@@ -6,10 +6,12 @@ using System.Windows;
 using Quantra.Enums;
 using Quantra.Models;
 using Quantra.Services;
+using System.Windows.Controls;
+
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         private WebullTradingBot _tradingBot;
         private StockDataCacheService _stockDataCache;

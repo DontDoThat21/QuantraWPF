@@ -11,7 +11,7 @@ using System.Windows.Data; // Added for CollectionViewSource
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         // Add this field to ensure selectedPrediction is available in this partial class
         // private Quantra.Models.PredictionModel selectedPrediction;

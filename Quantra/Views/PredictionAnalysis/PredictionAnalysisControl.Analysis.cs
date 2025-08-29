@@ -5,14 +5,17 @@ using System.Threading.Tasks;
 using Quantra.Services;
 using Quantra.Adapters;
 using Quantra.Models; // Ensures Quantra.Models.PredictionModel is accessible
-using Quantra.Services.Interfaces; // Ensures Quantra.Models.PredictionModel is accessible
+using Quantra.Services.Interfaces;
+using System.Windows;
+using System.Windows.Controls; // Ensures Quantra.Models.PredictionModel is accessible
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         public PredictionAnalysisControl()
         {
+            InitializeComponent();
             _financialNewsSentimentService = new FinancialNewsSentimentService();
             _earningsTranscriptService = new EarningsTranscriptService();
             _analystRatingService = new AnalystRatingService();

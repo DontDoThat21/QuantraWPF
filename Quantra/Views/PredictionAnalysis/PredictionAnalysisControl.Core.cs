@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         private WebullTradingBot tradingBot;
         private List<PredictionModel> predictions;

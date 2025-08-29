@@ -8,7 +8,7 @@ using Quantra.Modules;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         // Sentiment correlation analyzer
         private SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;

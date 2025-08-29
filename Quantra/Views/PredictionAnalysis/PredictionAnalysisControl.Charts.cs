@@ -10,7 +10,7 @@ using Quantra.Models;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         private ChartValues<double> adxValues = new ChartValues<double>();
         private ChartValues<double> rocValues = new ChartValues<double>();

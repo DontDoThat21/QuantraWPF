@@ -15,7 +15,7 @@ using System.Collections.ObjectModel; // Added for ObservableCollection
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : IDisposable
+    public partial class PredictionAnalysisControl : UserControl, IDisposable
     {
         // Automated mode property
         private DispatcherTimer autoRefreshTimer;

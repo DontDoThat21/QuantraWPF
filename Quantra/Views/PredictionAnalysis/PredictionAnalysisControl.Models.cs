@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Media;
 using Quantra.Models;
+using System.Windows.Controls;
+
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl
+    public partial class PredictionAnalysisControl : UserControl
     {
         // UI configuration and display settings
         public class DisplaySettings
