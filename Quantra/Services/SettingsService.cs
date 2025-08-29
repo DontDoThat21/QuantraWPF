@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Threading.Tasks;
 using Quantra.Models;
 using Quantra.CrossCutting.ErrorHandling;
+using Quantra.Services.Interfaces;
 
 namespace Quantra.Services
 {
-    public class SettingsService
+    public class SettingsService : ISettingsService
     {
         // Ensure the settings profiles table exists
-        public static void EnsureSettingsProfilesTable()
+        public void EnsureSettingsProfilesTable()
         {
             ResilienceHelper.Retry(() =>
             {
@@ -60,7 +62,8 @@ namespace Quantra.Services
                         EnableTechnicalIndicatorAlertPushNotifications INTEGER DEFAULT 0,
                         EnableSentimentShiftAlertPushNotifications INTEGER DEFAULT 0,
                         EnableSystemHealthAlertPushNotifications INTEGER DEFAULT 0,
-                        EnableTradeExecutionPushNotifications INTEGER DEFAULT 0
+                        EnableTradeExecutionPushNotifications INTEGER DEFAULT 0,
+                        AlphaVantageApiKey TEXT DEFAULT ''
                     )";
                 
                     using (var command = new SQLiteCommand(createTableQuery, connection))
@@ -199,6 +202,33 @@ namespace Quantra.Services
                             DatabaseMonolith.Log("Info", "Added EnableVixMonitoring column to SettingsProfiles table");
                         }
                     }
+
+                    // Check if the AlphaVantageApiKey column exists in the table
+                    bool hasAlphaVantageApiKey = false;
+                    using (var command = new SQLiteCommand("PRAGMA table_info(SettingsProfiles)", connection))
+                    {
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                if (reader["name"].ToString() == "AlphaVantageApiKey")
+                                {
+                                    hasAlphaVantageApiKey = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If the AlphaVantageApiKey column doesn't exist, add it
+                    if (!hasAlphaVantageApiKey)
+                    {
+                        using (var command = new SQLiteCommand("ALTER TABLE SettingsProfiles ADD COLUMN AlphaVantageApiKey TEXT DEFAULT ''", connection))
+                        {
+                            command.ExecuteNonQuery();
+                            DatabaseMonolith.Log("Info", "Added AlphaVantageApiKey column to SettingsProfiles table");
+                        }
+                    }
                 
                     // Check if any profiles exist, if not create a default one
                     using (var command = new SQLiteCommand("SELECT COUNT(*) FROM SettingsProfiles", connection))
@@ -245,7 +275,7 @@ namespace Quantra.Services
         }
         
         // Create a new settings profile
-        public static int CreateSettingsProfile(DatabaseSettingsProfile profile)
+        public int CreateSettingsProfile(DatabaseSettingsProfile profile)
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -275,7 +305,7 @@ namespace Quantra.Services
                             PushNotificationUserId, EnablePushNotifications, EnableStandardAlertPushNotifications, EnableOpportunityAlertPushNotifications, 
                             EnablePredictionAlertPushNotifications, EnableGlobalAlertPushNotifications, EnableTechnicalIndicatorAlertPushNotifications, 
                             EnableSentimentShiftAlertPushNotifications, EnableSystemHealthAlertPushNotifications, EnableTradeExecutionPushNotifications,
-                            EnableVixMonitoring
+                            EnableVixMonitoring, AlphaVantageApiKey
                         ) VALUES (
                             @Name, @Description, @IsDefault, @CreatedDate, @ModifiedDate,
                             @EnableApiModalChecks, @ApiTimeoutSeconds, @CacheDurationMinutes,
@@ -287,7 +317,7 @@ namespace Quantra.Services
                             @PushNotificationUserId, @EnablePushNotifications, @EnableStandardAlertPushNotifications, @EnableOpportunityAlertPushNotifications,
                             @EnablePredictionAlertPushNotifications, @EnableGlobalAlertPushNotifications, @EnableTechnicalIndicatorAlertPushNotifications,
                             @EnableSentimentShiftAlertPushNotifications, @EnableSystemHealthAlertPushNotifications, @EnableTradeExecutionPushNotifications,
-                            @EnableVixMonitoring
+                            @EnableVixMonitoring, @AlphaVantageApiKey
                         )";
                 
                     using (var command = new SQLiteCommand(insertQuery, connection))
@@ -336,6 +366,7 @@ namespace Quantra.Services
                         command.Parameters.AddWithValue("@EnableSystemHealthAlertPushNotifications", profile.EnableSystemHealthAlertPushNotifications ? 1 : 0);
                         command.Parameters.AddWithValue("@EnableTradeExecutionPushNotifications", profile.EnableTradeExecutionPushNotifications ? 1 : 0);
                         command.Parameters.AddWithValue("@EnableVixMonitoring", profile.EnableVixMonitoring ? 1 : 0);
+                        command.Parameters.AddWithValue("@AlphaVantageApiKey", profile.AlphaVantageApiKey ?? "");
                     }
                 
                     // Get the ID of the inserted profile
@@ -348,7 +379,7 @@ namespace Quantra.Services
         }
         
         // Update an existing settings profile
-        public static bool UpdateSettingsProfile(DatabaseSettingsProfile profile)
+        public bool UpdateSettingsProfile(DatabaseSettingsProfile profile)
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -408,7 +439,8 @@ namespace Quantra.Services
                             EnableSentimentShiftAlertPushNotifications = @EnableSentimentShiftAlertPushNotifications,
                             EnableSystemHealthAlertPushNotifications = @EnableSystemHealthAlertPushNotifications,
                             EnableTradeExecutionPushNotifications = @EnableTradeExecutionPushNotifications,
-                            EnableVixMonitoring = @EnableVixMonitoring
+                            EnableVixMonitoring = @EnableVixMonitoring,
+                            AlphaVantageApiKey = @AlphaVantageApiKey
                         WHERE Id = @Id";
                 
                     using (var command = new SQLiteCommand(updateQuery, connection))
@@ -459,6 +491,7 @@ namespace Quantra.Services
                         command.Parameters.AddWithValue("@EnableSystemHealthAlertPushNotifications", profile.EnableSystemHealthAlertPushNotifications ? 1 : 0);
                         command.Parameters.AddWithValue("@EnableTradeExecutionPushNotifications", profile.EnableTradeExecutionPushNotifications ? 1 : 0);
                         command.Parameters.AddWithValue("@EnableVixMonitoring", profile.EnableVixMonitoring ? 1 : 0);
+                        command.Parameters.AddWithValue("@AlphaVantageApiKey", profile.AlphaVantageApiKey ?? "");
                     
                         int rowsAffected = command.ExecuteNonQuery();
                         return rowsAffected > 0;
@@ -468,7 +501,7 @@ namespace Quantra.Services
         }
         
         // Delete a settings profile
-        public static bool DeleteSettingsProfile(int profileId)
+        public bool DeleteSettingsProfile(int profileId)
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -521,7 +554,7 @@ namespace Quantra.Services
         }
         
         // Get a specific settings profile
-        public static DatabaseSettingsProfile GetSettingsProfile(int profileId)
+        public DatabaseSettingsProfile GetSettingsProfile(int profileId)
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -548,7 +581,7 @@ namespace Quantra.Services
         }
         
         // Get the default settings profile
-        public static DatabaseSettingsProfile GetDefaultSettingsProfile()
+        public DatabaseSettingsProfile GetDefaultSettingsProfile()
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -615,8 +648,14 @@ namespace Quantra.Services
             }, RetryOptions.ForUserFacingOperation());
         }
         
+        // Get the default settings profile asynchronously
+        public Task<DatabaseSettingsProfile> GetDefaultSettingsProfileAsync()
+        {
+            return Task.FromResult(GetDefaultSettingsProfile());
+        }
+        
         // Get all settings profiles
-        public static List<DatabaseSettingsProfile> GetAllSettingsProfiles()
+        public List<DatabaseSettingsProfile> GetAllSettingsProfiles()
         {
             return ResilienceHelper.Retry(() =>
             {
@@ -714,7 +753,7 @@ namespace Quantra.Services
         }
         
         // Ensure at least one settings profile exists
-        public static void EnsureSettingsProfiles()
+        public void EnsureSettingsProfiles()
         {
             ResilienceHelper.Retry(() =>
             {
@@ -770,7 +809,7 @@ namespace Quantra.Services
         }
         
         // Set a profile as the default
-        public static bool SetProfileAsDefault(int profileId)
+        public bool SetProfileAsDefault(int profileId)
         {
             return ResilienceHelper.Retry(() =>
             {

@@ -1,20 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Data.SQLite;
-using System.IO;
-using System.Windows;
 using Dapper;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using Quantra.CrossCutting.ErrorHandling;
 using Quantra.Models;
 using Quantra.Services;
-using System.Data;
+using Quantra.Services.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
+using System.Data.SQLite;
+using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Net.Http;
-using Newtonsoft.Json;
-using Microsoft.Extensions.Configuration;
 using System.Reflection; // <-- Add this for reflection
-using Quantra.CrossCutting.ErrorHandling;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace Quantra
 {
@@ -65,13 +66,14 @@ namespace Quantra
     /// DatabaseMonolith.AddOrderToHistory(order);
     /// </code>
     /// </example>
-    public static class DatabaseMonolith
+    public class DatabaseMonolith
     {
         private static readonly string DbFilePath = "Quantra.db";
         public static readonly string ConnectionString = $"Data Source={DbFilePath};Version=3;Journal Mode=WAL;Busy Timeout=30000;";
         private static bool initialized = false;
         private static IConfiguration _configuration;
-        
+        private static SettingsService _settingsService;
+
         // Store API keys for backward compatibility
         public static string AlphaVantageApiKey { get; internal set; }
 
@@ -230,9 +232,10 @@ namespace Quantra
             }
         }
 
-        static DatabaseMonolith()
+        DatabaseMonolith(SettingsService settingsService)
         {
             Initialize();
+            _settingsService = settingsService;
         }
 
         private static void CreateDatabase()
@@ -1119,7 +1122,7 @@ namespace Quantra
             try
             {
                 // Get the default settings profile and convert it to UserSettings
-                var profile = SettingsService.GetDefaultSettingsProfile();
+                var profile = _settingsService.GetDefaultSettingsProfile();
                 if (profile != null)
                 {
                     return profile.ToUserSettings();
@@ -1247,13 +1250,13 @@ namespace Quantra
             try
             {
                 // Get the current default profile
-                var profile = SettingsService.GetDefaultSettingsProfile();
+                var profile = _settingsService.GetDefaultSettingsProfile();
                 
                 // If no profile exists, create one
                 if (profile == null)
                 {
-                    SettingsService.EnsureSettingsProfiles();
-                    profile = SettingsService.GetDefaultSettingsProfile();
+                    _settingsService.EnsureSettingsProfiles();
+                    profile = _settingsService.GetDefaultSettingsProfile();
                     if (profile == null)
                     {
                         Log("Error", "Could not create or retrieve default settings profile");
@@ -1275,9 +1278,9 @@ namespace Quantra
                 profile.EnableTradeNotifications = settings.EnableTradeNotifications;
                 profile.EnablePaperTrading = settings.EnablePaperTrading;
                 profile.RiskLevel = settings.RiskLevel;
-                
+
                 // Save the updated profile
-                SettingsService.UpdateSettingsProfile(profile);
+                _settingsService.UpdateSettingsProfile(profile);
                 
                 Log("Info", "Settings saved successfully to profile: " + profile.Name);
             }
@@ -1375,7 +1378,7 @@ namespace Quantra
         private static void EnsureSettingsProfiles()
         {
             // Just delegate to the SettingsService
-            SettingsService.EnsureSettingsProfiles();
+            _settingsService.EnsureSettingsProfiles();
         }
 
         public static string GetSetting(string key, string defaultValue = null)

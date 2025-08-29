@@ -7,7 +7,6 @@ using Quantra.Services;
 using Quantra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-// Removed: using Microsoft.Extensions.Configuration.FileExtensions;
 using Microsoft.Extensions.Configuration.Json;
 using Quantra.Extensions;
 using Quantra.Configuration;
@@ -97,6 +96,9 @@ namespace Quantra
                 {
                     var serviceCollection = new ServiceCollection();
                     serviceCollection.AddSingleton(Configuration);
+
+                    serviceCollection.AddScoped<ISettingsService, SettingsService>();
+
                     ConfigureServices(serviceCollection);
                     ServiceProvider = serviceCollection.BuildServiceProvider();
                     _logger.Information("Services configured successfully");

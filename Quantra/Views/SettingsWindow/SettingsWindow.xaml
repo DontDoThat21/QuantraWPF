@@ -3,762 +3,1009 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Quantra"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="Settings" Height="1346" Width="800" 
+        Title="Settings" Height="1327" Width="800"
         Background="{StaticResource DarkBlueBrush}"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None" AllowsTransparency="True"
         MinHeight="800" MinWidth="800">
-    <Grid>
-        <!-- Resize borders -->
-        <local:ResizableBorder/>
-        
-        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Add CustomTitleBar with transparent background and margin for rounded corners -->
-                <local:SharedTitleBar Title="Settings" Grid.Row="0" Background="Transparent" Margin="2,2,2,0"/>
-                
-                <Grid Grid.Row="1" Margin="20">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="250"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+	<Grid>
+		<!-- Resize borders -->
+		<local:ResizableBorder/>
 
-                    <!-- Left Panel - Settings Profiles -->
-                    <Grid Grid.Column="0" Margin="0,0,15,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <TextBlock Text="Settings Profiles" Grid.Row="0"
-                                   FontSize="20" FontWeight="Bold" Foreground="{StaticResource LightBlueBrush}" 
+		<Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<!-- Add CustomTitleBar with transparent background and margin for rounded corners -->
+				<local:SharedTitleBar Title="Settings" Grid.Row="0" Background="Transparent" Margin="2,2,2,0"/>
+
+				<Grid Grid.Row="1" Margin="20">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="250"/>
+						<ColumnDefinition Width="*"/>
+					</Grid.ColumnDefinitions>
+
+					<!-- Left Panel - Settings Profiles -->
+					<Grid Grid.Column="0" Margin="0,0,15,0">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+
+						<TextBlock Text="Settings Profiles" Grid.Row="0"
+                                   FontSize="20" FontWeight="Bold" Foreground="{StaticResource LightBlueBrush}"
                                    Margin="0,0,0,12"
                                    Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
 
-                        <!-- Profiles ListView -->
-                        <materialDesign:Card Grid.Row="1" 
+						<!-- Profiles ListView -->
+						<materialDesign:Card Grid.Row="1"
                                            Background="{StaticResource DarkBlueAccentBrush}"
                                            UniformCornerRadius="6"
                                            Padding="0"
                                            materialDesign:ElevationAssist.Elevation="Dp2">
-                            <ListView x:Name="ProfilesListView" 
+							<ListView x:Name="ProfilesListView"
                                       Background="Transparent"
                                       BorderThickness="0"
                                       Foreground="White"
                                       SelectionChanged="ProfilesListView_SelectionChanged">
-                                <ListView.ItemContainerStyle>
-                                    <Style TargetType="ListViewItem">
-                                        <Setter Property="Padding" Value="12,8"/>
-                                        <Setter Property="Margin" Value="0"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="#3E3E56"/>
-                                                <Setter Property="BorderBrush" Value="{StaticResource LightBlueBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#33445A"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ListView.ItemContainerStyle>
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White" FontSize="14"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" 
+								<ListView.ItemContainerStyle>
+									<Style TargetType="ListViewItem">
+										<Setter Property="Padding" Value="12,8"/>
+										<Setter Property="Margin" Value="0"/>
+										<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+										<Style.Triggers>
+											<Trigger Property="IsSelected" Value="True">
+												<Setter Property="Background" Value="#3E3E56"/>
+												<Setter Property="BorderBrush" Value="{StaticResource LightBlueBrush}"/>
+											</Trigger>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter Property="Background" Value="#33445A"/>
+											</Trigger>
+										</Style.Triggers>
+									</Style>
+								</ListView.ItemContainerStyle>
+								<ListView.ItemTemplate>
+									<DataTemplate>
+										<Grid Margin="0">
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="*" />
+												<ColumnDefinition Width="Auto" />
+											</Grid.ColumnDefinitions>
+											<StackPanel Grid.Column="0">
+												<TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White" FontSize="14"/>
+												<TextBlock Text="{Binding Description}" FontSize="12" TextWrapping="Wrap"
                                                           Foreground="#CCCCCC" Margin="0,4,0,0"/>
-                                                <TextBlock Text="{Binding ModifiedDate, StringFormat='Modified: {0:g}'}" 
+												<TextBlock Text="{Binding ModifiedDate, StringFormat='Modified: {0:g}'}"
                                                            FontSize="11" Foreground="#AAAAAA" Margin="0,4,0,0"/>
-                                                <Border Background="#2D6A4C" CornerRadius="3" Padding="5,2" 
+												<Border Background="#2D6A4C" CornerRadius="3" Padding="5,2"
                                                         HorizontalAlignment="Left" Margin="0,5,0,0"
                                                         Visibility="{Binding IsDefault, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="Default" FontWeight="Bold" Foreground="#50E070" FontSize="10"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </materialDesign:Card>
+													<TextBlock Text="Default" FontWeight="Bold" Foreground="#50E070" FontSize="10"/>
+												</Border>
+											</StackPanel>
+										</Grid>
+									</DataTemplate>
+								</ListView.ItemTemplate>
+							</ListView>
+						</materialDesign:Card>
 
-                        <!-- Profile Actions -->
-                        <StackPanel Grid.Row="2" Margin="0,15,0,0">
-                            <Button x:Name="NewProfileButton" Content="New Profile" Height="36" 
+						<!-- Profile Actions -->
+						<StackPanel Grid.Row="2" Margin="0,15,0,0">
+							<Button x:Name="NewProfileButton" Content="New Profile" Height="36"
                                     Margin="0,0,0,8" Click="NewProfileButton_Click"
                                     Style="{StaticResource ButtonStyle1}"
-                                    Background="#3E3E56" 
+                                    Background="#3E3E56"
                                     BorderBrush="{StaticResource AccentBlueBrush}">
-                                <Button.Effect>
-                                    <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
-                                </Button.Effect>
-                            </Button>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Button x:Name="RenameProfileButton" Content="Rename" Height="36" 
+								<Button.Effect>
+									<DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
+								</Button.Effect>
+							</Button>
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="*"/>
+								</Grid.ColumnDefinitions>
+								<Button x:Name="RenameProfileButton" Content="Rename" Height="36"
                                         Margin="0,0,5,0" Grid.Column="0" Click="RenameProfileButton_Click"
                                         Style="{StaticResource ButtonStyle1}"
-                                        Background="#3E3E56" 
+                                        Background="#3E3E56"
                                         BorderBrush="{StaticResource AccentBlueBrush}"/>
-                                <Button x:Name="DeleteProfileButton" Content="Delete" Height="36" 
+								<Button x:Name="DeleteProfileButton" Content="Delete" Height="36"
                                         Margin="5,0,0,0" Grid.Column="1" Click="DeleteProfileButton_Click"
                                         Style="{StaticResource ButtonStyle1}"
-                                        Background="#3E3E56" 
+                                        Background="#3E3E56"
                                         BorderBrush="{StaticResource AccentBlueBrush}"/>
-                            </Grid>
-                            <Button x:Name="SetAsDefaultButton" Content="Set as Default" Height="36" 
+							</Grid>
+							<Button x:Name="SetAsDefaultButton" Content="Set as Default" Height="36"
                                     Margin="0,8,0,0" Click="SetAsDefaultButton_Click"
                                     Style="{StaticResource ButtonStyle1}"
-                                    Background="#3E3E56" 
+                                    Background="#3E3E56"
                                     BorderBrush="{StaticResource AccentBlueBrush}"/>
-                        </StackPanel>
-                    </Grid>
+						</StackPanel>
+					</Grid>
 
-                    <!-- Right Panel - Settings -->
-                    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Text="Settings" FontSize="24" FontWeight="Bold" Foreground="{StaticResource LightBlueBrush}" 
+					<!-- Right Panel - Settings -->
+					<ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+						<Grid>
+							<Grid.RowDefinitions>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="Auto"/>
+								<RowDefinition Height="*"/>
+								<RowDefinition Height="Auto"/>
+							</Grid.RowDefinitions>
+
+							<TextBlock Text="Settings" FontSize="24" FontWeight="Bold" Foreground="{StaticResource LightBlueBrush}"
                                        HorizontalAlignment="Left" Margin="0,0,0,20"
                                        Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                    
-                            <!-- API Settings -->
-                            <materialDesign:Card Grid.Row="1" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="API Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+
+							<!-- API Settings -->
+							<materialDesign:Card Grid.Row="1" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="API Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <CheckBox x:Name="EnableApiModalChecks" Content="Enable API Confirmation Modal" 
+
+									<CheckBox x:Name="EnableApiModalChecks" Content="Enable API Confirmation Modal"
                                               IsChecked="True" Foreground="White" Margin="0,5">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                    
-                                    <Grid Margin="0,10,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="API Request Timeout (seconds):" VerticalAlignment="Center" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<Grid Margin="0,10,0,0">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="API Request Timeout (seconds):" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <TextBox x:Name="ApiTimeoutTextBox" Grid.Column="1" Width="70" Text="30" 
-                                                 Style="{StaticResource EnhancedTextBoxStyle}" 
+										<TextBox x:Name="ApiTimeoutTextBox" Grid.Column="1" Width="70" Text="30"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
                                                  Margin="10,0,0,0"
                                                  HorizontalContentAlignment="Right"/>
-                                    </Grid>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Data Settings -->
-                            <materialDesign:Card Grid.Row="2" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Data Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+									</Grid>
+
+									<Grid Margin="0,10,0,0">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="*"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Alpha Vantage API Key:" VerticalAlignment="Center"
+                                                   Foreground="White"/>
+										<PasswordBox x:Name="AlphaVantageApiKeyBox" Grid.Column="1"
+                                                     Style="{StaticResource EnhancedPasswordBoxStyle}"
+                                                     Margin="10,0,0,0"
+                                                     PasswordChanged="AlphaVantageApiKeyBox_PasswordChanged"/>
+									</Grid>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- Data Settings -->
+							<materialDesign:Card Grid.Row="2" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="Data Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <Grid Margin="0,5,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Cache Duration (minutes):" VerticalAlignment="Center" 
+
+									<Grid Margin="0,5,0,10">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Cache Duration (minutes):" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <TextBox x:Name="CacheDurationTextBox" Grid.Column="1" Width="70" Text="15" 
-                                                 Style="{StaticResource EnhancedTextBoxStyle}" 
+										<TextBox x:Name="CacheDurationTextBox" Grid.Column="1" Width="70" Text="15"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
                                                  Margin="10,0,0,0"
                                                  HorizontalContentAlignment="Right"/>
-                                    </Grid>
-                                    
-                                    <CheckBox x:Name="EnableHistoricalDataCache" Content="Cache Historical Data" 
+									</Grid>
+
+									<CheckBox x:Name="EnableHistoricalDataCache" Content="Cache Historical Data"
                                               IsChecked="True" Foreground="White" Margin="0,5">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- UI Settings -->
-                            <materialDesign:Card Grid.Row="3" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="UI Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- UI Settings -->
+							<materialDesign:Card Grid.Row="3" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="UI Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <CheckBox x:Name="EnableDarkMode" Content="Dark Mode" 
+
+									<CheckBox x:Name="EnableDarkMode" Content="Dark Mode"
                                               IsChecked="True" Foreground="White" Margin="0,5,0,10">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                    
-                                    <CheckBox x:Name="RememberWindowState" Content="Remember Window State" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="RememberWindowState" Content="Remember Window State"
                                               IsChecked="True" Foreground="White" Margin="0,5,0,10">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                    
-                                    <Grid Margin="0,0,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Chart Update Interval (seconds):" VerticalAlignment="Center" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<Grid Margin="0,0,0,0">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Chart Update Interval (seconds):" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <TextBox x:Name="ChartUpdateIntervalTextBox" Grid.Column="1" Width="70" Text="2" 
-                                                 Style="{StaticResource EnhancedTextBoxStyle}" 
+										<TextBox x:Name="ChartUpdateIntervalTextBox" Grid.Column="1" Width="70" Text="2"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
                                                  Margin="10,0,0,0"
                                                  HorizontalContentAlignment="Right"/>
-                                    </Grid>
-                                    
-                                    <CheckBox x:Name="EnableVixMonitoring" Content="Enable VIX Monitoring in Title Bar" 
+									</Grid>
+
+									<CheckBox x:Name="EnableVixMonitoring" Content="Enable VIX Monitoring in Title Bar"
                                               IsChecked="True" Foreground="White" Margin="0,10,0,0">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Grid Settings -->
-                            <materialDesign:Card Grid.Row="4" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Grid Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- Grid Settings -->
+							<materialDesign:Card Grid.Row="4" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="Grid Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <Grid Margin="0,5,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Default Grid Rows:" VerticalAlignment="Center" 
+
+									<Grid Margin="0,5,0,10">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Default Grid Rows:" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <TextBox x:Name="DefaultGridRowsTextBox" Grid.Column="1" Width="70" Text="4" 
-                                                 Style="{StaticResource EnhancedTextBoxStyle}" 
+										<TextBox x:Name="DefaultGridRowsTextBox" Grid.Column="1" Width="70" Text="4"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
                                                  Margin="10,0,0,0"
                                                  HorizontalContentAlignment="Right"/>
-                                    </Grid>
-                                    
-                                    <Grid Margin="0,0,0,10">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Default Grid Columns:" VerticalAlignment="Center" 
+									</Grid>
+
+									<Grid Margin="0,0,0,10">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Default Grid Columns:" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <TextBox x:Name="DefaultGridColumnsTextBox" Grid.Column="1" Width="70" Text="4" 
-                                                 Style="{StaticResource EnhancedTextBoxStyle}" 
+										<TextBox x:Name="DefaultGridColumnsTextBox" Grid.Column="1" Width="70" Text="4"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
                                                  Margin="10,0,0,0"
                                                  HorizontalContentAlignment="Right"/>
-                                    </Grid>
-                                    
-                                    <Grid Margin="0,0,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Grid Border Color:" VerticalAlignment="Center" 
+									</Grid>
+
+									<Grid Margin="0,0,0,0">
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="200"/>
+											<ColumnDefinition Width="Auto"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Grid Border Color:" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <ComboBox x:Name="GridBorderColorComboBox" Grid.Column="1" Width="120" 
+										<ComboBox x:Name="GridBorderColorComboBox" Grid.Column="1" Width="120"
                                                   Style="{StaticResource EnhancedComboBoxStyle}"
-                                                  Margin="10,0,10,0">
-                                            <ComboBoxItem Content="Cyan" IsSelected="True" Tag="#FF00FFFF"/>
-                                            <ComboBoxItem Content="Magenta" Tag="#FFFF00FF"/>
-                                            <ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
-                                            <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
-                                            <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
-                                            <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
-                                            <ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
-                                        </ComboBox>
-                                        <Border Grid.Column="2" Width="24" Height="24" CornerRadius="3" 
+                                                  Margin="10,0,10,0"
+                                                  SelectionChanged="GridBorderColorComboBox_SelectionChanged">
+											<ComboBoxItem Content="Cyan" IsSelected="True" Tag="#FF00FFFF"/>
+											<ComboBoxItem Content="Magenta" Tag="#FFFF00FF"/>
+											<ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
+											<ComboBoxItem Content="Green" Tag="#FF00FF00"/>
+											<ComboBoxItem Content="Red" Tag="#FFFF0000"/>
+											<ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
+											<ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
+										</ComboBox>
+										<Border Grid.Column="2" Width="24" Height="24" CornerRadius="3"
                                                 BorderThickness="1" BorderBrush="#555555">
-                                            <Rectangle x:Name="ColorPreview" Width="22" Height="22" Fill="Cyan"/>
-                                        </Border>
-                                    </Grid>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Notification Settings -->
-                            <materialDesign:Card Grid.Row="5" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Notification Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+											<Rectangle x:Name="ColorPreview" Width="22" Height="22" Fill="Cyan"/>
+										</Border>
+									</Grid>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- Notification Settings -->
+							<materialDesign:Card Grid.Row="5" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="Notification Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <CheckBox x:Name="EnablePriceAlerts" Content="Enable Price Alerts" 
+
+									<CheckBox x:Name="EnablePriceAlerts" Content="Enable Price Alerts"
                                               IsChecked="True" Foreground="White" Margin="0,5,0,5">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                    
-                                    <CheckBox x:Name="EnableTradeNotifications" Content="Enable Trade Notifications" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="EnableTradeNotifications" Content="Enable Trade Notifications"
                                               IsChecked="True" Foreground="White" Margin="0,5">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Trading Settings -->
-                            <materialDesign:Card Grid.Row="6" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Trading Settings" FontSize="18" FontWeight="SemiBold" 
-                                               Foreground="{StaticResource LightBlueBrush}" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- Trading Settings -->
+							<materialDesign:Card Grid.Row="6" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="Trading Settings" FontSize="18" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}"
                                                Margin="0,0,0,10"/>
-                                    
-                                    <CheckBox x:Name="EnablePaperTrading" Content="Enable Paper Trading Mode" 
+
+									<CheckBox x:Name="EnablePaperTrading" Content="Enable Paper Trading Mode"
                                               IsChecked="True" Foreground="White" Margin="0,5,0,10">
-                                        <CheckBox.Style>
-                                            <Style TargetType="CheckBox">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="CheckBox">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                
-                                                                <Border x:Name="CheckboxBorder" Grid.Column="0" 
-                                                                        Width="18" Height="18" 
-                                                                        Background="#262638" 
-                                                                        BorderBrush="#3E90FF" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="3" 
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
                                                                         VerticalAlignment="Center">
-                                                                    <Path x:Name="CheckMark" 
-                                                                          Data="M1,5 L4,9 L9,1" 
-                                                                          Stroke="Cyan" 
-                                                                          StrokeThickness="2" 
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
                                                                           Visibility="Collapsed"
                                                                           VerticalAlignment="Center"
                                                                           HorizontalAlignment="Center"/>
-                                                                </Border>
-                                                                
-                                                                <ContentPresenter Grid.Column="1" 
-                                                                                 Margin="10,0,0,0" 
-                                                                                 VerticalAlignment="Center" 
-                                                                                 HorizontalAlignment="Left" 
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
                                                                                  RecognizesAccessKey="True"/>
-                                                            </Grid>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
-                                                                    <Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
-                                                                </Trigger>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </CheckBox.Style>
-                                    </CheckBox>
-                                    
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" MinWidth="150"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        
-                                        <TextBlock Text="Default Risk Level:" VerticalAlignment="Center" 
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<Grid>
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="Auto" MinWidth="150"/>
+											<ColumnDefinition Width="Auto"/>
+										</Grid.ColumnDefinitions>
+
+										<TextBlock Text="Default Risk Level:" VerticalAlignment="Center"
                                                    Foreground="White"/>
-                                        <ComboBox x:Name="RiskLevelComboBox" Grid.Column="1" Width="120" 
+										<ComboBox x:Name="RiskLevelComboBox" Grid.Column="1" Width="120"
                                                   Style="{StaticResource EnhancedComboBoxStyle}"
                                                   Margin="10,0,0,0">
-                                            <ComboBoxItem Content="Low" IsSelected="True"/>
-                                            <ComboBoxItem Content="Medium"/>
-                                            <ComboBoxItem Content="High"/>
-                                        </ComboBox>
-                                    </Grid>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Email Alert Settings -->
-                            <materialDesign:Card Grid.Row="7" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Email Alert Settings" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource LightBlueBrush}" Margin="0,0,0,10"/>
-                                    <CheckBox x:Name="EnableEmailAlerts" Content="Enable Email Alerts" IsChecked="False" Foreground="White" Margin="0,5,0,5"/>
-                                    <CheckBox x:Name="EnableStandardAlertEmails" Content="Standard Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5"/>
-                                    <CheckBox x:Name="EnableOpportunityAlertEmails" Content="Opportunity Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5"/>
-                                    <CheckBox x:Name="EnablePredictionAlertEmails" Content="Prediction Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5"/>
-                                    <CheckBox x:Name="EnableGlobalAlertEmails" Content="Global Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                        <TextBlock Text="Alert Email:" VerticalAlignment="Center" Foreground="White"/>
-                                        <TextBox x:Name="AlertEmailTextBox" Width="220" Margin="10,0,0,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </materialDesign:Card>
-                    
-                            <!-- Action Buttons -->
-                            <StackPanel Grid.Row="9" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-                                <Button x:Name="SaveButton" Content="Save" Width="100" Height="36" Margin="0,0,15,0" 
-                                        Click="SaveButton_Click" 
-                                        Style="{StaticResource ButtonStyle1}"
-                                        Background="#3E90FF" Foreground="White" BorderThickness="0">
-                                    <Button.Effect>
-                                        <DropShadowEffect ShadowDepth="1" BlurRadius="4" Opacity="0.3"/>
-                                    </Button.Effect>
-                                </Button>
-                                <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="36" 
-                                        Click="CancelButton_Click"
-                                        Style="{StaticResource ButtonStyle1}"
-                                        Background="#3E3E56" Foreground="White" BorderBrush="#555555" BorderThickness="1"/>
-                            </StackPanel>
-                        </Grid>
-                    </ScrollViewer>
-                </Grid>
-            </Grid>
-        </Border>
-    </Grid>
+											<ComboBoxItem Content="Low" IsSelected="True"/>
+											<ComboBoxItem Content="Medium"/>
+											<ComboBoxItem Content="High"/>
+										</ComboBox>
+									</Grid>
+								</StackPanel>
+							</materialDesign:Card>
+
+							<!-- Email Alert Settings -->
+							<materialDesign:Card Grid.Row="7" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+								<StackPanel>
+									<TextBlock Text="Email Alert Settings" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource LightBlueBrush}" Margin="0,0,0,10"/>
+
+									<CheckBox x:Name="EnableEmailAlerts" Content="Enable Email Alerts" IsChecked="False" Foreground="White" Margin="0,5,0,5">
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
+                                                                        VerticalAlignment="Center">
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
+                                                                          Visibility="Collapsed"
+                                                                          VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 RecognizesAccessKey="True"/>
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="EnableStandardAlertEmails" Content="Standard Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5">
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
+                                                                        VerticalAlignment="Center">
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
+                                                                          Visibility="Collapsed"
+                                                                          VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 RecognizesAccessKey="True"/>
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="EnableOpportunityAlertEmails" Content="Opportunity Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5">
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
+                                                                        VerticalAlignment="Center">
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
+                                                                          Visibility="Collapsed"
+                                                                          VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 RecognizesAccessKey="True"/>
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="EnablePredictionAlertEmails" Content="Prediction Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5">
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
+                                                                        VerticalAlignment="Center">
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
+                                                                          Visibility="Collapsed"
+                                                                          VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 RecognizesAccessKey="True"/>
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<CheckBox x:Name="EnableGlobalAlertEmails" Content="Global Alert Emails" IsChecked="False" Foreground="White" Margin="0,5,0,5">
+										<CheckBox.Style>
+											<Style TargetType="CheckBox">
+												<Setter Property="Template">
+													<Setter.Value>
+														<ControlTemplate TargetType="CheckBox">
+															<Grid>
+																<Grid.ColumnDefinitions>
+																	<ColumnDefinition Width="Auto"/>
+																	<ColumnDefinition Width="*"/>
+																</Grid.ColumnDefinitions>
+
+																<Border x:Name="CheckboxBorder" Grid.Column="0"
+                                                                        Width="18" Height="18"
+                                                                        Background="#262638"
+                                                                        BorderBrush="#3E90FF"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="3"
+                                                                        VerticalAlignment="Center">
+																	<Path x:Name="CheckMark"
+                                                                          Data="M1,5 L4,9 L9,1"
+                                                                          Stroke="Cyan"
+                                                                          StrokeThickness="2"
+                                                                          Visibility="Collapsed"
+                                                                          VerticalAlignment="Center"
+                                                                          HorizontalAlignment="Center"/>
+																</Border>
+
+																<ContentPresenter Grid.Column="1"
+                                                                                 Margin="10,0,0,0"
+                                                                                 VerticalAlignment="Center"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 RecognizesAccessKey="True"/>
+															</Grid>
+															<ControlTemplate.Triggers>
+																<Trigger Property="IsChecked" Value="True">
+																	<Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+																	<Setter TargetName="CheckboxBorder" Property="Background" Value="#3E3E56"/>
+																</Trigger>
+																<Trigger Property="IsMouseOver" Value="True">
+																	<Setter TargetName="CheckboxBorder" Property="BorderBrush" Value="Cyan"/>
+																</Trigger>
+															</ControlTemplate.Triggers>
+														</ControlTemplate>
+													</Setter.Value>
+												</Setter>
+											</Style>
+										</CheckBox.Style>
+									</CheckBox>
+
+									<StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+										<TextBlock Text="Alert Email:" VerticalAlignment="Center" Foreground="White"/>
+										<TextBox x:Name="AlertEmailTextBox" Width="220" Margin="10,0,0,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+									</StackPanel>
+								</StackPanel>
+							</materialDesign:Card>
+
+
+						</Grid>
+					</ScrollViewer>
+				</Grid>
+			</Grid>
+		</Border>
+	</Grid>
 </Window>
 

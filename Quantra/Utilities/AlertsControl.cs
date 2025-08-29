@@ -14,6 +14,7 @@ namespace Quantra.Utilities
         private static readonly List<Action<AlertModel>> _alertHandlers = new();
         private static IAudioService _audioService;
         private static INotificationService _notificationService;
+        private static ISettingsService _settingsService;
         private static readonly ILogger _logger = Log.ForType(typeof(AlertManager));
         
         static AlertManager()
@@ -26,6 +27,18 @@ namespace Quantra.Utilities
         {
             _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            
+            // Try to resolve settings service from DI container or create fallback
+            try
+            {
+                _settingsService = App.ServiceProvider?.GetService<ISettingsService>() ?? new SettingsService();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Failed to resolve ISettingsService, creating fallback instance");
+                _settingsService = new SettingsService();
+            }
+            
             _logger.Information("AlertManager initialized with audio and notification services");
         }
 
@@ -80,7 +93,7 @@ namespace Quantra.Utilities
                     }
 
                     // Get the current database settings profile
-                    var settings = SettingsService.GetDefaultSettingsProfile();
+                    var settings = _settingsService.GetDefaultSettingsProfile();
                     
                     // Send email notification if enabled
                     if (settings != null)

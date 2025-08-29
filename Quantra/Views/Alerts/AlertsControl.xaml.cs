@@ -581,7 +581,7 @@ namespace Quantra.Controls
         {
             GlobalAlertEmitted?.Invoke(alert);
             // Send email if enabled in settings
-            var settings = SettingsService.GetDefaultSettingsProfile();
+            var settings = _settingsService.GetDefaultSettingsProfile();
             EmailAlertService.SendAlertEmail(alert, settings);
         }
 

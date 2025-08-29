@@ -63,6 +63,9 @@ namespace Quantra.Models
         // VIX monitoring settings
         public bool EnableVixMonitoring { get; set; } = true;
         
+        // API Keys settings
+        public string AlphaVantageApiKey { get; set; } = "";
+        
         // Create a new profile from a UserSettings object
         public static DatabaseSettingsProfile FromUserSettings(UserSettings settings, string name, string description, bool isDefault)
         {
@@ -114,7 +117,9 @@ namespace Quantra.Models
                 RememberWindowState = settings.RememberWindowState,
                 LastWindowState = settings.LastWindowState,
                 // VIX monitoring settings
-                EnableVixMonitoring = settings.EnableVixMonitoring
+                EnableVixMonitoring = settings.EnableVixMonitoring,
+                // API Keys settings
+                AlphaVantageApiKey = settings.AlphaVantageApiKey ?? ""
             };
         }
         
@@ -165,6 +170,8 @@ namespace Quantra.Models
                 LastWindowState = this.LastWindowState,
                 // VIX monitoring settings
                 EnableVixMonitoring = this.EnableVixMonitoring,
+                // API Keys settings
+                AlphaVantageApiKey = this.AlphaVantageApiKey ?? ""
             };
         }
         
@@ -219,7 +226,9 @@ namespace Quantra.Models
                 RememberWindowState = this.RememberWindowState,
                 LastWindowState = this.LastWindowState,
                 // VIX monitoring settings
-                EnableVixMonitoring = this.EnableVixMonitoring
+                EnableVixMonitoring = this.EnableVixMonitoring,
+                // API Keys settings
+                AlphaVantageApiKey = this.AlphaVantageApiKey ?? ""
             };
         }
 
@@ -275,7 +284,9 @@ namespace Quantra.Models
                 RememberWindowState = true,
                 LastWindowState = 0, // Default to Normal window state
                 // VIX monitoring settings
-                EnableVixMonitoring = true
+                EnableVixMonitoring = true,
+                // API Keys settings
+                AlphaVantageApiKey = ""
             };
         }
     }

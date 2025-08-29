@@ -69,7 +69,7 @@
 		<!-- Alerts List -->
 		<DataGrid x:Name="AlertsDataGrid" Grid.Row="1" Margin="0,5"
                   AutoGenerateColumns="False"
-                  Background="#2D2D42" Foreground="White"
+                  Background="#2D2D42" Foreground="Black"
                   BorderBrush="#3E3E56" AlternatingRowBackground="#3E3E56"
                   SelectionChanged="AlertsDataGrid_SelectionChanged"
                   CanUserAddRows="False" CanUserDeleteRows="False"

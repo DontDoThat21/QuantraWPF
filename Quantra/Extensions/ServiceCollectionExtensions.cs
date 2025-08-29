@@ -55,6 +55,7 @@ namespace Quantra.Extensions
             services.AddSingleton<IAudioService, AudioService>();
                 
             // Register services
+            services.AddSingleton<ISettingsService, SettingsService>();
             services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<ITechnicalIndicatorService, TechnicalIndicatorService>();
             services.AddSingleton<IAlphaVantageService, AlphaVantageService>();
