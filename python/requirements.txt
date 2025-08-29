@@ -1,0 +1,29 @@
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+joblib>=1.1.0
+matplotlib>=3.5.0
+
+# Machine Learning Frameworks
+tensorflow>=2.9.0
+torch>=1.13.0
+
+# Hyperparameter Optimization
+optuna>=3.0.0
+plotly>=5.10.0
+
+hmmlearn>=0.3.0
+
+# Reinforcement Learning
+gym>=0.21.0
+stable-baselines3>=1.6.0
+
+# YouTube Sentiment Analysis
+yt-dlp>=2023.1.6
+openai-whisper>=20230314
+openai>=1.0.0
+
+# GPU Acceleration (preferred, optional)
+cudf>=22.10.0
+cuml>=22.10.0
+cupy>=10.0.0

@@ -1,0 +1,319 @@
+<Window x:Class="Quantra.AddControlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Quantra"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Add Control" Height="974" Width="520"
+        Background="Transparent" Foreground="{StaticResource TextWhiteBrush}"
+        WindowStyle="None" AllowsTransparency="True" MinHeight="450" MinWidth="450">
+    <Grid>
+        <!-- Add ResizableBorder for consistent behavior with other windows -->
+        <local:ResizableBorder/>
+        
+        <!-- Updated Border with CornerRadius="10" to match the title bar's top corners -->
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <materialDesign:Card Background="#1B1B2A" Margin="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <!-- Changed: Use star sizing for content area to enable better resizing -->
+                        <RowDefinition Height="*"/>
+                        <!-- Added: Auto height row for sticky footer buttons -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Custom Title Bar -->
+                    <local:SharedTitleBar x:Name="TitleBar" Grid.Row="0" Title="Add Control"/>
+
+                    <!-- Main Content -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Changed: Improved row definitions with MinHeight values -->
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" MinHeight="120"/>
+                                <RowDefinition Height="Auto" MinHeight="100"/>
+                                <RowDefinition Height="Auto" MinHeight="140"/>
+                                <!-- Changed: Use star sizing for visualization area to grow with window -->
+                                <RowDefinition Height="*" MinHeight="200"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Section: Tab Selection - Improved spacing -->
+                            <materialDesign:Card Grid.Row="0" Grid.ColumnSpan="2" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                                <StackPanel>
+                                    <TextBlock Text="1. SELECT TAB" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                    <Label Content="Select the tab to add the control to:" Style="{StaticResource EnhancedLabelStyle}"/>
+                                    <ComboBox x:Name="TabComboBox" 
+                                          Style="{StaticResource EnhancedComboBoxStyle}" 
+                                          SelectionChanged="TabComboBox_SelectionChanged" 
+                                          materialDesign:HintAssist.Hint="Select Tab" 
+                                          Width="Auto"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <TextBlock Text="Current Grid Size: " Foreground="#99CCFF" VerticalAlignment="Center"/>
+                                        <Label x:Name="GridSizeLabel" Content="4 x 4" Foreground="Cyan" FontWeight="Bold" Padding="5,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- Section: Control Type - Improved spacing -->
+                            <materialDesign:Card Grid.Row="1" Grid.ColumnSpan="2" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                                <StackPanel>
+                                    <TextBlock Text="2. SELECT CONTROL TYPE" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                    <Label Content="Choose the type of control to add:" Style="{StaticResource EnhancedLabelStyle}"/>
+                                    <ComboBox x:Name="ControlComboBox" 
+                                          Style="{StaticResource EnhancedComboBoxStyle}" 
+                                          materialDesign:HintAssist.Hint="Select Control Type" 
+                                          Width="Auto">
+                                        <!-- Control type options remain the same -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartLine" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Symbol Charts"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Gavel" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Trading Rules"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Alert" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Alerts"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Settings" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Configuration"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartScatterPlot" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Prediction Analysis"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Backtest Chart control option after Prediction Analysis -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartBar" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Backtest Chart"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add this control option to the ListBox -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartLineVariant" Width="24" Height="24" Margin="0,0,8,0" Foreground="#3E90FF"/>
+                                                <TextBlock Text="Sector Momentum Heatmap" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add this control option to the ControlComboBox after the "Prediction Analysis" option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Receipt" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Transactions"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Market Chat control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Chat" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Market Chat"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Spreads Explorer control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartMultiple" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Spreads Explorer"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                    </ComboBox>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- Section: Position and Size - Improved spacing and layout -->
+                            <materialDesign:Card Grid.Row="2" Grid.ColumnSpan="2" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                                <StackPanel>
+                                    <TextBlock Text="3. SET POSITION AND SIZE" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Position - Layout remains the same -->
+                                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,10,0">
+                                            <Label Content="Position in Grid:" Style="{StaticResource EnhancedLabelStyle}"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                                    <Label Content="Row:" Padding="0" Margin="0,0,0,3" Foreground="#99CCFF" Style="{StaticResource EnhancedSmallLabelStyle}"/>
+                                                    <TextBox x:Name="RowTextBox" 
+                                                         Text="0" 
+                                                         TextChanged="ValidatePosition"
+                                                         materialDesign:HintAssist.Hint="Row" 
+                                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                                    <Label Content="Column:" Padding="0" Margin="0,0,0,3" Foreground="#99CCFF" Style="{StaticResource EnhancedSmallLabelStyle}"/>
+                                                    <TextBox x:Name="ColumnTextBox" 
+                                                         Text="0" 
+                                                         TextChanged="ValidatePosition"
+                                                         materialDesign:HintAssist.Hint="Column" 
+                                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Size - Layout remains the same -->
+                                        <StackPanel Grid.Column="1" Grid.Row="0" Margin="10,0,0,0">
+                                            <Label Content="Control Size:" Style="{StaticResource EnhancedLabelStyle}"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                                    <Label Content="Row Span:" Padding="0" Margin="0,0,0,3" Foreground="#99CCFF" Style="{StaticResource EnhancedSmallLabelStyle}"/>
+                                                    <TextBox x:Name="RowSpanTextBox" 
+                                                         Text="4" 
+                                                         TextChanged="ValidatePosition"
+                                                         materialDesign:HintAssist.Hint="Row Span" 
+                                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                                    <Label Content="Column Span:" Padding="0" Margin="0,0,0,3" Foreground="#99CCFF" Style="{StaticResource EnhancedSmallLabelStyle}"/>
+                                                    <TextBox x:Name="ColumnSpanTextBox" 
+                                                         Text="4" 
+                                                         TextChanged="ValidatePosition"
+                                                         materialDesign:HintAssist.Hint="Column Span" 
+                                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </materialDesign:Card>
+
+                            <!-- IMPROVED: Grid Visualization with better sizing and ScrollViewer -->
+                            <materialDesign:Card Grid.Row="3" Grid.ColumnSpan="2" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <!-- Changed: Use star sizing for visualization container -->
+                                        <RowDefinition Height="*" MinHeight="160"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                
+                                    <!-- Heading -->
+                                    <TextBlock Grid.Row="0" Text="GRID VISUALIZATION" 
+                                             FontWeight="Bold" Foreground="#1E90FF" 
+                                             Margin="0,0,0,8" 
+                                             Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                    <!-- Added: ScrollViewer to handle large grid visualizations -->
+                                    <ScrollViewer Grid.Row="1" 
+                                                HorizontalScrollBarVisibility="Auto" 
+                                                VerticalScrollBarVisibility="Auto">
+                                        <Border x:Name="GridVisualizationContainer" 
+                                            BorderBrush="#3E3E56" 
+                                            BorderThickness="1" 
+                                            MinHeight="160"
+                                            MinWidth="300"
+                                            VerticalAlignment="Stretch"
+                                            HorizontalAlignment="Stretch">
+                                            <!-- Changed: Set background to slightly more visible shade -->
+                                            <Grid x:Name="GridVisualization" Background="#22283A"/>
+                                        </Border>
+                                    </ScrollViewer>
+
+                                    <!-- Instructions - moved to separate row for clarity -->
+                                    <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                                        <TextBlock TextWrapping="Wrap" Foreground="LightGray" FontStyle="Italic">
+                                            <Run Text="This visualization shows the current grid layout. "/>
+                                            <Run Text="Blue cells are available and red cells are already occupied. "/>
+                                            <Run Text="Your selected position will be highlighted in green."/>
+                                        </TextBlock>
+                                        
+                                        <TextBlock TextWrapping="Wrap" Margin="0,5,0,0" 
+                                                Foreground="LightGray" FontStyle="Italic">
+                                            <Run Text="Click on a cell to select position. "/>
+                                            <Run Text="Hold Shift and drag to set span. "/>
+                                            <Run Text="Numbers shown are 1-based indexes."/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </materialDesign:Card>
+
+                            <!-- Warning Message - Improved visibility with better placement -->
+                            <Border Grid.Row="4" Grid.ColumnSpan="2" 
+                                BorderThickness="1" 
+                                Margin="0,0,0,15" 
+                                Background="#33FF0000" 
+                                BorderBrush="#66FF0000"
+                                Visibility="{Binding ElementName=OverlapWarningTextBlock, Path=Visibility}"
+                                CornerRadius="5">
+                                <StackPanel Orientation="Horizontal" Margin="10">
+                                    <materialDesign:PackIcon Kind="Alert" VerticalAlignment="Center" Width="24" Height="24" Foreground="Red"/>
+                                    <TextBlock x:Name="OverlapWarningTextBlock" 
+                                           Margin="10,0,0,0" 
+                                           TextWrapping="Wrap" 
+                                           Foreground="Red" 
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed"
+                                           Text="This position would overlap with an existing control!" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Sticky Footer Buttons - Always visible at bottom -->
+                    <Grid Grid.Row="2" Margin="20,10,20,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="1" 
+                            Content="CANCEL" 
+                            Margin="0,0,10,0" 
+                            Style="{StaticResource ButtonStyle1}" 
+                            Click="CancelButton_Click" 
+                            Width="100"/>
+
+                        <Button Grid.Column="2" 
+                            x:Name="AddButton"
+                            Content="ADD CONTROL" 
+                            Background="{StaticResource AccentBlueBrush}" 
+                            Foreground="White" 
+                            Style="{StaticResource ButtonStyle1}" 
+                            Click="AddButton_Click" 
+                            Width="140"/>
+                    </Grid>
+                </Grid>
+            </materialDesign:Card>
+        </Border>
+    </Grid>
+</Window>

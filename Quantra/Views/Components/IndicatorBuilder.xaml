@@ -1,0 +1,177 @@
+<UserControl x:Class="Quantra.Views.Components.IndicatorBuilder"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#FF333333" Padding="10">
+            <StackPanel>
+                <TextBlock Text="Custom Indicator Builder" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Text="Create and customize your own technical indicators" Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Left Panel - Tools -->
+            <Border Grid.Column="0" Background="#FF222222" BorderBrush="#FF444444" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Search Box -->
+                    <StackPanel Grid.Row="0" Margin="10">
+                        <TextBlock Text="Components" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox x:Name="SearchBox" Style="{StaticResource EnhancedTextBoxStyle}" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Component List -->
+                    <TabControl Grid.Row="1" Background="#FF222222" BorderThickness="0">
+                        <TabItem Header="Indicators" Foreground="White" Background="#FF333333">
+                            <ListBox x:Name="IndicatorsList" Style="{StaticResource EnhancedListBoxStyle}">
+                                <ListBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#FFFFA500"/>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ListBox.GroupStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="5" Margin="2" Background="#FF333333">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                <TextBlock Text="{Binding Description}" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                                       TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </TabItem>
+                        <TabItem Header="Operations" Foreground="White" Background="#FF333333">
+                            <ListBox Style="{StaticResource EnhancedListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="5" Margin="2" Background="#FF333333">
+                                            <TextBlock Text="{Binding}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBoxItem>Add</ListBoxItem>
+                                <ListBoxItem>Subtract</ListBoxItem>
+                                <ListBoxItem>Multiply</ListBoxItem>
+                                <ListBoxItem>Divide</ListBoxItem>
+                                <ListBoxItem>Average</ListBoxItem>
+                                <ListBoxItem>Min</ListBoxItem>
+                                <ListBoxItem>Max</ListBoxItem>
+                            </ListBox>
+                        </TabItem>
+                        <TabItem Header="Templates" Foreground="White" Background="#FF333333">
+                            <ListBox Style="{StaticResource EnhancedListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="5" Margin="2" Background="#FF333333">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                <TextBlock Text="{Binding Description}" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                                       TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </TabItem>
+                    </TabControl>
+                </Grid>
+            </Border>
+            
+            <!-- Right Panel - Design Surface -->
+            <Border Grid.Column="1" Background="#FF1A1A1A">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="200"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Design Canvas -->
+                    <Border Grid.Row="0" Background="#FF1A1A1A" BorderBrush="#FF444444" 
+                            BorderThickness="0,0,0,1" Padding="10">
+                        <Canvas x:Name="DesignCanvas" Background="#FF1A1A1A">
+                            <TextBlock Text="Drag components here to build your indicator" 
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}" Canvas.Left="150" Canvas.Top="150"
+                                   FontStyle="Italic"/>
+                        </Canvas>
+                    </Border>
+                    
+                    <!-- Properties Panel -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Parameter Settings -->
+                        <Border Grid.Column="0" Background="#FF1E1E1E" Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="Parameters" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                <ScrollViewer Height="160" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ParametersPanel">
+                                        <TextBlock Text="No component selected" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                               FontStyle="Italic"/>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Preview Panel -->
+                        <Border Grid.Column="1" Background="#FF1E1E1E" Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="Live Preview" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                <Border Height="160" Background="#FF111111" Margin="0,5,0,0">
+                                    <TextBlock Text="Preview will be shown here" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                           FontStyle="Italic" HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+        
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="#FF222222" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Save" Width="80" Style="{StaticResource EnhancedButtonStyle}" Background="#FF1E90FF" Margin="5"/>
+                <Button Content="Test" Width="80" Style="{StaticResource EnhancedButtonStyle}" Background="#FF4CAF50" Margin="5"/>
+                <Button Content="Cancel" Width="80" Style="{StaticResource EnhancedButtonStyle}" Background="#FF555555" Margin="5"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

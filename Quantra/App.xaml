@@ -1,0 +1,180 @@
+﻿<Application x:Class="Quantra.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Quantra"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:Quantra.Converters"
+             StartupUri="Views/MainWindow/MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <materialDesign:BundledTheme BaseTheme="Dark" PrimaryColor="Blue" SecondaryColor="LightBlue" />
+                <!-- Add the reference to our enhanced styles dictionary -->
+                <ResourceDictionary Source="Styles/EnhancedStyles.xaml" />
+                <!-- Add the reference to our custom styles dictionary -->
+                <ResourceDictionary Source="Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Add the converter with the correct namespace reference -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <!-- Add alias for BooleanToVisibilityConverter -->
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            
+            <!-- Add the missing InverseBooleanConverter -->
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+            
+            <!-- Add InverseBoolToVisibilityConverter -->
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+            
+            <!-- Add the missing NullToBooleanConverter -->
+            <converters:NullToBooleanConverter x:Key="NullToBooleanConverter" />
+            
+            <!-- Add the missing NullToCollapsedConverter -->
+            <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter" />
+            
+            <!-- Add the missing Numeric converters -->
+            <converters:GreaterThanConverter x:Key="GreaterThanConverter" />
+            <converters:LessThanConverter x:Key="LessThanConverter" />
+            <converters:CurrencyFormatConverter x:Key="CurrencyFormatConverter" />
+            
+            <!-- Add the missing Color converters -->
+            <converters:ProfitLossColorConverter x:Key="ProfitLossColorConverter" />
+            <converters:WinRateColorConverter x:Key="WinRateColorConverter" />
+            
+            <!-- Add the missing additional converters -->
+            <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
+            <converters:SparklineSeriesConverter x:Key="SparklineSeriesConverter" />
+            
+            <!-- Add the missing Trade Mode converters -->
+            <converters:TradeModeForegroundConverter x:Key="TradeModeForegroundConverter" />
+            <converters:TradeModeTextConverter x:Key="TradeModeTextConverter" />
+            <converters:TradeModeBackgroundConverter x:Key="TradeModeBackgroundConverter" />
+            
+            <!-- Add the missing Order Status converters -->
+            <converters:OrderStatusForegroundConverter x:Key="OrderStatusForegroundConverter" />
+            <converters:OrderStatusBackgroundConverter x:Key="OrderStatusBackgroundConverter" />
+            
+            <!-- Color Resources -->
+            <SolidColorBrush x:Key="DarkBlueBrush" Color="#1E1E2F"/>
+            <SolidColorBrush x:Key="AccentBlueBrush" Color="#007ACC"/>
+            <SolidColorBrush x:Key="TextWhiteBrush" Color="#F8F8FF"/>
+            <!-- Updated to Ghost White -->
+            <SolidColorBrush x:Key="TextBlackBrush" Color="Black"/>
+            <SolidColorBrush x:Key="ComboBoxBackgroundBrush" Color="#2A2A3B"/>
+            <SolidColorBrush x:Key="TabBackgroundBrush" Color="Black"/>
+            <SolidColorBrush x:Key="TabForegroundBrush" Color="GhostWhite"/>
+            <SolidColorBrush x:Key="SelectedTabBackgroundBrush" Color="Blue"/>
+            <SolidColorBrush x:Key="SelectedTabForegroundBrush" Color="Black"/>
+            <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#2A2A3B"/>
+            <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#2D2D44"/>
+            <SolidColorBrush x:Key="DisabledButtonBackgroundBrush" Color="#1A1A28"/>
+            <SolidColorBrush x:Key="DisabledButtonForegroundBrush" Color="#666677"/>
+            <SolidColorBrush x:Key="DisabledButtonBorderBrush" Color="#333344"/>
+            <SolidColorBrush x:Key="PINKPINK" Color="HotPink"/>
+            <SolidColorBrush x:Key="DarkBlueAccentBrush" Color="#262638"/>
+            <SolidColorBrush x:Key="LightBlueBrush" Color="#3E90FF"/>
+            
+            <!-- Loading bar colors -->
+            <SolidColorBrush x:Key="LoadingBackgroundPurpleBrush" Color="#8A2BE2"/>
+            <SolidColorBrush x:Key="IdleBackgroundRoyalBlueBrush" Color="#4169E1"/>
+
+            <!-- Add the missing TextBoxStyle1 style -->
+            <Style x:Key="TextBoxStyle1" TargetType="TextBox">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+            
+            <!-- Other styles remain unchanged -->
+            <Style x:Key="PasswordBoxStyle1" TargetType="PasswordBox">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+            <Style x:Key="ListBoxStyle1" TargetType="ListBox">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+            </Style>
+            <Style x:Key="ComboBoxStyle1" TargetType="ComboBox">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextBlackBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="Margin" Value="5"/>
+            </Style>
+            <Style x:Key="ButtonStyle1" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="Margin" Value="5"/>
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="{StaticResource DisabledButtonBackgroundBrush}"/>
+                        <Setter Property="Foreground" Value="{StaticResource DisabledButtonForegroundBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource DisabledButtonBorderBrush}"/>
+                        <Setter Property="Opacity" Value="0.7"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="HeaderTextStyle" TargetType="Label">
+                <Setter Property="Background" Value="{StaticResource HeaderBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="Margin" Value="5"/>
+            </Style>
+            <Style x:Key="ButtonStyle2" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource ButtonBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBlueBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="Margin" Value="5"/>
+                <Style.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="{StaticResource DisabledButtonBackgroundBrush}"/>
+                        <Setter Property="Foreground" Value="{StaticResource DisabledButtonForegroundBrush}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource DisabledButtonBorderBrush}"/>
+                        <Setter Property="Opacity" Value="0.7"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="{StaticResource TabBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TabForegroundBrush}"/>
+            </Style>
+            <Style TargetType="TabItem">
+                <Setter Property="Background" Value="{StaticResource TabBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TabForegroundBrush}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="{StaticResource SelectedTabBackgroundBrush}"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextBlackBrush}"/>
+                    </Trigger>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource TextBlackBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- MaterialDesignCard Style -->
+            <Style x:Key="MaterialDesignCard" TargetType="materialDesign:Card">
+                <Setter Property="Background" Value="{StaticResource ComboBoxBackgroundBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}"/>
+                <Setter Property="Padding" Value="10"/>
+                <Setter Property="Margin" Value="10"/>
+            </Style>
+        </ResourceDictionary>
+        <!-- Ensure no global styles override the CustomTitleBar -->
+    </Application.Resources>
+</Application>

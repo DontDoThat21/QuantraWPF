@@ -1,0 +1,86 @@
+<Window x:Class="Quantra.StylesTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Styles.xaml Test Window" Height="400" Width="600"
+        Background="#1E1E2F">
+    
+    <!-- Test window to demonstrate the correct usage of Styles.xaml -->
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Styles.xaml Syntax Demonstration" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Foreground="#3E90FF" 
+                   Margin="0,0,0,20"/>
+        
+        <!-- Test Border with custom style -->
+        <Border Grid.Row="1" 
+                Style="{StaticResource CustomBorderStyle}"
+                Margin="0,0,0,15">
+            <TextBlock Text="This border demonstrates correct BorderBrush, BorderThickness, CornerRadius, and Padding properties" 
+                       Foreground="GhostWhite" 
+                       TextWrapping="Wrap"/>
+        </Border>
+        
+        <!-- Test Button with custom style -->
+        <Button Grid.Row="2" 
+                Content="Custom Styled Button" 
+                Style="{StaticResource CustomButtonStyle}"
+                HorizontalAlignment="Left"
+                Margin="0,0,0,15"/>
+        
+        <!-- Test TextBox with custom style -->
+        <TextBox Grid.Row="3" 
+                 Text="Custom Styled TextBox" 
+                 Style="{StaticResource CustomTextBoxStyle}"
+                 Width="300"
+                 HorizontalAlignment="Left"
+                 Margin="0,0,0,15"/>
+        
+        <!-- Test Material Design Card with custom style -->
+        <materialDesign:Card Grid.Row="4" 
+                             Style="{StaticResource CustomCardStyle}"
+                             VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="Custom Material Design Card" 
+                          FontWeight="Bold" 
+                          Foreground="#3E90FF" 
+                          Margin="0,0,0,10"/>
+                <TextBlock Text="This card demonstrates proper usage of Padding, UniformCornerRadius, and other Material Design properties." 
+                          Foreground="GhostWhite" 
+                          TextWrapping="Wrap"/>
+                <TextBlock Text="All syntax errors mentioned in issue #594 have been addressed:" 
+                          Foreground="#99CCFF" 
+                          Margin="0,10,0,5"/>
+                <TextBlock Text="✓ BorderBrush instead of BorderColor" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+                <TextBlock Text="✓ BorderThickness instead of BorderWidth" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+                <TextBlock Text="✓ Proper CornerRadius usage" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+                <TextBlock Text="✓ Proper Padding usage" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+                <TextBlock Text="✓ Correct Key attribute placement" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+                <TextBlock Text="✓ No duplicate Value properties" 
+                          Foreground="#50E070" 
+                          Margin="5,0,0,2"/>
+            </StackPanel>
+        </materialDesign:Card>
+    </Grid>
+</Window>

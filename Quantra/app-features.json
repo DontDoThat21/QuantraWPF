@@ -1,0 +1,167 @@
+{
+  "instructions": "Work through all tasks without confirmation. Complete each task fully. The Day Trader app uses WPF MVVM, Material Design in XAML, SQLite, LiveCharts, Alpha Vantage API, Webull integration, AutoHotKey for VS automation, and xUnit testing.",
+  "tasks": [
+    {
+      "title": "Initialize WPF MVVM Architecture with Material Design",
+      "details": "Setup solution structure, install NuGet packages (Material Design, MVVM Toolkit, SQLite, LiveCharts, xUnit). Configure base MVVM pattern.",
+      "status": "not_started",
+      "files": ["App.xaml", "MainWindow.xaml", "MainViewModel.cs"]
+    },
+    {
+      "title": "Implement SQLite Database Schema",
+      "details": "Define tables for HistoricalPrices, Indicators, Alerts, UserSettings, StrategyProfiles, BacktestLogs.",
+      "status": "not_started",
+      "files": ["Database/Models/*.cs", "Database/DatabaseContext.cs"]
+    },
+    {
+      "title": "Integrate Alpha Vantage API with Data Caching",
+      "details": "Fetch historical prices and indicators, implement data caching logic in SQLite, handle rate limiting.",
+      "status": "not_started",
+      "files": ["Services/AlphaVantageService.cs"]
+    },
+    {
+      "title": "Add Multi-threaded Data Retrieval",
+      "details": "Create threaded workers to retrieve data and update Prediction Analysis Controls without UI blocking.",
+      "status": "not_started",
+      "files": ["Threading/DataWorker.cs"]
+    },
+    {
+      "title": "Implement Modular Prediction Analysis Controls (PAC)",
+      "details": "Create modular PAC to display predictions, indicators, and controls for individual stocks.",
+      "status": "not_started",
+      "files": ["Controls/PredictionAnalysisControl.xaml", "Controls/PredictionAnalysisControl.xaml.cs"]
+    },
+    {
+      "title": "Add Technical Indicator Calculations (~18 indicators)",
+      "details": "Implement RSI, MACD, VWAP, ADX, Bollinger Bands, EMA, SMA, Stoch RSI, OBV, Momentum, CCI, ATR.",
+      "status": "not_started",
+      "files": ["Indicators/*.cs"]
+    },
+    {
+      "title": "Build Strategy Profile Management",
+      "details": "Implement profile selection logic, allowing users to select trading strategies per PAC.",
+      "status": "not_started",
+      "files": ["Strategies/StrategyEngine.cs", "Strategies/StrategyProfile.cs"]
+    },
+    {
+      "title": "Auto-Trading Execution Logic",
+      "details": "Implement auto-trading toggle per PAC, triggering simulated (backtest) or live trades based on rules.",
+      "status": "not_started",
+      "files": ["Trading/TradeExecutor.cs"]
+    },
+    {
+      "title": "Add LiveCharts Visualization for Stock Data",
+      "details": "Integrate LiveCharts to visualize stock price data, indicators, signals, entry/exit points.",
+      "status": "not_started",
+      "files": ["Controls/StockChart.xaml", "Controls/StockChart.xaml.cs"]
+    },
+    {
+      "title": "AlertsControl Global Alert System",
+      "details": "Display global alerts (errors, opportunities, new predictions) with severity indicators.",
+      "status": "not_started",
+      "files": ["Controls/AlertsControl.xaml", "Controls/AlertsControl.xaml.cs"]
+    },
+    {
+      "title": "Centralized Logging and Error Handling",
+      "details": "Log and manage application errors globally, implement pruning for errors older than 7 days.",
+      "status": "not_started",
+      "files": ["Utilities/Logger.cs"]
+    },
+    {
+      "title": "User Settings Modal Implementation",
+      "details": "Build settings modal allowing users to configure email/SMS alerts, default trading profiles, themes, and API keys.",
+      "status": "not_started",
+      "files": ["Views/SettingsModal.xaml", "Views/SettingsModal.xaml.cs"]
+    },
+    {
+      "title": "Email and SMS Notification System",
+      "details": "Implement real-time email and SMS notifications triggered by alerts and trading signals.",
+      "status": "not_started",
+      "files": ["Services/NotificationService.cs"]
+    },
+    {
+      "title": "Comprehensive Backtesting Module",
+      "details": "Develop backtesting engine to simulate historical trades using stored historical data and configured strategy profiles.",
+      "status": "not_started",
+      "files": ["Modules/Backtester.cs"]
+    },
+    {
+      "title": "Backtesting Visualizations with LiveCharts",
+      "details": "Generate detailed visualizations (charts, drawdown, equity curves) for backtest results using LiveCharts.",
+      "status": "not_started",
+      "files": ["Controls/BacktestChart.xaml", "Controls/BacktestChart.xaml.cs"]
+    },
+    {
+      "title": "Risk Management Integration",
+      "details": "Implement position sizing, stop-loss, take-profit logic within trading execution based on configurable rules.",
+      "status": "not_started",
+      "files": ["Risk/RiskManagement.cs"]
+    },
+    {
+      "title": "JSON Task-Based Automation Engine",
+      "details": "Develop task engine to process JSON-formatted task lists and interact with Copilot automation via AutoHotKey scripts.",
+      "status": "not_started",
+      "files": ["Automation/TaskAutomationEngine.cs"]
+    },
+    {
+      "title": "Copilot Agent Automation via AutoHotKey",
+      "details": "Create AutoHotKey scripts to automate VS 2022 Copilot Agent mode, reading and executing JSON tasks automatically.",
+      "status": "not_started",
+      "files": ["Automation/CopilotAgent.ahk"]
+    },
+    {
+      "title": "Python ML Integration via C# Interop",
+      "details": "Implement interop between C# and Python ML scripts (TensorFlow, PyTorch) to run advanced predictive models.",
+      "status": "not_started",
+      "files": ["ML/PythonInterop.cs"]
+    },
+    {
+      "title": "Implement LSTM Model for Time-Series Predictions",
+      "details": "Add Python-based LSTM for forecasting stock price movements using historical data from Alpha Vantage.",
+      "status": "not_started",
+      "files": ["ML/LSTMModel.py"]
+    },
+    {
+      "title": "CNN for Candle Pattern Detection",
+      "details": "Develop CNN to identify specific candle patterns, integrating results into trading signals.",
+      "status": "not_started",
+      "files": ["ML/CNNModel.py"]
+    },
+    {
+      "title": "Random Forest and GBM Predictors",
+      "details": "Build Random Forest and GBM models to provide robust baseline predictions.",
+      "status": "not_started",
+      "files": ["ML/GBMModel.py"]
+    },
+    {
+      "title": "Sentiment Analysis Integration",
+      "details": "Implement sentiment analysis from Twitter API with NLP libraries, overlay results onto trade signals.",
+      "status": "not_started",
+      "files": ["Sentiment/SentimentEngine.cs", "ML/SentimentAnalysis.py"]
+    },
+    {
+      "title": "Reinforcement Learning Strategy Optimizer",
+      "details": "Create reinforcement learning-based optimizer to refine trading strategies dynamically.",
+      "status": "not_started",
+      "files": ["ML/ReinforcementLearning.py"]
+    },
+    {
+      "title": "Full xUnit Testing with 100% Logic Coverage",
+      "details": "Write comprehensive xUnit tests covering all core logic including indicators, strategies, risk management, backtesting, database interactions, and API services.",
+      "status": "not_started",
+      "files": ["Tests/*.cs"]
+    },
+    {
+      "title": "Complete End-to-End UI Polish and Performance Optimization",
+      "details": "Review all UI components, optimize responsiveness, memory usage, ensure adherence to Material Design guidelines, and finalize all visual details.",
+      "status": "not_started",
+      "files": ["*.xaml", "*.cs"]
+    },
+    {
+      "title": "Deploy and Package Application",
+      "details": "Implement a deployment pipeline and packaging process to create stable releases of the application.",
+      "status": "not_started",
+      "files": ["Deployment/DeploymentPipeline.yml"]
+    }
+  ]
+}

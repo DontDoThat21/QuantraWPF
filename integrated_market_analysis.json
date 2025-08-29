@@ -1,0 +1,21 @@
+{
+  "market_regime": {
+    "current_regime": "RANGING",
+    "regime_confidence": 0.5,
+    "recommended_approaches": []
+  },
+  "anomalies": {
+    "anomalies_detected": false,
+    "anomaly_count": 0,
+    "recent_anomalies": []
+  },
+  "timestamp": "2025-05-23 16:13:36",
+  "risk_assessment": {
+    "risk_level": "LOW",
+    "concerns": []
+  },
+  "recommendations": [
+    "Ranging market detected - consider mean-reversion strategies",
+    "Look for overbought/oversold conditions at range boundaries"
+  ]
+}

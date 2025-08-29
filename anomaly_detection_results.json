@@ -1,0 +1,70 @@
+{
+  "anomalies_detected": true,
+  "anomaly_count": 1,
+  "anomaly_indices": [
+    46
+  ],
+  "anomaly_types": {
+    "46": [
+      "VOLUME_ANOMALY"
+    ]
+  },
+  "anomaly_insights": {
+    "46": {
+      "anomaly_types": [
+        "VOLUME_ANOMALY"
+      ],
+      "description": [
+        "Unusual trading volume 4.72x above normal levels"
+      ],
+      "potential_causes": [
+        "Institutional accumulation/distribution",
+        "News-driven trading activity",
+        "Market maker activity",
+        "Potential trend reversal signal"
+      ],
+      "suggested_actions": [
+        "Monitor price action following volume spike",
+        "Check for block trades or unusual options activity",
+        "Look for confirmation from other technical indicators",
+        "Consider increasing position monitoring frequency"
+      ]
+    }
+  },
+  "detection_methods": [
+    "isolation_forest",
+    "local_outlier_factor",
+    "one_class_svm"
+  ],
+  "feature_engineering_used": true,
+  "timestamp": "2025-05-23 16:11:31",
+  "recent_anomalies": [
+    {
+      "index": 46,
+      "date": "46",
+      "types": [
+        "VOLUME_ANOMALY"
+      ],
+      "insights": {
+        "anomaly_types": [
+          "VOLUME_ANOMALY"
+        ],
+        "description": [
+          "Unusual trading volume 4.72x above normal levels"
+        ],
+        "potential_causes": [
+          "Institutional accumulation/distribution",
+          "News-driven trading activity",
+          "Market maker activity",
+          "Potential trend reversal signal"
+        ],
+        "suggested_actions": [
+          "Monitor price action following volume spike",
+          "Check for block trades or unusual options activity",
+          "Look for confirmation from other technical indicators",
+          "Consider increasing position monitoring frequency"
+        ]
+      }
+    }
+  ]
+}

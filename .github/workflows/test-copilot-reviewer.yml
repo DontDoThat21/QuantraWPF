@@ -1,0 +1,131 @@
+name: Test Copilot Reviewer Assignment
+
+# This workflow is used to test the auto-assign Copilot as reviewer functionality
+# It creates a mock PR event and validates the logic without actually assigning reviewers
+
+on:
+  workflow_dispatch:
+    inputs:
+      mock_pr_title:
+        description: 'Mock PR title'
+        required: true
+        default: 'Test PR created by AI'
+      mock_pr_body:
+        description: 'Mock PR body'
+        required: true
+        default: 'This PR was completed by Copilot'
+      mock_labels:
+        description: 'Comma-separated labels'
+        required: false
+        default: 'review-requested-by-ai'
+      mock_author:
+        description: 'PR author username'
+        required: false
+        default: 'test-user'
+      copilot_username:
+        description: 'GitHub Copilot username to test'
+        required: false
+        default: 'copilot'
+
+jobs:
+  test-conditions:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Test PR detection logic
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Create mock PR data from inputs
+            const mockPR = {
+              number: 999,
+              title: '${{ inputs.mock_pr_title }}',
+              body: '${{ inputs.mock_pr_body }}',
+              labels: '${{ inputs.mock_labels }}'.split(',').filter(label => label.trim() !== '').map(label => ({ name: label.trim() })),
+              user: {
+                login: '${{ inputs.mock_author }}'
+              }
+            };
+            
+            console.log('Mock PR:', mockPR);
+            
+            // Copy detection logic from assign-copilot-reviewer.yml for testing
+            const aiRelatedLabels = [
+              'review-requested-by-ai', 
+              'ai-generated',
+              'ai-task',
+              'copilot',
+              'copilot-generated'
+            ];
+            
+            // Check if PR has any AI-related labels
+            const hasAiLabel = mockPR.labels.some(label => 
+              aiRelatedLabels.includes(label.name.toLowerCase())
+            );
+            
+            // Check if PR title or body contains AI-related keywords
+            const aiKeywords = [
+              'copilot', 
+              'ai task', 
+              'ai generated',
+              'github copilot',
+              'completed by ai'
+            ];
+            
+            const titleHasAiKeyword = aiKeywords.some(keyword => 
+              mockPR.title.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            const bodyHasAiKeyword = mockPR.body && aiKeywords.some(keyword => 
+              mockPR.body.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            // Check if PR was created by a bot or AI-related account
+            const aiAuthors = ['web-flow', 'github-actions', 'copilot'];
+            const isAiAuthor = aiAuthors.includes(mockPR.user.login.toLowerCase());
+            
+            // Determine if we would assign Copilot as reviewer
+            const shouldAssign = hasAiLabel || titleHasAiKeyword || bodyHasAiKeyword || isAiAuthor;
+            
+            console.log(`\n=== TEST RESULTS ===`);
+            console.log(`PR #${mockPR.number} AI-related: ${shouldAssign}`);
+            console.log(`- Has AI label: ${hasAiLabel}`);
+            console.log(`- Title has AI keyword: ${titleHasAiKeyword}`);
+            console.log(`- Body has AI keyword: ${bodyHasAiKeyword}`);
+            console.log(`- Is AI author: ${isAiAuthor}`);
+            console.log(`\nWould assign ${{ inputs.copilot_username }} as reviewer: ${shouldAssign ? 'YES' : 'NO'}`);
+            
+            // Report failure if conditions aren't met
+            if (!shouldAssign) {
+              core.setFailed('PR would not be detected as AI-related. Check inputs and detection logic.');
+            } else {
+              console.log('Test passed! PR would be detected correctly as AI-related.');
+            }
+      
+      - name: Test Copilot username exists
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const copilotUsername = '${{ inputs.copilot_username }}';
+            console.log(`Testing if GitHub user ${copilotUsername} exists...`);
+            
+            try {
+              const { data: user } = await github.rest.users.getByUsername({
+                username: copilotUsername
+              });
+              console.log(`✅ Success! GitHub user ${copilotUsername} exists.`);
+              console.log(`User ID: ${user.id}, Type: ${user.type}`);
+            } catch (error) {
+              console.log(`⚠️ Warning: Could not verify GitHub user ${copilotUsername} exists.`);
+              console.log(`This might be because:`);
+              console.log(`- The user doesn't exist`);
+              console.log(`- The user is private`);
+              console.log(`- Your token doesn't have sufficient permissions`);
+              
+              // We don't fail the workflow, as the main workflow will also try to assign anyway
+              console.log(`The main workflow will still attempt to assign this user as a reviewer.`);
+            }

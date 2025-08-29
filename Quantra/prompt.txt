@@ -1,0 +1,45 @@
+Don't ask me for confirmations. Just keep working through all tasks automatically.
+This prompt.txt is your guide for completing this project. 
+This Quantra app is a algorithmic trading application,
+making predictions via AlphaVantage historcitcal data via APIs and more.
+After this first initial section,
+section meaning a block/paragraph of texts between empty line breaks,
+treat each text block as a "story"/"feature", and implement it indiviually from the other sections, to completion. 
+Feel free to mark this/a different txt file for statuses/marking what tasks are done.
+
+The AlertsControl isn't properly displaying. Improve the UI rendering code behind logic to display properly.
+
+Every error, from every method, should be both logged to any open AlertsControl instance. 
+This should already be implemented partially or fully already. 
+The AlertsControl is a real-time 'console' to display news, live application errors, stock events, etc.
+When opening the app, clear all errors > 7 days old from the database table(s).
+
+When selecting a stock form the drop down or from the StockDataGrid, 
+all of the indicators should load correct, 
+and up to date information from the AlphaVantage service.
+
+Improve the SettingsWindow form's UI and functionality. 
+Any settings in the UI need to be implemented if they are not already.
+
+Add email alerts when a good buying opportunity has been spotted through the Prediction Analysis results.
+Send the emails to a configurable email address, set and saved in the database from the SettingsWindow form (tylortrub@gmail.com for default).
+
+Any prediction analysis control with "Auto Mode" toggled automatically analyze every-so-often.
+This may already happen, but the grid isn't ever displaying datas. The Grid should show the most recent result of the analysis.
+
+Every form needs to be MVVM. Start with StockExplorer form first.
+Break up the code-behind of the StockExplorer form to be properly seperated into partial classes per functionality category.
+
+The PredictionAnalysis should be MMVM, but ensure it is properly following MVVM standards as well.
+
+The gray/silver (not sure) grid cell border preview is showing up BEFORE the control is being highlighted. This is wrong.
+
+A system for retrieving tweets to determine stock directions needs to be implemented.
+Use AI sentiment analysis, powered off of the local machine's GPU ideally, interopped from C# using Python script(s).
+Implement the Python, and C# required.
+
+The cell to open the orders widget should be a button in the StockDataGrid cell(s), one per stock/symbol,
+to stop and enable the symbol from auto trading in that particlar Prediction Analysis control.
+A stop auto trading button should then be visible on that PredictionAnalysis.
+
+Improve the Grid interactivity functionality, and colors.

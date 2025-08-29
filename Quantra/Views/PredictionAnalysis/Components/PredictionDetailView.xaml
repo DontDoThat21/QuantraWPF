@@ -1,0 +1,307 @@
+<UserControl x:Class="Quantra.Controls.Components.PredictionDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Quantra.Controls.Components"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="400"
+             Background="#262639">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Selected Symbol Info -->
+            <StackPanel Grid.Row="0">
+                <TextBlock x:Name="SelectedSymbolTitle" Text="Select a symbol from the list" 
+                           Style="{StaticResource EnhancedHeaderTextBlockStyle}" Margin="10,5"/>
+                <TextBlock x:Name="PredictionSummaryText" Text="" 
+                           Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="10,0,10,5"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Price Chart with Indicators -->
+            <lvc:CartesianChart x:Name="PredictionChart" Grid.Row="1" Margin="5" 
+                                DisableAnimations="True"
+                                HorizontalAlignment="Stretch" 
+                                VerticalAlignment="Stretch"
+                                MinHeight="180" MaxHeight="240">
+                <lvc:CartesianChart.Series>
+                    <lvc:LineSeries x:Name="PriceSeries" Title="Price"
+                                    Values="{Binding PriceValues}" 
+                                    PointGeometry="{x:Null}" 
+                                    Stroke="#3E90FF"
+                                    StrokeThickness="2"/>
+                    <lvc:LineSeries x:Name="VwapSeries" Title="VWAP"
+                                    Values="{Binding VwapValues}" 
+                                    PointGeometry="{x:Null}" 
+                                    Stroke="#FF8C00"
+                                    StrokeThickness="1"
+                                    Fill="Transparent"/>
+                    <lvc:LineSeries x:Name="PredictionSeries" Title="Prediction"
+                                    Values="{Binding PredictionValues}" 
+                                    PointGeometry="{x:Null}" 
+                                    StrokeDashArray="5"
+                                    Stroke="#20C040"
+                                    StrokeThickness="1"
+                                    Fill="Transparent"/>
+                </lvc:CartesianChart.Series>
+                <lvc:CartesianChart.AxisX>
+                    <lvc:Axis Title="Date" Style="{StaticResource EnhancedTextBlockStyle}" LabelFormatter="{Binding DateFormatter}"/>
+                </lvc:CartesianChart.AxisX>
+                <lvc:CartesianChart.AxisY>
+                    <lvc:Axis Title="Price" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </lvc:CartesianChart.AxisY>
+            </lvc:CartesianChart>
+
+            <!-- ML Confidence and Analysis Section -->
+            <Grid Grid.Row="2" Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0"
+                           Text="ML Model Analysis" 
+                           Style="{StaticResource EnhancedHeaderTextBlockStyle}"
+                           Margin="0,0,0,5"/>
+
+                <!-- ML Confidence Meter -->
+                <materialDesign:Card Grid.Row="1" Style="{StaticResource EnhancedContentCardStyle}" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="Prediction Confidence" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        
+                        <!-- Confidence Meter -->
+                        <Grid Grid.Row="1" Height="30" Margin="0,8,0,8">
+                            <Rectangle x:Name="ConfidenceBackground" Fill="#333344" RadiusX="3" RadiusY="3">
+                                <Rectangle.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="ML Model Confidence" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                            <TextBlock Text="Higher confidence indicates stronger model certainty" Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="0,5,0,0"/>
+                                            <TextBlock Text="Green: High (>75%) - Strong signal" Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="0,2,0,0"/>
+                                            <TextBlock Text="Yellow: Medium (50-75%) - Moderate signal" Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="0,2,0,0"/>
+                                            <TextBlock Text="Red: Low (less than 50%) - Weak signal" Style="{StaticResource EnhancedSmallTextBlockStyle}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </Rectangle.ToolTip>
+                            </Rectangle>
+                            <Rectangle x:Name="ConfidenceFill" Fill="#20C040" HorizontalAlignment="Left" Width="50" RadiusX="3" RadiusY="3"/>
+                            <TextBlock x:Name="ConfidenceText" Text="50%" Style="{StaticResource EnhancedTextBlockStyle}" 
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Model Info -->
+                        <StackPanel Grid.Row="2">
+                            <TextBlock x:Name="ModelTypeText" Text="Model Type: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="InferenceTimeText" Text="Inference Time: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="PredictionQualityText" Text="Quality Score: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <!-- Risk Metrics Summary -->
+                        <materialDesign:Card Grid.Row="3" Style="{StaticResource EnhancedContentCardStyle}" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Risk Analysis" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5">
+                                    <TextBlock.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel Width="250">
+                                                <TextBlock Text="Risk Assessment" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                <TextBlock Text="Risk Score: Overall risk level of this trade (lower is better)" 
+                                                           Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                                <TextBlock Text="Value at Risk (VaR): Maximum expected loss with 95% confidence" 
+                                                           Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                                <TextBlock Text="Sharpe Ratio: Risk-adjusted return metric (higher is better)" 
+                                                           Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                                <TextBlock x:Name="RiskScoreText" Text="Risk Score: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="ValueAtRiskText" Text="Value at Risk: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="SharpeRatioText" Text="Sharpe Ratio: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
+                </materialDesign:Card>
+
+                <!-- Feature Importance Chart -->
+                <materialDesign:Card Grid.Row="2"
+                        Style="{StaticResource EnhancedContentCardStyle}"
+                        Margin="0,0,0,8" >
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="Feature Importance" Style="{StaticResource EnhancedTextBlockStyle}" >
+                            <TextBlock.ToolTip>
+                                <ToolTip>
+                                    <StackPanel Width="250">
+                                        <TextBlock Text="Feature Importance Visualization" />
+                                        <TextBlock Text="Shows which market factors most influenced this prediction" 
+                                                   TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                        <TextBlock Text="Green bars: Positive influence (supports buying)" 
+                                                   TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Red bars: Negative influence (supports selling)" 
+                                                   TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                        <TextBlock Text="Longer bars indicate stronger influence." 
+                                                   TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </TextBlock.ToolTip>
+                        </TextBlock>
+                        
+                        <!-- Feature bars will be added here dynamically -->
+                        <StackPanel x:Name="FeatureImportancePanel" Grid.Row="1" Margin="0,8,0,0">
+                            <TextBlock x:Name="NoFeaturesText" Text="No feature data available" Style="{StaticResource EnhancedSmallTextBlockStyle}" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Grid>
+                </materialDesign:Card>
+            </Grid>
+
+            <!-- ML Model Performance Visualization -->
+            <Grid Grid.Row="3" Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0"
+                           Text="ML Model Performance" 
+                           Style="{StaticResource EnhancedTextBlockStyle}" 
+                           Margin="0,0,0,5"/>
+                
+                <!-- ML Performance Visualization Panel -->
+                <materialDesign:Card Grid.Row="1"
+                        Style="{StaticResource EnhancedContentCardStyle}"
+                        Margin="0,0,0,8" >
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- ML Performance Metrics -->
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Performance Metrics -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock x:Name="PredictionAccuracyText" Text="Historical Accuracy: --" 
+                                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="ConsecutiveCorrectText" Text="Consecutive Correct: --" 
+                                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                                <TextBlock x:Name="ConfidenceTrendText" Text="Confidence Trend: --"
+                                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Generate Dashboard Button -->
+                            <Button x:Name="GenerateDashboardButton" Grid.Column="1" 
+                                    Content="Generate Dashboard" Style="{StaticResource EnhancedButtonStyle}" Margin="10,0,0,0"
+                                    VerticalAlignment="Top" Click="GenerateDashboardButton_Click">
+                                <Button.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock Text="Generate a detailed performance dashboard for this model" />
+                                    </ToolTip>
+                                </Button.ToolTip>
+                            </Button>
+                        </Grid>
+                        
+                        <!-- Performance Visualization -->
+                        <materialDesign:Card Grid.Row="1" 
+                                Style="{StaticResource EnhancedContentCardStyle}"
+                                Margin="0,0,0,8" MinHeight="120">
+                            <Grid>
+                                <Image x:Name="PerformanceDashboardImage" Stretch="Uniform"/>
+                                <TextBlock x:Name="NoDashboardText" Text="Click 'Generate Dashboard' to view model performance" 
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap" TextAlignment="Center" 
+                                          Width="200"/>
+                                <ProgressBar x:Name="DashboardLoadingIndicator" 
+                                            IsIndeterminate="True" Height="5" 
+                                            VerticalAlignment="Bottom" 
+                                            Visibility="Collapsed"/>
+                            </Grid>
+                        </materialDesign:Card>
+                        
+                        <!-- Performance Insights -->
+                        <TextBlock x:Name="PerformanceInsightsText" Grid.Row="2"
+                                  Text="Performance insights will appear here after generating a dashboard."
+                                  Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap"/>
+                    </Grid>
+                </materialDesign:Card>
+            </Grid>
+            
+            <!-- Indicators Panel -->
+            <Grid Grid.Row="4" Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                           Text="Technical Indicators" 
+                           Style="{StaticResource EnhancedTextBlockStyle}" 
+                           Margin="0,0,0,5"/>
+                
+                <!-- RSI Panel -->
+                <materialDesign:Card Grid.Row="1" Grid.Column="0"
+                        Style="{StaticResource EnhancedContentCardStyle}"
+                        Margin="0,0,5,0" >
+                    <StackPanel Margin="8">
+                        <TextBlock Text="RSI" Style="{StaticResource EnhancedTextBlockStyle}" />
+                        <TextBlock x:Name="RsiValueText" Text="RSI: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,5,0,0"/>
+                        <TextBlock x:Name="RsiTrendText" Text="Trend: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="RsiSignalText" Text="Signal: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </materialDesign:Card>
+                
+                <!-- Other Indicator Panel -->
+                <materialDesign:Card Grid.Row="1" Grid.Column="1"
+                        Style="{StaticResource EnhancedContentCardStyle}"
+                        Margin="5,0,0,0" >
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Volume Analysis" Style="{StaticResource EnhancedTextBlockStyle}" />
+                        <TextBlock x:Name="VolumeText" Text="Volume: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,5,0,0"/>
+                        <TextBlock x:Name="VwapText" Text="VWAP: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="VolumeTrendText" Text="Trend: --" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

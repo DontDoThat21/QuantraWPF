@@ -1,0 +1,173 @@
+<Window x:Class="Quantra.Views.Backtesting.CustomBenchmarkDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:Quantra.Views.Backtesting"
+        mc:Ignorable="d"
+        Title="Custom Benchmark" Height="550" Width="700"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="#23233A"
+        Foreground="White">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Basic Info Section -->
+        <GroupBox Header="Benchmark Information" Grid.Row="0" Margin="0,0,0,10" Foreground="White">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBox Grid.Column="1" Grid.Row="0" x:Name="NameTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                
+                <TextBlock Grid.Column="2" Grid.Row="0" Text="Category:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <ComboBox Grid.Column="3" Grid.Row="0" x:Name="CategoryComboBox" Style="{StaticResource EnhancedComboBoxStyle}"/>
+                
+                <TextBlock Grid.Column="0" Grid.Row="1" Text="Description:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBox Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="1" x:Name="DescriptionTextBox" TextWrapping="Wrap" 
+                         AcceptsReturn="True" Height="40" VerticalScrollBarVisibility="Auto" Style="{StaticResource EnhancedTextBoxStyle}"/>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Component Management Section -->
+        <GroupBox Header="Benchmark Components" Grid.Row="1" Margin="0,0,0,10" Foreground="White">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" Text="Symbol:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBox Grid.Column="1" x:Name="SymbolTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                
+                <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                
+                <TextBlock Grid.Column="4" Text="Weight (%):" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                
+                <Button Grid.Column="5" x:Name="AddComponentButton" Content="Add"
+                        Click="AddComponentButton_Click"
+                        Style="{StaticResource EnhancedButtonStyle}"/>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Weight Distribution Section -->
+        <GroupBox Header="Component Weights" Grid.Row="2" Margin="0,0,0,10" Foreground="White">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="EqualWeightButton" Content="Equal Weight" Margin="0,0,10,0"
+                            Click="EqualWeightButton_Click" ToolTip="Set equal weights for all components"
+                            Style="{StaticResource EnhancedButtonStyle}"/>
+                    <Button x:Name="NormalizeWeightsButton" Content="Normalize Weights" Margin="0,0,10,0"
+                            Click="NormalizeWeightsButton_Click" ToolTip="Normalize weights to sum to 100%"
+                            Style="{StaticResource EnhancedButtonStyle}"/>
+                </StackPanel>
+                
+                <TextBlock Grid.Column="1" x:Name="TotalWeightText" Text="Total: 0%" 
+                           VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Component Table Header -->
+        <Grid Grid.Row="3" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" Text="Symbol" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+            <TextBlock Grid.Column="1" Text="Name" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+            <TextBlock Grid.Column="2" Text="Weight %" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+            <TextBlock Grid.Column="3" Text="Actions" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+        </Grid>
+        
+        <!-- Component List -->
+        <ScrollViewer Grid.Row="4" Margin="5" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="ComponentsItemControl">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="{Binding Symbol}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding WeightPercentage}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                <Button Content="Edit" Tag="{Binding Symbol}" 
+                                        Click="EditComponentButton_Click"/>
+                                <Button Content="Remove" Tag="{Binding Symbol}" 
+                                        Click="RemoveComponentButton_Click"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+        
+        <!-- Preview Section -->
+        <GroupBox Header="Benchmark Preview" Grid.Row="5" Margin="0,10,0,10" Foreground="White">
+            <Grid Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="This custom benchmark will be displayed as:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Row="1" x:Name="PreviewText" Text="CUSTOM" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+            </Grid>
+        </GroupBox>
+        
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="SaveButton" Content="Save Benchmark" Width="120" 
+                    Click="SaveButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"/>
+            <Button x:Name="CancelButton" Content="Cancel" Width="80" IsCancel="True" 
+                    Click="CancelButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"/>
+        </StackPanel>
+    </Grid>
+</Window>

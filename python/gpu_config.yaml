@@ -1,0 +1,125 @@
+# GPU Configuration for Quantra Trading Platform
+
+# General GPU settings
+gpu:
+  enabled: true                  # Enable GPU acceleration
+  device_id: 0                   # Default GPU device ID to use (0 for first GPU)
+  memory_growth: true            # Enable memory growth for TensorFlow
+  memory_limit: 0.8              # Fraction of GPU memory to allocate (0.0-1.0)
+  fallback_to_cpu: true          # Fallback to CPU if GPU is not available
+  precision: "float32"           # Default precision (float32, float16, mixed)
+
+# Framework-specific settings
+frameworks:
+  # PyTorch settings
+  pytorch:
+    enabled: true
+    cuda_visible_devices: "0"    # Comma-separated list of GPU IDs (e.g., "0,1")
+    benchmark: true              # Enable cuDNN benchmark mode
+    deterministic: false         # Make operations deterministic (slower)
+    allow_tf32: true             # Allow TensorFloat-32 acceleration on Ampere GPUs
+
+  # TensorFlow settings
+  tensorflow:
+    enabled: true
+    cuda_visible_devices: "0"    # Comma-separated list of GPU IDs
+    xla_compilation: true        # Enable XLA JIT compilation
+    mixed_precision: true        # Enable mixed precision training
+    memory_growth: true          # Enable memory growth
+    allow_growth: true           # Allow memory growth
+    per_process_gpu_memory_fraction: 0.9  # Memory limit per process
+
+  # CuPy settings
+  cupy:
+    enabled: true
+    device_id: 0                 # Device ID
+    use_cuda_python: false       # Enable CUDA Python (experimental)
+    pinned_memory: true          # Use pinned memory for faster transfers
+
+  # RAPIDS settings (cuDF, cuML)
+  rapids:
+    enabled: true
+    memory_pool_size: 2048       # Memory pool size in MB
+    device_id: 0                 # Device ID
+    use_deterministic: false     # Use deterministic algorithms when available
+
+# Performance monitoring settings
+monitoring:
+  enabled: true
+  sample_interval: 1.0           # Interval in seconds for metric collection
+  auto_log_training: true        # Automatically log metrics during training
+  save_metrics: true             # Save metrics to disk
+  metrics_dir: "gpu_metrics"     # Directory to save metrics
+  alert_on_high_usage: true      # Alert when GPU usage exceeds threshold
+  usage_threshold: 0.95          # Usage threshold (0.0-1.0)
+  temperature_threshold: 85      # Temperature threshold in Celsius
+
+# Data pipeline settings
+data_pipeline:
+  batch_size: 256                # Default batch size for data processing
+  prefetch_factor: 2             # Number of batches to prefetch
+  pin_memory: true               # Use pinned memory for faster data transfer
+  num_workers: 4                 # Number of data loader workers
+  persistent_workers: true       # Keep worker processes alive between iterations
+  use_gpu_acceleration: true     # Use GPU acceleration for data preprocessing
+  stream_execution: true         # Use CUDA streams for overlapping operations
+
+# Model optimization settings
+model_optimization:
+  use_amp: true                  # Use automatic mixed precision
+  precision: "float16"           # Precision for mixed precision training
+  fuse_operations: true          # Fuse operations for better performance
+  quantization:
+    enabled: false               # Enable quantization
+    type: "int8"                 # Quantization type (int8, uint8)
+  pruning:
+    enabled: false               # Enable pruning
+    target_sparsity: 0.5         # Target sparsity level
+  enable_tensorrt: false         # Enable TensorRT optimization
+  onnx_export:
+    enabled: false               # Export models to ONNX format
+    optimize: true               # Optimize ONNX models
+    target_opset: 12             # ONNX opset version
+
+# Multi-GPU settings
+multi_gpu:
+  enabled: false                 # Enable multi-GPU training
+  strategy: "mirrored"           # Distribution strategy (mirrored, data_parallel)
+  sync_batch_norm: true          # Use synchronized batch normalization
+  num_gpus: 1                    # Number of GPUs to use (0 for all available)
+  all_reduce_alg: "nccl"         # All-reduce algorithm (nccl, hierarchical_copy)
+
+# Environment settings
+environment:
+  cuda_toolkit_path: ""          # Custom CUDA toolkit path (leave empty for default)
+  cudnn_path: ""                 # Custom cuDNN path (leave empty for default)
+  tensorrt_path: ""              # Custom TensorRT path (leave empty for default)
+  set_tf_cpp_min_log_level: 2    # TensorFlow C++ log level (0-3)
+  enable_cuda_profiling: false   # Enable CUDA profiling
+  set_cuda_cache_path: ".cuda_cache"  # CUDA cache path
+
+# Custom configurations for specific models/tasks
+models:
+  lstm_price_predictor:
+    batch_size: 128
+    precision: "float16"
+    device_id: 0
+    
+  transformer_sentiment:
+    batch_size: 64
+    precision: "float32"
+    device_id: 0
+    
+  reinforcement_learning:
+    batch_size: 32
+    precision: "float32"
+    device_id: 0
+
+# Development and debugging settings
+debug:
+  verbose_logging: false         # Enable verbose logging
+  profile_operations: false      # Profile individual operations
+  trace_cuda: false              # Enable CUDA tracing
+  detect_anomalies: false        # Detect NaN/inf in TensorFlow
+  log_device_placement: false    # Log device placement in TensorFlow
+  tf_debug_mode: false           # Enable TensorFlow debug mode

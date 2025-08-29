@@ -1,0 +1,171 @@
+<Window x:Class="Quantra.Views.MoveControlWindow.MoveControlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Move Control"
+        Height="350" 
+        Width="450"
+        WindowStartupLocation="CenterOwner"
+        Background="#1A1A28"
+        BorderBrush="#3E3E56"
+        BorderThickness="1">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <Style x:Key="HeaderTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource EnhancedTextBlockStyle}">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="#1E90FF" />
+                <Setter Property="Margin" Value="0,0,0,10" />
+            </Style>
+            
+            <Style x:Key="SectionTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource EnhancedTextBlockStyle}">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Margin" Value="0,8,0,5" />
+            </Style>
+            
+            <Style x:Key="MoveControlButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Margin" Value="10,0,10,0" />
+                <Setter Property="MinWidth" Value="80" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Padding" Value="8,3" />
+                <Setter Property="Foreground" Value="White" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Border CornerRadius="0" BorderThickness="0">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <TextBlock Text="Move Control" 
+                       Style="{StaticResource HeaderTextBlockStyle}" 
+                       Grid.Row="0" />
+            
+            <!-- Content -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                
+                <!-- Source Tab Info -->
+                <TextBlock Text="Current Tab:" 
+                           Style="{StaticResource SectionTextBlockStyle}"
+                           Grid.Row="0" Grid.Column="0" />
+                <TextBlock x:Name="SourceTabTextBlock" 
+                           Text="[Tab Name]"
+                           Style="{StaticResource EnhancedTextBlockStyle}"
+                           FontWeight="SemiBold"
+                           Foreground="#B0B0FF"
+                           Grid.Row="0" Grid.Column="1"
+                           Margin="10,8,0,5" />
+                
+                <!-- Destination Tab Selection -->
+                <TextBlock Text="Move To Tab:" 
+                           Style="{StaticResource SectionTextBlockStyle}"
+                           Grid.Row="1" Grid.Column="0" />
+                <ComboBox x:Name="DestinationTabComboBox" 
+                          Grid.Row="1" Grid.Column="1"
+                          Margin="10,5,0,5"
+                          Height="30"
+                          SelectionChanged="DestinationTabComboBox_SelectionChanged" />
+                
+                <!-- Row Input -->
+                <TextBlock Text="Row:" 
+                           Style="{StaticResource SectionTextBlockStyle}"
+                           Grid.Row="2" Grid.Column="0" />
+                <Grid Grid.Row="2" Grid.Column="1" Margin="10,5,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="RowTextBox" 
+                             Grid.Column="0"
+                             Height="30"
+                             TextChanged="Position_TextChanged" />
+                    <TextBlock Text="Integer value representing the grid row (starts at 0)"
+                               Grid.Column="1"
+                               Margin="10,5,0,0"
+                               Foreground="#AAAAAA"
+                               FontSize="12" />
+                </Grid>
+                
+                <!-- Column Input -->
+                <TextBlock Text="Column:" 
+                           Style="{StaticResource SectionTextBlockStyle}"
+                           Grid.Row="3" Grid.Column="0" />
+                <Grid Grid.Row="3" Grid.Column="1" Margin="10,5,0,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ColumnTextBox" 
+                             Grid.Column="0"
+                             Height="30"
+                             TextChanged="Position_TextChanged" />
+                    <TextBlock Text="Integer value representing the grid column (starts at 0)"
+                               Grid.Column="1"
+                               Margin="10,5,0,0"
+                               Foreground="#AAAAAA"
+                               FontSize="12" />
+                </Grid>
+                
+                <!-- Preview Visual -->
+                <Border x:Name="PreviewBorder"
+                        Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                        Background="#262638"
+                        Margin="0,15,0,0"
+                        BorderBrush="#3E3E56"
+                        BorderThickness="1"
+                        Padding="10">
+                    <Grid x:Name="PreviewGrid">
+                        <!-- Will be populated with grid cells in code-behind -->
+                    </Grid>
+                </Border>
+            </Grid>
+            
+            <!-- Buttons -->
+            <StackPanel Grid.Row="2" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right"
+                        Margin="0,20,0,0">
+                
+                <Button x:Name="MoveButton"
+                        Content="Move" 
+                        IsDefault="True"
+                        Style="{StaticResource MoveControlButtonStyle}"
+                        Background="#31A278"
+                        Click="MoveButton_Click" />
+                
+                <Button x:Name="CancelButton"
+                        Content="Cancel" 
+                        IsCancel="True"
+                        Style="{StaticResource MoveControlButtonStyle}"
+                        Background="#666677"
+                        Margin="10,0,0,0"
+                        Click="CancelButton_Click" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,145 @@
+<UserControl x:Class="Quantra.Controls.Components.SectorSentimentVisualizationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Controls Header -->
+        <Grid Grid.Row="0" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="150"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" Text="Sector:" VerticalAlignment="Center" Margin="5,0"/>
+            <ComboBox x:Name="SectorComboBox" Grid.Column="1" Margin="5,0" SelectionChanged="SectorComboBox_SelectionChanged">
+                <ComboBoxItem Content="Technology" IsSelected="True"/>
+                <ComboBoxItem Content="Financial"/>
+                <ComboBoxItem Content="Healthcare"/>
+                <ComboBoxItem Content="Energy"/>
+                <ComboBoxItem Content="Consumer Discretionary"/>
+                <ComboBoxItem Content="Consumer Staples"/>
+                <ComboBoxItem Content="Industrial"/>
+                <ComboBoxItem Content="Materials"/>
+                <ComboBoxItem Content="Utilities"/>
+                <ComboBoxItem Content="Real Estate"/>
+                <ComboBoxItem Content="Communication"/>
+            </ComboBox>
+            
+            <TextBlock Grid.Column="2" Text="Comparison:" VerticalAlignment="Center" Margin="15,0,5,0"/>
+            <ComboBox x:Name="ComparisonModeComboBox" Grid.Column="3" Margin="5,0" 
+                      SelectionChanged="ComparisonModeComboBox_SelectionChanged"/>
+        </Grid>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Sector Sentiment Comparison Chart -->
+            <Border Grid.Column="0" Grid.Row="0" BorderBrush="#CCCCCC" BorderThickness="1" Margin="5" Padding="5" Background="#F8F8F8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Sector Sentiment Comparison" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <lvc:CartesianChart Grid.Row="1" x:Name="SectorComparisonChart" LegendLocation="None">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="Sectors" />
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="Sentiment" MinValue="-1" MaxValue="1"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </Grid>
+            </Border>
+            
+            <!-- Historical Sentiment Chart -->
+            <Border Grid.Column="0" Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" Margin="5" Padding="5" Background="#F8F8F8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Historical Sentiment Trend" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <lvc:CartesianChart Grid.Row="1" x:Name="HistoricalSentimentChart" LegendLocation="None">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="Date" />
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="Sentiment" MinValue="-1" MaxValue="1"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </Grid>
+            </Border>
+            
+            <!-- News Articles -->
+            <Border Grid.Column="1" Grid.Row="0" BorderBrush="#CCCCCC" BorderThickness="1" Margin="5" Padding="5" Background="#F8F8F8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Sector News Analysis" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <ListBox Grid.Row="1" x:Name="NewsArticlesList" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                </Grid>
+            </Border>
+            
+            <!-- Source Breakdown and Trending Topics -->
+            <Grid Grid.Column="1" Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Source Breakdown -->
+                <Border Grid.Row="0" BorderBrush="#CCCCCC" BorderThickness="1" Margin="5" Padding="5" Background="#F8F8F8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="Sentiment Source Breakdown" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <ListBox Grid.Row="1" x:Name="SourceBreakdownList" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                    </Grid>
+                </Border>
+                
+                <!-- Trending Topics -->
+                <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" Margin="5" Padding="5" Background="#F8F8F8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="Trending Topics in Sector" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <ListBox Grid.Row="1" x:Name="TrendingTopicsList" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

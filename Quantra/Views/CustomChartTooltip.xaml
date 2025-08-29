@@ -1,0 +1,68 @@
+<UserControl x:Class="Quantra.Controls.CustomChartTooltip"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Quantra.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="200">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border Background="#F01E1E2F" BorderBrush="#FF3A3A5A" BorderThickness="1" 
+            CornerRadius="3" Padding="8">
+        <StackPanel>
+            <!-- Date and Time -->
+            <TextBlock x:Name="DateTimeText" 
+                       Text="" 
+                       FontWeight="Bold" 
+                       Style="{StaticResource EnhancedTextBlockStyle}" 
+                       Margin="0,0,0,5"/>
+            
+            <!-- Divider -->
+            <Rectangle Height="1" 
+                       Fill="#FF3A3A5A" 
+                       Margin="0,0,0,5"/>
+            
+            <!-- OHLC Values -->
+            <StackPanel x:Name="OHLCPanel" Visibility="Collapsed">
+                <DockPanel Margin="0,2">
+                    <TextBlock Text="O: " Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="20"/>
+                    <TextBlock x:Name="OpenText" Text="185.42" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </DockPanel>
+                <DockPanel Margin="0,2">
+                    <TextBlock Text="H: " Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="20"/>
+                    <TextBlock x:Name="HighText" Text="187.65" Foreground="#FF90EE90" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </DockPanel>
+                <DockPanel Margin="0,2">
+                    <TextBlock Text="L: " Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="20"/>
+                    <TextBlock x:Name="LowText" Text="184.21" Foreground="#FFF08080" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </DockPanel>
+                <DockPanel Margin="0,2">
+                    <TextBlock Text="C: " Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="20"/>
+                    <TextBlock x:Name="CloseText" Text="186.73" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </DockPanel>
+                <DockPanel Margin="0,2">
+                    <TextBlock Text="V: " Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="20"/>
+                    <TextBlock x:Name="VolumeText" Text="3.4M" Foreground="#FF87CEEB" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                </DockPanel>
+            </StackPanel>
+            
+            <!-- Indicator Values (dynamic content) -->
+            <ItemsControl x:Name="IndicatorValues">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="0,2">
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource EnhancedSmallTextBlockStyle}" Width="75"/>
+                            <TextBlock Text="{Binding Value}" Foreground="{Binding Color}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</UserControl>

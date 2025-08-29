@@ -1,0 +1,339 @@
+<UserControl x:Class="Quantra.Controls.ConfigurationControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Quantra.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="#1E1E30">
+    <UserControl.Resources>
+        <!-- Enhanced TabControl Style matching EnhancedStyles theme -->
+        <Style x:Key="EnhancedTabControlStyle" TargetType="TabControl">
+            <Setter Property="Background" Value="#2D2D42"/>
+            <Setter Property="BorderBrush" Value="#3E3E56"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="TabStripPlacement" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Tab Strip -->
+                            <Border Grid.Row="0" Background="#1E1E30" BorderBrush="#3E3E56" BorderThickness="0,0,0,1">
+                                <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Panel.ZIndex="1" Margin="2,2,2,0"/>
+                            </Border>
+                            
+                            <!-- Content Area -->
+                            <Border Grid.Row="1" Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="1,0,1,1">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                                  Content="{TemplateBinding SelectedContent}"
+                                                  ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"
+                                                  ContentSource="SelectedContent"
+                                                  Margin="0"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Enhanced TabItem Style matching EnhancedStyles theme -->
+        <Style x:Key="EnhancedTabItemStyle" TargetType="TabItem">
+            <Setter Property="Background" Value="#3E3E56"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#3E3E56"/>
+            <Setter Property="BorderThickness" Value="1,1,1,0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="FontFamily" Value="Franklin Gothic Medium"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- Ensure tab is clickable -->
+            <Setter Property="IsTabStop" Value="True"/>
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3,3,0,0"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="{TemplateBinding Margin}">
+                            <ContentPresenter x:Name="ContentSite"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Header}"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}"
+                                              TextBlock.FontFamily="{TemplateBinding FontFamily}"
+                                              TextBlock.FontSize="{TemplateBinding FontSize}"
+                                              TextBlock.FontWeight="{TemplateBinding FontWeight}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Selected state - highest priority -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="Black"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="Black"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter TargetName="TabBorder" Property="Margin" Value="0,0,2,-1"/>
+                                <Setter Property="Panel.ZIndex" Value="100"/>
+                            </Trigger>
+                            
+                            <!-- Mouse over state - only when not selected -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsSelected" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="TabBorder" Property="Background" Value="#007ACC"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title and Controls -->
+            <RowDefinition Height="*"/>   <!-- Configuration Categories -->
+            <RowDefinition Height="Auto"/> <!-- Apply/Save Button -->
+        </Grid.RowDefinitions>
+
+        <!-- Title and Controls -->
+        <Grid Grid.Row="0" Margin="0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock Grid.Column="0" Text="Application Settings" FontSize="22" 
+                       FontWeight="Bold" Foreground="White" Margin="5,0,0,10"/>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ResetButton" Content="Reset" Width="80" Height="30" 
+                        Click="ResetButton_Click"
+                        Background="#3E3E56" Foreground="White" 
+                        BorderBrush="Cyan" Margin="0,0,5,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Configuration Categories -->
+        <TabControl x:Name="ConfigurationTabControl" Grid.Row="1" Margin="0,5" 
+                    Style="{StaticResource EnhancedTabControlStyle}"
+                    SelectedIndex="{Binding SelectedSettingsTabIndex, Mode=TwoWay}"
+                    SelectionChanged="ConfigurationTabControl_SelectionChanged">
+            <!-- General Settings Tab -->
+            <TabItem Header="General" Style="{StaticResource EnhancedTabItemStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <StackPanel Margin="10">
+                            <!-- Trading Mode -->
+                            <TextBlock Text="Trading Mode:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="TradingModeComboBox" Margin="0,0,0,10"
+             Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Market" IsSelected="True"/>
+                                <ComboBoxItem Content="Paper"/>
+                                <ComboBoxItem Content="Sandbox"/>
+                            </ComboBox>
+
+                            <!-- Risk Mode -->
+                            <TextBlock Text="Risk Mode:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="RiskModeComboBox" Margin="0,0,0,10"
+             Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Conservative" />
+                                <ComboBoxItem Content="Normal" IsSelected="True"/>
+                                <ComboBoxItem Content="Aggressive"/>
+                            </ComboBox>
+
+                            <!-- Theme -->
+                            <TextBlock Text="Application Theme:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="ThemeComboBox" Margin="0,0,0,10"
+             Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Dark" IsSelected="True"/>
+                                <ComboBoxItem Content="Light"/>
+                                <ComboBoxItem Content="System"/>
+                            </ComboBox>
+
+                            <!-- Data Refresh Rate -->
+                            <TextBlock Text="Data Refresh Rate (seconds):" Foreground="White" Margin="0,5"/>
+                            <Slider x:Name="RefreshRateSlider" Minimum="1" Maximum="60" Value="5" 
+            IsSnapToTickEnabled="True" TickFrequency="1"
+            Margin="0,0,0,5" />
+                            <TextBlock x:Name="RefreshRateLabel" Text="5 seconds" 
+               Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+
+                            <!-- Notifications -->
+                            <CheckBox x:Name="EnableNotificationsCheckBox" Content="Enable Notifications" 
+              IsChecked="True" Margin="0,5,0,10" Foreground="White"/>
+
+                            <!-- API Modal Checks -->
+                            <CheckBox x:Name="EnableApiModalChecksCheckBox" Content="Show Confirmation Before API Calls" 
+              IsChecked="True" Margin="0,5,0,10" Foreground="White"/>
+
+                            <!-- Auto-save -->
+                            <CheckBox x:Name="AutoSaveCheckBox" Content="Auto-save Changes" 
+              IsChecked="True" Margin="0,5,0,10" Foreground="White"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="10">
+                            <!-- API Keys Section -->
+                            <TextBlock Text="Financial Modeling Prep API" FontSize="16" 
+               FontWeight="Bold" Foreground="White" Margin="0,5,0,10"/>
+
+                            <TextBlock Text="API Key:" Foreground="White" Margin="0,5"/>
+                            <PasswordBox x:Name="FmpApiKeyBox" Margin="0,0,0,10"
+                 Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Webull API" FontSize="16" 
+               FontWeight="Bold" Foreground="White" Margin="0,15,0,10"/>
+
+                            <TextBlock Text="Username:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="WebullUsernameTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Password:" Foreground="White" Margin="0,5"/>
+                            <PasswordBox x:Name="WebullPasswordBox" Margin="0,0,0,10"
+                 Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Pin:" Foreground="White" Margin="0,5"/>
+                            <PasswordBox x:Name="WebullPinBox" Margin="0,0,0,10"
+                 Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <CheckBox x:Name="RememberCredentialsCheckBox" Content="Remember Credentials" 
+              IsChecked="False" Margin="0,5,0,10" Foreground="White"/>
+
+                            <!-- Test Connection Button -->
+                            <Button x:Name="TestConnectionButton" Content="Test Connection" Width="150" Height="30" 
+            HorizontalAlignment="Left" Click="TestConnectionButton_Click" Margin="0,10,0,10"
+            Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="10">
+                            <!-- Trading Algorithm Settings -->
+                            <TextBlock Text="Trading Algorithm Settings" FontSize="16" 
+               FontWeight="Bold" Foreground="White" Margin="0,5,0,10"/>
+
+                            <TextBlock Text="Default Stop Loss (%):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="DefaultStopLossTextBox" Text="2.0" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Default Take Profit (%):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="DefaultTakeProfitTextBox" Text="5.0" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="RSI Oversold Threshold:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="RsiOversoldTextBox" Text="30" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="RSI Overbought Threshold:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="RsiOverboughtTextBox" Text="70" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Bollinger Bands Period:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="BollingerPeriodTextBox" Text="20" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Bollinger Bands Std Dev:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="BollingerStdDevTextBox" Text="2.0" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- Database Settings -->
+                            <TextBlock Text="Database Settings" FontSize="16" 
+               FontWeight="Bold" Foreground="White" Margin="0,15,0,10"/>
+
+                            <Button x:Name="ClearCacheButton" Content="Clear Cache" Width="150" Height="30" 
+            HorizontalAlignment="Left" Click="ClearCacheButton_Click" Margin="0,5,0,10"
+            Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
+
+                            <Button x:Name="ExportLogsButton" Content="Export Logs" Width="150" Height="30" 
+            HorizontalAlignment="Left" Click="ExportLogsButton_Click" Margin="0,5,0,10"
+            Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
+                        </StackPanel>
+
+                        <StackPanel Margin="10">
+                            <!-- Account Size -->
+                            <TextBlock Text="Account Size (USD):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="AccountSizeTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- Risk Percentage -->
+                            <TextBlock Text="Risk Percentage per Trade (%):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="RiskPercentageTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- Position Sizing Method -->
+                            <TextBlock Text="Position Sizing Method:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="PositionSizingMethodComboBox" Margin="0,0,0,10"
+              Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="FixedRisk"/>
+                                <ComboBoxItem Content="PercentageOfEquity"/>
+                                <ComboBoxItem Content="VolatilityBased"/>
+                                <ComboBoxItem Content="KellyFormula"/>
+                                <ComboBoxItem Content="FixedAmount"/>
+                                <ComboBoxItem Content="TierBased"/>
+                                <ComboBoxItem Content="AdaptiveRisk"/>
+                            </ComboBox>
+
+                            <!-- Max Position Size -->
+                            <TextBlock Text="Max Position Size (% of Account):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="MaxPositionSizeTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- Fixed Trade Amount -->
+                            <TextBlock Text="Fixed Trade Amount (USD):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="FixedTradeAmountTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- ATR Multiple -->
+                            <TextBlock Text="ATR Multiple:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="ATRMultipleTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <!-- Kelly Criterion Section -->
+                            <TextBlock Text="Kelly Criterion Settings" FontSize="16" 
+               FontWeight="Bold" Foreground="White" Margin="0,15,0,10"/>
+
+                            <CheckBox x:Name="UseKellyCriterionCheckBox" Content="Use Kelly Criterion" 
+              Margin="0,5,0,10" Foreground="White"/>
+
+                            <TextBlock Text="Historical Win Rate (%):" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="WinRateTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Reward/Risk Ratio:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="RewardRiskRatioTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+
+                            <TextBlock Text="Kelly Fraction Multiplier:" Foreground="White" Margin="0,5"/>
+                            <TextBox x:Name="KellyFractionTextBox" Margin="0,0,0,10"
+             Background="#2D2D42" Foreground="White" BorderBrush="#3E3E56"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- Save Button -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Button x:Name="SaveSettingsButton" Content="Save Settings" Height="35" Width="150" 
+                    HorizontalAlignment="Center" Click="SaveSettingsButton_Click"
+                    Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
+        </Grid>
+    </Grid>
+</UserControl>

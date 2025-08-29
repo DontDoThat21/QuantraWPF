@@ -1,0 +1,142 @@
+<Window x:Class="Quantra.CreateTabWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Quantra"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Create New Tab" Height="681" Width="550"
+        Background="Transparent" Foreground="{StaticResource TextWhiteBrush}"
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+    <Border BorderThickness="0" CornerRadius="0,0,10,10" Margin="4">
+        <materialDesign:Card Background="#1B1B2A" Margin="5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Custom Title Bar -->
+                <local:SharedTitleBar x:Name="TitleBar" Grid.Row="0" Title="Create New Tab"/>
+
+                <!-- Main Content -->
+                <Grid Grid.Row="1" Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Tab Name Section -->
+                    <materialDesign:Card Grid.Row="0" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                        <StackPanel>
+                            <TextBlock Text="TAB NAME" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8"
+                                       Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            <TextBox x:Name="TabNameTextBox" 
+                                     materialDesign:HintAssist.Hint="Enter a unique tab name" 
+                                     Style="{StaticResource EnhancedTextBoxStyle}" 
+                                     Margin="0,5,0,0"
+                                     FontSize="14"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Grid Configuration Section -->
+                    <materialDesign:Card Grid.Row="1" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                        <StackPanel>
+                            <TextBlock Text="GRID CONFIGURATION" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8"
+                                       Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                            <Grid Margin="0,5,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <Label Content="Number of Rows:" Foreground="#99CCFF" 
+                                           Style="{StaticResource EnhancedLabelStyle}"/>
+                                    <TextBox x:Name="GridRowsTextBox" 
+                                             materialDesign:HintAssist.Hint="Rows (minimum 1)"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             Text="4"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <Label Content="Number of Columns:" Foreground="#99CCFF"
+                                           Style="{StaticResource EnhancedLabelStyle}"/>
+                                    <TextBox x:Name="GridColumnsTextBox" 
+                                             materialDesign:HintAssist.Hint="Columns (minimum 1)" 
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             Text="4"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Grid Preview Section -->
+                    <materialDesign:Card Grid.Row="2" Background="#262638" Margin="0,0,0,15" Padding="15,10">
+                        <StackPanel>
+                            <TextBlock Text="GRID PREVIEW" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,8"
+                                       Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            
+                            <Border x:Name="GridPreviewBorder" Height="120" BorderBrush="#3E3E56" BorderThickness="1" Margin="0,5,0,5">
+                                <Grid x:Name="GridPreview" ShowGridLines="True" Background="#22FFFFFF">
+                                    <!-- Grid will be generated dynamically -->
+                                </Grid>
+                            </Border>
+                            
+                            <TextBlock Text="This is a preview of your grid layout. The actual size will depend on the available space in the tab."
+                                       TextWrapping="Wrap" Foreground="LightGray" FontStyle="Italic" Margin="0,5,0,0" FontSize="11"/>
+                        </StackPanel>
+                    </materialDesign:Card>
+
+                    <!-- Warning Message -->
+                    <Border Grid.Row="3" 
+                            BorderThickness="1" 
+                            Margin="0,10,0,0" 
+                            Background="#33FF0000" 
+                            BorderBrush="#66FF0000"
+                            Visibility="{Binding ElementName=WarningTextBlock, Path=Visibility}"
+                            CornerRadius="5">
+                        <StackPanel Orientation="Horizontal" Margin="10">
+                            <materialDesign:PackIcon Kind="Alert" VerticalAlignment="Center" Width="24" Height="24" Foreground="Red"/>
+                            <TextBlock x:Name="WarningTextBlock" 
+                                       Margin="10,0,0,0" 
+                                       TextWrapping="Wrap" 
+                                       Foreground="Red" 
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Buttons -->
+                    <Grid Grid.Row="4" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="1" 
+                                Content="CANCEL" 
+                                Margin="0,0,10,0" 
+                                Style="{StaticResource ButtonStyle1}" 
+                                Click="CancelButton_Click" 
+                                Width="100"/>
+
+                        <Button Grid.Column="2" 
+                                x:Name="CreateButton"
+                                Content="CREATE" 
+                                Background="{StaticResource AccentBlueBrush}" 
+                                Foreground="White" 
+                                Style="{StaticResource ButtonStyle1}" 
+                                Click="CreateButton_Click" 
+                                Width="100"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </materialDesign:Card>
+    </Border>
+</Window>

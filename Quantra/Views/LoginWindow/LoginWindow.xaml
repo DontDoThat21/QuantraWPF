@@ -1,0 +1,152 @@
+<Window x:Class="Quantra.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:Quantra"
+        Title="Login" Height="700" Width="450" WindowStartupLocation="CenterScreen"
+        Background="Transparent" WindowStyle="None" AllowsTransparency="True" 
+        MinHeight="700" MinWidth="400">
+    <Window.Resources>
+        <!-- Resize grip style -->
+        <Style x:Key="ResizeGripStyle" TargetType="Rectangle">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Fill" Value="Transparent"/>
+            <Setter Property="Stroke" Value="Transparent"/>
+            <Setter Property="StrokeThickness" Value="0"/>
+            <Setter Property="Cursor" Value="SizeNWSE"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- Add ResizableBorder for consistent behavior with other windows -->
+        <local:ResizableBorder/>
+        
+        <!-- Updated Border with CornerRadius="10" to match the title bar's top corners -->
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Custom Title Bar -->
+                <local:SharedTitleBar Title="Login" Grid.Row="0"/>
+                
+                <!-- Main Content -->
+                <Grid Grid.Row="1">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- App Logo/Icon -->
+                        <Border Width="70" Height="70" Background="Transparent" Margin="0,0,0,15">
+                            <Path Data="M12,2L1,21H23M12,6L19.5,19H4.5" Fill="{StaticResource LightBlueBrush}" Stretch="Uniform"/>
+                        </Border>
+                        
+                        <!-- Title -->
+                        <TextBlock Text="Day Trader" FontSize="32" FontWeight="Bold" 
+                                   Style="{StaticResource EnhancedHeaderTextBlockStyle}" 
+                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                        
+                        <TextBlock Text="Webull Login" FontSize="18" FontWeight="SemiBold" 
+                                   Style="{StaticResource EnhancedTextBlockStyle}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                        
+                        <!-- Login Fields -->
+                        <materialDesign:Card Background="#262638" UniformCornerRadius="6" 
+                                           Margin="0,5,0,15" Padding="25,30" Width="320"
+                                           materialDesign:ElevationAssist.Elevation="Dp2">
+                            <!-- Login fields remain unchanged -->
+                            <StackPanel>
+                                <!-- Username Field -->
+                                <Grid Margin="0,0,0,5">
+                                    <TextBlock Text="Username" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <TextBox x:Name="UsernameTextBox" Style="{StaticResource EnhancedTextBoxStyle}" 
+                                            GotFocus="UsernameTextBox_GotFocus" 
+                                            KeyDown="UsernameTextBox_KeyDown" 
+                                            Height="38" Width="240"
+                                            Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Password Field -->
+                                <Grid Margin="0,10,0,5">
+                                    <TextBlock Text="Password" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <PasswordBox x:Name="PasswordBox" Style="{StaticResource EnhancedPasswordBoxStyle}" 
+                                               Height="38" Width="240"
+                                               Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Account Selection -->
+                                <Grid Margin="0,10,0,5">
+                                    <TextBlock Text="Saved Accounts" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <ComboBox x:Name="AccountComboBox" Style="{StaticResource EnhancedComboBoxStyle}" 
+                                            SelectionChanged="AccountComboBox_SelectionChanged" 
+                                            Height="38" Width="240"
+                                            Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Remember Me Checkbox -->
+                                <CheckBox x:Name="RememberMeCheckBox" Content="Remember this account" 
+                                         Style="{StaticResource EnhancedCheckBoxStyle}" 
+                                         Margin="0,15,0,5"/>
+                                
+                                <!-- PIN Field - Hidden by default -->
+                                <Grid x:Name="PinTextBoxContainer" Visibility="Collapsed" Margin="0,10,0,5">
+                                    <TextBlock Text="PIN" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <TextBox x:Name="PinTextBox" Style="{StaticResource EnhancedTextBoxStyle}" 
+                                           Text="PIN" Height="38" Width="240"
+                                           Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Action Buttons -->
+                                <Button Content="Login" Style="{StaticResource EnhancedButtonStyle}" 
+                                      Height="38" Width="120"
+                                      Margin="0,20,0,5" Click="LoginButton_Click"/>
+                                
+                                <Button Content="Settings" Style="{StaticResource EnhancedButtonStyle}" 
+                                      Height="38" Width="120"
+                                      Click="SettingsButton_Click"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Resize Grips -->
+                <Grid Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Rectangle x:Name="BottomLeftGrip" Grid.Column="0" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNESW"
+                             MouseDown="ResizeGrip_MouseDown"/>
+                    
+                    <Rectangle x:Name="BottomGrip" Grid.Column="1" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Center" VerticalAlignment="Bottom" 
+                             Width="80" Margin="0,0,0,2" Cursor="SizeNS"
+                             MouseDown="ResizeGrip_MouseDown"/>
+                    
+                    <Rectangle x:Name="BottomRightGrip" Grid.Column="2" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNWSE"
+                             MouseDown="ResizeGrip_MouseDown"/>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
+

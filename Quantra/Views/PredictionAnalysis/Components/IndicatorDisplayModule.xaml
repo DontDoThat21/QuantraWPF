@@ -1,0 +1,153 @@
+<UserControl x:Class="Quantra.Controls.Components.IndicatorDisplayModule"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:components="clr-namespace:Quantra.Views.PredictionAnalysis.Components"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <DockPanel Grid.Row="0" LastChildFill="True" Margin="5">
+            <TextBlock Text="Trading Rule:" Margin="0,0,5,0" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding AvailableTradingRules}"
+                      SelectedItem="{Binding SelectedTradingRule}"
+                      DisplayMemberPath="Name"
+                      Margin="0,0,5,0"/>
+            <ToggleButton IsChecked="{Binding IsAutoTradingEnabled}"
+                         Content="Auto Trading"
+                         Margin="5,0"/>
+        </DockPanel>
+
+        <!-- Indicators -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="10">
+                <!-- Trend Indicators -->
+                <GroupBox Header="Trend Indicators" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="ADX:" Width="80"/>
+                            <TextBlock x:Name="adxValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="VWAP:" Width="80"/>
+                            <TextBlock x:Name="vwapValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="ROC:" Width="80"/>
+                            <TextBlock x:Name="rocValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Momentum Indicators -->
+                <GroupBox Header="Momentum Indicators" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="RSI:" Width="80"/>
+                            <TextBlock x:Name="rsiValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="CCI:" Width="80"/>
+                            <TextBlock x:Name="cciValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="StochRSI:" Width="80"/>
+                            <TextBlock x:Name="stochRsiValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Williams %R:" Width="80"/>
+                            <TextBlock x:Name="williamsRValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Volatility Indicators -->
+                <GroupBox Header="Volatility Indicators" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="ATR:" Width="80"/>
+                            <TextBlock x:Name="atrValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Bull Power:" Width="80"/>
+                            <TextBlock x:Name="bullPowerValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Bear Power:" Width="80"/>
+                            <TextBlock x:Name="bearPowerValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- MACD -->
+                <GroupBox Header="MACD" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="MACD:" Width="80"/>
+                            <TextBlock x:Name="macdValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Signal:" Width="80"/>
+                            <TextBlock x:Name="macdSignalValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Histogram:" Width="80"/>
+                            <TextBlock x:Name="macdHistValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Stochastic Oscillator -->
+                <GroupBox Header="Stochastic Oscillator" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="%K:" Width="80"/>
+                            <TextBlock x:Name="stochKValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="%D:" Width="80"/>
+                            <TextBlock x:Name="stochDValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Trading Signals -->
+                <GroupBox Header="Trading Signals" Margin="0,5">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="Momentum:" Width="80"/>
+                            <TextBlock x:Name="momentumValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Signal:" Width="80"/>
+                            <TextBlock x:Name="tradingSignalValue"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock Text="Buy/Sell:" Width="80"/>
+                            <TextBlock x:Name="buySellSignalValue"/>
+                        </DockPanel>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="0" Grid.RowSpan="3"
+              Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ProgressBar Style="{DynamicResource MaterialDesignCircularProgressBar}"
+                         Value="0"
+                         IsIndeterminate="True"
+                         Width="24"
+                         Height="24"/>
+        </Grid>
+    </Grid>
+</UserControl>

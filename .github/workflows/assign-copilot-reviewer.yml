@@ -1,0 +1,145 @@
+name: Auto-Assign Copilot as Reviewer
+
+on:
+  pull_request_target:
+    types: [labeled, review_requested, opened, reopened]
+  # Optional: Add workflow_dispatch to manually trigger the workflow
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull Request Number to process'
+        required: true
+        type: number
+      copilot_username:
+        description: 'GitHub Copilot username (default: copilot)'
+        required: false
+        default: 'copilot'
+        type: string
+
+jobs:
+  auto-assign-copilot:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      pull-requests: write
+    
+    steps:
+      - name: Check if PR is AI-related
+        id: check-conditions
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Get PR number either from the event or manual input
+            const prNumber = context.payload.pull_request?.number || 
+                             context.payload.inputs?.pr_number;
+            
+            if (!prNumber) {
+              console.log('No PR number found, skipping');
+              return core.setOutput('assign', 'false');
+            }
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            // Check conditions to determine if this is an AI-related PR
+            const aiRelatedLabels = [
+              'review-requested-by-ai', 
+              'ai-generated',
+              'ai-task',
+              'copilot',
+              'copilot-generated'
+            ];
+            
+            // Check if PR has any AI-related labels
+            const hasAiLabel = pr.labels.some(label => 
+              aiRelatedLabels.includes(label.name.toLowerCase())
+            );
+            
+            // Check if PR title or body contains AI-related keywords
+            const aiKeywords = [
+              'copilot', 
+              'ai task', 
+              'ai generated',
+              'github copilot',
+              'completed by ai'
+            ];
+            
+            const titleHasAiKeyword = aiKeywords.some(keyword => 
+              pr.title.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            const bodyHasAiKeyword = pr.body && aiKeywords.some(keyword => 
+              pr.body.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            // Check if PR was created by a bot or AI-related account
+            const aiAuthors = ['web-flow', 'github-actions', 'copilot'];
+            const isAiAuthor = aiAuthors.includes(pr.user.login.toLowerCase());
+            
+            // Determine if we should assign Copilot as reviewer
+            const shouldAssign = hasAiLabel || titleHasAiKeyword || bodyHasAiKeyword || isAiAuthor;
+            
+            console.log(`PR #${prNumber} AI-related: ${shouldAssign}`);
+            console.log(`- Has AI label: ${hasAiLabel}`);
+            console.log(`- Title has AI keyword: ${titleHasAiKeyword}`);
+            console.log(`- Body has AI keyword: ${bodyHasAiKeyword}`);
+            console.log(`- Is AI author: ${isAiAuthor}`);
+            
+            core.setOutput('assign', shouldAssign.toString());
+            core.setOutput('pr_number', prNumber.toString());
+
+      - name: Add GitHub Copilot as reviewer
+        if: steps.check-conditions.outputs.assign == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = steps.check-conditions.outputs.pr_number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get Copilot username from input or use default
+            const copilotUsername = context.payload.inputs?.copilot_username || 'copilot';
+            
+            // Check if given username exists by trying to get user info
+            try {
+              await github.rest.users.getByUsername({
+                username: copilotUsername
+              });
+              console.log(`Confirmed GitHub user ${copilotUsername} exists`);
+            } catch (error) {
+              console.log(`Warning: Could not verify GitHub user ${copilotUsername} exists. Will try to assign anyway.`);
+              // Continue anyway as the user might exist but be private
+            }
+            
+            // Check if Copilot is already a reviewer
+            const { data: reviewers } = await github.rest.pulls.listRequestedReviewers({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
+            
+            if (reviewers.users.some(user => user.login.toLowerCase() === copilotUsername.toLowerCase())) {
+              console.log(`${copilotUsername} is already a reviewer for this PR`);
+              return;
+            }
+            
+            console.log(`Adding ${copilotUsername} as reviewer to PR #${prNumber}`);
+            
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner,
+                repo,
+                pull_number: prNumber,
+                reviewers: [copilotUsername]
+              });
+              console.log(`Successfully requested review from ${copilotUsername}`);
+            } catch (error) {
+              console.error('Error requesting review:', error);
+              core.setFailed(error.message);
+            }

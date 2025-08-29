@@ -1,0 +1,296 @@
+<Window x:Class="Quantra.ResizeControlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Quantra"
+        Title="Resize Control" Height="550" Width="700"
+        Background="{StaticResource DarkBlueBrush}" Foreground="{StaticResource TextWhiteBrush}"
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
+        
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Border BorderBrush="{StaticResource DarkBlueBrush}" BorderThickness="1" CornerRadius="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Title Bar -->
+            <local:SharedTitleBar x:Name="TitleBar" Grid.Row="0" Title="Resize Control"/>
+
+            <!-- Main Content -->
+            <Grid Grid.Row="1" Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Tab Context Information -->
+                <Border Grid.Row="0" BorderBrush="#454545" BorderThickness="0,0,0,1" Margin="0,0,0,10" Padding="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Current Tab:" FontSize="14" Foreground="#AAAAAA"/>
+                            <TextBlock x:Name="CurrentTabText" Text="Dashboard" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                        </StackPanel>
+                        
+                        <Border Grid.Column="1" Background="#22FFFFFF" CornerRadius="4" Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Grid Size: " Foreground="#AAAAAA"/>
+                                <TextBlock x:Name="GridSizeText" Text="4 x 4" Foreground="LightBlue" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+                
+                <!-- Control Identification -->
+                <Border Grid.Row="1" Margin="0,5,0,15" Background="#22FFFFFF" CornerRadius="6" Padding="10,8">
+                    <TextBlock x:Name="ControlTypeText" Text="Resizing: Symbol Charts" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+                </Border>
+
+                <!-- Main Content Grid -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Left side: Grid controls and info -->
+                    <Border Grid.Column="0" Background="#22FFFFFF" CornerRadius="6" Padding="15" Margin="0,0,15,0">
+                        <StackPanel>
+                            <TextBlock Text="Position Settings" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+                            
+                            <!-- Position Controls -->
+                            <Grid Margin="0,5,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Row Position -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Row:" VerticalAlignment="Center" Foreground="White"/>
+                                <Grid Grid.Row="0" Grid.Column="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="RowSlider" Grid.Column="0" Minimum="0" Maximum="3" 
+                                            Value="0" IsSnapToTickEnabled="True" TickFrequency="1" 
+                                            ValueChanged="RowSlider_ValueChanged"/>
+                                    <Border Grid.Column="1" Width="60" Background="#33FFFFFF" CornerRadius="3" Margin="5,0,0,0">
+                                        <TextBox x:Name="RowTextBox" Text="0" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="White"
+                                                 TextChanged="RowTextBox_TextChanged"/>
+                                    </Border>
+                                </Grid>
+                                
+                                <!-- Column Position -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Column:" VerticalAlignment="Center" Foreground="White" Margin="0,10,0,0"/>
+                                <Grid Grid.Row="1" Grid.Column="1" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="ColumnSlider" Grid.Column="0" Minimum="0" Maximum="3" 
+                                            Value="0" IsSnapToTickEnabled="True" TickFrequency="1"
+                                            ValueChanged="ColumnSlider_ValueChanged"/>
+                                    <Border Grid.Column="1" Width="60" Background="#33FFFFFF" CornerRadius="3" Margin="5,0,0,0">
+                                        <TextBox x:Name="ColumnTextBox" Text="0" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="White"
+                                                 TextChanged="ColumnTextBox_TextChanged"/>
+                                    </Border>
+                                </Grid>
+                                
+                                <!-- Size Header -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
+                                           Text="Size Settings" FontSize="16" FontWeight="Bold" 
+                                           Foreground="White" Margin="0,20,0,10"/>
+                                
+                                <!-- Row Span -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Row Span:" VerticalAlignment="Center" Foreground="White"/>
+                                <Grid Grid.Row="3" Grid.Column="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="RowSpanSlider" Grid.Column="0" Minimum="1" Maximum="4" 
+                                            Value="1" IsSnapToTickEnabled="True" TickFrequency="1"
+                                            ValueChanged="RowSpanSlider_ValueChanged"/>
+                                    <Border Grid.Column="1" Width="60" Background="#33FFFFFF" CornerRadius="3" Margin="5,0,0,0">
+                                        <TextBox x:Name="RowSpanTextBox" Text="1" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="White"
+                                                 TextChanged="RowSpanTextBox_TextChanged"/>
+                                    </Border>
+                                </Grid>
+                                
+                                <!-- Column Span -->
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Column Span:" VerticalAlignment="Center" Foreground="White" Margin="0,10,0,0"/>
+                                <Grid Grid.Row="4" Grid.Column="1" Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="ColumnSpanSlider" Grid.Column="0" Minimum="1" Maximum="4" 
+                                            Value="1" IsSnapToTickEnabled="True" TickFrequency="1"
+                                            ValueChanged="ColumnSpanSlider_ValueChanged"/>
+                                    <Border Grid.Column="1" Width="60" Background="#33FFFFFF" CornerRadius="3" Margin="5,0,0,0">
+                                        <TextBox x:Name="ColumnSpanTextBox" Text="1" TextAlignment="Center"
+                                                 Background="Transparent" BorderThickness="0" Foreground="White"
+                                                 TextChanged="ColumnSpanTextBox_TextChanged"/>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                            
+                            <!-- Warning Display -->
+                            <Border x:Name="WarningBorder" Background="#40FF0000" CornerRadius="4" Padding="10,8" Margin="0,10,0,10" Visibility="Collapsed">
+                                <TextBlock x:Name="WarningTextBlock" Foreground="White" FontWeight="Medium" 
+                                         TextWrapping="Wrap"/>
+                            </Border>
+                            
+                            <!-- Control Information -->
+                            <Border Background="#30FFFFFF" CornerRadius="4" Padding="10,8" Margin="0,5,0,0">
+                                <TextBlock x:Name="ControlInfoTextBlock" Foreground="White" TextWrapping="Wrap">
+                                    Adjust the control size by dragging the sliders, entering values or directly manipulating the grid.
+                                </TextBlock>
+                            </Border>
+                            
+                            <!-- Keyboard Shortcuts -->
+                            <Expander Header="Keyboard Shortcuts" Margin="0,10,0,0" Foreground="White" IsExpanded="False">
+                                <Grid Margin="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <Border Grid.Row="0" Grid.Column="0" Background="#33FFFFFF" Margin="0,0,5,2" Padding="3,1" CornerRadius="3">
+                                        <TextBlock Text="Arrow Keys" Foreground="#DDDDDD" FontFamily="Consolas"/>
+                                    </Border>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Move control position" Foreground="#DDDDDD"/>
+                                    
+                                    <Border Grid.Row="1" Grid.Column="0" Background="#33FFFFFF" Margin="0,2,5,2" Padding="3,1" CornerRadius="3">
+                                        <TextBlock Text="Shift+Arrows" Foreground="#DDDDDD" FontFamily="Consolas"/>
+                                    </Border>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Change control size" Foreground="#DDDDDD"/>
+                                    
+                                    <Border Grid.Row="2" Grid.Column="0" Background="#33FFFFFF" Margin="0,2,5,2" Padding="3,1" CornerRadius="3">
+                                        <TextBlock Text="Enter" Foreground="#DDDDDD" FontFamily="Consolas"/>
+                                    </Border>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Apply changes" Foreground="#DDDDDD"/>
+                                    
+                                    <Border Grid.Row="3" Grid.Column="0" Background="#33FFFFFF" Margin="0,2,5,0" Padding="3,1" CornerRadius="3">
+                                        <TextBlock Text="Escape" Foreground="#DDDDDD" FontFamily="Consolas"/>
+                                    </Border>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Cancel" Foreground="#DDDDDD"/>
+                                </Grid>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Right side: Grid visual representation -->
+                    <Border Grid.Column="1" Background="#22FFFFFF" CornerRadius="6" Padding="10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <TextBlock Grid.Row="0" Text="Grid Visualization" FontSize="16" FontWeight="Bold" 
+                                       Foreground="White" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                            
+                            <Border Grid.Row="1" Background="#11FFFFFF">
+                                <Grid x:Name="GridVisualizer" ShowGridLines="True">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Visual indicator of the current selection -->
+                            <Border Grid.Row="1" x:Name="SelectionIndicator" 
+                                    Background="#664BA9F8" BorderBrush="#FF4BA9F8" BorderThickness="2"
+                                    Visibility="Visible"/>
+                            
+                            <!-- Instruction Overlay (initially hidden) -->
+                            <Border Grid.Row="1" x:Name="InstructionOverlay" 
+                                    Background="#BB000000" Visibility="Collapsed"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Padding="15" CornerRadius="6">
+                                <StackPanel>
+                                    <TextBlock Text="Click, Drag and Resize" FontSize="16" FontWeight="Bold" 
+                                               Foreground="White" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Click grid to position control" Foreground="White" Margin="0,10,0,0"/>
+                                    <TextBlock Text="Drag corners to resize" Foreground="White" Margin="0,5,0,0"/>
+                                    <TextBlock Text="Drag center to move" Foreground="White" Margin="0,5,0,0"/>
+                                    <Button Content="Got it!" Margin="0,15,0,0" Padding="15,5"
+                                            Click="DismissInstructions_Click"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Help Button -->
+                            <Button Grid.Row="1" 
+                                    Style="{StaticResource EnhancedButtonStyle}"
+                                    Width="30" Height="30" 
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,5,5,0"
+                                    Click="ShowInstructions_Click"
+                                    ToolTip="Show resize instructions">
+                                <TextBlock Text="?" 
+                                           FontSize="16" 
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+                
+                <!-- Action Buttons -->
+                <Grid Grid.Row="3" Margin="0,15,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="ApplyButton" Content="Apply Changes" Width="120" Height="36" Margin="0,0,10,0" 
+                                Style="{StaticResource EnhancedButtonStyle}" Click="ApplyButton_Click"/>
+                        <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="36"
+                                Style="{StaticResource EnhancedButtonStyle}" Click="CancelButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,375 @@
+﻿<UserControl x:Class="Quantra.Controls.AlertsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Quantra.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="#1E1E30">
+             
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+	<Grid Margin="10">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<!-- Title and Controls -->
+			<RowDefinition Height="*"/>
+			<!-- Alerts List -->
+			<RowDefinition Height="Auto"/>
+			<!-- Add New Alert -->
+		</Grid.RowDefinitions>
+
+		<!-- Title and Controls -->
+		<Grid Grid.Row="0" Margin="0,5">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<TextBlock Grid.Column="0" Text="Price Alerts" FontSize="22"
+                       FontWeight="Bold" Foreground="White" Margin="5,0,0,10"/>
+
+			<StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+				<ComboBox x:Name="FilterComboBox" Width="100" Height="30" Margin="0,0,5,0"
+                          SelectionChanged="FilterComboBox_SelectionChanged"
+                          Style="{StaticResource EnhancedComboBoxStyle}">
+					<ComboBoxItem Content="All" IsSelected="True"/>
+					<ComboBoxItem Content="Active"/>
+					<ComboBoxItem Content="Triggered"/>
+					<ComboBoxItem Content="High Priority"/>
+				</ComboBox>
+				<ComboBox x:Name="CategoryFilterComboBox" Width="120" Height="30" Margin="0,0,5,0"
+                          SelectionChanged="CategoryFilterComboBox_SelectionChanged"
+                          Style="{StaticResource EnhancedComboBoxStyle}">
+					<ComboBoxItem Content="All Categories" IsSelected="True"/>
+					<ComboBoxItem Content="Standard"/>
+					<ComboBoxItem Content="TechnicalIndicator"/>
+					<ComboBoxItem Content="Opportunity"/>
+					<ComboBoxItem Content="Prediction"/>
+					<ComboBoxItem Content="Global"/>
+					<ComboBoxItem Content="SystemHealth"/>
+					<ComboBoxItem Content="Sentiment"/>
+					<ComboBoxItem Content="Pattern"/>
+				</ComboBox>
+				<TextBox x:Name="SearchBox" Width="200" Height="30" Margin="0,0,5,0"
+                         KeyUp="SearchBox_KeyUp"
+                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+				<Button x:Name="RefreshButton" Content="↻" Width="40" Height="30"
+                        Click="RefreshButton_Click"
+                        Style="{StaticResource EnhancedButtonStyle}" Margin="0,0,5,0"/>
+			</StackPanel>
+		</Grid>
+
+		<!-- Alerts List -->
+		<DataGrid x:Name="AlertsDataGrid" Grid.Row="1" Margin="0,5"
+                  AutoGenerateColumns="False"
+                  Background="#2D2D42" Foreground="White"
+                  BorderBrush="#3E3E56" AlternatingRowBackground="#3E3E56"
+                  SelectionChanged="AlertsDataGrid_SelectionChanged"
+                  CanUserAddRows="False" CanUserDeleteRows="False"
+                  IsReadOnly="True">
+			<DataGrid.Resources>
+				<Style TargetType="DataGridRow">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding IsTriggered}" Value="True">
+							<Setter Property="Background" Value="#45456A"/>
+						</DataTrigger>
+						<DataTrigger Binding="{Binding Priority}" Value="1">
+							<Setter Property="Background" Value="#4A3030"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</DataGrid.Resources>
+			<DataGrid.Columns>
+				<DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="120"/>
+				<DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80"/>
+				<DataGridTextColumn Header="Condition" Binding="{Binding Condition}" Width="*"/>
+				<DataGridTemplateColumn Header="Price/Value" Width="100">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding TriggerPrice, StringFormat=\${0:F2}}">
+								<TextBlock.Style>
+									<Style TargetType="TextBlock">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding Category}" Value="TechnicalIndicator">
+												<Setter Property="Text" Value="{Binding ThresholdValue, StringFormat=F2}"/>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</TextBlock.Style>
+							</TextBlock>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTextColumn Header="Alert Type" Binding="{Binding AlertType}" Width="90"/>
+				<DataGridTemplateColumn Header="Category" Width="90">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Category}">
+								<TextBlock.Style>
+									<Style TargetType="TextBlock">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding Category}" Value="TechnicalIndicator">
+												<Setter Property="Foreground" Value="#5CC8FF"/>
+											</DataTrigger>
+											<DataTrigger Binding="{Binding Category}" Value="SystemHealth">
+												<Setter Property="Foreground" Value="#FF5C5C"/>
+												<Setter Property="FontWeight" Value="Bold"/>
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</TextBlock.Style>
+							</TextBlock>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="Status" Width="80">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBlock>
+								<TextBlock.Style>
+									<Style TargetType="TextBlock">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding IsTriggered}" Value="True">
+												<Setter Property="Text" Value="Triggered" />
+												<Setter Property="Foreground" Value="Orange" />
+											</DataTrigger>
+											<DataTrigger Binding="{Binding IsTriggered}" Value="False">
+												<Setter Property="Text" Value="Waiting" />
+												<Setter Property="Foreground" Value="LightGreen" />
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</TextBlock.Style>
+							</TextBlock>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTemplateColumn Header="Priority" Width="70">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBlock>
+								<TextBlock.Style>
+									<Style TargetType="TextBlock">
+										<Style.Triggers>
+											<DataTrigger Binding="{Binding Priority}" Value="1">
+												<Setter Property="Text" Value="High" />
+												<Setter Property="Foreground" Value="Red" />
+											</DataTrigger>
+											<DataTrigger Binding="{Binding Priority}" Value="2">
+												<Setter Property="Text" Value="Medium" />
+												<Setter Property="Foreground" Value="Yellow" />
+											</DataTrigger>
+											<DataTrigger Binding="{Binding Priority}" Value="3">
+												<Setter Property="Text" Value="Low" />
+												<Setter Property="Foreground" Value="CornflowerBlue" />
+											</DataTrigger>
+										</Style.Triggers>
+									</Style>
+								</TextBlock.Style>
+							</TextBlock>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="60"/>
+				<DataGridTextColumn Header="Created" Binding="{Binding CreatedDate, StringFormat=MM/dd/yy HH:mm}" Width="110"/>
+				<DataGridTemplateColumn Header="Actions" Width="100">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<StackPanel Orientation="Horizontal">
+								<Button Content="Edit" Click="EditAlert_Click" Margin="2,0"
+                                        Width="40" Style="{StaticResource EnhancedButtonStyle}"/>
+								<Button Content="Delete" Click="DeleteAlert_Click" Margin="2,0"
+                                        Width="40" Style="{StaticResource EnhancedButtonStyle}"/>
+							</StackPanel>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+			</DataGrid.Columns>
+		</DataGrid>
+
+		<!-- Add New Alert -->
+		<Grid Grid.Row="2" Margin="0,5">
+			<Button x:Name="AddAlertButton" Content="Add New Alert" Height="35" Width="150"
+                    HorizontalAlignment="Center" Click="AddAlertButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"/>
+		</Grid>
+
+		<!-- Alert Editor Popup -->
+		<Popup x:Name="AlertEditorPopup" PlacementTarget="{Binding ElementName=AddAlertButton}"
+               Placement="Center" StaysOpen="False" Width="400">
+			<Border BorderBrush="#3E3E56" BorderThickness="2" Background="#1E1E30" Padding="10">
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+
+					<TextBlock Grid.Row="0" Text="Alert Editor" FontSize="18"
+                               FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
+
+					<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="400">
+						<StackPanel>
+							<TextBlock Text="Alert Name:" Foreground="White" Margin="0,5"/>
+							<TextBox x:Name="AlertNameTextBox" Margin="0,0,0,10"
+                                     Style="{StaticResource EnhancedTextBoxStyle}"/>
+
+							<TextBlock Text="Symbol:" Foreground="White" Margin="0,5"/>
+							<TextBox x:Name="SymbolTextBox" Margin="0,0,0,10"
+                                     Style="{StaticResource EnhancedTextBoxStyle}"/>
+
+							<TextBlock Text="Alert Category:" Foreground="White" Margin="0,5"/>
+							<ComboBox x:Name="AlertCategoryComboBox" Margin="0,0,0,10" SelectionChanged="AlertCategoryComboBox_SelectionChanged"
+                                      Style="{StaticResource EnhancedComboBoxStyle}">
+								<ComboBoxItem Content="Standard" Tag="Standard"/>
+								<ComboBoxItem Content="Technical Indicator" Tag="TechnicalIndicator"/>
+								<ComboBoxItem Content="Opportunity" Tag="Opportunity"/>
+								<ComboBoxItem Content="Prediction" Tag="Prediction"/>
+								<ComboBoxItem Content="System Health" Tag="SystemHealth"/>
+								<ComboBoxItem Content="Sentiment" Tag="Sentiment"/>
+								<ComboBoxItem Content="Pattern" Tag="Pattern"/>
+							</ComboBox>
+
+							<!-- Price Condition Controls (Standard) -->
+							<StackPanel x:Name="PriceConditionPanel">
+								<TextBlock Text="Condition:" Foreground="White" Margin="0,5"/>
+								<ComboBox x:Name="ConditionComboBox" Margin="0,0,0,10"
+										  Style="{StaticResource EnhancedComboBoxStyle}">
+									<ComboBoxItem Content="Price Above"/>
+									<ComboBoxItem Content="Price Below"/>
+									<ComboBoxItem Content="Price Crosses"/>
+								</ComboBox>
+
+								<TextBlock Text="Trigger Price:" Foreground="White" Margin="0,5"/>
+								<TextBox x:Name="TriggerPriceTextBox" Margin="0,0,0,10"
+										 Style="{StaticResource EnhancedTextBoxStyle}"/>
+							</StackPanel>
+							
+							<!-- Technical Indicator Condition Controls -->
+							<StackPanel x:Name="IndicatorConditionPanel" Visibility="Collapsed">
+								<TextBlock Text="Technical Indicator:" Foreground="White" Margin="0,5"/>
+								<ComboBox x:Name="IndicatorNameComboBox" Margin="0,0,0,10"
+										  Style="{StaticResource EnhancedComboBoxStyle}"
+										  SelectionChanged="IndicatorNameComboBox_SelectionChanged">
+									<ComboBoxItem Content="RSI"/>
+									<ComboBoxItem Content="MACD"/>
+									<ComboBoxItem Content="ADX"/>
+									<ComboBoxItem Content="ATR"/>
+									<ComboBoxItem Content="Momentum"/>
+									<ComboBoxItem Content="OBV"/>
+									<ComboBoxItem Content="MFI"/>
+									<ComboBoxItem Content="StochK"/>
+									<ComboBoxItem Content="StochD"/>
+									<ComboBoxItem Content="VWAP"/>
+									<ComboBoxItem Content="BullPower"/>
+									<ComboBoxItem Content="BearPower"/>
+									<ComboBoxItem Content="ROC"/>
+									<ComboBoxItem Content="Volume"/>
+									<ComboBoxItem Content="VolumeSpike"/>
+								</ComboBox>
+								
+								<TextBlock Text="Comparison Operator:" Foreground="White" Margin="0,5"/>
+								<ComboBox x:Name="ComparisonOperatorComboBox" Margin="0,0,0,10"
+										  Style="{StaticResource EnhancedComboBoxStyle}">
+									<ComboBoxItem Content="Equal" Tag="Equal"/>
+									<ComboBoxItem Content="Not Equal" Tag="NotEqual"/>
+									<ComboBoxItem Content="Greater Than" Tag="GreaterThan"/>
+									<ComboBoxItem Content="Less Than" Tag="LessThan"/>
+									<ComboBoxItem Content="Greater Than Or Equal" Tag="GreaterThanOrEqual"/>
+									<ComboBoxItem Content="Less Than Or Equal" Tag="LessThanOrEqual"/>
+									<ComboBoxItem Content="Crosses Above" Tag="CrossesAbove"/>
+									<ComboBoxItem Content="Crosses Below" Tag="CrossesBelow"/>
+								</ComboBox>
+								
+								<TextBlock Text="Threshold Value:" Foreground="White" Margin="0,5"/>
+								<TextBox x:Name="ThresholdValueTextBox" Margin="0,0,0,10"
+										 Style="{StaticResource EnhancedTextBoxStyle}"/>
+							</StackPanel>
+
+							<TextBlock Text="Alert Type:" Foreground="White" Margin="0,5"/>
+							<ComboBox x:Name="AlertTypeComboBox" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedComboBoxStyle}">
+								<ComboBoxItem Content="Notification"/>
+								<ComboBoxItem Content="Email"/>
+								<ComboBoxItem Content="Sound"/>
+								<ComboBoxItem Content="Order"/>
+							</ComboBox>
+
+							<TextBlock Text="Priority:" Foreground="White" Margin="0,5"/>
+							<ComboBox x:Name="PriorityComboBox" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedComboBoxStyle}">
+								<ComboBoxItem Content="High" Tag="1"/>
+								<ComboBoxItem Content="Medium" Tag="2" IsSelected="True"/>
+								<ComboBoxItem Content="Low" Tag="3"/>
+							</ComboBox>
+
+							<TextBlock Text="Notes:" Foreground="White" Margin="0,5"/>
+							<TextBox x:Name="NotesTextBox" Margin="0,0,0,10" Height="60" TextWrapping="Wrap"
+                                     Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                     
+                            <!-- Sound Settings -->
+                            <TextBlock Text="Sound Settings:" Foreground="White" Margin="0,10,0,5" FontWeight="Bold"/>
+                            
+                            <CheckBox x:Name="EnableSoundCheckBox" Content="Enable Sound for this Alert" 
+                                     Margin="0,5" IsChecked="True" Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                            
+                            <TextBlock Text="Alert Sound:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="SoundFileComboBox" Margin="0,0,0,10"
+                                     Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Default (Based on Category)" Tag=""/>
+                                <ComboBoxItem Content="Standard Alert" Tag="alert.wav"/>
+                                <ComboBoxItem Content="Opportunity Alert" Tag="opportunity.wav"/>
+                                <ComboBoxItem Content="Prediction Alert" Tag="prediction.wav"/>
+                                <ComboBoxItem Content="Technical Indicator Alert" Tag="indicator.wav"/>
+                                <ComboBoxItem Content="Warning Alert" Tag="warning.wav"/>
+                            </ComboBox>
+                            
+                            <!-- Visual Indicator Settings -->
+                            <TextBlock Text="Visual Indicator Settings:" Foreground="White" Margin="0,10,0,5" FontWeight="Bold"/>
+                            
+                            <TextBlock Text="Indicator Type:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="VisualIndicatorTypeComboBox" Margin="0,0,0,10"
+                                     Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Toast" Tag="Toast"/>
+                                <ComboBoxItem Content="Banner" Tag="Banner"/>
+                                <ComboBoxItem Content="Popup" Tag="Popup"/>
+                                <ComboBoxItem Content="Flashcard" Tag="Flashcard"/>
+                            </ComboBox>
+                            
+                            <TextBlock Text="Indicator Color:" Foreground="White" Margin="0,5"/>
+                            <ComboBox x:Name="VisualIndicatorColorComboBox" Margin="0,0,0,10"
+                                     Style="{StaticResource EnhancedComboBoxStyle}">
+                                <ComboBoxItem Content="Yellow" Tag="#FFFF00"/>
+                                <ComboBoxItem Content="Red" Tag="#FF0000"/>
+                                <ComboBoxItem Content="Green" Tag="#00FF00"/>
+                                <ComboBoxItem Content="Blue" Tag="#0000FF"/>
+                                <ComboBoxItem Content="Orange" Tag="#FFA500"/>
+                                <ComboBoxItem Content="Purple" Tag="#800080"/>
+                                <ComboBoxItem Content="Cyan" Tag="#00FFFF"/>
+                                <ComboBoxItem Content="White" Tag="#FFFFFF"/>
+                            </ComboBox>
+
+							<CheckBox x:Name="IsActiveCheckBox" Content="Active" Margin="0,10,0,5" IsChecked="True" Style="{StaticResource EnhancedCheckBoxStyle}"/>
+						</StackPanel>
+					</ScrollViewer>
+
+					<StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+						<Button x:Name="SaveAlertButton" Content="Save" Width="100" Height="30" Margin="5,0"
+                                Click="SaveAlertButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+						<Button x:Name="CancelAlertButton" Content="Cancel" Width="100" Height="30" Margin="5,0"
+                                Click="CancelAlertButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</Popup>
+	</Grid>
+</UserControl>

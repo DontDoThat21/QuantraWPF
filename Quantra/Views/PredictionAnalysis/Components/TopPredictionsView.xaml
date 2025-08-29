@@ -1,0 +1,196 @@
+<UserControl x:Class="Quantra.Controls.Components.TopPredictionsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Quantra.Controls.Components"
+             xmlns:controls="clr-namespace:Quantra.Controls"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             xmlns:converters="clr-namespace:Quantra.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="Transparent">
+
+    <UserControl.Resources>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+    </UserControl.Resources>
+    
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Prediction List -->
+        <DataGrid x:Name="PredictionDataGrid" Grid.Column="0" Margin="5" 
+                  AutoGenerateColumns="False" 
+                  Background="#2D2D42" Foreground="Black" 
+                  BorderBrush="#3E3E56" AlternatingRowBackground="#3E3E56"
+                  SelectionChanged="PredictionDataGrid_SelectionChanged"
+                  CanUserAddRows="False" CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding PredictedAction}" Value="BUY">
+                            <Setter Property="Background" Value="#304838"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding PredictedAction}" Value="SELL">
+                            <Setter Property="Background" Value="#4A3030"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="SizeToHeader" 
+                                  MinWidth="60" Foreground="GhostWhite">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Action" Binding="{Binding PredictedAction}" Width="SizeToHeader" 
+                                  MinWidth="60" Foreground="GhostWhite">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Header="Confidence" Width="*" MinWidth="80">
+                    <DataGridTemplateColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTemplateColumn.HeaderStyle>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <ProgressBar Value="{Binding Confidence}" 
+                                           Minimum="0" Maximum="1" 
+                                           Height="15"
+                                           HorizontalAlignment="Stretch">
+                                    <ProgressBar.Style>
+                                        <Style TargetType="ProgressBar">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding PredictedAction}" Value="BUY">
+                                                    <Setter Property="Foreground" Value="#20C040"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding PredictedAction}" Value="SELL">
+                                                    <Setter Property="Foreground" Value="#C02020"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ProgressBar.Style>
+                                </ProgressBar>
+                                <TextBlock Text="{Binding Confidence, StringFormat={}{0:P0}}" 
+                                         HorizontalAlignment="Center" 
+                                         VerticalAlignment="Center"
+                                         FontSize="10"
+                                         FontWeight="Bold"
+                                         Foreground="White"/>
+                            </Grid>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Current" Binding="{Binding CurrentPrice, StringFormat=\${0:F2}}" 
+                                  Width="Auto" Foreground="GhostWhite">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Target" Binding="{Binding TargetPrice, StringFormat=\${0:F2}}" 
+                                  Width="Auto" Foreground="GhostWhite">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Potential" Binding="{Binding PotentialReturn, StringFormat={}{0:P2}}" 
+                                  Width="Auto" Foreground="GhostWhite">
+                    <DataGridTextColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.HeaderStyle>
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PredictedAction}" Value="BUY">
+                                    <Setter Property="Foreground" Value="#20C040"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding PredictedAction}" Value="SELL">
+                                    <Setter Property="Foreground" Value="#C02020"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Header="Trading Rule" Width="120">
+                    <DataGridTemplateColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTemplateColumn.HeaderStyle>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Cursor="Hand" Background="Transparent" MouseLeftButtonDown="TradingRule_Click">
+                                <TextBlock Text="{Binding TradingRule}" 
+                                           Foreground="#3E90FF" 
+                                           TextAlignment="Center"
+                                           Padding="5,2"
+                                           TextDecorations="{Binding TradingRule}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TradingRule}" Value="">
+                                                    <Setter Property="Text" Value="Set Rule"/>
+                                                    <Setter Property="Foreground" Value="#999999"/>
+                                                    <Setter Property="FontStyle" Value="Italic"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Actions" Width="Auto">
+                    <DataGridTemplateColumn.HeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Foreground" Value="GhostWhite"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTemplateColumn.HeaderStyle>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Create Rule" Click="CreateRule_Click"
+                                  Background="#3E3E56" Foreground="White" BorderBrush="Cyan" 
+                                  Width="70" Height="22" Margin="2"
+                                  IsEnabled="{Binding Path=IsOrdersPageAvailable, RelativeSource={RelativeSource AncestorType={x:Type local:TopPredictionsView}}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Detailed Analysis -->
+        <local:PredictionDetailView Grid.Column="1" x:Name="PredictionDetail" />
+    </Grid>
+</UserControl>

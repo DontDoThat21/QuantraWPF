@@ -1,0 +1,381 @@
+<Window x:Class="Quantra.Views.Orders.OrdersPage"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Quantra"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Place Order" Height="650" Width="700" 
+        Background="{StaticResource DarkBlueBrush}"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None" AllowsTransparency="True"
+        MinHeight="650" MinWidth="700">
+    <Grid>
+        <!-- Resize borders -->
+        <local:ResizableBorder/>
+        
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Add CustomTitleBar -->
+                <local:SharedTitleBar Title="Orders" Grid.Row="0"/>
+                
+                <Grid Grid.Row="1" Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Order Form Section -->
+                    <materialDesign:Card Grid.Row="0" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="New Order" 
+                                      Style="{StaticResource EnhancedHeaderTextBlockStyle}"
+                                      Margin="0,0,0,15"/>
+
+                            <!-- Order Details -->
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Symbol -->
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
+                                    <TextBlock Text="Symbol" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="SymbolTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                            Text="{Binding Order.Symbol, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+
+                                <!-- Order Type -->
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,15">
+                                    <TextBlock Text="Order Type" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <ComboBox x:Name="OrderTypeComboBox" Style="{StaticResource EnhancedComboBoxStyle}"
+                                             SelectedItem="{Binding Order.OrderType}">
+                                        <ComboBoxItem Content="BUY" IsSelected="True"/>
+                                        <ComboBoxItem Content="SELL"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <!-- Quantity -->
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
+                                    <TextBlock Text="Quantity" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="QuantityTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                            Text="{Binding Order.Quantity, UpdateSourceTrigger=PropertyChanged}"/>
+                                </StackPanel>
+
+                                <!-- Price -->
+                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,15">
+                                    <TextBlock Text="Price" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="PriceTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                            Text="{Binding Order.Price, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"/>
+                                </StackPanel>
+
+                                <!-- Stop Loss -->
+                                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,5">
+                                    <TextBlock Text="Stop Loss" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="StopLossTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                            Text="{Binding Order.StopLoss, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"/>
+                                </StackPanel>
+
+                                <!-- Take Profit -->
+                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,5">
+                                    <TextBlock Text="Take Profit" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="TakeProfitTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                            Text="{Binding Order.TakeProfit, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Trade Mode Toggle -->
+                            <Grid Grid.Row="2" Margin="0,10,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Paper Trading Mode" VerticalAlignment="Center"
+                                           Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                <ToggleButton x:Name="PaperTradeToggle" Grid.Column="1" HorizontalAlignment="Right"
+                                             IsChecked="{Binding Order.IsPaperTrade}" Checked="PaperTradeToggle_Checked"
+                                             Unchecked="PaperTradeToggle_Unchecked">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton" BasedOn="{StaticResource MaterialDesignSwitchToggleButton}">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter Property="Background" Value="#2D6A4C"/>
+                                                    <Setter Property="BorderBrush" Value="#50E070"/>
+                                                </Trigger>
+                                                <Trigger Property="IsChecked" Value="False">
+                                                    <Setter Property="Background" Value="#6A2D2D"/>
+                                                    <Setter Property="BorderBrush" Value="#E05050"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                            </Grid>
+
+                            <!-- Order Summary -->
+                            <Border Grid.Row="3" Background="#1A253A" CornerRadius="4" Padding="15" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Order Summary" 
+                                               Style="{StaticResource EnhancedHeaderTextBlockStyle}" 
+                                               Margin="0,0,0,10"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,0,5">
+                                        <Run Text="You are about to " Foreground="#CCCCCC"/>
+                                        <Run Text="{Binding Order.OrderType}" Foreground="#3E90FF" FontWeight="Bold"/>
+                                        <Run Text="{Binding Order.Quantity}" Foreground="#3E90FF" FontWeight="Bold"/>
+                                        <Run Text="shares of " Foreground="#CCCCCC"/>
+                                        <Run Text="{Binding Order.Symbol}" Foreground="#3E90FF" FontWeight="Bold"/>
+                                        <Run Text="at " Foreground="#CCCCCC"/>
+                                        <Run Text="$" Foreground="#CCCCCC"/>
+                                        <Run Text="{Binding Order.Price, StringFormat=N2}" Foreground="#3E90FF" FontWeight="Bold"/>
+                                        <Run Text="per share" Foreground="#CCCCCC"/>
+                                    </TextBlock>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0">
+                                        <Run Text="Total Value: " Foreground="#CCCCCC"/>
+                                        <Run Text="$" Foreground="#CCCCCC"/>
+                                        <Run Text="{Binding Order.TotalValue, Mode=OneWay, StringFormat=N2}" Foreground="#3E90FF" FontWeight="Bold"/>
+                                    </TextBlock>
+
+                                    <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" VerticalAlignment="Center"
+                                            Background="{Binding TradeModeBadgeBackground}" CornerRadius="3" Padding="10,5">
+                                        <TextBlock Text="{Binding TradeModeBadgeText, Mode=OneWay}" FontWeight="SemiBold" 
+                                                  Foreground="{Binding TradeModeBadgeForeground}"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Action Buttons -->
+                            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="RefreshPriceButton" Content="Refresh Price" Width="120" Height="36" 
+                                        Margin="0,0,10,0" Click="RefreshPriceButton_Click"
+                                        Style="{StaticResource EnhancedButtonStyle}"/>
+                                
+                                <Button x:Name="PlaceOrderButton" Content="Place Order" Width="120" Height="36" 
+                                        Click="PlaceOrderButton_Click"
+                                        Style="{StaticResource EnhancedButtonStyle}">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="1" BlurRadius="4" Opacity="0.3"/>
+                                    </Button.Effect>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </materialDesign:Card>
+
+                    <!-- Order History Section -->
+                    <materialDesign:Card Grid.Row="1" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="Recent Orders" 
+                                           Style="{StaticResource EnhancedHeaderTextBlockStyle}"
+                                           Margin="0,0,0,10"/>
+                                
+                                <ComboBox x:Name="FilterComboBox" Grid.Column="1" Width="120" 
+                                          Style="{StaticResource EnhancedComboBoxStyle}"
+                                          SelectionChanged="FilterComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="All" IsSelected="True"/>
+                                    <ComboBoxItem Content="Paper Trades"/>
+                                    <ComboBoxItem Content="Real Trades"/>
+                                    <ComboBoxItem Content="Buy Orders"/>
+                                    <ComboBoxItem Content="Sell Orders"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <DataGrid x:Name="OrderHistoryGrid" Grid.Row="1" 
+                                      AutoGenerateColumns="False" 
+                                      IsReadOnly="True"
+                                      ItemsSource="{Binding FilteredOrders}"
+                                      Background="Transparent" 
+                                      BorderThickness="0"
+                                      GridLinesVisibility="None"
+                                      RowBackground="#1A253A"
+                                      AlternatingRowBackground="#1E2A40"
+                                      HeadersVisibility="Column">
+                                <DataGrid.Resources>
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource EnhancedDataGridColumnHeaderStyle}">
+                                        <Setter Property="Padding" Value="10,5"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                        <Setter Property="BorderBrush" Value="#3E3E56"/>
+                                    </Style>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="10,5"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                    </Style>
+                                    <Style TargetType="DataGridRow">
+                                        <Setter Property="Margin" Value="0,2"/>
+                                    </Style>
+                                </DataGrid.Resources>
+
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Timestamp" 
+                                                        Binding="{Binding Timestamp, StringFormat=g}" 
+                                                        Width="150"/>
+                                    <DataGridTextColumn Header="Symbol" 
+                                                        Binding="{Binding Symbol}" 
+                                                        Width="80"/>
+                                    <DataGridTextColumn Header="Type" 
+                                                        Binding="{Binding OrderType}" 
+                                                        Width="80"/>
+                                    <DataGridTextColumn Header="Quantity" 
+                                                        Binding="{Binding Quantity}" 
+                                                        Width="80"/>
+                                    <DataGridTextColumn Header="Price" 
+                                                        Binding="{Binding Price, StringFormat=N2}" 
+                                                        Width="80"/>
+                                    <DataGridTextColumn Header="Total Value" 
+                                                        Binding="{Binding TotalValue, Mode=OneWay, StringFormat=N2}" 
+                                                        Width="100"/>
+                                    <DataGridTemplateColumn Header="Trade Type" Width="100">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding IsPaperTrade, Converter={StaticResource TradeModeBackgroundConverter}}" 
+                                                        CornerRadius="3" Padding="5,2">
+                                                    <TextBlock Text="{Binding IsPaperTrade, Converter={StaticResource TradeModeTextConverter}}" 
+                                                               FontWeight="SemiBold" 
+                                                               Foreground="{Binding IsPaperTrade, Converter={StaticResource TradeModeForegroundConverter}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="Status" Width="*">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding Status, Converter={StaticResource OrderStatusBackgroundConverter}}" 
+                                                        CornerRadius="3" Padding="5,2">
+                                                    <TextBlock Text="{Binding Status}" 
+                                                               FontWeight="SemiBold" 
+                                                               Foreground="{Binding Status, Converter={StaticResource OrderStatusForegroundConverter}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </materialDesign:Card>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,0">
+                        <Button x:Name="ClearHistoryButton" Content="Clear History" Width="120" Height="36" 
+                                Margin="0,0,10,0" Click="ClearHistoryButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+                        
+                        <Button x:Name="CloseButton" Content="Close" Width="120" Height="36" 
+                                Click="CloseButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+        
+        <!-- API Call Confirmation Dialog -->
+        <Grid x:Name="ApiConfirmationOverlay" Visibility="Collapsed" Background="#80000000">
+            <materialDesign:Card Width="400" Height="250" 
+                              Background="{StaticResource DarkBlueAccentBrush}"
+                              UniformCornerRadius="6"
+                              Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Confirm Order" 
+                              Style="{StaticResource EnhancedHeaderTextBlockStyle}" 
+                              Margin="0,0,0,15"/>
+                    
+                    <TextBlock Grid.Row="1" TextWrapping="Wrap" Style="{StaticResource EnhancedTextBlockStyle}">
+                        <Run Text="You are about to place a "/>
+                        <Run Text="{Binding Order.OrderType}" FontWeight="Bold"/>
+                        <Run Text=" order for "/>
+                        <Run Text="{Binding Order.Quantity}" FontWeight="Bold"/>
+                        <Run Text=" shares of "/>
+                        <Run Text="{Binding Order.Symbol}" FontWeight="Bold"/>
+                        <Run Text=" at $"/>
+                        <Run Text="{Binding Order.Price, StringFormat=N2}" FontWeight="Bold"/>
+                        <Run Text=" per share."/><LineBreak/><LineBreak/>
+                        <Run Text="Total value: $"/>
+                        <Run Text="{Binding Order.TotalValue, Mode=OneWay, StringFormat=N2}" FontWeight="Bold"/><LineBreak/><LineBreak/>
+                        <Run Text="This will execute as a "/>
+                        <Run Text="{Binding TradeModeBadgeText}" FontWeight="Bold"/>
+                        <Run Text="."/>
+                    </TextBlock>
+                    
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <CheckBox x:Name="DontShowAgainCheckBox" Content="Don't show again" 
+                                  Style="{StaticResource EnhancedCheckBoxStyle}" Margin="0,0,15,0"/>
+                        <Button x:Name="CancelApiButton" Content="Cancel" Width="90" Height="36" 
+                                Click="CancelApiButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                Margin="0,0,10,0"/>
+                        <Button x:Name="ConfirmApiButton" Content="Confirm" Width="90" Height="36" 
+                                Click="ConfirmApiButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+        
+        <!-- Success/Error Notification -->
+        <Border x:Name="NotificationPanel" Visibility="Collapsed" 
+                Background="{StaticResource DarkBlueAccentBrush}" 
+                BorderBrush="{Binding NotificationBorderBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="15" 
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20"
+                MinWidth="300">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <materialDesign:PackIcon Grid.Column="0" Kind="{Binding NotificationIcon}" 
+                       Width="24" Height="24" Margin="0,0,15,0" 
+                       Foreground="{Binding NotificationIconColor}"/>
+                
+                <TextBlock Grid.Column="1" Text="{Binding NotificationText}" 
+                         Style="{StaticResource EnhancedTextBlockStyle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

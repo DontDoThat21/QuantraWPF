@@ -1,0 +1,554 @@
+<UserControl x:Class="Quantra.Views.Backtesting.BacktestResultsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Quantra.Views.Backtesting"
+             xmlns:converters="clr-namespace:Quantra.Converters"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             mc:Ignorable="d" d:DesignWidth="900"
+             Background="#23233A"
+             Loaded="BacktestResultsControl_Loaded" Height="948">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:CustomBenchmarkDisplayConverter x:Key="CustomBenchmarkDisplayConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="4*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Performance Metrics Panel -->
+        <!-- Benchmark Selection Controls -->
+        <GroupBox Header="Benchmark Comparison" Grid.Row="0" Margin="5" Foreground="White">
+            <Grid Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Active benchmark indicator -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock Text="Active Reference Benchmark:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}" FontWeight="Bold"/>
+                    <TextBlock x:Name="ActiveBenchmarkText" Text="S&amp;P 500 (SPY)" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}" 
+                               Foreground="DarkGreen" FontWeight="Bold" Margin="5,0,0,0"/>
+                </StackPanel>
+
+                <!-- Standard benchmarks -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                    <TextBlock Text="Standard benchmarks:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                    <CheckBox x:Name="SPYCheckBox" Content="S&amp;P 500 (SPY)" Style="{StaticResource EnhancedCheckBoxStyle}" IsChecked="True" 
+                              Checked="BenchmarkCheckBox_Changed" Unchecked="BenchmarkCheckBox_Changed"/>
+                    <CheckBox x:Name="QQQCheckBox" Content="NASDAQ (QQQ)" Style="{StaticResource EnhancedCheckBoxStyle}" IsChecked="True" 
+                              Checked="BenchmarkCheckBox_Changed" Unchecked="BenchmarkCheckBox_Changed"/>
+                    <CheckBox x:Name="IWMCheckBox" Content="Russell 2000 (IWM)" Style="{StaticResource EnhancedCheckBoxStyle}" IsChecked="True" 
+                              Checked="BenchmarkCheckBox_Changed" Unchecked="BenchmarkCheckBox_Changed"/>
+                    <CheckBox x:Name="DIACheckBox" Content="Dow Jones (DIA)" Style="{StaticResource EnhancedCheckBoxStyle}"
+                              Checked="BenchmarkCheckBox_Changed" Unchecked="BenchmarkCheckBox_Changed"/>
+                </StackPanel>
+
+                <!-- Custom benchmarks -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
+                    <TextBlock Text="Custom benchmarks:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                    <ComboBox x:Name="CustomBenchmarkComboBox" Width="200" Style="{StaticResource EnhancedComboBoxStyle}" 
+                              SelectionChanged="CustomBenchmarkComboBox_SelectionChanged">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name, FallbackValue='Unnamed Custom Benchmark'}" FontWeight="Bold"/>
+                                    <TextBlock Text=" (" Margin="5,0,0,0"/>
+                                    <TextBlock Text="{Binding DisplaySymbol, FallbackValue='CUSTOM'}"/>
+                                    <TextBlock Text=")"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button x:Name="ManageCustomBenchmarksButton" Content="Manage Custom Benchmarks..." 
+                            Click="ManageCustomBenchmarksButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            />
+                    <Button x:Name="RefreshBenchmarksButton" Content="Refresh Benchmarks" 
+                            Click="RefreshBenchmarksButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+
+        <!-- Performance Metrics Panel -->
+        <GroupBox Header="Performance Metrics" Grid.Row="1" Margin="5" Foreground="White">
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Basic Metrics -->
+                <TextBlock Grid.Column="0" Grid.Row="0" Text="Total Return:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" x:Name="TotalReturnText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="1" Grid.Row="0" Text="Max Drawdown:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="MaxDrawdownText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="2" Grid.Row="0" Text="Win Rate:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="1" x:Name="WinRateText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="CAGR:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" x:Name="CAGRText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <!-- Advanced Metrics -->
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="Sharpe Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="3" x:Name="SharpeRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="1" Grid.Row="2" Text="Sortino Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="3" x:Name="SortinoRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="2" Grid.Row="2" Text="Calmar Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="3" x:Name="CalmarRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="3" Grid.Row="2" Text="Profit Factor:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="3" Grid.Row="3" x:Name="ProfitFactorText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="4" Grid.Row="2" Text="Information Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="4" Grid.Row="3" x:Name="InformationRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Price Chart with Trades" Grid.Row="2" Margin="5" Foreground="White">
+            <lvc:CartesianChart Name="PriceChart" Background="#23233A" Foreground="White">
+                <!-- Series and trade markers will be bound in code-behind -->
+            </lvc:CartesianChart>
+        </GroupBox>
+        <GroupBox Header="Equity Curve" Grid.Row="3" Margin="5" Foreground="White">
+            <lvc:CartesianChart Name="EquityChart" Background="#23233A" Foreground="White">
+                <!-- Series will be bound in code-behind -->
+            </lvc:CartesianChart>
+        </GroupBox>
+        <GroupBox Header="Drawdown Curve" Grid.Row="4" Margin="5" Foreground="White">
+            <lvc:CartesianChart Name="DrawdownChart" Background="#23233A" Foreground="White">
+                <!-- Series will be bound in code-behind -->
+            </lvc:CartesianChart>
+        </GroupBox>
+
+        <!-- Benchmark Comparison Chart -->
+        <GroupBox Header="Benchmark Comparison" Grid.Row="5" Margin="5" Foreground="White">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Tab control for different comparison views -->
+                <TabControl x:Name="BenchmarkComparisonTabControl" Grid.Row="1" SelectionChanged="BenchmarkComparisonTabControl_SelectionChanged">
+                    <TabItem Header="Performance Summary">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Combined performance chart -->
+                            <lvc:CartesianChart Name="CombinedPerformanceChart" Grid.Column="0" Grid.Row="0" Background="#23233A" Foreground="White">
+                                <!-- Series will be bound in code-behind -->
+                                <lvc:CartesianChart.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock Text="Hover over data points to see details" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                    </ToolTip>
+                                </lvc:CartesianChart.ToolTip>
+                            </lvc:CartesianChart>
+
+                            <!-- Performance metrics comparison table -->
+                            <DataGrid Name="PerformanceComparisonGrid" Grid.Column="1" Grid.Row="0" 
+                                      AutoGenerateColumns="False" IsReadOnly="True"
+                                      Foreground="White"
+                                      Background="#23233A"
+                                      RowBackground="#23233A"
+                                      AlternatingRowBackground="#26264A"
+                                      HeadersVisibility="Column"
+                                      ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                                      RowStyle="{StaticResource EnhancedDataGridRowStyle}"
+                                      CellStyle="{StaticResource EnhancedDataGridCellStyle}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Metric" Binding="{Binding Metric}" Width="*"/>
+                                    <DataGridTextColumn Header="Strategy" Binding="{Binding Strategy}" Width="*"/>
+                                    <DataGridTextColumn Header="Benchmark" Binding="{Binding Benchmark}" Width="*"/>
+                                    <DataGridTextColumn Header="Diff" Binding="{Binding Difference}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- Performance summary explanation -->
+                            <TextBlock Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Style="{StaticResource EnhancedTextBlockStyle}" TextWrapping="Wrap">
+                                <Run FontWeight="Bold">Performance Summary:</Run> This tab shows a comparison of key performance metrics between your strategy and selected benchmarks. 
+                                The chart visualizes cumulative performance and drawdown periods. The table shows numerical comparison with key metrics.
+                            </TextBlock>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Cumulative Returns">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <lvc:CartesianChart Name="BenchmarkReturnsChart" Grid.Row="0" Background="#23233A" Foreground="White">
+                                <!-- Series will be bound in code-behind -->
+                                <lvc:CartesianChart.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="Cumulative Returns" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                            <TextBlock Text="Hover over lines to see normalized returns" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="Use mouse wheel to zoom, click and drag to pan" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="Double-click to reset view" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </lvc:CartesianChart.ToolTip>
+                            </lvc:CartesianChart>
+
+                            <!-- Interactive controls -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+                                <ToggleButton x:Name="ShowRelativeReturnsToggle" Content="Show Relative Performance" 
+                                              Margin="5" Padding="5" Checked="ShowRelativeReturns_Changed" Unchecked="ShowRelativeReturns_Changed"
+                                              Style="{StaticResource EnhancedToggleButtonStyle}"/>
+                                <Button x:Name="ResetChartZoomButton" Content="Reset Zoom" 
+                                        Click="ResetChartZoom_Click" Style="{StaticResource EnhancedButtonStyle}"/>
+                                <ComboBox x:Name="TimeRangeSelector" Width="120" Style="{StaticResource EnhancedComboBoxStyle}" SelectionChanged="TimeRangeSelector_SelectionChanged">
+                                    <ComboBoxItem Content="All Data" IsSelected="True"/>
+                                    <ComboBoxItem Content="YTD"/>
+                                    <ComboBoxItem Content="1 Month"/>
+                                    <ComboBoxItem Content="3 Months"/>
+                                    <ComboBoxItem Content="6 Months"/>
+                                    <ComboBoxItem Content="1 Year"/>
+                                </ComboBox>
+                                <Button x:Name="HighlightOutperformanceButton" Content="Highlight Outperformance" 
+                                        Margin="5" Padding="5" Click="HighlightOutperformance_Click" Style="{StaticResource EnhancedButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Drawdown Comparison">
+                        <lvc:CartesianChart Name="BenchmarkDrawdownChart" Background="#23233A" Foreground="White">
+                            <!-- Series will be bound in code-behind -->
+                            <lvc:CartesianChart.ToolTip>
+                                <ToolTip>
+                                    <TextBlock Text="Hover over lines to see drawdown percentages. Use mouse wheel to zoom." Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                </ToolTip>
+                            </lvc:CartesianChart.ToolTip>
+                        </lvc:CartesianChart>
+                    </TabItem>
+
+                    <TabItem Header="Volatility Comparison">
+                        <lvc:CartesianChart Name="VolatilityComparisonChart" Background="#23233A" Foreground="White">
+                            <!-- Series will be bound in code-behind -->
+                            <lvc:CartesianChart.ToolTip>
+                                <ToolTip>
+                                    <StackPanel>
+                                        <TextBlock Text="Volatility Metrics" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                        <TextBlock Text="- Daily Volatility: Standard deviation of daily returns" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                        <TextBlock Text="- Annualized Volatility: Daily volatility scaled to annual basis" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                        <TextBlock Text="- Return/Risk Ratio: Total return divided by annualized volatility" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </lvc:CartesianChart.ToolTip>
+                        </lvc:CartesianChart>
+                    </TabItem>
+
+                    <TabItem Header="Performance Attribution">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <lvc:CartesianChart Name="PerformanceAttributionChart" Grid.Row="0" Background="#23233A" Foreground="White">
+                                <!-- Series will be bound in code-behind -->
+                                <lvc:CartesianChart.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="Performance Attribution Analysis" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                            <TextBlock Text="Shows periods of outperformance/underperformance relative to benchmarks" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="Green areas represent strategy outperformance" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="Red areas represent strategy underperformance" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </lvc:CartesianChart.ToolTip>
+                            </lvc:CartesianChart>
+
+                            <TextBlock Grid.Row="1" Style="{StaticResource EnhancedTextBlockStyle}" TextWrapping="Wrap">
+                                <Run FontWeight="Bold">Performance Attribution:</Run> This analysis highlights periods where your strategy outperforms or underperforms the benchmark. 
+                                The chart shows the difference between strategy and benchmark returns over time, helping identify market conditions where your strategy performs best.
+                            </TextBlock>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Risk-Adjusted Metrics">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Risk metrics chart -->
+                            <lvc:CartesianChart Name="RiskMetricsComparisonChart" Grid.Column="0" Grid.Row="0" Background="#23233A" Foreground="White">
+                                <!-- Series will be bound in code-behind -->
+                                <lvc:CartesianChart.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="Risk-Adjusted Performance Metrics:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                            <TextBlock Text="- Sharpe Ratio: Return per unit of risk" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="- Sortino Ratio: Return per unit of downside risk" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="- Calmar Ratio: Return per unit of max drawdown" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            <TextBlock Text="- Information Ratio: Excess return per unit of risk relative to benchmark" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </lvc:CartesianChart.ToolTip>
+                            </lvc:CartesianChart>
+
+                            <!-- Risk vs Return Scatter Plot -->
+                            <lvc:CartesianChart Name="RiskReturnScatterChart" Grid.Column="0" Grid.Row="1" Background="#23233A" Foreground="White">
+                                <!-- Series will be bound in code-behind -->
+                                <lvc:CartesianChart.AxisX>
+                                    <lvc:Axis Title="Risk (Max Drawdown %)" LabelFormatter="{Binding XFormatter}"/>
+                                </lvc:CartesianChart.AxisX>
+                                <lvc:CartesianChart.AxisY>
+                                    <lvc:Axis Title="Return %" LabelFormatter="{Binding YFormatter}"/>
+                                </lvc:CartesianChart.AxisY>
+                                <lvc:CartesianChart.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock Text="Risk vs Return: Bubble size represents volatility" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                    </ToolTip>
+                                </lvc:CartesianChart.ToolTip>
+                            </lvc:CartesianChart>
+
+                            <!-- Risk metrics table -->
+                            <DataGrid Name="RiskMetricsGrid" Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" 
+                                      AutoGenerateColumns="False" IsReadOnly="True"
+                                      Foreground="White"
+                                      Background="#23233A"
+                                      RowBackground="#23233A"
+                                      AlternatingRowBackground="#26264A"
+                                      HeadersVisibility="Column"
+                                      ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                                      CellStyle="{StaticResource EnhancedDataGridCellStyle}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Benchmark" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn Header="Beta" Binding="{Binding Beta, StringFormat=F2}" Width="*"/>
+                                    <DataGridTextColumn Header="Alpha" Binding="{Binding Alpha, StringFormat=P2}" Width="*"/>
+                                    <DataGridTextColumn Header="Return" Binding="{Binding TotalReturn, StringFormat=P2}" Width="*"/>
+                                    <DataGridTextColumn Header="Max DD" Binding="{Binding MaxDrawdown, StringFormat=P2}" Width="*"/>
+                                    <DataGridTextColumn Header="Info Ratio" Binding="{Binding InformationRatio, StringFormat=F2}" Width="*"/>
+                                    <DataGridTextColumn Header="Correl." Binding="{Binding Correlation, StringFormat=F2}" Width="*"/>
+                                </DataGrid.Columns>
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource EnhancedDataGridRowStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Name}" Value="Strategy">
+                                                <Setter Property="Background" Value="#26264A"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="Monte Carlo Simulation">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Monte Carlo Controls -->
+                            <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" Orientation="Horizontal">
+                                <TextBlock Text="Number of Simulations:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                <ComboBox Name="SimulationCountComboBox" SelectedIndex="1" Width="80" Style="{StaticResource EnhancedComboBoxStyle}">
+                                    <ComboBoxItem Content="100"/>
+                                    <ComboBoxItem Content="1000"/>
+                                    <ComboBoxItem Content="5000"/>
+                                    <ComboBoxItem Content="10000"/>
+                                </ComboBox>
+                                <Button Name="RunMonteCarloButton" Content="Run Simulation" Click="RunMonteCarloButton_Click" Style="{StaticResource EnhancedButtonStyle}"/>
+                                <TextBlock Name="MonteCarloStatusText" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                            </StackPanel>
+
+                            <!-- Monte Carlo Equity Curves -->
+                            <Grid Grid.Column="0" Grid.Row="1" Grid.RowSpan="2">
+                                <lvc:CartesianChart Name="MonteCarloEquityChart" Background="#23233A" Foreground="White">
+                                    <lvc:CartesianChart.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel>
+                                                <TextBlock Text="Monte Carlo Equity Curves" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                                <TextBlock Text="Shows distribution of possible future equity curves" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                                <TextBlock Text="Darker areas represent more likely outcomes" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                                <TextBlock Text="Extreme paths represent best/worst case scenarios" Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </lvc:CartesianChart.ToolTip>
+                                </lvc:CartesianChart>
+                            </Grid>
+
+                            <!-- Vertical GridSplitter -->
+                            <GridSplitter Grid.Column="1" Grid.Row="1" Grid.RowSpan="2"
+                                          Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                          Background="#FFC7C7C7"/>
+
+                            <!-- Monte Carlo Statistics Grid -->
+                            <Grid Grid.Column="2" Grid.Row="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <GroupBox Header="Return Distribution" Grid.Row="0" Margin="5">
+                                    <lvc:CartesianChart Name="ReturnDistributionChart" Height="150" Background="#23233A" Foreground="White">
+                                        <!-- Histogram will be added in code-behind -->
+                                    </lvc:CartesianChart>
+                                </GroupBox>
+
+                                <GroupBox Header="Monte Carlo Statistics" Grid.Row="1" Margin="5">
+                                    <ScrollViewer>
+                                        <StackPanel>
+                                            <GroupBox Header="Return Percentiles" Margin="0,5">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="5% Worst Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Return5PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="25% Lower Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Return25PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="50% Median:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Return50PercentText" Text="0.0%" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="75% Upper Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Return75PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="95% Best Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Return95PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                </Grid>
+                                            </GroupBox>
+
+                                            <GroupBox Header="Drawdown Percentiles" Margin="0,5">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="5% Best Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Drawdown5PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="25% Lower Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Drawdown25PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="50% Median:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Drawdown50PercentText" Text="0.0%" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="75% Upper Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Drawdown75PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="95% Worst Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Drawdown95PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                </Grid>
+                                            </GroupBox>
+
+                                            <GroupBox Header="Risk Metrics" Margin="0,5">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Value at Risk (95%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Maximum expected loss at 95% confidence level"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="VaR95Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="Value at Risk (99%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Maximum expected loss at 99% confidence level"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="VaR99Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="Expected Shortfall (95%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Average of worst 5% of outcomes"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="CVaR95Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="Probability of Profit:" Style="{StaticResource EnhancedTextBlockStyle}" />
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="ProfitProbabilityText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="Prob. of Beating Backtest:" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Probability of exceeding the original backtest return"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="BeatBacktestProbabilityText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                </Grid>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </GroupBox>
+                            </Grid>
+
+                            <!-- Max Drawdown Distribution -->
+                            <GroupBox Header="Drawdown Distribution" Grid.Column="2" Grid.Row="2" Margin="5">
+                                <lvc:CartesianChart Name="DrawdownDistributionChart" Background="#23233A" Foreground="White">
+                                    <!-- Histogram will be added in code-behind -->
+                                </lvc:CartesianChart>
+                            </GroupBox>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </GroupBox>
+    </Grid>
+</UserControl>
