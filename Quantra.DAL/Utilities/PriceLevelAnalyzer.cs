@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Quantra.Models;
 
-namespace Quantra.Models
+namespace Quantra.Utilities
 {
     /// <summary>
     /// Utility class for analyzing and identifying support and resistance levels

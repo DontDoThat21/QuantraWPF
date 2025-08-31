@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Quantra.Models;
+using Quantra;
 
-namespace Quantra.Models
+namespace Quantra.DAL.Services
 {
     /// <summary>
     /// Singleton manager for trading strategy profiles
