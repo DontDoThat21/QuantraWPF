@@ -88,7 +88,7 @@ pipeline.stop()
 ### C# Usage
 
 ```csharp
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 // Create inference service
 var inferenceService = new RealTimeInferenceService(maxConcurrentRequests: 10);

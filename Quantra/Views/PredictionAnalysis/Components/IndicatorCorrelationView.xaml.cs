@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 using LiveCharts;
 using LiveCharts.Wpf;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 
 namespace Quantra.Controls.Components

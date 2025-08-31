@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Tests.Services
 {

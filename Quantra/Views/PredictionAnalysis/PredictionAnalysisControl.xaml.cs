@@ -14,7 +14,7 @@ using Quantra.Views.PredictionAnalysis.Components;
 using PredictionChartModuleType = Quantra.Views.PredictionAnalysis.Components.PredictionChartModule;
 using System.Windows.Markup;
 using Quantra.Data;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 
@@ -25,6 +25,7 @@ namespace Quantra.Controls
         private readonly PredictionAnalysisViewModel _viewModel;
         private readonly INotificationService _notificationService;
         private readonly ITechnicalIndicatorService _indicatorService;
+        private readonly IEmailService _emailService;
         private readonly IndicatorDisplayModule _indicatorModule;
         private readonly PredictionChartModuleType _chartModule;
         private string _pacId; // Unique identifier for this PAC instance
@@ -37,13 +38,14 @@ namespace Quantra.Controls
         private double confidence;
 
         public PredictionAnalysisControl(
-            PredictionAnalysisViewModel viewModel = null,
-            INotificationService notificationService = null,
-            ITechnicalIndicatorService indicatorService = null,
-            PredictionAnalysisRepository analysisRepository = null,
-            ITradingService tradingService = null,
-            IAlphaVantageService alphaVantageService = null,
-            IEmailService emailService = null)
+            PredictionAnalysisViewModel viewModel,
+            INotificationService notificationService,
+            ITechnicalIndicatorService indicatorService,
+            PredictionAnalysisRepository analysisRepository,
+            ITradingService tradingService,
+            ISettingsService settingsService,
+            IAlphaVantageService alphaVantageService,
+            IEmailService emailService)
         {
             InitializeComponent();
 
@@ -51,17 +53,20 @@ namespace Quantra.Controls
             var indicatorSvc = indicatorService ?? new TechnicalIndicatorService();
             var emailSvc = emailService ?? new EmailService();
             var audioSvc = new AudioService(DatabaseMonolith.GetUserSettings());
-            var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc);
             var smsSvc = new SmsService();
+            var settingsSvc = settingsService ?? new SettingsService();
+            var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc, settingsSvc);
             var tradingSvc = tradingService ?? new TradingService(emailSvc, notificationSvc, smsSvc);
             var alphaSvc = alphaVantageService ?? new AlphaVantageService();
 
-            _viewModel = viewModel ?? new PredictionAnalysisViewModel(indicatorSvc, repo, tradingSvc, alphaSvc, emailSvc);
+            _viewModel = viewModel ?? new PredictionAnalysisViewModel(indicatorSvc, repo, tradingSvc, settingsSvc, alphaSvc, emailSvc);
+            _notificationService = notificationSvc;
             _notificationService = notificationSvc;
             _indicatorService = indicatorSvc;
+            _emailService = emailSvc;
 
-            _indicatorModule = new IndicatorDisplayModule(_indicatorService, _notificationService);
-            _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService);
+            _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
+            _chartModule = new PredictionChartModuleType(_settingsService, _indicatorService, _notificationService);
 
             DataContext = _viewModel;
 

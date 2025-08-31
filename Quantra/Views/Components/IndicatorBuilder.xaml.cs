@@ -10,7 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Data;  // Add this for CollectionViewSource
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 
 namespace Quantra.Views.Components

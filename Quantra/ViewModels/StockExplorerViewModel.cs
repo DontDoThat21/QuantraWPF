@@ -1,6 +1,6 @@
 using Quantra;
 using Quantra.Commands;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Utilities;
 using System.Collections.ObjectModel;

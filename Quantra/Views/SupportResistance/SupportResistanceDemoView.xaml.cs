@@ -8,7 +8,7 @@ using LiveCharts;
 using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Views.ChartExtensions;
 
 namespace Quantra.Views.SupportResistance

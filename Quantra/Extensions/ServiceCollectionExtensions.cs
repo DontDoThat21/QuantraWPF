@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Quantra.Configuration;
 using Quantra.Configuration.Models;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using Quantra.ViewModels;
 using Quantra.Controls;

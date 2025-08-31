@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using Quantra.Enums;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Xunit;
 

@@ -4,7 +4,7 @@
 //using System.Threading.Tasks;
 //using Xunit;
 //using Quantra.Models; // Only import Models
-//using Quantra.Services; // Needed for MultiStrategyBacktestService
+//using Quantra.DAL.Services.Interfaces; // Needed for MultiStrategyBacktestService
 
 //namespace Quantra.Tests
 //{

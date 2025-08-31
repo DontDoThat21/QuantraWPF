@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Media;
+using Quantra.Models;
 
 namespace Quantra.Models
 {
@@ -81,7 +82,9 @@ namespace Quantra.Models
                 };
                 
                 // Set color and style based on detection method and type
-                (visual.LineColor, visual.Style) = GetVisualStyleForLevel(level);
+                var visualStyle = GetVisualStyleForLevel(level);
+                visual.LineColor = visualStyle.color;
+                visual.Style = visualStyle.style;
                 
                 visuals.Add(visual);
             }
@@ -117,7 +120,7 @@ namespace Quantra.Models
                     // Pivot points use dashed lines
                     style = LineStyle.Dashed;
                     // Adjust color for pivot points
-                    if (level.Description.Contains("PP"))
+                    if (!string.IsNullOrEmpty(level.Description) && level.Description.Contains("PP"))
                         baseColor = Colors.Blue;
                     break;
                     
@@ -125,7 +128,7 @@ namespace Quantra.Models
                     // Fibonacci levels use dotted lines
                     style = LineStyle.Dotted;
                     // Use golden color for key Fibonacci levels
-                    if (level.Description.Contains("618") || level.Description.Contains("382"))
+                    if (!string.IsNullOrEmpty(level.Description) && (level.Description.Contains("618") || level.Description.Contains("382")))
                         baseColor = Color.FromRgb(212, 175, 55); // Gold color
                     break;
                     
@@ -146,7 +149,7 @@ namespace Quantra.Models
         {
             string typeLabel = level.IsSupport && level.IsResistance ? "S/R" : 
                                level.IsSupport ? "Support" : "Resistance";
-                               
+                                
             string strengthDesc = level.Strength >= 0.8 ? "Strong" :
                                  level.Strength >= 0.5 ? "Moderate" : "Weak";
                                  

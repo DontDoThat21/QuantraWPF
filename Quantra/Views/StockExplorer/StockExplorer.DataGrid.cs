@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media; // Added for VisualTreeHelper
 using Quantra.Models;
-using Quantra.Services; // Add this for StockDataCacheService
+using Quantra.DAL.Services.Interfaces; // Add this for StockDataCacheService
 using Quantra.Utilities; // Added for VisualTreeHelperExtensions
 using Quantra.Views.Shared; // Added for ConfirmationModal
 using Quantra.ViewModels; // Added for StockExplorerViewModel

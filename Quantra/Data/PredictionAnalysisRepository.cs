@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Linq;
 using Quantra.Models;
-using Quantra.Services; // For StrategyProfile
+using Quantra.DAL.Services.Interfaces; // For StrategyProfile
 
 namespace Quantra.Data
 {

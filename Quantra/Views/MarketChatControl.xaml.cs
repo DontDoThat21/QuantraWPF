@@ -6,7 +6,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels;
 
 namespace Quantra.Controls

@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using System.Linq;
 using System.Windows.Data;
@@ -21,6 +21,7 @@ namespace Quantra.ViewModels
         private readonly ITechnicalIndicatorService _indicatorService;
         private readonly PredictionAnalysisRepository _analysisRepository;
         private readonly IAlphaVantageService _alphaVantageService;
+        private readonly ISettingsService _settingsService;
         private readonly IEmailService _emailService;
         private double _currentPrice;
         private string _symbol;
@@ -140,6 +141,7 @@ namespace Quantra.ViewModels
             ITechnicalIndicatorService indicatorService,
             PredictionAnalysisRepository analysisRepository,
             ITradingService tradingService,
+            ISettingsService settingsService,
             IAlphaVantageService alphaVantageService,
             IEmailService emailService)
         {
@@ -148,7 +150,7 @@ namespace Quantra.ViewModels
             TradingService = tradingService ?? throw new ArgumentNullException(nameof(tradingService));
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-            
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             AnalyzeCommand = new RelayCommand(async _ => await AnalyzeAsync(), _ => true);
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => true);
 

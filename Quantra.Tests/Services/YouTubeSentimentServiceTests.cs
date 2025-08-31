@@ -7,7 +7,7 @@ using Microsoft.Extensions.Primitives;
 using System.ComponentModel;
 using Quantra.Configuration;
 using Quantra.Configuration.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Tests.Services
 {

@@ -12,11 +12,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Quantra.Models;
-using Quantra.Services;
-using Quantra.Services.Interfaces;
 using System.Collections.ObjectModel;
 using System.Text.Json;
-using Quantra.CrossCutting.Monitoring;
 
 namespace Quantra.Controls
 {

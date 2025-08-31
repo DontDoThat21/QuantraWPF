@@ -1,6 +1,6 @@
 using System;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Examples
 {

@@ -3,7 +3,7 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Windows;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -128,7 +128,6 @@ namespace Quantra
                 
                 // Register to hook each window as it's created to add resize functionality
                 this.Startup += App_Startup;
-                this.DispatcherUnhandledException += App_DispatcherUnhandledException;
                 
                 _logger.Information("Application startup completed successfully");
                 
@@ -218,56 +217,6 @@ namespace Quantra
                 window.Tag = "ResizableApplied";
                 
                 _logger.Debug("Applied resize behavior to window {WindowType}", window.GetType().Name);
-            }
-        }
-
-        private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
-        {
-            try
-            {
-                // Use our new framework to handle the unhandled exception
-                _logger.Error(e.Exception, "Unhandled application exception");
-                ResilienceHelper.HandleException(e.Exception, "UnhandledException");
-                
-                // Create and emit a system health alert for the unhandled exception
-                var alert = new Quantra.Models.AlertModel
-                {
-                    Name = "Unhandled Application Exception",
-                    Condition = e.Exception.Message,
-                    AlertType = "Critical Error",
-                    IsActive = true,
-                    IsTriggered = true,
-                    Priority = 3, // High priority
-                    CreatedDate = DateTime.Now,
-                    TriggeredDate = DateTime.Now,
-                    Category = Quantra.Models.AlertCategory.SystemHealth,
-                    Notes = e.Exception.ToString()
-                };
-
-                // Log to database and emit alert
-                AlertManager.EmitGlobalAlert(alert);
-
-                // Show UI notification
-                MainWindow mainWindow = Current.MainWindow as MainWindow;
-                mainWindow?.AppendAlert($"Critical error: {e.Exception.Message}", "negative");
-                
-                MessageBox.Show($"An unexpected error occurred: {e.Exception.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                
-                e.Handled = true;
-            }
-            catch (Exception ex)
-            {
-                // Last-resort fallback if even the error handling fails
-                _logger.Fatal(ex, "Critical failure in exception handler");
-                MessageBox.Show("A critical error occurred in the application.",
-                    "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                e.Handled = true;
-            }
-            finally
-            {
-                // Make sure all logs are flushed in case of critical errors
-                Log.Flush();
             }
         }
         

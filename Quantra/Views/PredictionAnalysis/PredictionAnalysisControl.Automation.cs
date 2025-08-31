@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System.Data.SQLite;
 using Quantra;
 using System.Windows.Threading;  // Add this explicit namespace reference

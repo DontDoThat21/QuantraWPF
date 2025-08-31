@@ -1,6 +1,6 @@
 using Quantra.Commands;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using Quantra.ViewModels.Base;
 using System;
@@ -170,9 +170,6 @@ namespace Quantra.ViewModels
             // Load transactions
             LoadTransactions();
         }
-
-        // For backward compatibility and designer support
-        public TransactionsViewModel() : this(new TransactionService(), new NotificationService(DatabaseMonolith.GetUserSettings(), new AudioService(DatabaseMonolith.GetUserSettings()))) { }
         
         #region Command Execution Methods
         

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Adapters;
 using Quantra.Models; // Ensures Quantra.Models.PredictionModel is accessible
 using Quantra.Services.Interfaces;
@@ -13,20 +13,13 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl
     {
-        public PredictionAnalysisControl()
-        {
-            InitializeComponent();
-            _financialNewsSentimentService = new FinancialNewsSentimentService();
-            _earningsTranscriptService = new EarningsTranscriptService();
-            _analystRatingService = new AnalystRatingService();
-            _insiderTradingService = new InsiderTradingService();
-        }
         private static TwitterSentimentService _twitterSentimentService = new TwitterSentimentService();
         private readonly ISocialMediaSentimentService _financialNewsSentimentService;
         private readonly IEarningsTranscriptService _earningsTranscriptService;
         private readonly IAnalystRatingService _analystRatingService;
+        private readonly ISettingsService _settingsService;
         private readonly IInsiderTradingService _insiderTradingService;
-        private readonly UserSettings _userSettings = ((DatabaseSettingsProfile)SettingsService.GetDefaultSettingsProfile())?.ToUserSettings() ?? new UserSettings();
+        private readonly UserSettings _userSettings;
         
         // Sentiment metrics storage
         private double sentimentScore = 0;

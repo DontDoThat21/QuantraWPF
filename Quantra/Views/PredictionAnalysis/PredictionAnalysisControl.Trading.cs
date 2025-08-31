@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Quantra.Enums;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System.Windows.Controls;
 
 

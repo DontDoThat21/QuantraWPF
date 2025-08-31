@@ -11,7 +11,7 @@ using Quantra.ViewModels.Base;
 using MaterialDesignThemes.Wpf;
 using System.Windows.Input;
 using System.Windows;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.ViewModels
 {

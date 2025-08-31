@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using System.ComponentModel;
 using System.Linq;
@@ -107,16 +107,17 @@ namespace Quantra.Views.PredictionAnalysis.Components
         }
 
         public PredictionChartModule(
-            ITechnicalIndicatorService indicatorService = null,
-            INotificationService notificationService = null)
+            ITechnicalIndicatorService indicatorService,
+            INotificationService notificationService,
+            IStockDataCacheService stockDataCacheService)
         {
             // Initialize properties before setting DataContext to avoid binding errors
             InitializeChart();
             InitializeComponent();
             DataContext = this;
-            _indicatorService = indicatorService ?? new TechnicalIndicatorService();
-            _notificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), new AudioService(DatabaseMonolith.GetUserSettings()));
-            _stockDataCacheService = new StockDataCacheService();
+            _indicatorService = indicatorService;
+            _notificationService = notificationService;
+            _stockDataCacheService = stockDataCacheService;
             
             // Subscribe to symbol update events
             SymbolUpdateService.SymbolUpdated += OnSymbolUpdated;

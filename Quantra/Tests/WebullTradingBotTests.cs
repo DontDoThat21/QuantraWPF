@@ -3,7 +3,7 @@
 //using System.Threading.Tasks;
 //using Microsoft.VisualStudio.TestTools.UnitTesting;
 //using Quantra.Enums;
-//using Quantra.Services;
+//using Quantra.DAL.Services.Interfaces;
 //using Quantra.Models;
 
 //namespace Quantra.Tests

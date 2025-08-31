@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using MaterialDesignThemes.Wpf;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Data;
 using Quantra.Services.Interfaces;
 using System.Collections.ObjectModel;
@@ -174,17 +174,18 @@ namespace Quantra.Controls.Components
         }
 
         public IndicatorDisplayModule(
-            ITechnicalIndicatorService? indicatorService = null,
-            INotificationService? notificationService = null,
-            IEmailService? emailService = null)
+            ISettingsService settingsService,
+            ITechnicalIndicatorService indicatorService,
+            INotificationService notificationService,
+            IEmailService emailService)
         {
             InitializeComponent();
             DataContext = this;
-            
-            _indicatorService = indicatorService ?? new TechnicalIndicatorService();
-            _notificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), new AudioService(DatabaseMonolith.GetUserSettings()));
-            _emailService = emailService ?? new EmailService();
-            _settingsProfile = SettingsService.GetDefaultSettingsProfile();
+
+            _indicatorService = indicatorService;
+            _notificationService = notificationService;
+            _emailService = emailService;
+            _settingsProfile = settingsService.GetDefaultSettingsProfile();
             _monitoringManager = MonitoringManager.Instance;
             _tradingBot = new WebullTradingBot();
             _cancellationTokenSource = new CancellationTokenSource();

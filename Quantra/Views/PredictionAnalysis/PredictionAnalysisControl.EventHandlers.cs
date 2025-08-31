@@ -1,5 +1,5 @@
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;

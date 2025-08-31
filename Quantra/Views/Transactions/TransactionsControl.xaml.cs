@@ -1,3 +1,8 @@
+using MaterialDesignThemes.Wpf;
+using Microsoft.Extensions.DependencyInjection;
+using Quantra.Models;
+using Quantra.DAL.Services.Interfaces;
+using Quantra.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,10 +12,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using Quantra.Models;
-using Quantra.Services;
-using Quantra.ViewModels;
-using MaterialDesignThemes.Wpf;
 
 namespace Quantra.Controls
 {
@@ -26,7 +27,12 @@ namespace Quantra.Controls
             InitializeComponent();
             
             // Initialize the ViewModel
-            _viewModel = new TransactionsViewModel();
+            //_viewModel = new TransactionsViewModel(
+                
+            var serviceProvider = App.ServiceProvider;
+
+            _viewModel = serviceProvider.GetRequiredService<TransactionsViewModel>();
+
             DataContext = _viewModel;
 
             // Load data when control is loaded

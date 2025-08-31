@@ -8,7 +8,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Quantra;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Controls
 {

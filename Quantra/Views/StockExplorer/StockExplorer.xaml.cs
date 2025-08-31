@@ -12,7 +12,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Reflection;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra;
 using LiveCharts.Defaults;

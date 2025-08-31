@@ -1,5 +1,5 @@
 using Xunit;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using System;
 using System.Threading.Tasks;

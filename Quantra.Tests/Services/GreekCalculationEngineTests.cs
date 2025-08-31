@@ -1,6 +1,6 @@
 using NUnit.Framework;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System;
 using static NUnit.Framework.Assert;
 

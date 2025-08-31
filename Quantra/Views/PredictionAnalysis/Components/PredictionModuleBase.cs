@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Windows.Controls;
 using Quantra.Data;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 
 namespace Quantra.Views.PredictionAnalysis.Components

@@ -14,7 +14,7 @@ using System.ComponentModel;
 using System.Collections.ObjectModel;
 using Quantra.Controls;
 using System.Windows.Shapes;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Enums;
 using Dapper;

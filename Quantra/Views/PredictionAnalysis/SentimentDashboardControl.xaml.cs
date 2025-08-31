@@ -7,7 +7,7 @@ using System.Windows.Media;
 using LiveCharts;
 using LiveCharts.Wpf;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using Quantra.Modules; // Add this for SentimentPriceVisualData, SentimentShiftEvent
 

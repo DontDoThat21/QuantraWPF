@@ -70,7 +70,10 @@
 
   <ItemGroup>
     <Folder Include="Controls\" />
-    <Folder Include="Services\Indicators\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Quantra.DAL\Quantra.DAL.csproj" />
   </ItemGroup>
 
 </Project>

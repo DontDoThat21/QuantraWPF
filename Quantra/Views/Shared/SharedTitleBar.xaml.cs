@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.CrossCutting.ErrorHandling;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Services.Interfaces;
 using System;
 using System.ComponentModel;
@@ -27,6 +27,7 @@ namespace Quantra
         private DispatcherTimer vixMonitoringTimer;
         private DispatcherTimer monitoringClearTimer;
         private IOrderService _orderService;
+        private ISettingsService _settingsService;
 
         // Add AlphaVantageService field
         private AlphaVantageService _alphaVantageService;
@@ -296,9 +297,9 @@ namespace Quantra
             {
                 // Ensure database is initialized first
                 DatabaseMonolith.Initialize();
-                
+
                 // Then ensure settings profiles exist
-                SettingsService.EnsureSettingsProfiles();
+                _settingsService.EnsureSettingsProfiles();
                 DatabaseMonolith.Log("Info", "SharedTitleBar: Database and settings profiles initialized successfully");
             }
             catch (Exception ex)
@@ -378,7 +379,7 @@ namespace Quantra
                 DatabaseMonolith.Log("Info", "RefreshVixDisplay: Starting VIX refresh");
                 
                 // Check if VIX monitoring is enabled in settings using resilient retry logic
-                var activeProfile = ResilienceHelper.Retry(() => SettingsService.GetDefaultSettingsProfile(), 
+                var activeProfile = ResilienceHelper.Retry(() => _settingsService.GetDefaultSettingsProfile(), 
                     RetryOptions.ForCriticalOperation());
                 
                 // If no profile found, try to initialize settings
@@ -388,10 +389,10 @@ namespace Quantra
                     
                     try
                     {
-                        ResilienceHelper.Retry(() => SettingsService.EnsureSettingsProfiles(), 
+                        ResilienceHelper.Retry(() => _settingsService.EnsureSettingsProfiles(), 
                             RetryOptions.ForCriticalOperation());
                         
-                        activeProfile = ResilienceHelper.Retry(() => SettingsService.GetDefaultSettingsProfile(), 
+                        activeProfile = ResilienceHelper.Retry(() => _settingsService.GetDefaultSettingsProfile(), 
                             RetryOptions.ForCriticalOperation());
                         
                         if (activeProfile != null)

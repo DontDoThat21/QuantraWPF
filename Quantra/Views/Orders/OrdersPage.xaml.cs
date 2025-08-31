@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using MaterialDesignThemes.Wpf;
 using System.Windows.Media.Animation;
 using System.Windows.Documents;

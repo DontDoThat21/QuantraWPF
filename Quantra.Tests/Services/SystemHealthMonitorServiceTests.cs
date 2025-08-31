@@ -2,7 +2,7 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.CrossCutting.Monitoring;
 
 namespace Quantra.Tests.Services

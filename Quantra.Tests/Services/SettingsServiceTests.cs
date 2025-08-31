@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Data.SQLite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 
 namespace Quantra.Tests.Services

@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using LiveCharts;
 using LiveCharts.Defaults;
 using Quantra.Models;
-using Quantra.Services;
+using Quantra.DAL.Services.Interfaces;
 using System.Windows.Threading;
 using Quantra.Adapters;
 using System.Threading.Tasks;
