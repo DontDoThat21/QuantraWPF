@@ -15,6 +15,9 @@ namespace Quantra.Utilities
         private static IAudioService _audioService;
         private static INotificationService _notificationService;
         private static ISettingsService _settingsService;
+        //private static SmsAlertService _smsAlertService;
+        //private static PushNotificationAlertService _pushNotificationAlertService;
+        //private static EmailAlertService _emailAlertService;
         private static readonly ILogger _logger = Log.ForType(typeof(AlertManager));
         
         static AlertManager()
@@ -91,23 +94,31 @@ namespace Quantra.Utilities
                     {
                         _notificationService.ShowAlertNotification(alert);
                     }
-
-                    // Get the current database settings profile
-                    var settings = _settingsService.GetDefaultSettingsProfile();
                     
-                    // Send email notification if enabled
-                    if (settings != null)
+                    
+                    if (_settingsService != null)
                     {
-                        // Send SMS notification if enabled
-                        ResilienceHelper.Retry(() => _smsAlertService.SendAlertSms(alert, settings));
-                        
+                        _settingsService.GetDefaultSettingsProfile();
+
+
+                        // Get the current database settings profile
+                        var settings = _settingsService.GetDefaultSettingsProfile();
+
                         // Send email notification if enabled
-                        ResilienceHelper.Retry(() => _emailAlertService.SendAlertEmail(alert, settings));
+                        if (settings != null)
+                        {
+                            // Send SMS notification if enabled
+                            ResilienceHelper.Retry(() => SmsAlertService.SendAlertSms(alert, settings));
 
-                        // Send push notification if enabled
-                        ResilienceHelper.Retry(() => _pushNotificationAlertService.SendAlertPushNotification(alert, settings));
-                    }
+                            // Send email notification if enabled
+                            ResilienceHelper.Retry(() => EmailAlertService.SendAlertEmail(alert, settings));
 
+                            // Send push notification if enabled
+                            ResilienceHelper.Retry(() => PushNotificationAlertService.SendAlertPushNotification(alert, settings));
+                        }
+
+                    }                    
+                    
                     // Notify all registered handlers
                     foreach (var handler in _alertHandlers)
                     {

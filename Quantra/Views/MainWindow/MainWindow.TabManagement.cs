@@ -1,15 +1,18 @@
 using Dapper;
 using Quantra.Controls;
+using Quantra.DAL.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Repositories;
 using Quantra.Utilities;
+using Quantra.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Documents;
 using System.Windows.Shapes; // For AdornerLayer
 
 namespace Quantra
@@ -23,7 +26,15 @@ namespace Quantra
         // Flag to track recursive tab selection operations
         private bool isTabSelectionInProgress = false;
         private TabRepository _tabRepository;
-
+        private PredictionAnalysisViewModel _viewModel;
+        private INotificationService _notificationService;
+        private ITechnicalIndicatorService _indicatorService;
+        private PredictionAnalysisRepository _analysisRepository;
+        private StockDataCacheService _stockDataCacheService;
+        private ITradingService _tradingService;
+        private ISettingsService _settingsService;
+        private IAlphaVantageService _alphaVantageService;
+        private IEmailService _emailService;
         #endregion
 
         #region Constructor
@@ -683,7 +694,15 @@ namespace Quantra
             try
             {
                 // Create a new instance of our custom PredictionAnalysisControl with explicit sizing
-                var predictionAnalysisControl = new PredictionAnalysisControl();
+                var predictionAnalysisControl = new PredictionAnalysisControl(_viewModel,
+                    _notificationService,
+                    _indicatorService,
+                    _analysisRepository,
+                    _stockDataCacheService,
+                    _tradingService,
+                    _settingsService,
+                    _alphaVantageService,
+                    _emailService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width

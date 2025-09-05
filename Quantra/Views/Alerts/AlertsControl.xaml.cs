@@ -21,6 +21,7 @@ namespace Quantra.Controls
         private AlertModel currentEditAlert = null;
         private TechnicalIndicatorAlertService technicalIndicatorAlertService;
         private VolumeAlertService volumeAlertService;
+        private SettingsService settingsService;
         private PatternAlertService patternAlertService;
         private DispatcherTimer alertMonitoringTimer;
 
@@ -40,7 +41,9 @@ namespace Quantra.Controls
             // Initialize the volume alert service
             var historicalDataService = ServiceLocator.Resolve<IHistoricalDataService>();
             volumeAlertService = new VolumeAlertService(historicalDataService, indicatorService);
-            
+
+            settingsService = ServiceLocator.Resolve<SettingsService>();
+
             // Initialize the pattern alert service
             var stockDataService = ServiceLocator.Resolve<StockDataCacheService>();
             var patternRecognitionService = new PricePatternRecognitionService(stockDataService);
@@ -577,11 +580,11 @@ namespace Quantra.Controls
         /// Emits a global alert that will be displayed in all AlertsControl instances.
         /// Usage: AlertsControl.EmitGlobalAlert(new AlertModel { ... });
         /// </summary>
-        public static void EmitGlobalAlert(AlertModel alert)
+        public void EmitGlobalAlert(AlertModel alert)
         {
             GlobalAlertEmitted?.Invoke(alert);
             // Send email if enabled in settings
-            var settings = _settingsService.GetDefaultSettingsProfile();
+            var settings = settingsService.GetDefaultSettingsProfile();
             EmailAlertService.SendAlertEmail(alert, settings);
         }
 
@@ -644,7 +647,7 @@ namespace Quantra.Controls
         /// <summary>
         /// Emits a global error alert from any exception or error message.
         /// </summary>
-        public static void EmitGlobalError(string message, Exception ex = null)
+        public void EmitGlobalError(string message, Exception ex = null)
         {
             var alert = new AlertModel
             {

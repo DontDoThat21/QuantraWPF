@@ -11,6 +11,7 @@ using System.Windows.Threading;
 using Quantra.Enums;
 using MaterialDesignThemes.Wpf;
 using Quantra.DAL.Services;
+using Quantra.DAL.Notifications;
 
 namespace Quantra
 {
@@ -71,7 +72,7 @@ namespace Quantra
         }
         
         // Handler for notifications from the NotificationService
-        private async void OnNotificationReceived(string message, PackIconKind icon, Color iconColor)
+        private async void OnNotificationReceived(string message, NotificationIcon icon, string iconColorHex)
         {
             // Update dispatcher monitoring before making the call
             SharedTitleBar.UpdateDispatcherMonitoring("OnNotificationReceived_DispatcherCall");
@@ -79,13 +80,28 @@ namespace Quantra
             // Use the AppendAlert method to show notifications consistently
             string intent = "neutral";
             
-            // Determine intent based on icon color
-            if (iconColor == Colors.Green)
-                intent = "positive";
-            else if (iconColor == Colors.Red)
-                intent = "negative";
-            else if (iconColor == Colors.Orange)
-                intent = "warning";
+            // Determine intent based on icon type and color
+            switch (icon)
+            {
+                case NotificationIcon.Success:
+                    intent = "positive";
+                    break;
+                case NotificationIcon.Error:
+                    intent = "negative";
+                    break;
+                case NotificationIcon.Warning:
+                    intent = "warning";
+                    break;
+                default:
+                    // For other cases, check the color hex
+                    if (iconColorHex?.Contains("00C853") == true || iconColorHex?.ToLower().Contains("green") == true)
+                        intent = "positive";
+                    else if (iconColorHex?.Contains("FF1744") == true || iconColorHex?.ToLower().Contains("red") == true)
+                        intent = "negative";
+                    else if (iconColorHex?.Contains("FFA000") == true || iconColorHex?.ToLower().Contains("orange") == true)
+                        intent = "warning";
+                    break;
+            }
             
             // We need to ensure we're on the UI thread
             await Application.Current.Dispatcher.InvokeAsync(() =>

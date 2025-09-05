@@ -56,7 +56,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
         {
             IndicatorService = indicatorService ?? new TechnicalIndicatorService();
             NotificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(),
-                new AudioService(DatabaseMonolith.GetUserSettings()));
+                new AudioService(DatabaseMonolith.GetUserSettings()), new SettingsService());
         }
 
         protected virtual void OnSymbolChanged()

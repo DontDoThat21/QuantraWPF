@@ -17,6 +17,7 @@ using System.Data.SQLite;
 using Quantra.Controls;  // Added for AlertsControl
 using Quantra.CrossCutting.Monitoring;
 using Quantra.DAL.Services;
+using Quantra.Utilities;
 
 namespace Quantra.Controls.Components
 {
@@ -941,7 +942,7 @@ namespace Quantra.Controls.Components
                     await ExecuteTrade(prediction);
 
                     // Log the alert (using AlertsControl.EmitGlobalAlert correctly)
-                    AlertsControl.EmitGlobalAlert(alert);
+                    Alerting.EmitGlobalAlert(alert);
                 }
             }
             catch (Exception ex)
@@ -1094,7 +1095,7 @@ namespace Quantra.Controls.Components
                 };
 
                 // Emit the global alert using AlertsControl instead of AlertManager
-                AlertsControl.EmitGlobalAlert(alert);
+                Alerting.EmitGlobalAlert(alert);
 
                 // Log successful trade
                 DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}", alert.Notes);
