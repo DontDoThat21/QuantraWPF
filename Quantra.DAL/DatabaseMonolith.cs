@@ -75,6 +75,7 @@ namespace Quantra
         private static IConfiguration _configuration;
         private static SettingsService _settingsService;
 
+
         // Store API keys for backward compatibility
         public static string AlphaVantageApiKey { get; internal set; }
 
@@ -233,7 +234,7 @@ namespace Quantra
             }
         }
 
-        DatabaseMonolith(SettingsService settingsService)
+        public DatabaseMonolith(SettingsService settingsService)
         {
             Initialize();
             _settingsService = settingsService;
@@ -293,246 +294,6 @@ namespace Quantra
             }
         }
 
-        /// <summary>
-        /// Drops all user tables from the database - USE WITH EXTREME CAUTION.
-        /// </summary>
-        /// <param name="connection">Open SQLite connection to use for operations</param>
-        /// <remarks>
-        /// This method is intended for development use only. It will permanently delete
-        /// all application data including logs, settings, trading history, and user configurations.
-        /// 
-        /// Only call this method during development, testing, or when performing a complete
-        /// application reset with user consent.
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// // Development/testing only
-        /// using (var connection = DatabaseMonolith.GetConnection())
-        /// {
-        ///     connection.Open();
-        ///     DatabaseMonolith.DropAllTables(connection);
-        /// }
-        /// </code>
-        /// </example>
-        public static void DropAllTables(SQLiteConnection connection)
-        {
-            try
-            {
-                Log("Info", "Dropping all database tables");
-
-                // Get a list of all tables in the database
-                var tables = connection.Query<string>(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
-
-                Log("Info", $"Found {tables.Count()} tables to drop");
-
-                // Drop each table
-                foreach (var table in tables)
-                {
-                    Log("Info", $"Dropping table: {table}");
-                    connection.Execute($"DROP TABLE IF EXISTS {table}");
-                }
-
-                Log("Info", "All tables dropped successfully");
-            }
-            catch (Exception ex)
-            {
-                // Just log the error but don't show Message Box
-                LogErrorWithContext(ex, "Error dropping tables");
-                // Optionally, rethrow or handle in another way if needed
-                throw new DatabaseException("Failed to drop database tables", ex);
-            }
-        }
-
-        public static void DropAndRecreateAllTables()
-        {
-            try
-            {
-                // Store log messages temporarily since we can't log to database while tables are dropped
-                List<(string Level, string Message, string Exception, DateTime Timestamp)> pendingLogs =
-                    new List<(string, string, string, DateTime)>();
-
-                pendingLogs.Add(("Info", "Starting database reset - dropping and recreating all tables", null, DateTime.Now));
-
-                // Check if database file exists, if not, just create it
-                if (!File.Exists(DbFilePath))
-                {
-                    pendingLogs.Add(("Info", "Database file does not exist. Creating new database.", null, DateTime.Now));
-
-                    // We can create the database directly since we don't need to drop tables
-                    SQLiteConnection.CreateFile(DbFilePath);
-                    using (var connection = new SQLiteConnection($"Data Source={DbFilePath};Version=3;"))
-                    {
-                        connection.Open();
-                        CreateDatabaseTables(connection);
-
-                        // Now we can log all pending messages
-                        foreach (var log in pendingLogs)
-                        {
-                            LogToDatabase(connection, log.Level, log.Message, log.Exception, log.Timestamp);
-                        }
-
-                        pendingLogs.Add(("Info", "Database created successfully with default schema and data", null, DateTime.Now));
-                    }
-                    return;
-                }
-
-                // For existing database, we need to drop and recreate
-                using (var connection = new SQLiteConnection($"Data Source={DbFilePath};Version=3;"))
-                {
-                    connection.Open();
-
-                    // Begin transaction to ensure all operations complete or none of them do
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Drop all existing tables
-                            pendingLogs.Add(("Info", "Dropping all database tables", null, DateTime.Now));
-                            var tables = connection.Query<string>(
-                                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
-
-                            pendingLogs.Add(("Info", $"Found {tables.Count()} tables to drop", null, DateTime.Now));
-
-                            // Drop each table
-                            foreach (var table in tables)
-                            {
-                                pendingLogs.Add(("Info", $"Dropping table: {table}", null, DateTime.Now));
-                                connection.Execute($"DROP TABLE IF EXISTS {table}");
-                            }
-
-                            pendingLogs.Add(("Info", "All tables dropped successfully", null, DateTime.Now));
-
-                            // Recreate tables with current schema
-                            pendingLogs.Add(("Info", "Recreating tables with current schema", null, DateTime.Now));
-                            CreateDatabaseTables(connection);
-
-                            // Commit transaction after all tables are recreated
-                            transaction.Commit();
-
-                            // Now we can log all pending messages since we have recreated the Logs table
-                            foreach (var log in pendingLogs)
-                            {
-                                LogToDatabase(connection, log.Level, log.Message, log.Exception, log.Timestamp);
-                            }
-
-                            pendingLogs.Add(("Info", "Database reset completed successfully", null, DateTime.Now));
-                            // Log the final message
-                            LogToDatabase(connection, "Info", "Database reset completed successfully", null, DateTime.Now);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Rollback if any error occurs during recreation
-                            transaction.Rollback();
-                            LogErrorWithContext(ex, "Error during database recreation");
-                            throw new DatabaseException("Error during database recreation", ex);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Since we can't guarantee the Logs table exists at this point, 
-                // we'll just throw the exception to be handled by the caller
-                LogErrorWithContext(ex, "Failed to reset database");
-                throw new DatabaseException("Failed to reset database", ex);
-            }
-        }
-
-
-
-        // Helper method to create all database tables
-        private static void CreateDatabaseTables(SQLiteConnection connection)
-        {
-            try
-            {
-                // Create all the standard tables
-                var createTablesQuery = @"
-            CREATE TABLE UserAppSettings (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                TabName TEXT NOT NULL,
-                TabOrder INTEGER NOT NULL,
-                CardPositions TEXT,
-                ControlsConfig TEXT,
-                ToolsConfig TEXT,
-                GridRows INTEGER DEFAULT 4,
-                GridColumns INTEGER DEFAULT 4
-            );
-            CREATE TABLE UserCredentials (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Username TEXT NOT NULL,
-                Password TEXT NOT NULL,
-                Pin TEXT,
-                LastLoginDate DATETIME
-            );
-            CREATE TABLE Logs (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Timestamp DATETIME NOT NULL,
-                Level TEXT NOT NULL,
-                Message TEXT NOT NULL,
-                Exception TEXT
-            );
-            CREATE TABLE TabConfigs (
-                TabName TEXT NOT NULL PRIMARY KEY,
-                ToolsConfig TEXT
-            );";
-
-                connection.Execute(createTablesQuery);
-
-                // Create Settings table separately
-                EnsureSettingsTable(connection);
-
-                // Add default tab
-                var defaultTabQuery = @"
-            INSERT INTO UserAppSettings (TabName, TabOrder, GridRows, GridColumns) 
-            VALUES ('Dashboard', 0, 4, 4);";
-                connection.Execute(defaultTabQuery);
-
-                // Verify tables were created
-                VerifyTablesExist(connection);
-
-                Log("Info", "Database tables created successfully");
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, "Failed to create database tables");
-                throw new DatabaseException("Failed to create database tables", ex);
-            }
-        }
-
-        // New method to verify tables exist after creation
-        private static void VerifyTablesExist(SQLiteConnection connection)
-        {
-            var requiredTables = new[] { "UserAppSettings", "UserCredentials", "Logs", "TabConfigs", "Settings", "UserPreferences" };
-            foreach (var tableName in requiredTables)
-            {
-                var tableExists = connection.ExecuteScalar<int>(
-                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=@TableName", 
-                    new { TableName = tableName });
-                
-                if (tableExists == 0)
-                {
-                    throw new DatabaseException($"Failed to create required table: {tableName}");
-                }
-            }
-        }
-
-        // Helper method to log directly to the database with a specific connection
-        private static void LogToDatabase(SQLiteConnection connection, string level, string message, string exception = null, DateTime? timestamp = null)
-        {
-            var insertQuery = @"
-        INSERT INTO Logs (Timestamp, Level, Message, Exception)
-        VALUES (@Timestamp, @Level, @Message, @Exception)";
-
-            connection.Execute(insertQuery, new
-            {
-                Timestamp = timestamp ?? DateTime.Now,
-                Level = level,
-                Message = message,
-                Exception = exception
-            });
-        }
-
         // Add this custom exception class at the bottom of the file or in a separate file
         public class DatabaseException : Exception
         {
@@ -542,59 +303,6 @@ namespace Quantra
 
             public DatabaseException(string message, Exception innerException) : base(message, innerException)
             {
-            }
-        }
-
-        public static void EnsureDatabaseAndTables()
-        {
-            if (!File.Exists(DbFilePath))
-            {
-                CreateDatabase();
-                return;
-            }
-
-            using (var connection = GetConnection())
-            {
-                connection.Open();
-
-                var createTableQuery = @"
-                    CREATE TABLE IF NOT EXISTS UserAppSettings (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        TabName TEXT NOT NULL,
-                        TabOrder INTEGER NOT NULL,
-                        CardPositions TEXT,
-                        ControlsConfig TEXT,
-                        ToolsConfig TEXT,
-                        GridRows INTEGER DEFAULT 4,
-                        GridColumns INTEGER DEFAULT 4
-                    );
-                    CREATE TABLE IF NOT EXISTS UserCredentials (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Username TEXT NOT NULL,
-                        Password TEXT NOT NULL,
-                        Pin TEXT,
-                        LastLoginDate DATETIME
-                    );
-                    CREATE TABLE IF NOT EXISTS Logs (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Timestamp DATETIME NOT NULL,
-                        Level TEXT NOT NULL,
-                        Message TEXT NOT NULL,
-                        Exception TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS TabConfigs (
-                        TabName TEXT NOT NULL PRIMARY KEY,
-                        ToolsConfig TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS UserPreferences (
-                        Key TEXT PRIMARY KEY,
-                        Value TEXT,
-                        LastUpdated DATETIME NOT NULL
-                    )";
-                connection.Execute(createTableQuery);
-                
-                // Ensure Settings table exists
-                EnsureSettingsTable(connection);
             }
         }
 
@@ -748,16 +456,6 @@ namespace Quantra
             }
         }
 
-        public static void SetPinForCurrentUser(string pin)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Open();
-                var updateQuery = "UPDATE UserCredentials SET Pin = @Pin WHERE Username = @Username";
-                connection.Execute(updateQuery, new { Pin = pin, Username = "current_user" }); // Replace "current_user" with the actual current user's username
-            }
-        }
-
         public static void SaveUserSettings(string pin, bool enableApiModalChecks)
         {
             using (var connection = GetConnection())
@@ -845,27 +543,6 @@ namespace Quantra
             }
         }
 
-        public static void SaveToolsConfig(string tabName, string toolsConfig)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Open();
-                var query = "INSERT INTO TabConfigs (TabName, ToolsConfig) VALUES (@TabName, @ToolsConfig) " +
-                            "ON CONFLICT(TabName) DO UPDATE SET ToolsConfig = @ToolsConfig";
-                connection.Execute(query, new { TabName = tabName, ToolsConfig = toolsConfig });
-            }
-        }
-
-        public static string LoadToolsConfig(string tabName)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Open();
-                var query = "SELECT ToolsConfig FROM TabConfigs WHERE TabName = @TabName";
-                return connection.QuerySingleOrDefault<string>(query, new { TabName = tabName }) ?? string.Empty;
-            }
-        }
-
         public static (int Rows, int Columns) LoadGridConfig(string tabName)
         {
             using (var connection = GetConnection())
@@ -880,16 +557,6 @@ namespace Quantra
                     return (4, 4);
                 }
                 return result;
-            }
-        }
-
-        public static void SaveGridConfig(string tabName, int rows, int columns)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Open();
-                var updateQuery = "UPDATE UserAppSettings SET GridRows = @Rows, GridColumns = @Columns WHERE TabName = @TabName";
-                connection.Execute(updateQuery, new { Rows = rows, Columns = columns, TabName = tabName });
             }
         }
 
@@ -923,7 +590,7 @@ namespace Quantra
                 return new Models.DataGridSettings();
             }
         }
-
+        
         public static void SaveDataGridConfig(string tabName, string controlName, Models.DataGridSettings settings)
         {
             using (var connection = GetConnection())
@@ -979,31 +646,6 @@ namespace Quantra
                         Log("Info", $"Skipped creating tab entry for auto-generated StockExplorer name: {tabName}");
                     }
                 }
-            }
-        }
-
-        public static void AddCustomControl(string tabName, string controlDefinition)
-        {
-            try
-            {
-                var currentControls = LoadControlsConfig(tabName) ?? string.Empty;
-
-                // Fix: Ensure we're using semicolons as separators instead of newlines
-                // Trim any trailing semicolons to avoid empty entries
-                currentControls = currentControls.Trim().TrimEnd(';');
-
-                // Append the new control with proper semicolon separator
-                var updatedControls = string.IsNullOrEmpty(currentControls)
-                    ? controlDefinition
-                    : currentControls + ";" + controlDefinition;
-
-                SaveControlsConfig(tabName, updatedControls);
-
-                Log("Info", $"Added control to tab '{tabName}': {controlDefinition}");
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Failed to add control to tab '{tabName}'");
             }
         }
 
@@ -1292,12 +934,6 @@ namespace Quantra
             }
         }
 
-        public static void UpdateSettingsTable()
-        {
-            // This method is called during application startup to migrate old settings to the new profile system
-            EnsureSettingsProfiles();
-        }
-
         /// <summary>
         /// Adds a completed order to the trading history.
         /// </summary>
@@ -1374,18 +1010,6 @@ namespace Quantra
             {
                 LogErrorWithContext(ex, $"Failed to add order to history: {order.Symbol}");
             }
-        }
-
-        private static void EnsureSettingsProfiles()
-        {
-            // Just delegate to the SettingsService
-            _settingsService.EnsureSettingsProfiles();
-        }
-
-        public static string GetSetting(string key, string defaultValue = null)
-        {
-            // Alias for GetUserPreference to maintain compatibility
-            return GetUserPreference(key, defaultValue);
         }
 
         public static string GetUserPreference(string key, string defaultValue = null)
@@ -1501,59 +1125,6 @@ namespace Quantra
                     
                     Log("Info", "Created UserPreferences table");
                 }
-            }
-        }
-
-        // Add this method to the DatabaseMonolith class to support retrieving control type by index
-
-        /// <summary>
-        /// Gets the control type for a specific control in a tab by its index
-        /// </summary>
-        /// <param name="tabName">The name of the tab containing the control</param>
-        /// <param name="controlIndex">The index of the control in the tab</param>
-        /// <returns>The control type as a string, or null if not found</returns>
-        public static string GetControlTypeByIndex(string tabName, int controlIndex)
-        {
-            try
-            {
-                using (var connection = GetConnection())
-                {
-                    connection.Open();
-                    
-                    // Load the controls config for the tab
-                    var configQuery = "SELECT ControlsConfig FROM UserAppSettings WHERE TabName = @TabName";
-                    var controlsConfig = connection.QueryFirstOrDefault<string>(configQuery, new { TabName = tabName });
-                    
-                    if (string.IsNullOrEmpty(controlsConfig))
-                        return null;
-                    
-                    // Split controls by semicolon
-                    var controlEntries = controlsConfig
-                        .Replace("\r\n", ";")
-                        .Replace("\n", ";")
-                        .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                    
-                    // If index is out of range, return null
-                    if (controlIndex < 0 || controlIndex >= controlEntries.Length)
-                        return null;
-                    
-                    // Get the control configuration at the specified index
-                    var controlConfig = controlEntries[controlIndex];
-                    
-                    // Parse the control type (first part before comma)
-                    var parts = controlConfig.Split(',');
-                    if (parts.Length > 0)
-                    {
-                        return parts[0].Trim();
-                    }
-                    
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, "Error getting control type by index");
-                return null;
             }
         }
 
@@ -2274,36 +1845,6 @@ namespace Quantra
             }, RetryOptions.ForCriticalOperation());
         }
 
-        public static DataTable ExecuteQuery(string sql, params SQLiteParameter[] parameters)
-        {
-            try
-            {
-                using (var connection = new SQLiteConnection(ConnectionString))
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand(sql, connection))
-                    {
-                        if (parameters != null && parameters.Length > 0)
-                        {
-                            command.Parameters.AddRange(parameters);
-                        }
-
-                        using (var adapter = new SQLiteDataAdapter(command))
-                        {
-                            var dataTable = new DataTable();
-                            adapter.Fill(dataTable);
-                            return dataTable;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Error executing query: {sql}");
-                throw;
-            }
-        }
-
         public static T ExecuteScalar<T>(string sql, params SQLiteParameter[] parameters)
         {
             try
@@ -2327,78 +1868,6 @@ namespace Quantra
                 LogErrorWithContext(ex, $"Error executing scalar query: {sql}");
                 throw;
             }
-        }
-
-        public static void ResetDatabase()
-        {
-            try
-            {
-                // Close all connections before deleting
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-                // Delete database file
-                if (File.Exists(DbFilePath))
-                {
-                    File.Delete(DbFilePath);
-                }
-
-                // Reinitialize
-                initialized = false;
-                Initialize();
-                Log("Info", "Database has been reset successfully");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error resetting database: {ex.Message}");
-                throw;
-            }
-        }
-
-        public static List<TransactionModel> LoadTransactions(string symbol)
-        {
-            List<TransactionModel> results = new List<TransactionModel>();
-            try
-            {
-                using (var connection = new SQLiteConnection(ConnectionString))
-                {
-                    connection.Open();
-                    string query = @"
-                        SELECT Date, Type, Symbol, Price, Shares, Cost, PnL 
-                        FROM Transactions 
-                        WHERE Symbol = @Symbol
-                        ORDER BY Date DESC";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", symbol);
-                        
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                results.Add(new TransactionModel
-                                {
-                                    Symbol = reader["Symbol"].ToString(),
-                                    TransactionType = reader["Type"].ToString(),
-                                    ExecutionPrice = Convert.ToDouble(reader["Price"]),
-                                    Quantity = Convert.ToInt32(reader["Shares"]),
-                                    TotalValue = Convert.ToDouble(reader["Cost"]),
-                                    RealizedPnL = Convert.ToDouble(reader["PnL"]),
-                                    ExecutionTime = Convert.ToDateTime(reader["Date"])
-                                });
-                            }
-                        }
-                    }
-
-                    Log("Info", $"Loaded {results.Count} transactions for symbol {symbol}");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Failed to load transactions for symbol {symbol}");
-            }
-            return results;
         }
 
         #region Stock Symbol Caching Methods
@@ -2757,6 +2226,7 @@ namespace Quantra
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@Symbol", symbol.Trim().ToUpper());
+                        
                         using (var reader = command.ExecuteReader())
                         {
                             if (reader.Read())
@@ -2817,91 +2287,6 @@ namespace Quantra
             {
                 LogErrorWithContext(ex, $"Failed to get stock data with timestamp for {symbol} {timeRange}");
                 return (null, null);
-            }
-        }
-
-        /// <summary>
-        /// Saves a real-time quote (QuoteData) to the StockSymbols table.
-        /// Updates fields if the symbol already exists.
-        /// </summary>
-        public static async Task SaveQuoteData(QuoteData quote)
-        {
-            if (quote == null || string.IsNullOrWhiteSpace(quote.Symbol))
-                return;
-
-            try
-            {
-                using (var connection = new SQLiteConnection(ConnectionString))
-                {
-                    connection.Open();
-                    var query = @"
-                        INSERT INTO StockSymbols (Symbol, Name, LastUpdated)
-                        VALUES (@Symbol, @Name, @LastUpdated)
-                        ON CONFLICT(Symbol) DO UPDATE SET
-                            Name = @Name,
-                            LastUpdated = @LastUpdated;
-                    ";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", quote.Symbol);
-                        command.Parameters.AddWithValue("@Name", quote.Name ?? string.Empty);
-                        command.Parameters.AddWithValue("@LastUpdated", quote.LastUpdated == default ? DateTime.Now : quote.LastUpdated);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Log("Info", $"Saved quote data for {quote.Symbol}");
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Failed to save quote data for {quote?.Symbol}");
-            }
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Saves historical/time-series stock data (StockData) to the StockDataCache table.
-        /// Data is serialized as JSON and compressed.
-        /// </summary>
-        /// <param name="symbol">Stock symbol</param>
-        /// <param name="timeRange">Time range (e.g., '1day', '1week')</param>
-        /// <param name="interval">Interval (e.g., '5min', '1day')</param>
-        /// <param name="data">StockData object</param>
-        public static void SaveStockData(string symbol, string timeRange, string interval, StockData data)
-        {
-            if (string.IsNullOrWhiteSpace(symbol) || data == null)
-                return;
-
-            try
-            {
-                using (var connection = new SQLiteConnection(ConnectionString))
-                {
-                    connection.Open();
-                    // Serialize to JSON and then compress
-                    var json = JsonConvert.SerializeObject(data);
-                    var compressedJson = Utilities.CompressionHelper.CompressString(json);
-                    
-                    var query = @"
-                        INSERT INTO StockDataCache (Symbol, TimeRange, Interval, Data, CacheTime)
-                        VALUES (@Symbol, @TimeRange, @Interval, @Data, @CacheTime)
-                        ON CONFLICT(Symbol, TimeRange, Interval) DO UPDATE SET
-                            Data = @Data,
-                            CacheTime = @CacheTime;
-                    ";
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", symbol.Trim().ToUpper());
-                        command.Parameters.AddWithValue("@TimeRange", timeRange ?? "");
-                        command.Parameters.AddWithValue("@Interval", interval ?? "");
-                        command.Parameters.AddWithValue("@Data", compressedJson);
-                        command.Parameters.AddWithValue("@CacheTime", DateTime.Now);
-                        command.ExecuteNonQuery();
-                    }
-                }
-                Log("Info", $"Saved compressed stock data for {symbol} [{timeRange}, {interval}]");
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Failed to save stock data for {symbol} [{timeRange}, {interval}]");
             }
         }
 
@@ -3023,16 +2408,6 @@ namespace Quantra
             {
                 LogErrorWithContext(ex, "Failed to delete old error logs");
             }
-        }
-
-        /// <summary>
-        /// Loads the user settings from the database or settings profile.
-        /// </summary>
-        /// <returns>UserSettings object with current settings.</returns>
-        public static UserSettings LoadUserSettings()
-        {
-            // For now, just use GetUserSettings (profile-based)
-            return GetUserSettings();
         }
 
         private static readonly string StockCacheKey = "StockCache";
@@ -3194,86 +2569,6 @@ namespace Quantra
             {
                 command.ExecuteNonQuery();
             }
-        }
-        
-        /// <summary>
-        /// Retrieves analyst ratings for a specific symbol since a given date.
-        /// </summary>
-        /// <param name="symbol">Stock symbol to retrieve ratings for</param>
-        /// <param name="since">Minimum date for ratings to include</param>
-        /// <returns>List of analyst ratings ordered by date (most recent first)</returns>
-        /// <remarks>
-        /// Loads historical analyst rating data for analysis and decision making.
-        /// Results are ordered by rating date in descending order (newest first).
-        /// Creates the table if it doesn't exist to prevent runtime errors.
-        /// </remarks>
-        /// <example>
-        /// <code>
-        /// var ratings = DatabaseMonolith.GetAnalystRatings("AAPL", DateTime.Now.AddDays(-30));
-        /// foreach (var rating in ratings)
-        /// {
-        ///     Console.WriteLine($"{rating.AnalystName}: {rating.Rating} - ${rating.PriceTarget}");
-        /// }
-        /// </code>
-        /// </example>
-        public static List<AnalystRating> GetAnalystRatings(string symbol, DateTime since)
-        {
-            var ratings = new List<AnalystRating>();
-            
-            try
-            {
-                using (var connection = GetConnection())
-                {
-                    connection.Open();
-                    
-                    // Ensure the table exists
-                    EnsureAnalystRatingsTable(connection);
-                    
-                    var query = @"
-                        SELECT 
-                            Id, Symbol, AnalystName, Rating, PreviousRating,
-                            PriceTarget, PreviousPriceTarget, RatingDate, ChangeType
-                        FROM AnalystRatings
-                        WHERE Symbol = @Symbol AND datetime(RatingDate) >= datetime(@Since)
-                        ORDER BY datetime(RatingDate) DESC
-                    ";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", symbol);
-                        command.Parameters.AddWithValue("@Since", since.ToString("yyyy-MM-dd HH:mm:ss"));
-                        
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var rating = new AnalystRating
-                                {
-                                    Id = Convert.ToInt32(reader["Id"]),
-                                    Symbol = reader["Symbol"].ToString(),
-                                    AnalystName = reader["AnalystName"].ToString(),
-                                    Rating = reader["Rating"].ToString(),
-                                    PreviousRating = reader["PreviousRating"] == DBNull.Value ? null : reader["PreviousRating"].ToString(),
-                                    PriceTarget = Convert.ToDouble(reader["PriceTarget"]),
-                                    PreviousPriceTarget = reader["PreviousPriceTarget"] == DBNull.Value ? 0 : Convert.ToDouble(reader["PreviousPriceTarget"]),
-                                    RatingDate = DateTime.Parse(reader["RatingDate"].ToString()),
-                                    ChangeType = (RatingChangeType)Enum.Parse(typeof(RatingChangeType), reader["ChangeType"].ToString())
-                                };
-                                
-                                ratings.Add(rating);
-                            }
-                        }
-                    }
-                }
-                
-                Log("Info", $"Retrieved {ratings.Count} analyst ratings for {symbol} since {since.ToString("yyyy-MM-dd")}");
-            }
-            catch (Exception ex)
-            {
-                LogErrorWithContext(ex, $"Failed to retrieve analyst ratings for {symbol}");
-            }
-            
-            return ratings;
         }
         
         /// <summary>
@@ -3457,8 +2752,6 @@ namespace Quantra
                 LogErrorWithContext(ex, "Failed to cache volatile stocks");
             }
         }
-
-        private static readonly string _connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Quantra;Integrated Security=True";
 
         /// <summary>
         /// Retrieves active trading rules, optionally filtered by symbol.
