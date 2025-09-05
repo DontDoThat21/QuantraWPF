@@ -14,6 +14,9 @@ using System.Windows.Shapes;
 using Quantra.Models;
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using Quantra.DAL.Services.Interfaces;
+using Quantra.CrossCutting.Monitoring;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {

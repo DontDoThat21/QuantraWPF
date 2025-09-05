@@ -2,7 +2,6 @@ using System;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Data;
 
 namespace Quantra.DAL.Services
 {

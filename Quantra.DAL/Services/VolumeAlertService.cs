@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Quantra.Controls;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
-using Quantra.Utilities;
+using Quantra.CrossCutting.ErrorHandling;
 
 namespace Quantra.DAL.Services
 {
@@ -116,7 +116,8 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                AlertsControl.EmitGlobalError($"Error checking volume alert condition for {alert.Name}: {ex.Message}", ex);
+                // Use centralized error handling; avoids UI project dependency
+                ErrorHandlingManager.Instance.HandleException(ex, "VolumeAlertService.CheckAlertConditionAsync");
                 return false;
             }
         }
@@ -132,31 +133,43 @@ namespace Quantra.DAL.Services
                 return 0;
 
             int triggeredCount = 0;
-            List<Task<bool>> checkTasks = new List<Task<bool>>();
 
-            foreach (var alert in alerts)
-            {
-                if (alert.Category == AlertCategory.TechnicalIndicator && 
-                    (alert.IndicatorName == "Volume" || alert.IndicatorName == "VolumeSpike") && 
-                    alert.IsActive && !alert.IsTriggered)
-                {
-                    checkTasks.Add(CheckAlertConditionAsync(alert));
-                }
-            }
+            // Prepare eligible alerts
+            var eligibleAlerts = alerts.Where(alert =>
+                alert.Category == AlertCategory.TechnicalIndicator &&
+                (alert.IndicatorName == "Volume" || alert.IndicatorName == "VolumeSpike") &&
+                alert.IsActive && !alert.IsTriggered).ToList();
 
-            if (checkTasks.Count == 0)
+            if (eligibleAlerts.Count == 0)
                 return 0;
 
-            // Use simple throttling for alert checks to prevent resource contention
-            using var throttler = new ConcurrentTaskThrottler(Math.Min(checkTasks.Count, 4));
-            var taskFactories = checkTasks.Select(task => new Func<Task<bool>>(() => task));
-            bool[] results = await throttler.ExecuteThrottledAsync(taskFactories);
-            foreach (bool triggered in results)
+            // Throttle concurrent checks to avoid resource contention
+            using var semaphore = new SemaphoreSlim(Math.Min(eligibleAlerts.Count, 4));
+            var tasks = new List<Task>();
+
+            foreach (var alert in eligibleAlerts)
             {
-                if (triggered) triggeredCount++;
+                tasks.Add(ProcessAlertAsync(alert));
             }
 
+            await Task.WhenAll(tasks);
             return triggeredCount;
+
+            async Task ProcessAlertAsync(AlertModel alert)
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    if (await CheckAlertConditionAsync(alert))
+                    {
+                        Interlocked.Increment(ref triggeredCount);
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
         }
 
         /// <summary>
@@ -199,7 +212,8 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                AlertsControl.EmitGlobalError($"Error calculating volume ratio for {symbol}: {ex.Message}", ex);
+                // Use centralized error handling; avoids UI project dependency
+                ErrorHandlingManager.Instance.HandleException(ex, "VolumeAlertService.CalculateVolumeRatioAsync");
                 return 1.0; // Default value indicating no spike
             }
         }

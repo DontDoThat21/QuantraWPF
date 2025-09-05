@@ -1,5 +1,6 @@
 using System;
 using NUnit.Framework;
+using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Tests

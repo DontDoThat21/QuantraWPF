@@ -11,7 +11,7 @@ using LiveCharts;
 using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls.Components
 {

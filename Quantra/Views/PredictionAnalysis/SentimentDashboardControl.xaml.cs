@@ -8,8 +8,8 @@ using LiveCharts;
 using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
-using Quantra.Modules; // Add this for SentimentPriceVisualData, SentimentShiftEvent
+using Quantra.Modules;
+using Quantra.DAL.Services; // Add this for SentimentPriceVisualData, SentimentShiftEvent
 
 namespace Quantra.Controls
 {
@@ -28,7 +28,7 @@ namespace Quantra.Controls
 
         #region Services
         // Disambiguate SentimentPriceCorrelationAnalysis
-        private readonly Quantra.Services.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
+        private readonly Quantra.Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly IAnalystRatingService _analystRatingService;
         private readonly IInsiderTradingService _insiderTradingService;
         #endregion
@@ -75,7 +75,7 @@ namespace Quantra.Controls
             SentimentShiftChart.Series = SentimentShiftSeries;
             
             // Initialize services
-            _sentimentCorrelationAnalysis = new Quantra.Services.SentimentPriceCorrelationAnalysis();
+            _sentimentCorrelationAnalysis = new Quantra.Modules.SentimentPriceCorrelationAnalysis();
             _analystRatingService = ServiceLocator.Resolve<IAnalystRatingService>();
             _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
             

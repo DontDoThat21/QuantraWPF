@@ -2,14 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Quantra.Models;
 using System.IO;
 using System.Text.Json;
-using Quantra.Repositories;
 using System.Text;
-using Quantra.Utilities;
 using Quantra.CrossCutting.Monitoring;
 using Quantra.DAL.Services.Interfaces;
 
@@ -26,10 +25,10 @@ namespace Quantra.DAL.Services
         // Dictionary of registered custom indicators
         private readonly Dictionary<string, IIndicator> _customIndicators;
         
-        // Repository for custom indicator definitions
+        // Repository for custom indicator definitions (local in-memory fallback to avoid cross-project dependency)
         private readonly CustomIndicatorRepository _customIndicatorRepository;
 
-        // Throttler for concurrent background tasks
+        // Throttler for concurrent background tasks (local minimal implementation)
         private readonly ConcurrentTaskThrottler _taskThrottler;
         private readonly IMonitoringManager _monitoringManager;
         private bool _disposed = false;
@@ -2715,6 +2714,80 @@ namespace Quantra.DAL.Services
         public void Dispose()
         {
             _taskThrottler?.Dispose();
+        }
+
+        // Minimal local implementations to avoid cross-project dependencies
+        private class ConcurrentTaskThrottler : IDisposable
+        {
+            private readonly SemaphoreSlim _semaphore;
+            public ConcurrentTaskThrottler(int maxDegreeOfParallelism = 6)
+            {
+                if (maxDegreeOfParallelism <= 0) maxDegreeOfParallelism = 1;
+                _semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
+            }
+            public async Task<T[]> ExecuteThrottledAsync<T>(IEnumerable<Func<Task<T>>> taskFactories, CancellationToken cancellationToken = default)
+            {
+                if (taskFactories == null) return Array.Empty<T>();
+                var tasks = taskFactories.Select(factory => Run(factory, cancellationToken));
+                return await Task.WhenAll(tasks);
+            }
+            private async Task<T> Run<T>(Func<Task<T>> factory, CancellationToken ct)
+            {
+                await _semaphore.WaitAsync(ct);
+                try { return await factory(); }
+                finally { _semaphore.Release(); }
+            }
+            public void Dispose()
+            {
+                _semaphore?.Dispose();
+            }
+        }
+
+        private class CustomIndicatorRepository
+        {
+            private readonly Dictionary<string, CustomIndicatorDefinition> _defs = new Dictionary<string, CustomIndicatorDefinition>();
+
+            public Task<CustomIndicatorDefinition> GetIndicatorAsync(string id)
+            {
+                if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
+                _defs.TryGetValue(id, out var def);
+                return Task.FromResult(def);
+            }
+
+            public Task<bool> SaveIndicatorAsync(CustomIndicatorDefinition definition)
+            {
+                if (definition == null) throw new ArgumentNullException(nameof(definition));
+                if (string.IsNullOrWhiteSpace(definition.Id)) definition.Id = Guid.NewGuid().ToString();
+                if (definition.Parameters == null) definition.Parameters = new Dictionary<string, IndicatorParameterDefinition>();
+                _defs[definition.Id] = definition;
+                return Task.FromResult(true);
+            }
+
+            public bool DeleteIndicator(string id)
+            {
+                if (string.IsNullOrWhiteSpace(id)) return false;
+                return _defs.Remove(id);
+            }
+
+            public Task<List<CustomIndicatorDefinition>> GetAllIndicatorsAsync()
+            {
+                return Task.FromResult(_defs.Values.ToList());
+            }
+
+            public Task<List<CustomIndicatorDefinition>> SearchIndicatorsAsync(string searchTerm, string category = null)
+            {
+                var q = _defs.Values.AsEnumerable();
+                if (!string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    q = q.Where(i => (i.Name?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0 ||
+                                     (i.Description?.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0);
+                }
+                if (!string.IsNullOrWhiteSpace(category))
+                {
+                    q = q.Where(i => string.Equals(i.Category, category, StringComparison.OrdinalIgnoreCase));
+                }
+                return Task.FromResult(q.ToList());
+            }
         }
     }
 }

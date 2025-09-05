@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Linq;
 using System;
 using System.Windows;
+using Quantra.DAL.Services;
 
 namespace Quantra.ViewModels
 {
@@ -146,7 +147,7 @@ namespace Quantra.ViewModels
             else
             {
                 // Not in cache: fetch from AlphaVantage API in background thread to avoid UI blocking
-                _ = Quantra.Services.GlobalLoadingStateService.WithLoadingState(Task.Run(async () =>
+                _ = GlobalLoadingStateService.WithLoadingState(Task.Run(async () =>
                 {
                     try
                     {

@@ -5,10 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Quantra.Configuration;
-using Quantra.Configuration.Models;
 using Quantra.CrossCutting.ErrorHandling;
+using Quantra.CrossCutting.Logging;
 using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.DAL.Services
@@ -19,22 +17,23 @@ namespace Quantra.DAL.Services
     /// </summary>
     public class YouTubeSentimentService : ISocialMediaSentimentService
     {
-        private readonly ILogger<YouTubeSentimentService> _logger;
-        private readonly ApiConfig _apiConfig;
-        private readonly SentimentAnalysisConfig _sentimentConfig;
+        private readonly ILogger _logger;
         private readonly string _pythonScriptPath;
         private readonly Dictionary<string, SentimentCacheItem> _sentimentCache = new Dictionary<string, SentimentCacheItem>();
 
         /// <summary>
         /// Constructor for YouTubeSentimentService
         /// </summary>
-        public YouTubeSentimentService(
-            ILogger<YouTubeSentimentService> logger,
-            IConfigurationManager configManager)
+        /// <remarks>
+        /// Accepts loosely-typed parameters to avoid cross-project hard references.
+        /// If a logger is not provided, falls back to the application's logging system.
+        /// </remarks>
+        public YouTubeSentimentService(object logger = null, object configManager = null)
         {
-            _logger = logger;
-            _apiConfig = configManager.GetSection<ApiConfig>("ApiConfig");
-            _sentimentConfig = configManager.GetSection<SentimentAnalysisConfig>("SentimentAnalysisConfig");
+            // Prefer provided logger if it matches our logging abstraction, otherwise get a default one
+            _logger = logger as ILogger ?? Log.ForType<YouTubeSentimentService>();
+
+            // Python script default path under app base directory
             _pythonScriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "youtube_sentiment_analysis.py");
         }
 
@@ -47,41 +46,36 @@ namespace Quantra.DAL.Services
             {
                 // Check cache first
                 var cacheKey = $"youtube_sentiment_{symbol}";
-                if (_sentimentCache.TryGetValue(cacheKey, out var cachedItem) && 
+                if (_sentimentCache.TryGetValue(cacheKey, out var cachedItem) &&
                     DateTime.Now - cachedItem.Timestamp < TimeSpan.FromMinutes(30)) // Default 30 minutes cache
                 {
-                    _logger.LogInformation($"Returning cached sentiment for {symbol}: {cachedItem.Sentiment}");
+                    _logger.Information("Returning cached sentiment for {Symbol}: {Sentiment}", symbol, cachedItem.Sentiment);
                     return cachedItem.Sentiment;
                 }
 
-                return new double();
+                // For now, fetch recent content and analyze it
+                var urls = await FetchRecentContentAsync(symbol, 5);
+                if (urls.Count == 0)
+                {
+                    _logger.Warning("No YouTube content found for symbol: {Symbol}", symbol);
+                    return 0.0;
+                }
 
-                // why is this commented lmao
-                // if this idea useless? bloomberg free is so npc anyways..
-                // Get YouTube URLs for the symbol (Bloomberg streams, company channels, etc.)
-                //var urls = await GetRecentContentAsync(symbol, 5);
-                //if (urls.Count == 0)
-                //{
-                //    _logger.LogWarning($"No YouTube content found for symbol: {symbol}");
-                //    return 0.0;
-                //}
+                var sentiment = await AnalyzeSentimentAsync(urls);
 
-                // Analyze sentiment from the URLs
-                //var sentiment = await AnalyzeSentimentAsync(urls);
-                
                 // Cache the result
-                //_sentimentCache[cacheKey] = new SentimentCacheItem
-                //{
-                //    Sentiment = sentiment,
-                //    Timestamp = DateTime.Now
-                //};
-                //
-                //_logger.LogInformation($"YouTube sentiment analysis completed for {symbol}: {sentiment}");
-                //return sentiment;
+                _sentimentCache[cacheKey] = new SentimentCacheItem
+                {
+                    Sentiment = sentiment,
+                    Timestamp = DateTime.Now
+                };
+
+                _logger.Information("YouTube sentiment analysis completed for {Symbol}: {Sentiment}", symbol, sentiment);
+                return sentiment;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting YouTube sentiment for symbol: {symbol}");
+                _logger.Error(ex, "Error getting YouTube sentiment for symbol: {Symbol}", symbol);
                 return 0.0;
             }
         }
@@ -106,11 +100,11 @@ namespace Quantra.DAL.Services
                 });
 
                 var jsonInput = JsonSerializer.Serialize(urlData);
-                
+
                 // Call Python script
                 var sentiment = await CallPythonSentimentAnalysis(jsonInput);
-                
-                _logger.LogInformation($"YouTube sentiment analysis completed for {urls.Count} URLs: {sentiment}");
+
+                _logger.Information("YouTube sentiment analysis completed for {Count} URLs: {Sentiment}", urls.Count, sentiment);
                 return sentiment;
             });
         }
@@ -121,7 +115,7 @@ namespace Quantra.DAL.Services
         public async Task<Dictionary<string, double>> GetDetailedSourceSentimentAsync(string symbol)
         {
             var result = new Dictionary<string, double>();
-            
+
             try
             {
                 // Analyze different types of YouTube content
@@ -146,7 +140,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting detailed YouTube sentiment for symbol: {symbol}");
+                _logger.Error(ex, "Error getting detailed YouTube sentiment for symbol: {Symbol}", symbol);
             }
 
             return result;
@@ -158,7 +152,7 @@ namespace Quantra.DAL.Services
         public async Task<List<string>> FetchRecentContentAsync(string symbol, int count = 10)
         {
             var urls = new List<string>();
-            
+
             try
             {
                 // Combine different sources
@@ -174,7 +168,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error fetching YouTube content for symbol: {symbol}");
+                _logger.Error(ex, "Error fetching YouTube content for symbol: {Symbol}", symbol);
             }
 
             return urls;
@@ -189,12 +183,12 @@ namespace Quantra.DAL.Services
             {
                 var data = new { url, context };
                 var jsonInput = JsonSerializer.Serialize(data);
-                
+
                 return await CallPythonSentimentAnalysis(jsonInput);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error analyzing sentiment for YouTube URL: {url}");
+                _logger.Error(ex, "Error analyzing sentiment for YouTube URL: {Url}", url);
                 return 0.0;
             }
         }
@@ -217,10 +211,11 @@ namespace Quantra.DAL.Services
                     CreateNoWindow = true
                 };
 
-                // Set OpenAI API key as environment variable
-                if (!string.IsNullOrEmpty(_apiConfig.OpenAI.ApiKey))
+                // Ensure OpenAI API key is available via environment variable if set
+                var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+                if (!string.IsNullOrWhiteSpace(openAiApiKey))
                 {
-                    psi.EnvironmentVariables["OPENAI_API_KEY"] = _apiConfig.OpenAI.ApiKey;
+                    psi.EnvironmentVariables["OPENAI_API_KEY"] = openAiApiKey;
                 }
 
                 using var process = new Process { StartInfo = psi };
@@ -239,20 +234,20 @@ namespace Quantra.DAL.Services
 
                 if (process.ExitCode != 0)
                 {
-                    _logger.LogError($"Python script failed with exit code {process.ExitCode}: {error}");
+                    _logger.Error("Python script failed with exit code {ExitCode}: {Error}", process.ExitCode, error);
                     return 0.0;
                 }
 
                 // Parse result
                 var result = JsonSerializer.Deserialize<JsonElement>(output);
-                
+
                 if (result.ValueKind == JsonValueKind.Array)
                 {
                     // Multiple results - calculate average
                     var sentiments = new List<double>();
                     foreach (var item in result.EnumerateArray())
                     {
-                        if (item.TryGetProperty("sentiment_score", out var scoreProperty) && 
+                        if (item.TryGetProperty("sentiment_score", out var scoreProperty) &&
                             scoreProperty.TryGetDouble(out var score))
                         {
                             sentiments.Add(score);
@@ -260,7 +255,8 @@ namespace Quantra.DAL.Services
                     }
                     return sentiments.Count > 0 ? sentiments.Average() : 0.0;
                 }
-                else if (result.TryGetProperty("sentiment_score", out var sentimentProperty) && 
+                else if (result.ValueKind == JsonValueKind.Object &&
+                         result.TryGetProperty("sentiment_score", out var sentimentProperty) &&
                          sentimentProperty.TryGetDouble(out var sentiment))
                 {
                     return sentiment;
@@ -270,7 +266,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling Python sentiment analysis script");
+                _logger.Error(ex, "Error calling Python sentiment analysis script");
                 return 0.0;
             }
         }
@@ -304,10 +300,10 @@ namespace Quantra.DAL.Services
         private async Task<List<string>> GetCompanyContentAsync(string symbol)
         {
             var urls = new List<string>();
-            
+
             // In a real implementation, this would search for the company's official YouTube channel
             // and recent videos about the company
-            
+
             return urls;
         }
 
@@ -317,9 +313,9 @@ namespace Quantra.DAL.Services
         private async Task<List<string>> GetNewsContentAsync(string symbol)
         {
             var urls = new List<string>();
-            
+
             // In a real implementation, this would search for financial news videos about the symbol
-            
+
             return urls;
         }
 

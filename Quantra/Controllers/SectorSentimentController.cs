@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Controls.Components;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controllers
 {

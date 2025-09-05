@@ -9,8 +9,6 @@ using System.Windows.Threading;
 using MaterialDesignThemes.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Data;
-using Quantra.Services.Interfaces;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -18,6 +16,7 @@ using Quantra.Views.PredictionAnalysis.Components;
 using System.Data.SQLite;
 using Quantra.Controls;  // Added for AlertsControl
 using Quantra.CrossCutting.Monitoring;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls.Components
 {

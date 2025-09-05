@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using Quantra.Models;
+using Quantra.Utilities;
 
 namespace Quantra.Views.SupportResistance
 {

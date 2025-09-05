@@ -8,9 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using Quantra.Models;
-using Quantra.Helpers;
-using Quantra.Controls;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Utilities;
+using Quantra.Utilities;
 
 namespace Quantra.DAL.Services
 {
@@ -22,6 +22,7 @@ namespace Quantra.DAL.Services
         private readonly HttpClient _client;
         private readonly string _apiKey;
         private readonly UserSettings _userSettings;
+        private readonly IAlertPublisher _alertPublisher;
         
         // Cache for ratings to reduce API calls
         private readonly ConcurrentDictionary<string, (List<AnalystRating> Ratings, DateTime Timestamp)> _ratingsCache = 
@@ -38,11 +39,12 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Constructs a new AnalystRatingService
         /// </summary>
-        public AnalystRatingService(UserSettings userSettings = null)
+        public AnalystRatingService(UserSettings userSettings = null, IAlertPublisher alertPublisher = null)
         {
             _client = new HttpClient();
             _apiKey = GetApiKey();
             _userSettings = userSettings ?? new UserSettings();
+            _alertPublisher = alertPublisher; // can be null in tests
         }
         
         /// <summary>
@@ -287,7 +289,7 @@ namespace Quantra.DAL.Services
                 {
                     aiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
                         ?? Environment.GetEnvironmentVariable("CHATGPT_API_KEY")
-                        ?? ApiKeyHelper.GetOpenAiApiKey();
+                        ?? Quantra.DAL.Utilities.Utilities.GetOpenAiApiKey();
                 }
                 catch (Exception)
                 {
@@ -501,7 +503,7 @@ namespace Quantra.DAL.Services
                         additionalNotes = $"Analyst: {change.AnalystName}\nDate: {change.RatingDate}";
                     }
                     
-                    // Create and emit the alert
+                    // Create the alert
                     var alert = new AlertModel
                     {
                         Name = alertMessage,
@@ -515,7 +517,15 @@ namespace Quantra.DAL.Services
                         Notes = additionalNotes
                     };
                     
-                    AlertsControl.EmitGlobalAlert(alert);
+                    // Publish via DI publisher if available; otherwise fallback to AlertManager
+                    if (_alertPublisher != null)
+                    {
+                        _alertPublisher.EmitGlobalAlert(alert);
+                    }
+                    else
+                    {
+                        Alerting.EmitGlobalAlert(alert);
+                    }
                 }
             }
             
@@ -525,7 +535,6 @@ namespace Quantra.DAL.Services
             
             if (upgradeCount >= 2 && upgradeCount > downgradeCount * 2)
             {
-                // Multiple upgrades with few or no downgrades - significant positive shift
                 var alert = new AlertModel
                 {
                     Name = $"Multiple analyst upgrades for {symbol} ({upgradeCount} upgrades in 24h)",
@@ -538,12 +547,10 @@ namespace Quantra.DAL.Services
                     CreatedDate = DateTime.Now,
                     Notes = $"Significant positive shift with {upgradeCount} upgrades vs {downgradeCount} downgrades in the last 24 hours"
                 };
-                
-                AlertsControl.EmitGlobalAlert(alert);
+                if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
             }
             else if (downgradeCount >= 2 && downgradeCount > upgradeCount * 2)
             {
-                // Multiple downgrades with few or no upgrades - significant negative shift
                 var alert = new AlertModel
                 {
                     Name = $"Multiple analyst downgrades for {symbol} ({downgradeCount} downgrades in 24h)",
@@ -556,14 +563,13 @@ namespace Quantra.DAL.Services
                     CreatedDate = DateTime.Now,
                     Notes = $"Significant negative shift with {downgradeCount} downgrades vs {upgradeCount} upgrades in the last 24 hours"
                 };
-                
-                AlertsControl.EmitGlobalAlert(alert);
+                if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
             }
             
             // Check for consensus change
             await CheckConsensusChange(symbol);
         }
-        
+
         /// <summary>
         /// Gets statistics about an analyst firm's historical accuracy
         /// </summary>
@@ -593,27 +599,19 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Get current aggregate
                 var currentAggregate = await GetAggregatedRatingsAsync(symbol);
-                
-                // Analyze consensus history for trends
                 var historyAnalysis = await AnalyzeConsensusHistoryAsync(symbol);
-                
-                // Check for cached previous aggregate
                 var previousConsensus = GetPreviousConsensus(symbol);
                 
                 if (previousConsensus != null)
                 {
-                    // Check for consensus rating change
                     if (previousConsensus.ConsensusRating != currentAggregate.ConsensusRating)
                     {
-                        // Consensus has changed
                         string alertMessage = $"Analyst consensus for {symbol} changed from {previousConsensus.ConsensusRating} to {currentAggregate.ConsensusRating}";
                         
                         AlertCategory category = AlertCategory.Standard;
                         int priority = 2;
                         
-                        // Stronger alerts for more significant changes
                         if (previousConsensus.ConsensusRating == "Hold" && currentAggregate.ConsensusRating == "Buy" ||
                             previousConsensus.ConsensusRating == "Sell" && currentAggregate.ConsensusRating == "Hold")
                         {
@@ -626,7 +624,6 @@ namespace Quantra.DAL.Services
                             priority = 1;
                         }
                         
-                        // Create and emit the alert
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -639,10 +636,8 @@ namespace Quantra.DAL.Services
                             CreatedDate = DateTime.Now,
                             Notes = $"Current breakdown: {currentAggregate.BuyCount} Buy, {currentAggregate.HoldCount} Hold, {currentAggregate.SellCount} Sell\nTrend: {currentAggregate.ConsensusTrend} (Upgrades: {currentAggregate.UpgradeCount}, Downgrades: {currentAggregate.DowngradeCount})"
                         };
-                        
-                        AlertsControl.EmitGlobalAlert(alert);
+                        if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
                     }
-                    // Check for significant consensus score change even if the rating didn't change
                     else if (Math.Abs(previousConsensus.ConsensusScore - currentAggregate.ConsensusScore) > 0.2)
                     {
                         string direction = currentAggregate.ConsensusScore > previousConsensus.ConsensusScore ? "strengthened" : "weakened";
@@ -651,7 +646,6 @@ namespace Quantra.DAL.Services
                         AlertCategory category = direction == "strengthened" ? AlertCategory.Opportunity : AlertCategory.Standard;
                         int priority = 2;
                         
-                        // Create and emit the alert
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -664,10 +658,8 @@ namespace Quantra.DAL.Services
                             CreatedDate = DateTime.Now,
                             Notes = $"Current breakdown: {currentAggregate.BuyCount} Buy, {currentAggregate.HoldCount} Hold, {currentAggregate.SellCount} Sell\nTrend: {currentAggregate.ConsensusTrend}"
                         };
-                        
-                        AlertsControl.EmitGlobalAlert(alert);
+                        if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
                     }
-                    // Check for significant change in price targets (>5% change)
                     else if (previousConsensus.AveragePriceTarget > 0 && 
                              Math.Abs(currentAggregate.AveragePriceTarget - previousConsensus.AveragePriceTarget) / previousConsensus.AveragePriceTarget > 0.05)
                     {
@@ -678,7 +670,6 @@ namespace Quantra.DAL.Services
                         
                         AlertCategory category = pctChange > 0 ? AlertCategory.Opportunity : AlertCategory.Standard;
                         
-                        // Create and emit the alert
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -691,12 +682,10 @@ namespace Quantra.DAL.Services
                             CreatedDate = DateTime.Now,
                             Notes = $"Consensus rating: {currentAggregate.ConsensusRating}\nRange: ${currentAggregate.LowestPriceTarget:F2} - ${currentAggregate.HighestPriceTarget:F2}"
                         };
-                        
-                        AlertsControl.EmitGlobalAlert(alert);
+                        if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
                     }
                 }
                 
-                // Store current consensus as previous for next check
                 StorePreviousConsensus(symbol, currentAggregate);
             }
             catch (Exception ex)
@@ -857,7 +846,9 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                 string firm = analystFirms[random.Next(analystFirms.Length)];
                 
                 // Rating
-                string currentRating = ratingTypes[random.Next(ratingTypes.Length)];
+                string currentRating = ratingTypes[random.Next(ratingTypes.Length)]
+                    .Replace("Buy", "Strong Buy") // Promote some Buys to Strong Buy for variety
+                    .Replace("Sell", "Strong Sell"); // Promote some Sells to Strong Sell
                 
                 // Random date in last 90 days
                 DateTime ratingDate = DateTime.Now.AddDays(-random.Next(90));

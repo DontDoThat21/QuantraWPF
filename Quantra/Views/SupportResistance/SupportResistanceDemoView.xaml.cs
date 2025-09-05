@@ -10,6 +10,7 @@ using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Views.ChartExtensions;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.SupportResistance
 {

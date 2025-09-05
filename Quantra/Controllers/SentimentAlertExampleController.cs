@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using Quantra.Services.Interfaces;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Controllers
 {

@@ -1,7 +1,6 @@
 using Quantra.Commands;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using Quantra.ViewModels.Base;
 using System;
 using System.Collections.ObjectModel;
@@ -13,6 +12,7 @@ using MaterialDesignThemes.Wpf;
 using Microsoft.Win32;
 using System.IO;
 using System.Text;
+using Quantra.DAL.Notifications;
 
 namespace Quantra.ViewModels
 {
@@ -171,6 +171,44 @@ namespace Quantra.ViewModels
             LoadTransactions();
         }
         
+        #region Helper Methods
+        
+        /// <summary>
+        /// Converts DAL NotificationIcon enum to MaterialDesign PackIconKind
+        /// </summary>
+        private static PackIconKind ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon notificationIcon)
+        {
+            return notificationIcon switch
+            {
+                Quantra.DAL.Notifications.NotificationIcon.Info => PackIconKind.Information,
+                Quantra.DAL.Notifications.NotificationIcon.Success => PackIconKind.CheckCircle,
+                Quantra.DAL.Notifications.NotificationIcon.Warning => PackIconKind.AlertCircle,
+                Quantra.DAL.Notifications.NotificationIcon.Error => PackIconKind.AlertCircle,
+                Quantra.DAL.Notifications.NotificationIcon.TrendingUp => PackIconKind.TrendingUp,
+                Quantra.DAL.Notifications.NotificationIcon.ChartLine => PackIconKind.ChartLine,
+                Quantra.DAL.Notifications.NotificationIcon.ChartBubble => PackIconKind.ChartBubble,
+                Quantra.DAL.Notifications.NotificationIcon.Calculator => PackIconKind.Calculator,
+                _ => PackIconKind.Information
+            };
+        }
+        
+        /// <summary>
+        /// Converts hex color string to Color object
+        /// </summary>
+        private static Color ConvertHexToColor(string hexColor)
+        {
+            try
+            {
+                return (Color)ColorConverter.ConvertFromString(hexColor);
+            }
+            catch
+            {
+                return Colors.Blue; // Default fallback color
+            }
+        }
+        
+        #endregion
+        
         #region Command Execution Methods
         
         private void ExecuteSearchTextKeyUp(object param)
@@ -184,19 +222,25 @@ namespace Quantra.ViewModels
         private void ExecuteSearch()
         {
             Search(SearchText);
-            _notificationService.ShowNotification("Search applied.", PackIconKind.Magnify, Colors.SkyBlue);
+            _notificationService.ShowNotification("Search applied.", 
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info), 
+                ConvertHexToColor("#2196F3"));
         }
         
         private void ExecuteApplyFilters()
         {
             ApplyFilters();
-            _notificationService.ShowNotification("Filters applied.", PackIconKind.Filter, Colors.SkyBlue);
+            _notificationService.ShowNotification("Filters applied.", 
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info), 
+                ConvertHexToColor("#2196F3"));
         }
         
         private void ExecuteLoadTransactions()
         {
             LoadTransactions();
-            _notificationService.ShowNotification("Transaction data refreshed.", PackIconKind.Refresh, Colors.LimeGreen);
+            _notificationService.ShowNotification("Transaction data refreshed.", 
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success), 
+                ConvertHexToColor("#00C853"));
         }
         
         private void ExecuteExportData()
@@ -204,11 +248,15 @@ namespace Quantra.ViewModels
             try
             {
                 ExportData();
-                _notificationService.ShowNotification(NotificationText, PackIconKind.FileExport, Colors.LimeGreen);
+                _notificationService.ShowNotification(NotificationText, 
+                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success), 
+                    ConvertHexToColor("#00C853"));
             }
             catch (Exception ex)
             {
-                _notificationService.ShowNotification($"Export failed: {ex.Message}", PackIconKind.Error, Colors.Red);
+                _notificationService.ShowNotification($"Export failed: {ex.Message}", 
+                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Error), 
+                    ConvertHexToColor("#FF1744"));
                 DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
             }
         }
@@ -235,8 +283,14 @@ namespace Quantra.ViewModels
             {
                 var transactions = _transactionService.GetTransactions();
                 
-                Transactions = new ObservableCollection<TransactionModel>(transactions);
-                FilteredTransactions = new ObservableCollection<TransactionModel>(transactions);
+                // Rebuild collections to avoid any IEnumerable type mismatch issues
+                Transactions = new ObservableCollection<TransactionModel>();
+                foreach (var tx in transactions)
+                {
+                    Transactions.Add(tx);
+                }
+                
+                FilteredTransactions = new ObservableCollection<TransactionModel>(Transactions);
                 
                 UpdateStatistics();
             }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests
 {

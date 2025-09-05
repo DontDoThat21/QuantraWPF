@@ -1,18 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
-using Polly;
-using Polly.CircuitBreaker;
-using Polly.Retry;
-using Polly.Wrap;
 using Quantra.CrossCutting.Logging;
 using Quantra.Models; // For AlertModel, etc.
 
@@ -25,7 +19,7 @@ namespace Quantra.CrossCutting.ErrorHandling
     {
         private static readonly Lazy<ErrorHandlingManager> _instance = new Lazy<ErrorHandlingManager>(() => new ErrorHandlingManager());
         private readonly ILogger _logger;
-        private readonly ConcurrentDictionary<string, AsyncCircuitBreakerPolicy> _circuitBreakers;
+        private readonly ConcurrentDictionary<string, SimpleCircuit> _circuitBreakers;
         private readonly ConcurrentDictionary<string, CircuitBreakerStatus> _circuitStatuses;
         private bool _initialized;
 
@@ -38,11 +32,34 @@ namespace Quantra.CrossCutting.ErrorHandling
         public string ModuleName => "ErrorHandling";
 
         /// <summary>
+        /// Simple circuit breaker implementation (no external dependencies).
+        /// </summary>
+        private sealed class SimpleCircuit
+        {
+            public CircuitBreakerOptions Options { get; }
+            public int ConsecutiveFailures { get; set; }
+            public CircuitBreakerStatus Status { get; set; } = CircuitBreakerStatus.Closed;
+            public DateTime LastBreakUtc { get; set; } = DateTime.MinValue;
+
+            public SimpleCircuit(CircuitBreakerOptions options)
+            {
+                Options = options ?? new CircuitBreakerOptions();
+            }
+
+            public bool IsOpen(TimeSpan? nowOffset = null)
+            {
+                if (Status != CircuitBreakerStatus.Open) return false;
+                var elapsed = DateTime.UtcNow - LastBreakUtc;
+                return elapsed.TotalMilliseconds < Options.DurationOfBreakMs;
+            }
+        }
+
+        /// <summary>
         /// Private constructor to enforce singleton pattern.
         /// </summary>
         private ErrorHandlingManager()
         {
-            _circuitBreakers = new ConcurrentDictionary<string, AsyncCircuitBreakerPolicy>();
+            _circuitBreakers = new ConcurrentDictionary<string, SimpleCircuit>();
             _circuitStatuses = new ConcurrentDictionary<string, CircuitBreakerStatus>();
             _logger = Log.ForType<ErrorHandlingManager>();
             
@@ -89,7 +106,8 @@ namespace Quantra.CrossCutting.ErrorHandling
                     return ErrorCategory.NetworkError;
                 }
                 
-                if (ex is SQLiteException || ex.Message.Contains("database"))
+                // Avoid direct reference to external packages; match by type name
+                if (string.Equals(ex.GetType().Name, "SQLiteException", StringComparison.Ordinal) || ex.Message.Contains("database", StringComparison.OrdinalIgnoreCase))
                 {
                     return ErrorCategory.DatabaseError;
                 }
@@ -110,20 +128,20 @@ namespace Quantra.CrossCutting.ErrorHandling
                 }
                 
                 // Check for trading specific errors
-                if (ex.Message.Contains("trading") || ex.Message.Contains("position") || 
-                    ex.Message.Contains("order") || ex.Message.Contains("execution"))
+                if (ex.Message.Contains("trading", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("position", StringComparison.OrdinalIgnoreCase) || 
+                    ex.Message.Contains("order", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("execution", StringComparison.OrdinalIgnoreCase))
                 {
                     return ErrorCategory.TradingError;
                 }
                 
                 // Check for API specific errors
-                if (ex.Message.Contains("API") || ex.Message.Contains("quota") || 
-                    ex.Message.Contains("rate limit") || ex.Message.Contains("throttle"))
+                if (ex.Message.Contains("API", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || 
+                    ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("throttle", StringComparison.OrdinalIgnoreCase))
                 {
                     return ErrorCategory.ApiError;
                 }
                 
-                if (ex.Message.Contains("config") || ex.Message.Contains("setting"))
+                if (ex.Message.Contains("config", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("setting", StringComparison.OrdinalIgnoreCase))
                 {
                     return ErrorCategory.ConfigurationError;
                 }
@@ -164,42 +182,34 @@ namespace Quantra.CrossCutting.ErrorHandling
                     break;
                     
                 case ErrorCategory.UserError:
-                    // User errors should be displayed to the user
                     RaiseAlert(exception, "User Input Error", AlertCategory.Standard, 2);
                     break;
                     
                 case ErrorCategory.SystemFailure:
-                    // System failures require immediate attention
                     RaiseAlert(exception, "System Failure", AlertCategory.SystemHealth, 3);
                     break;
                     
                 case ErrorCategory.ApiError:
-                    // API errors might require throttling or circuit breaking
                     RaiseAlert(exception, "API Error", AlertCategory.Global, 2);
                     break;
                     
                 case ErrorCategory.DatabaseError:
-                    // Database errors are critical
                     RaiseAlert(exception, "Database Error", AlertCategory.SystemHealth, 3);
                     break;
                     
                 case ErrorCategory.NetworkError:
-                    // Network errors might be temporary
                     RaiseAlert(exception, "Network Connectivity Error", AlertCategory.SystemHealth, 2);
                     break;
                     
                 case ErrorCategory.TradingError:
-                    // Trading errors are very important for a trading system
                     RaiseAlert(exception, "Trading System Error", AlertCategory.Opportunity, 3);
                     break;
                     
                 case ErrorCategory.SecurityError:
-                    // Security errors require immediate attention
                     RaiseAlert(exception, "Security Alert", AlertCategory.SystemHealth, 3);
                     break;
                     
                 case ErrorCategory.ConfigurationError:
-                    // Configuration errors might prevent correct operation
                     RaiseAlert(exception, "Configuration Error", AlertCategory.SystemHealth, 2);
                     break;
                     
@@ -218,19 +228,29 @@ namespace Quantra.CrossCutting.ErrorHandling
             }
             
             options ??= RetryOptions.ForUserFacingOperation();
-            
-            // Create retry policy
-            var policy = CreateRetryPolicy(options);
-            
-            try
+
+            int attempt = 1;
+            while (true)
             {
-                policy.Execute(action);
-            }
-            catch (Exception ex)
-            {
-                // If we reach here, all retries have been exhausted
-                HandleException(ex, "RetryExhausted");
-                throw; // Re-throw after handling
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    if (!ShouldRetry(ex, options) || attempt > options.MaxRetries)
+                    {
+                        HandleException(ex, "RetryExhausted");
+                        throw;
+                    }
+
+                    var delay = CalculateRetryDelay(attempt, options);
+                    _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
+                        attempt, options.MaxRetries, delay.TotalMilliseconds, ex.Message);
+                    Task.Delay(delay).GetAwaiter().GetResult();
+                    attempt++;
+                }
             }
         }
 
@@ -243,19 +263,28 @@ namespace Quantra.CrossCutting.ErrorHandling
             }
             
             options ??= RetryOptions.ForUserFacingOperation();
-            
-            // Create retry policy
-            var policy = CreateRetryPolicy(options);
-            
-            try
+
+            int attempt = 1;
+            while (true)
             {
-                return policy.Execute(func);
-            }
-            catch (Exception ex)
-            {
-                // If we reach here, all retries have been exhausted
-                HandleException(ex, "RetryExhausted");
-                throw; // Re-throw after handling
+                try
+                {
+                    return func();
+                }
+                catch (Exception ex)
+                {
+                    if (!ShouldRetry(ex, options) || attempt > options.MaxRetries)
+                    {
+                        HandleException(ex, "RetryExhausted");
+                        throw;
+                    }
+
+                    var delay = CalculateRetryDelay(attempt, options);
+                    _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
+                        attempt, options.MaxRetries, delay.TotalMilliseconds, ex.Message);
+                    Task.Delay(delay).GetAwaiter().GetResult();
+                    attempt++;
+                }
             }
         }
 
@@ -268,19 +297,28 @@ namespace Quantra.CrossCutting.ErrorHandling
             }
             
             options ??= RetryOptions.ForUserFacingOperation();
-            
-            // Create retry policy
-            var policy = CreateAsyncRetryPolicy(options);
-            
-            try
+
+            int attempt = 1;
+            while (true)
             {
-                return await policy.ExecuteAsync(func).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                // If we reach here, all retries have been exhausted
-                HandleException(ex, "RetryExhausted");
-                throw; // Re-throw after handling
+                try
+                {
+                    return await func().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    if (!ShouldRetry(ex, options) || attempt > options.MaxRetries)
+                    {
+                        HandleException(ex, "RetryExhausted");
+                        throw;
+                    }
+
+                    var delay = CalculateRetryDelay(attempt, options);
+                    _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
+                        attempt, options.MaxRetries, delay.TotalMilliseconds, ex.Message);
+                    await Task.Delay(delay).ConfigureAwait(false);
+                    attempt++;
+                }
             }
         }
 
@@ -293,19 +331,29 @@ namespace Quantra.CrossCutting.ErrorHandling
             }
             
             options ??= RetryOptions.ForUserFacingOperation();
-            
-            // Create retry policy
-            var policy = CreateAsyncRetryPolicy(options);
-            
-            try
+
+            int attempt = 1;
+            while (true)
             {
-                await policy.ExecuteAsync(action).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                // If we reach here, all retries have been exhausted
-                HandleException(ex, "RetryExhausted");
-                throw; // Re-throw after handling
+                try
+                {
+                    await action().ConfigureAwait(false);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    if (!ShouldRetry(ex, options) || attempt > options.MaxRetries)
+                    {
+                        HandleException(ex, "RetryExhausted");
+                        throw;
+                    }
+
+                    var delay = CalculateRetryDelay(attempt, options);
+                    _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
+                        attempt, options.MaxRetries, delay.TotalMilliseconds, ex.Message);
+                    await Task.Delay(delay).ConfigureAwait(false);
+                    attempt++;
+                }
             }
         }
 
@@ -338,30 +386,9 @@ namespace Quantra.CrossCutting.ErrorHandling
                     _logger.Information("Circuit breaker for {ServiceName} half-open - testing service", name);
             }
 
-            // Create the failure predicate
-            Func<Exception, bool> failurePredicate = options.FailurePredicate ?? (ex => true);
-            if (options.FailureExceptions != null && options.FailureExceptions.Length > 0)
-            {
-                var exceptionTypes = options.FailureExceptions;
-                failurePredicate = ex => exceptionTypes.Contains(ex.GetType()) || 
-                                        exceptionTypes.Any(t => t.IsInstanceOfType(ex));
-            }
+            var circuit = new SimpleCircuit(options);
 
-            // Create the circuit breaker policy
-            var policy = Policy
-                .Handle<Exception>(failurePredicate)
-                .AdvancedCircuitBreakerAsync(
-                    failureThreshold: 0.5, // 50% failure threshold
-                    samplingDuration: TimeSpan.FromMilliseconds(options.SamplingDurationMs),
-                    minimumThroughput: options.FailureThreshold,
-                    durationOfBreak: TimeSpan.FromMilliseconds(options.DurationOfBreakMs),
-                    onBreak: (ex, ts) => options.OnCircuitOpened(serviceName, ex),
-                    onReset: () => options.OnCircuitClosed(serviceName),
-                    onHalfOpen: () => options.OnCircuitHalfOpen(serviceName)
-                );
-
-            // Store the circuit breaker
-            _circuitBreakers[serviceName] = policy;
+            _circuitBreakers[serviceName] = circuit;
             _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
             _logger.Debug("Registered circuit breaker for {ServiceName}", serviceName);
         }
@@ -379,32 +406,70 @@ namespace Quantra.CrossCutting.ErrorHandling
                 throw new ArgumentNullException(nameof(action));
             }
             
-            if (!_circuitBreakers.TryGetValue(serviceName, out var circuitBreaker))
+            if (!_circuitBreakers.TryGetValue(serviceName, out var circuit))
             {
                 RegisterCircuitBreaker(serviceName);
-                circuitBreaker = _circuitBreakers[serviceName];
+                circuit = _circuitBreakers[serviceName];
             }
             
             try
             {
-                circuitBreaker.ExecuteAsync(() => 
+                // Check circuit state
+                if (circuit.IsOpen())
                 {
-                    action();
-                    return Task.CompletedTask;
-                }).GetAwaiter().GetResult();
-                
-                // Update circuit status
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
-            }
-            catch (BrokenCircuitException)
-            {
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
-                _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
-                throw;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                    _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
+                    throw new InvalidOperationException($"Circuit for {serviceName} is open");
+                }
+
+                if (circuit.Status == CircuitBreakerStatus.Open && !circuit.IsOpen())
+                {
+                    circuit.Status = CircuitBreakerStatus.HalfOpen;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.HalfOpen;
+                    circuit.Options.OnCircuitHalfOpen?.Invoke(serviceName);
+                }
+
+                // Execute guarded action
+                action();
+
+                // Success - close circuit
+                circuit.ConsecutiveFailures = 0;
+                if (circuit.Status != CircuitBreakerStatus.Closed)
+                {
+                    circuit.Status = CircuitBreakerStatus.Closed;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                    circuit.Options.OnCircuitClosed?.Invoke(serviceName);
+                }
+                else
+                {
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                }
             }
             catch (Exception ex)
             {
-                // Non-circuit exception, just handle it
+                // Determine if this failure counts
+                bool countsAsFailure = true;
+                if (circuit.Options.FailurePredicate != null)
+                {
+                    countsAsFailure = circuit.Options.FailurePredicate(ex);
+                }
+                else if (circuit.Options.FailureExceptions != null && circuit.Options.FailureExceptions.Length > 0)
+                {
+                    countsAsFailure = circuit.Options.FailureExceptions.Any(t => t.IsInstanceOfType(ex));
+                }
+
+                if (countsAsFailure)
+                {
+                    circuit.ConsecutiveFailures++;
+                    if (circuit.Status == CircuitBreakerStatus.HalfOpen || circuit.ConsecutiveFailures >= circuit.Options.FailureThreshold)
+                    {
+                        circuit.Status = CircuitBreakerStatus.Open;
+                        circuit.LastBreakUtc = DateTime.UtcNow;
+                        _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                        circuit.Options.OnCircuitOpened?.Invoke(serviceName, ex);
+                    }
+                }
+
                 HandleException(ex, $"CircuitBreaker:{serviceName}");
                 throw;
             }
@@ -423,32 +488,68 @@ namespace Quantra.CrossCutting.ErrorHandling
                 throw new ArgumentNullException(nameof(func));
             }
             
-            if (!_circuitBreakers.TryGetValue(serviceName, out var circuitBreaker))
+            if (!_circuitBreakers.TryGetValue(serviceName, out var circuit))
             {
                 RegisterCircuitBreaker(serviceName);
-                circuitBreaker = _circuitBreakers[serviceName];
+                circuit = _circuitBreakers[serviceName];
             }
             
             try
             {
-                T result = circuitBreaker.ExecuteAsync(() => 
+                if (circuit.IsOpen())
                 {
-                    return Task.FromResult(func());
-                }).GetAwaiter().GetResult();
-                
-                // Update circuit status
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                    _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
+                    throw new InvalidOperationException($"Circuit for {serviceName} is open");
+                }
+
+                if (circuit.Status == CircuitBreakerStatus.Open && !circuit.IsOpen())
+                {
+                    circuit.Status = CircuitBreakerStatus.HalfOpen;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.HalfOpen;
+                    circuit.Options.OnCircuitHalfOpen?.Invoke(serviceName);
+                }
+
+                var result = func();
+
+                circuit.ConsecutiveFailures = 0;
+                if (circuit.Status != CircuitBreakerStatus.Closed)
+                {
+                    circuit.Status = CircuitBreakerStatus.Closed;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                    circuit.Options.OnCircuitClosed?.Invoke(serviceName);
+                }
+                else
+                {
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                }
+
                 return result;
-            }
-            catch (BrokenCircuitException)
-            {
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
-                _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
-                throw;
             }
             catch (Exception ex)
             {
-                // Non-circuit exception, just handle it
+                bool countsAsFailure = true;
+                if (circuit.Options.FailurePredicate != null)
+                {
+                    countsAsFailure = circuit.Options.FailurePredicate(ex);
+                }
+                else if (circuit.Options.FailureExceptions != null && circuit.Options.FailureExceptions.Length > 0)
+                {
+                    countsAsFailure = circuit.Options.FailureExceptions.Any(t => t.IsInstanceOfType(ex));
+                }
+
+                if (countsAsFailure)
+                {
+                    circuit.ConsecutiveFailures++;
+                    if (circuit.Status == CircuitBreakerStatus.HalfOpen || circuit.ConsecutiveFailures >= circuit.Options.FailureThreshold)
+                    {
+                        circuit.Status = CircuitBreakerStatus.Open;
+                        circuit.LastBreakUtc = DateTime.UtcNow;
+                        _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                        circuit.Options.OnCircuitOpened?.Invoke(serviceName, ex);
+                    }
+                }
+
                 HandleException(ex, $"CircuitBreaker:{serviceName}");
                 throw;
             }
@@ -467,29 +568,68 @@ namespace Quantra.CrossCutting.ErrorHandling
                 throw new ArgumentNullException(nameof(func));
             }
             
-            if (!_circuitBreakers.TryGetValue(serviceName, out var circuitBreaker))
+            if (!_circuitBreakers.TryGetValue(serviceName, out var circuit))
             {
                 RegisterCircuitBreaker(serviceName);
-                circuitBreaker = _circuitBreakers[serviceName];
+                circuit = _circuitBreakers[serviceName];
             }
             
             try
             {
-                T result = await circuitBreaker.ExecuteAsync(func).ConfigureAwait(false);
-                
-                // Update circuit status
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                if (circuit.IsOpen())
+                {
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                    _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
+                    throw new InvalidOperationException($"Circuit for {serviceName} is open");
+                }
+
+                if (circuit.Status == CircuitBreakerStatus.Open && !circuit.IsOpen())
+                {
+                    circuit.Status = CircuitBreakerStatus.HalfOpen;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.HalfOpen;
+                    circuit.Options.OnCircuitHalfOpen?.Invoke(serviceName);
+                }
+
+                var result = await func().ConfigureAwait(false);
+
+                circuit.ConsecutiveFailures = 0;
+                if (circuit.Status != CircuitBreakerStatus.Closed)
+                {
+                    circuit.Status = CircuitBreakerStatus.Closed;
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                    circuit.Options.OnCircuitClosed?.Invoke(serviceName);
+                }
+                else
+                {
+                    _circuitStatuses[serviceName] = CircuitBreakerStatus.Closed;
+                }
+
                 return result;
-            }
-            catch (BrokenCircuitException)
-            {
-                _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
-                _logger.Warning("Circuit for {ServiceName} is open - rejecting request", serviceName);
-                throw;
             }
             catch (Exception ex)
             {
-                // Non-circuit exception, just handle it
+                bool countsAsFailure = true;
+                if (circuit.Options.FailurePredicate != null)
+                {
+                    countsAsFailure = circuit.Options.FailurePredicate(ex);
+                }
+                else if (circuit.Options.FailureExceptions != null && circuit.Options.FailureExceptions.Length > 0)
+                {
+                    countsAsFailure = circuit.Options.FailureExceptions.Any(t => t.IsInstanceOfType(ex));
+                }
+
+                if (countsAsFailure)
+                {
+                    circuit.ConsecutiveFailures++;
+                    if (circuit.Status == CircuitBreakerStatus.HalfOpen || circuit.ConsecutiveFailures >= circuit.Options.FailureThreshold)
+                    {
+                        circuit.Status = CircuitBreakerStatus.Open;
+                        circuit.LastBreakUtc = DateTime.UtcNow;
+                        _circuitStatuses[serviceName] = CircuitBreakerStatus.Open;
+                        circuit.Options.OnCircuitOpened?.Invoke(serviceName, ex);
+                    }
+                }
+
                 HandleException(ex, $"CircuitBreaker:{serviceName}");
                 throw;
             }
@@ -524,47 +664,14 @@ namespace Quantra.CrossCutting.ErrorHandling
                     Category = category,
                     Notes = exception.ToString()
                 };
-                Controls.AlertsControl.EmitGlobalAlert(alert);
+
+                // Avoid cross-project dependencies from DAL. Log the alert; UI layer can subscribe and display.
+                DatabaseMonolith.Log(category.ToString(), alert.Name, alert.Notes);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to emit error alert");
             }
-        }
-        
-        /// <summary>
-        /// Creates a synchronous retry policy.
-        /// </summary>
-        private Policy CreateRetryPolicy(RetryOptions options)
-        {
-            return Policy
-                .Handle<Exception>(ex => ShouldRetry(ex, options))
-                .WaitAndRetry(
-                    retryCount: options.MaxRetries,
-                    sleepDurationProvider: (attempt, context) => 
-                        CalculateRetryDelay(attempt, options),
-                    onRetry: (ex, timespan, attempt, context) => 
-                        _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
-                            attempt, options.MaxRetries, timespan.TotalMilliseconds, ex.Message));
-        }
-        
-        /// <summary>
-        /// Creates an asynchronous retry policy.
-        /// </summary>
-        private AsyncPolicy CreateAsyncRetryPolicy(RetryOptions options)
-        {
-            return Policy
-                .Handle<Exception>(ex => ShouldRetry(ex, options))
-                .WaitAndRetryAsync(
-                    retryCount: options.MaxRetries,
-                    sleepDurationProvider: (attempt, context) => 
-                        CalculateRetryDelay(attempt, options),
-                    onRetryAsync: (ex, timespan, attempt, context) =>
-                    {
-                        _logger.Warning(ex.Message, "Retry attempt {RetryAttempt}/{MaxRetries} after {RetryDelayMs}ms. Reason: {ErrorMessage}", 
-                            attempt, options.MaxRetries, timespan.TotalMilliseconds, ex.Message);
-                        return Task.CompletedTask;
-                    });
         }
         
         /// <summary>

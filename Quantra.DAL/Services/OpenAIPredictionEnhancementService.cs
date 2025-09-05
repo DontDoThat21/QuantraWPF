@@ -4,9 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Quantra.Configuration;
-using Quantra.Configuration.Models;
+using Quantra.CrossCutting.Logging;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
@@ -18,23 +16,28 @@ namespace Quantra.DAL.Services
     /// </summary>
     public class OpenAIPredictionEnhancementService
     {
-        private readonly ILogger<OpenAIPredictionEnhancementService> _logger;
-        private readonly ApiConfig _apiConfig;
-        private readonly SentimentAnalysisConfig _sentimentConfig;
+        private readonly ILogger _logger;
+        private readonly dynamic _apiConfig; // dynamic to avoid hard project refs for DI flexibility
+        private readonly dynamic _sentimentConfig; // dynamic to avoid hard project refs for DI flexibility
         private readonly ISocialMediaSentimentService _openAiSentimentService;
         
         /// <summary>
         /// Constructor for OpenAIPredictionEnhancementService
         /// </summary>
+        /// <remarks>
+        /// Accepts loosely-typed configuration manager to avoid cross-project references.
+        /// </remarks>
         public OpenAIPredictionEnhancementService(
-            ILogger<OpenAIPredictionEnhancementService> logger,
-            IConfigurationManager configManager,
-            ISocialMediaSentimentService openAiSentimentService)
+            ISocialMediaSentimentService openAiSentimentService,
+            object configManager,
+            object logger)
         {
-            _logger = logger;
-            _apiConfig = configManager.GetSection<ApiConfig>("Api");
-            _sentimentConfig = configManager.GetSection<SentimentAnalysisConfig>("SentimentAnalysis");
+            _logger = logger as ILogger ?? Log.ForType<OpenAIPredictionEnhancementService>();
             _openAiSentimentService = openAiSentimentService;
+
+            // Build lightweight config objects from provided configuration manager (if available)
+            _apiConfig = BuildApiConfig(configManager);
+            _sentimentConfig = BuildSentimentConfig(configManager);
         }
         
         /// <summary>
@@ -45,18 +48,19 @@ namespace Quantra.DAL.Services
             if (prediction == null || string.IsNullOrEmpty(symbol))
                 return prediction;
                 
-            if (string.IsNullOrEmpty(_apiConfig?.OpenAI?.ApiKey) || !_sentimentConfig?.OpenAI?.EnableEnhancedPredictionExplanations == true)
+            // Check if OpenAI enabled and API key available
+            if (string.IsNullOrEmpty(_apiConfig?.OpenAI?.ApiKey) || !(_sentimentConfig?.OpenAI?.EnableEnhancedPredictionExplanations ?? true))
                 return prediction;
                 
             try
             {
-                _logger.LogInformation($"Enhancing prediction for {symbol} with OpenAI");
+                _logger.Information("Enhancing prediction for {Symbol} with OpenAI", symbol);
                 
                 // Fetch recent relevant content for context
                 var content = await _openAiSentimentService.FetchRecentContentAsync(symbol, 5);
-                if (content.Count == 0)
+                if (content == null || content.Count == 0)
                 {
-                    _logger.LogWarning($"No content available for enhancing prediction for {symbol}");
+                    _logger.Warning("No content available for enhancing prediction for {Symbol}", symbol);
                     return prediction;
                 }
                 
@@ -65,7 +69,7 @@ namespace Quantra.DAL.Services
                 if (enhancedPrediction != null)
                 {
                     // Preserve the original prediction values but add OpenAI insights
-                    prediction.OpenAIExplanation = enhancedPrediction.OpenAIExplanation ?? "";
+                    prediction.OpenAIExplanation = enhancedPrediction.OpenAIExplanation ?? string.Empty;
                     prediction.AnalysisDetails = enhancedPrediction.AnalysisDetails ?? prediction.AnalysisDetails;
                     prediction.UsesOpenAI = true;
                 }
@@ -74,7 +78,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error enhancing prediction for {symbol}");
+                _logger.Error(ex, "Error enhancing prediction for {Symbol}", symbol);
                 return prediction; // Return unmodified prediction on error
             }
         }
@@ -90,7 +94,7 @@ namespace Quantra.DAL.Services
             {
                 if (!File.Exists(pythonScript))
                 {
-                    _logger.LogError($"Python script not found at: {pythonScript}");
+                    _logger.Error("Python script not found at: {Path}", pythonScript);
                     return null;
                 }
                 
@@ -98,8 +102,8 @@ namespace Quantra.DAL.Services
                 var requestData = new
                 {
                     type = "enhance_prediction",
-                    apiKey = _apiConfig.OpenAI.ApiKey,
-                    model = _apiConfig.OpenAI.Model,
+                    apiKey = _apiConfig?.OpenAI?.ApiKey,
+                    model = _apiConfig?.OpenAI?.Model,
                     prediction = new
                     {
                         symbol,
@@ -132,7 +136,7 @@ namespace Quantra.DAL.Services
                 {
                     if (process == null)
                     {
-                        _logger.LogError("Failed to start Python process");
+                        _logger.Error("Failed to start Python process");
                         return null;
                     }
                     
@@ -150,13 +154,13 @@ namespace Quantra.DAL.Services
                     
                     if (process.ExitCode != 0)
                     {
-                        _logger.LogError($"Python script failed with exit code {process.ExitCode}: {stdErr}");
+                        _logger.Error("Python script failed with exit code {Code}: {Error}", process.ExitCode, stdErr);
                         return null;
                     }
                     
                     if (string.IsNullOrWhiteSpace(stdOut))
                     {
-                        _logger.LogError($"Python script returned empty output. StdErr: {stdErr}");
+                        _logger.Error("Python script returned empty output. StdErr: {Error}", stdErr);
                         return null;
                     }
                     
@@ -166,7 +170,7 @@ namespace Quantra.DAL.Services
                         var response = JsonSerializer.Deserialize<PythonResponse>(stdOut);
                         if (response?.prediction == null)
                         {
-                            _logger.LogError("Invalid response format from Python script");
+                            _logger.Error("Invalid response format from Python script");
                             return null;
                         }
                         
@@ -180,14 +184,14 @@ namespace Quantra.DAL.Services
                     }
                     catch (JsonException jsonEx)
                     {
-                        _logger.LogError(jsonEx, $"Error parsing Python response: {stdOut}");
+                        _logger.Error(jsonEx, "Error parsing Python response: {StdOut}", stdOut);
                         return null;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in CallOpenAIPredictionEnhancementAsync");
+                _logger.Error(ex, "Error in CallOpenAIPredictionEnhancementAsync");
                 return null;
             }
         }
@@ -213,6 +217,69 @@ namespace Quantra.DAL.Services
             public double confidence { get; set; }
             public string analysisDetails { get; set; }
             public bool openAiEnhanced { get; set; }
+        }
+
+        // --- Configuration helpers (mirror OpenAISentimentService approach) ---
+        private dynamic BuildApiConfig(object configManager)
+        {
+            dynamic root = new System.Dynamic.ExpandoObject();
+            dynamic openAi = new System.Dynamic.ExpandoObject();
+            openAi.BaseUrl = GetConfigValue(configManager, "ApiConfig:OpenAI:BaseUrl", "https://api.openai.com");
+            openAi.ApiKey = GetConfigValue(configManager, "ApiConfig:OpenAI:ApiKey", Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty);
+            openAi.Model = GetConfigValue(configManager, "ApiConfig:OpenAI:Model", "gpt-4o-mini");
+            openAi.Temperature = GetConfigValue(configManager, "ApiConfig:OpenAI:Temperature", 0.2);
+            root.OpenAI = openAi;
+            return root;
+        }
+
+        private dynamic BuildSentimentConfig(object configManager)
+        {
+            dynamic root = new System.Dynamic.ExpandoObject();
+            dynamic openAi = new System.Dynamic.ExpandoObject();
+            openAi.EnableEnhancedPredictionExplanations = GetConfigValue(configManager, "SentimentAnalysisConfig:OpenAI:EnableEnhancedPredictionExplanations", true);
+            openAi.MaxTokens = GetConfigValue(configManager, "SentimentAnalysisConfig:OpenAI:MaxTokens", 500);
+            root.OpenAI = openAi;
+            return root;
+        }
+
+        private T GetConfigValue<T>(object configManager, string key, T defaultValue)
+        {
+            try
+            {
+                if (configManager == null)
+                {
+                    return defaultValue;
+                }
+                var type = configManager.GetType();
+                // Try generic GetValue<T>(string key, T defaultValue)
+                var method = type.GetMethod("GetValue");
+                if (method != null && method.IsGenericMethod)
+                {
+                    var generic = method.MakeGenericMethod(typeof(T));
+                    var result = generic.Invoke(configManager, new object[] { key, defaultValue });
+                    if (result is T typed)
+                    {
+                        return typed;
+                    }
+                }
+                // Try indexer style: configManager[key]
+                var indexer = type.GetProperty("Item", new[] { typeof(string) });
+                if (indexer != null)
+                {
+                    var value = indexer.GetValue(configManager, new object[] { key });
+                    if (value is T t)
+                        return t;
+                    if (value != null)
+                    {
+                        return (T)Convert.ChangeType(value, typeof(T));
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore and fall back
+            }
+            return defaultValue;
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Text.Json;
 using Quantra.CrossCutting.Logging;
 using Quantra.CrossCutting.Monitoring.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Interfaces;
 
 namespace Quantra.CrossCutting.Monitoring
 {

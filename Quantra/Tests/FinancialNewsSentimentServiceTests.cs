@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests
 {

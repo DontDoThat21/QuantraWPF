@@ -8,15 +8,15 @@ using System.Windows.Media;
 using MaterialDesignThemes.Wpf;
 using Quantra.ViewModels;
 using Quantra.Models;
-using Quantra.Services.Interfaces;
 using Quantra.Controls.Components;
 using Quantra.Views.PredictionAnalysis.Components;
 using PredictionChartModuleType = Quantra.Views.PredictionAnalysis.Components.PredictionChartModule;
 using System.Windows.Markup;
-using Quantra.Data;
 using Quantra.DAL.Services.Interfaces;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
+using Quantra.Repositories;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {
@@ -24,6 +24,7 @@ namespace Quantra.Controls
     {
         private readonly PredictionAnalysisViewModel _viewModel;
         private readonly INotificationService _notificationService;
+        private readonly IStockDataCacheService _stockDataCacheService;
         private readonly ITechnicalIndicatorService _indicatorService;
         private readonly IEmailService _emailService;
         private readonly IndicatorDisplayModule _indicatorModule;
@@ -42,6 +43,7 @@ namespace Quantra.Controls
             INotificationService notificationService,
             ITechnicalIndicatorService indicatorService,
             PredictionAnalysisRepository analysisRepository,
+            StockDataCacheService stockDataCacheService,
             ITradingService tradingService,
             ISettingsService settingsService,
             IAlphaVantageService alphaVantageService,
@@ -49,24 +51,26 @@ namespace Quantra.Controls
         {
             InitializeComponent();
 
-            var repo = analysisRepository ?? new Quantra.Data.PredictionAnalysisRepository();
+            var repo = analysisRepository ?? new PredictionAnalysisRepository();
             var indicatorSvc = indicatorService ?? new TechnicalIndicatorService();
             var emailSvc = emailService ?? new EmailService();
             var audioSvc = new AudioService(DatabaseMonolith.GetUserSettings());
             var smsSvc = new SmsService();
             var settingsSvc = settingsService ?? new SettingsService();
             var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc, settingsSvc);
+            var stockDataCacheSvc = stockDataCacheService ?? new StockDataCacheService();
             var tradingSvc = tradingService ?? new TradingService(emailSvc, notificationSvc, smsSvc);
             var alphaSvc = alphaVantageService ?? new AlphaVantageService();
 
             _viewModel = viewModel ?? new PredictionAnalysisViewModel(indicatorSvc, repo, tradingSvc, settingsSvc, alphaSvc, emailSvc);
             _notificationService = notificationSvc;
-            _notificationService = notificationSvc;
+            _stockDataCacheService = stockDataCacheSvc;
             _indicatorService = indicatorSvc;
             _emailService = emailSvc;
+        
 
             _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
-            _chartModule = new PredictionChartModuleType(_settingsService, _indicatorService, _notificationService);
+            _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, stockDataCacheService);
 
             DataContext = _viewModel;
 

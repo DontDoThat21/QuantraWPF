@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Quantra.Data;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 using Quantra.Services.Interfaces;
 
 namespace Quantra.Modules

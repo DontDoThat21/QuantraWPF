@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using System.Linq;
 using System.Windows.Data;
-using Quantra.Data;
 using System.Collections.Generic;
 using Quantra.Commands;
+using Quantra.Repositories;
 
 namespace Quantra.ViewModels
 {

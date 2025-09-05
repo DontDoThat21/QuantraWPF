@@ -69,37 +69,37 @@
                   Orientation="Horizontal" Margin="10,10,10,10">
             <TextBlock Text="Indicators:" Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,10,0" VerticalAlignment="Center"/>
             <WrapPanel>
-                <CheckBox x:Name="VwapCheckBox" Content="VWAP" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="VwapCheckBox" Content="VWAP" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="MacdCheckBox" Content="MACD" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="MacdCheckBox" Content="MACD" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="RsiCheckBox" Content="RSI" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="RsiCheckBox" Content="RSI" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="BollingerCheckBox" Content="Bollinger" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="BollingerCheckBox" Content="Bollinger" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="MaCheckBox" Content="Moving Avg" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="MaCheckBox" Content="Moving Avg" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="VolumeCheckBox" Content="Volume" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="True"
+                <CheckBox x:Name="VolumeCheckBox" Content="Volume" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="True"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="BreadthThrustCheckBox" Content="Breadth Thrust" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="BreadthThrustCheckBox" Content="Breadth Thrust" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="AdxCheckBox" Content="ADX" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="AdxCheckBox" Content="ADX" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="RocCheckBox" Content="ROC" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="RocCheckBox" Content="ROC" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="UoCheckBox" Content="Ult. Osc" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="UoCheckBox" Content="Ult. Osc" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="BbpCheckBox" Content="Bull/Bear" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="BbpCheckBox" Content="Bull/Bear" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="CciCheckBox" Content="CCI" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="CciCheckBox" Content="CCI" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="AtrCheckBox" Content="ATR" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="AtrCheckBox" Content="ATR" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="WilliamsRCheckBox" Content="Williams %R" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="WilliamsRCheckBox" Content="Williams %R" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="StochCheckBox" Content="Stochastic" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="StochCheckBox" Content="Stochastic" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
-                <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Style="{StaticResource EnhancedTextBlockStyle}" Margin="5,0" IsChecked="False"
+                <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Style="{StaticResource EnhancedCheckBoxStyle}" Margin="5,0" IsChecked="False"
                           Checked="IndicatorCheckBox_Changed" Unchecked="IndicatorCheckBox_Changed"/>
             </WrapPanel>
         </StackPanel>

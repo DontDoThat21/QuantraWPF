@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.Backtesting
 {

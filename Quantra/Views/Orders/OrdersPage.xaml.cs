@@ -16,8 +16,8 @@ using Quantra.Controls; // Add explicit reference to Quantra.Controls namespace
 // Import the specific PredictionModel we want to use
 using PredictionModel = Quantra.Models.PredictionModel;
 using Quantra.Adapters;
-using Quantra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.Orders
 {

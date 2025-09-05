@@ -11,6 +11,7 @@ using LiveCharts.Defaults;
 using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.Backtesting
 {

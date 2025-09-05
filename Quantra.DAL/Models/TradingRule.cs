@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Media;
-using Quantra.DAL.Services.Interfaces;
 using Newtonsoft.Json;
+using Quantra.DAL.Utilities;
 
 namespace Quantra.Models
 {
@@ -200,24 +199,16 @@ namespace Quantra.Models
             return RiskRewardRatio >= 1.0;
         }
 
-        public Color GetStatusColor()
+        // Returns a hex color string representing the status color, keeping UI concerns out of the model
+        public string GetStatusColorHex()
         {
-            if (!IsActive)
-                return Colors.Gray;
-
-            if (RiskRewardRatio >= 3)
-                return Colors.Green;
-            if (RiskRewardRatio >= 2)
-                return Colors.YellowGreen;
-            if (RiskRewardRatio >= 1)
-                return Colors.Yellow;
-            return Colors.Orange;
+            return TradingRuleColorHelper.GetStatusColorHex(IsActive, RiskRewardRatio);
         }
 
         public override string ToString()
         {
-            var direction = OrderType == "BUY" ? "?" : "?";
-            return $"{Symbol} {direction} {Quantity} @ {EntryPrice:C2} ? {ExitPrice:C2} (R/R: {RiskRewardRatio:F1})";
+            var direction = OrderType == "BUY" ? "Buy" : "Sell";
+            return $"{Symbol} {direction} {Quantity} @ {EntryPrice:C2} -> {ExitPrice:C2} (R/R: {RiskRewardRatio:F1})";
         }
     }
 }

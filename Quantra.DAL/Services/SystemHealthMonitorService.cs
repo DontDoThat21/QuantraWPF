@@ -13,6 +13,8 @@ using Quantra.CrossCutting.Monitoring;
 using Quantra.CrossCutting.Monitoring.Models;
 using System.Text.Json;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.Utilities;
+using Quantra.Models;
 
 namespace Quantra.DAL.Services
 {
@@ -402,7 +404,7 @@ namespace Quantra.DAL.Services
                     Notes = details
                 };
 
-                AlertManager.EmitGlobalAlert(alert);
+                Alerting.EmitGlobalAlert(alert);
 
                 // Update the last alert time
                 _lastAlertTimes[alertKey] = DateTime.Now;

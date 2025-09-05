@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.CrossCutting.ErrorHandling;
+using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;

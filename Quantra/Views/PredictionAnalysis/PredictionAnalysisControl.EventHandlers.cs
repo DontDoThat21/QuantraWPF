@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Collections.ObjectModel; // Added for ObservableCollection
-using System.Windows.Data; // Added for CollectionViewSource
+using System.Windows.Data;
+using Quantra.DAL.Services; // Added for CollectionViewSource
 
 namespace Quantra.Controls
 {

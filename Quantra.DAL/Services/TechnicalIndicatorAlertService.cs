@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Quantra.Controls;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Utilities;
@@ -52,7 +53,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                AlertsControl.EmitGlobalError($"Error checking alert condition for {alert.Name}: {ex.Message}", ex);
+                Alerting.EmitGlobalError($"Error checking alert condition for {alert?.Name}: {ex.Message}", ex);
                 return false;
             }
         }
@@ -68,20 +69,29 @@ namespace Quantra.DAL.Services
                 return 0;
 
             int triggeredCount = 0;
-            List<Task<bool>> checkTasks = new List<Task<bool>>();
 
-            foreach (var alert in alerts)
+            // Build list of alerts to check
+            var indicatorAlerts = alerts.Where(a => a.Category == AlertCategory.TechnicalIndicator && a.IsActive && !a.IsTriggered).ToList();
+            if (indicatorAlerts.Count == 0)
+                return 0;
+
+            int maxDegreeOfParallelism = Math.Min(indicatorAlerts.Count, 4);
+            using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
+
+            var tasks = indicatorAlerts.Select(async alert =>
             {
-                if (alert.Category == AlertCategory.TechnicalIndicator && alert.IsActive && !alert.IsTriggered)
+                await semaphore.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    checkTasks.Add(CheckAlertConditionAsync(alert));
+                    return await CheckAlertConditionAsync(alert).ConfigureAwait(false);
                 }
-            }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToList();
 
-            // Use simple throttling for alert checks to prevent resource contention
-            using var throttler = new ConcurrentTaskThrottler(Math.Min(checkTasks.Count, 4));
-            var taskFactories = checkTasks.Select(task => new Func<Task<bool>>(() => task));
-            bool[] results = await throttler.ExecuteThrottledAsync(taskFactories);
+            bool[] results = await Task.WhenAll(tasks).ConfigureAwait(false);
             foreach (bool triggered in results)
             {
                 if (triggered) triggeredCount++;

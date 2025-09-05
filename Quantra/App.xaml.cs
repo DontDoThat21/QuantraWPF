@@ -4,7 +4,6 @@ using System.Data;
 using System.IO;
 using System.Windows;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
@@ -16,6 +15,9 @@ using Quantra.CrossCutting.Logging;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.CrossCutting.Monitoring;
 using Quantra.Utilities;
+using Quantra.DAL.Services;
+using System.Reflection;
+using Quantra.Services;
 
 namespace Quantra
 {
@@ -150,6 +152,9 @@ namespace Quantra
                 // Register application services
                 Quantra.Extensions.ServiceCollectionExtensions.AddQuantraServices(services);
                 
+                // Register AlertPublisher so non-UI services can emit alerts via DI
+                services.AddSingleton<IAlertPublisher, AlertPublisher>();
+                
                 // Initialize SystemHealthMonitorService
                 var healthMonitor = ServiceProvider?.GetService<SystemHealthMonitorService>() 
                     ?? new SystemHealthMonitorService();
@@ -210,8 +215,8 @@ namespace Quantra
                 if (window.MinHeight <= 0)
                     window.MinHeight = 200;
 
-                // Attach resize behavior
-                WindowResizeBehavior.AttachResizeBehavior(window);
+                // Attach resize behavior via reflection to avoid hard project dependency here
+                ResizableBehaviorHelper.Attach(window);
 
                 // Mark the window to avoid applying behavior multiple times
                 window.Tag = "ResizableApplied";
@@ -235,6 +240,39 @@ namespace Quantra
             }
             
             base.OnExit(e);
+        }
+
+        private static class ResizableBehaviorHelper
+        {
+            public static void Attach(Window window)
+            {
+                try
+                {
+                    var type = Type.GetType("Quantra.WindowResizeBehavior");
+                    if (type == null) return;
+
+                    var method = type.GetMethod(
+                        name: "AttachResizeBehavior",
+                        BindingFlags.Public | BindingFlags.Static);
+
+                    if (method == null) return;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length == 1)
+                    {
+                        method.Invoke(null, new object[] { window });
+                    }
+                    else
+                    {
+                        // Support optional second parameter (resizeBorderThickness)
+                        method.Invoke(null, new object[] { window, Type.Missing });
+                    }
+                }
+                catch
+                {
+                    // Intentionally ignore any reflection errors to avoid crashing on startup
+                }
+            }
         }
     }
 }

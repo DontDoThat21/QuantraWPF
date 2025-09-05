@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using Quantra.Enums;
 using MaterialDesignThemes.Wpf;
-using Quantra.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra
 {

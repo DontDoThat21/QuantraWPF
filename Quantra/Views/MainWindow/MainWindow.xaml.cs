@@ -18,8 +18,8 @@ using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Enums;
 using Dapper;
-using Quantra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Quantra.DAL.Services;
 
 namespace Quantra
 {

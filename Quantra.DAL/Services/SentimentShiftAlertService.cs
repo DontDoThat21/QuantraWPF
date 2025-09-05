@@ -45,6 +45,11 @@ namespace Quantra.DAL.Services
                     lookbackDays: 7, // Only need recent data
                     sentimentSources: sources);
                 
+                if (correlationResult?.AlignedData == null)
+                {
+                    return; // nothing to process
+                }
+                
                 if (!_lastSentimentValues.ContainsKey(symbol))
                 {
                     // First time monitoring this symbol, just store values as baseline
@@ -107,7 +112,7 @@ namespace Quantra.DAL.Services
             double previousSentiment, 
             double currentSentiment, 
             double shift,
-            Quantra.Modules.SentimentPriceCorrelationResult correlationResult)
+            SentimentPriceCorrelationResult correlationResult)
         {
             // Determine if it's a positive or negative shift
             string direction = shift > 0 ? "positive" : "negative";
@@ -150,8 +155,8 @@ namespace Quantra.DAL.Services
                 Priority = priority
             };
             
-            // Emit the alert
-            AlertsControl.EmitGlobalAlert(alert);
+            // Fallback emission: log alert details; higher-level layers may subscribe and forward
+            DatabaseMonolith.Log("Alert", alert.Name, alert.Notes);
         }
         
         /// <summary>

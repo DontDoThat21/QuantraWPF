@@ -6,7 +6,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using static Quantra.ResizableBorder;
-using System.Text.Json; // For JSON deserialization
+using System.Text.Json;
+using Quantra.DAL.Services; // For JSON deserialization
 
 namespace Quantra
 {

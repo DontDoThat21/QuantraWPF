@@ -43,9 +43,9 @@ namespace Quantra.DAL.Services
                 
                 // Store alert in memory for tracking patterns
                 StoreAlert(alert);
-                
+
                 // Emit the global alert
-                AlertManager.EmitGlobalAlert(alert);
+                Alerting.EmitGlobalAlert(alert);
             }
             catch (Exception ex)
             {
@@ -172,7 +172,7 @@ namespace Quantra.DAL.Services
             };
             
             // Emit global alert
-            AlertManager.EmitGlobalAlert(alert);
+            Alerting.EmitGlobalAlert(alert);
         }
     }
 }

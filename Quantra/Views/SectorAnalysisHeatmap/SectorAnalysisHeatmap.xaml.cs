@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using Quantra;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {

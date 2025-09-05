@@ -85,12 +85,12 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Get the saved window state for restoration
         /// </summary>
-        public static WindowState? GetSavedWindowState()
+        public static System.Windows.WindowState? GetSavedWindowState()
         {
             var settings = GetUserSettings();
             if (settings.RememberWindowState)
             {
-                return (WindowState)settings.LastWindowState;
+                return (System.Windows.WindowState)settings.LastWindowState;
             }
             return null;
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Models

@@ -8,6 +8,7 @@ using Quantra.Commands;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels.Base;
+using Quantra.DAL.Services;
 
 namespace Quantra.ViewModels
 {

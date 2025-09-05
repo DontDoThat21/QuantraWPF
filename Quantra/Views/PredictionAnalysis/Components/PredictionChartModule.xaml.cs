@@ -5,12 +5,12 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using System.ComponentModel;
 using System.Linq;
 using LiveCharts;
 using LiveCharts.Wpf;
 using System.Threading.Tasks;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.PredictionAnalysis.Components
 {

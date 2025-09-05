@@ -6,8 +6,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using Quantra.Models;
-using Quantra.Helpers;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Utilities;
 
 namespace Quantra.DAL.Services
 {
@@ -50,7 +50,7 @@ namespace Quantra.DAL.Services
                     return key;
                 
                 // Fallback to AlphaVantage key since we're simulating for now
-                return ApiKeyHelper.GetAlphaVantageApiKey();
+                return Quantra.DAL.Utilities.Utilities.GetAlphaVantageApiKey();
             }
             catch (Exception ex)
             {

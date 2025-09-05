@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Quantra.Tests", "Quantra.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Quantra.DAL", "Quantra.DAL\Quantra.DAL.csproj", "{8BAC68FF-3F74-4E04-ADDE-5085F193BA78}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Quantra.Helpers", "Quantra.Helpers\Quantra.Helpers.csproj", "{0D329118-AD55-4A93-AD59-DE4698EADF26}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,14 +41,6 @@ Global
 		{8BAC68FF-3F74-4E04-ADDE-5085F193BA78}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8BAC68FF-3F74-4E04-ADDE-5085F193BA78}.Release|x64.ActiveCfg = Release|Any CPU
 		{8BAC68FF-3F74-4E04-ADDE-5085F193BA78}.Release|x64.Build.0 = Release|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Debug|x64.Build.0 = Debug|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Release|x64.ActiveCfg = Release|Any CPU
-		{0D329118-AD55-4A93-AD59-DE4698EADF26}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

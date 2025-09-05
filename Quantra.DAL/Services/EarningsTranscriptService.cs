@@ -8,7 +8,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Quantra.Models;
-using Quantra.Data;
 using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.DAL.Services

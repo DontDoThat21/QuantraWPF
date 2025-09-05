@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {

@@ -6,12 +6,12 @@ using System.Windows.Media;
 using Quantra.Commands;
 using Quantra.Enums;
 using Quantra.Models;
-using Quantra.Services.Interfaces;
 using Quantra.ViewModels.Base;
 using MaterialDesignThemes.Wpf;
 using System.Windows.Input;
 using System.Windows;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.ViewModels
 {

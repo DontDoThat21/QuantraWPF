@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +15,8 @@ using System.Net.Http;
 using System.Reflection; // <-- Add this for reflection
 using System.Threading.Tasks;
 using System.Windows;
+using Quantra.DAL.Services;
+using Quantra.Utilities;
 
 namespace Quantra
 {
@@ -175,7 +176,7 @@ namespace Quantra
                         Category = Quantra.Models.AlertCategory.Global,
                         Notes = details
                     };
-                    Quantra.Controls.AlertsControl.EmitGlobalAlert(alert);
+                    Alerting.EmitGlobalAlert(alert);
                 }
             }
             catch (Exception ex)

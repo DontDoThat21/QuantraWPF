@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Quantra.Configuration;
-using Quantra.Configuration.Models;
+using Quantra.CrossCutting.Logging;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
@@ -20,27 +19,38 @@ namespace Quantra.DAL.Services
     public class OpenAISentimentService : ISocialMediaSentimentService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<OpenAISentimentService> _logger;
-        private readonly ApiConfig _apiConfig;
-        private readonly SentimentAnalysisConfig _sentimentConfig;
+        private readonly ILogger _logger;
+        private readonly dynamic _apiConfig; // dynamic to avoid hard project refs for DI flexibility
+        private readonly dynamic _sentimentConfig; // dynamic to avoid hard project refs for DI flexibility
         private readonly Dictionary<string, SentimentCacheItem> _sentimentCache = new Dictionary<string, SentimentCacheItem>();
         
         /// <summary>
-        /// Constructor for OpenAISentimentService
+        /// Flexible constructor for DI with optional logger and configuration manager
         /// </summary>
-        public OpenAISentimentService(
-            ILogger<OpenAISentimentService> logger,
-            IConfigurationManager configManager)
+        /// <remarks>
+        /// Accepts loosely-typed parameters to avoid cross-project hard references and DI mismatches.
+        /// </remarks>
+        public OpenAISentimentService(object logger = null, object configManager = null)
         {
-            _logger = logger;
+            _logger = logger as ILogger ?? Log.ForType<OpenAISentimentService>();
             _httpClient = new HttpClient();
-            _apiConfig = configManager.GetSection<ApiConfig>("ApiConfig");
-            _sentimentConfig = configManager.GetSection<SentimentAnalysisConfig>("SentimentAnalysisConfig");
+
+            // Build lightweight config objects from provided configuration manager (if available)
+            _apiConfig = BuildApiConfig(configManager);
+            _sentimentConfig = BuildSentimentConfig(configManager);
             
             // Set up the HTTP client
-            _httpClient.BaseAddress = new Uri(_apiConfig.OpenAI.BaseUrl);
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiConfig.OpenAI.ApiKey}");
-            _httpClient.Timeout = TimeSpan.FromSeconds(_apiConfig.OpenAI.DefaultTimeout);
+            string baseUrl = _apiConfig?.OpenAI?.BaseUrl ?? "https://api.openai.com";
+            string apiKey = _apiConfig?.OpenAI?.ApiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty;
+            int timeoutSeconds = _apiConfig?.OpenAI?.DefaultTimeout ?? 30;
+            
+            _httpClient.BaseAddress = new Uri(baseUrl);
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                _httpClient.DefaultRequestHeaders.Remove("Authorization");
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            }
+            _httpClient.Timeout = TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds));
         }
         
         /// <summary>
@@ -48,12 +58,12 @@ namespace Quantra.DAL.Services
         /// </summary>
         public async Task<double> GetSymbolSentimentAsync(string symbol)
         {
-            _logger.LogInformation($"Analyzing sentiment for {symbol} using OpenAI");
+            _logger.Information("Analyzing sentiment for {Symbol} using OpenAI", symbol);
             
             // Check cache first
             if (IsCacheValid(symbol))
             {
-                _logger.LogInformation($"Using cached sentiment for {symbol}");
+                _logger.Information("Using cached sentiment for {Symbol}", symbol);
                 return _sentimentCache[symbol].Score;
             }
             
@@ -80,7 +90,7 @@ namespace Quantra.DAL.Services
         {
             if (textContent == null || textContent.Count == 0)
             {
-                _logger.LogWarning("No content provided for sentiment analysis");
+                _logger.Warning("No content provided for sentiment analysis");
                 return 0.0;
             }
             
@@ -98,14 +108,14 @@ namespace Quantra.DAL.Services
                 {
                     var requestBody = new
                     {
-                        model = _apiConfig.OpenAI.Model,
+                        model = _apiConfig?.OpenAI?.Model ?? "gpt-4o-mini",
                         messages = new[]
                         {
                             new { role = "system", content = "You are a financial sentiment analyst specialized in stock market analysis." },
                             new { role = "user", content = prompt }
                         },
-                        temperature = _apiConfig.OpenAI.Temperature,
-                        max_tokens = _sentimentConfig.OpenAI.MaxTokens
+                        temperature = _apiConfig?.OpenAI?.Temperature ?? 0.2,
+                        max_tokens = _sentimentConfig?.OpenAI?.MaxTokens ?? 500
                     };
                     
                     var content = new StringContent(
@@ -129,7 +139,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error analyzing sentiment with OpenAI");
+                _logger.Error(ex, "Error analyzing sentiment with OpenAI");
                 return 0.0;
             }
         }
@@ -173,7 +183,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error getting detailed source sentiment for {symbol}");
+                _logger.Error(ex, "Error getting detailed source sentiment for {Symbol}", symbol);
                 return results;
             }
         }
@@ -201,7 +211,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error fetching content for {symbol}");
+                _logger.Error(ex, "Error fetching content for {Symbol}", symbol);
                 return new List<string>();
             }
         }
@@ -239,7 +249,7 @@ namespace Quantra.DAL.Services
         /// </summary>
         private async Task<double> AnalyzeSentimentWithContext(List<string> content, string sourceType, string symbol)
         {
-            if (!_sentimentConfig.OpenAI.UseContextAwarePrompts)
+            if (!(_sentimentConfig?.OpenAI?.UseContextAwarePrompts ?? true))
             {
                 // If context-aware prompts are disabled, use the standard analysis
                 return await AnalyzeSentimentAsync(content);
@@ -272,14 +282,14 @@ namespace Quantra.DAL.Services
                 {
                     var requestBody = new
                     {
-                        model = _apiConfig.OpenAI.Model,
+                        model = _apiConfig?.OpenAI?.Model ?? "gpt-4o-mini",
                         messages = new[]
                         {
                             new { role = "system", content = systemPrompt },
                             new { role = "user", content = userPrompt }
                         },
-                        temperature = _apiConfig.OpenAI.Temperature,
-                        max_tokens = _sentimentConfig.OpenAI.MaxTokens
+                        temperature = _apiConfig?.OpenAI?.Temperature ?? 0.2,
+                        max_tokens = _sentimentConfig?.OpenAI?.MaxTokens ?? 500
                     };
                     
                     var content = new StringContent(
@@ -302,7 +312,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in context-aware sentiment analysis for {sourceType}");
+                _logger.Error(ex, "Error in context-aware sentiment analysis for {SourceType}", sourceType);
                 return 0.0;
             }
         }
@@ -357,7 +367,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error parsing sentiment score from OpenAI response");
+                _logger.Error(ex, "Error parsing sentiment score from OpenAI response");
                 return 0.0;
             }
         }
@@ -391,9 +401,82 @@ namespace Quantra.DAL.Services
             }
             
             var cacheItem = _sentimentCache[symbol];
-            var expiryTime = TimeSpan.FromMinutes(_sentimentConfig.OpenAI.CacheExpiryMinutes);
+            var expiryTime = TimeSpan.FromMinutes(_sentimentConfig?.OpenAI?.CacheExpiryMinutes ?? 30);
             
             return DateTime.UtcNow - cacheItem.Timestamp < expiryTime;
+        }
+        
+        /// <summary>
+        /// Build minimal API config object from configuration manager
+        /// </summary>
+        private dynamic BuildApiConfig(object configManager)
+        {
+            dynamic root = new ExpandoObject();
+            dynamic openAi = new ExpandoObject();
+            openAi.BaseUrl = GetConfigValue(configManager, "ApiConfig:OpenAI:BaseUrl", "https://api.openai.com");
+            openAi.ApiKey = GetConfigValue(configManager, "ApiConfig:OpenAI:ApiKey", Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty);
+            openAi.Model = GetConfigValue(configManager, "ApiConfig:OpenAI:Model", "gpt-4o-mini");
+            openAi.Temperature = GetConfigValue(configManager, "ApiConfig:OpenAI:Temperature", 0.2);
+            openAi.DefaultTimeout = GetConfigValue(configManager, "ApiConfig:OpenAI:DefaultTimeout", 30);
+            root.OpenAI = openAi;
+            return root;
+        }
+        
+        /// <summary>
+        /// Build minimal Sentiment config object from configuration manager
+        /// </summary>
+        private dynamic BuildSentimentConfig(object configManager)
+        {
+            dynamic root = new ExpandoObject();
+            dynamic openAi = new ExpandoObject();
+            openAi.MaxTokens = GetConfigValue(configManager, "SentimentAnalysisConfig:OpenAI:MaxTokens", 500);
+            openAi.CacheExpiryMinutes = GetConfigValue(configManager, "SentimentAnalysisConfig:OpenAI:CacheExpiryMinutes", 30);
+            openAi.UseContextAwarePrompts = GetConfigValue(configManager, "SentimentAnalysisConfig:OpenAI:UseContextAwarePrompts", true);
+            root.OpenAI = openAi;
+            return root;
+        }
+        
+        /// <summary>
+        /// Attempts to get a configuration value via reflection from a custom IConfigurationManager; falls back to defaults
+        /// </summary>
+        private T GetConfigValue<T>(object configManager, string key, T defaultValue)
+        {
+            try
+            {
+                if (configManager == null)
+                {
+                    return defaultValue;
+                }
+                var type = configManager.GetType();
+                // Try generic GetValue<T>(string key, T defaultValue)
+                var method = type.GetMethod("GetValue");
+                if (method != null && method.IsGenericMethod)
+                {
+                    var generic = method.MakeGenericMethod(typeof(T));
+                    var result = generic.Invoke(configManager, new object[] { key, defaultValue });
+                    if (result is T typed)
+                    {
+                        return typed;
+                    }
+                }
+                // Try indexer style: configManager[key]
+                var indexer = type.GetProperty("Item", new[] { typeof(string) });
+                if (indexer != null)
+                {
+                    var value = indexer.GetValue(configManager, new object[] { key });
+                    if (value is T t)
+                        return t;
+                    if (value != null)
+                    {
+                        return (T)Convert.ChangeType(value, typeof(T));
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore and fall back
+            }
+            return defaultValue;
         }
         
         /// <summary>

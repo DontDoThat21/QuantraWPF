@@ -7,6 +7,7 @@ using Quantra.Models;
 using Quantra.ViewModels;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Enums;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {

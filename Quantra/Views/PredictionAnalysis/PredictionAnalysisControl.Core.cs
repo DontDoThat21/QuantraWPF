@@ -11,6 +11,7 @@ using Quantra.DAL.Services.Interfaces;
 using System.Windows.Threading;
 using Quantra.Adapters;
 using System.Threading.Tasks;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {

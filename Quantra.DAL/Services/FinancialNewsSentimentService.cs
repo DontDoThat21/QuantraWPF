@@ -6,9 +6,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Concurrent;
-using Quantra.Helpers;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Utilities; // Added for Utilities.GetNewsApiKey
 
 namespace Quantra.DAL.Services
 {
@@ -150,14 +150,18 @@ namespace Quantra.DAL.Services
                 if (!string.IsNullOrEmpty(key))
                     return key;
                 
-                // Then try from settings
-                return ApiKeyHelper.GetNewsApiKey();
+                // Then try from DAL utilities (local settings file fallback)
+                key = global::Quantra.DAL.Utilities.Utilities.GetNewsApiKey();
+                if (!string.IsNullOrWhiteSpace(key))
+                    return key;
             }
             catch (Exception ex)
             {
                 DatabaseMonolith.Log("Error", "Failed to get News API key", ex.ToString());
-                return "YOUR_NEWS_API_KEY"; // Fallback
             }
+
+            // Fallback
+            return string.Empty;
         }
 
         /// <summary>

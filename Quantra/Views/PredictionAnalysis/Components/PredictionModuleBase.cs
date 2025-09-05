@@ -1,9 +1,8 @@
 using System;
 using System.ComponentModel;
 using System.Windows.Controls;
-using Quantra.Data;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.PredictionAnalysis.Components
 {
@@ -56,7 +55,8 @@ namespace Quantra.Views.PredictionAnalysis.Components
             INotificationService notificationService = null)
         {
             IndicatorService = indicatorService ?? new TechnicalIndicatorService();
-            NotificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), new AudioService(DatabaseMonolith.GetUserSettings()));
+            NotificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(),
+                new AudioService(DatabaseMonolith.GetUserSettings()));
         }
 
         protected virtual void OnSymbolChanged()

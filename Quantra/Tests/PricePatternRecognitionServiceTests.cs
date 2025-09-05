@@ -5,6 +5,7 @@ using Moq;
 using NUnit.Framework;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests
 {

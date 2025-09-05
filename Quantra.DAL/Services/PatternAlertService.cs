@@ -62,7 +62,7 @@ namespace Quantra.DAL.Services
                     var alert = CreatePatternAlert(pattern);
                     if (alert != null)
                     {
-                        AlertManager.EmitGlobalAlert(alert);
+                        Alerting.EmitGlobalAlert(alert);
                         _lastAlertTimes[alertKey] = DateTime.Now;
                         alertsGenerated++;
                     }

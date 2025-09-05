@@ -302,9 +302,9 @@ namespace Quantra.DAL.Services
                 TriggeredDate = DateTime.Now,
                 Priority = CalculateAlertPriority(signal)
             };
-            
+
             // Emit global alert
-            AlertManager.EmitGlobalAlert(alert);
+            Alerting.EmitGlobalAlert(alert);
         }
         
         /// <summary>

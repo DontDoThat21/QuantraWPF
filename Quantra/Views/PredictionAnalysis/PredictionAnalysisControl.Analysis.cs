@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Adapters;
 using Quantra.Models; // Ensures Quantra.Models.PredictionModel is accessible
-using Quantra.Services.Interfaces;
 using System.Windows;
-using System.Windows.Controls; // Ensures Quantra.Models.PredictionModel is accessible
+using System.Windows.Controls;
+using Quantra.DAL.Services; // Ensures Quantra.Models.PredictionModel is accessible
 
 namespace Quantra.Controls
 {

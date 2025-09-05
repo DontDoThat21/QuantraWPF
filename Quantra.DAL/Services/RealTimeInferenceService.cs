@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Collections.Concurrent;
 using Quantra.Models;
+using Quantra.Utilities;
 
 namespace Quantra.DAL.Services
 {

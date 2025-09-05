@@ -21,6 +21,7 @@ using Quantra.ViewModels;
 using Quantra.Enums;
 using Quantra.Views.Shared;
 using Quantra.Utilities;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls 
 {

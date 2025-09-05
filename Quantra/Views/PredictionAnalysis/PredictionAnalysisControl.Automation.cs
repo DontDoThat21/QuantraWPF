@@ -11,7 +11,8 @@ using Quantra;
 using System.Windows.Threading;  // Add this explicit namespace reference
 using Quantra.Adapters; // Add this to use the PredictionModelAdapter
 using Quantra.Models;
-using System.Collections.ObjectModel; // Added for ObservableCollection
+using System.Collections.ObjectModel;
+using Quantra.DAL.Services; // Added for ObservableCollection
 
 namespace Quantra.Controls
 {

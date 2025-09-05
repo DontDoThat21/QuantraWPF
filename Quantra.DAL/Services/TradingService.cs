@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Data;
 using Quantra.Models;
 
 namespace Quantra.DAL.Services

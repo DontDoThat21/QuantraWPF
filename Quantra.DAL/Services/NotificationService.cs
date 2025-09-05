@@ -1,11 +1,9 @@
-using MaterialDesignThemes.Wpf;
 using System;
-using System.Windows;
-using System.Windows.Media;
+using MaterialDesignThemes.Wpf;
+using Quantra.DAL.Notifications;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
-using System.Threading.Tasks;
-using Quantra.DAL.Services.Interfaces;
-using Quantra.DAL.Services.Interfaces;
+using System.Windows.Media;
 
 namespace Quantra.DAL.Services
 {
@@ -15,10 +13,10 @@ namespace Quantra.DAL.Services
         private readonly UserSettings _userSettings;
         private readonly ISettingsService _settingsService;
         
-        public delegate void ShowNotificationHandler(string message, PackIconKind icon, Color iconColor);
+        public delegate void ShowNotificationHandler(string message, NotificationIcon icon, string iconColorHex);
         public event ShowNotificationHandler OnShowNotification;
         
-        public delegate void ShowCustomNotificationHandler(string message, string visualType, Color backgroundColor, double duration);
+        public delegate void ShowCustomNotificationHandler(string message, string visualType, string backgroundColorHex, double duration);
         public event ShowCustomNotificationHandler OnShowCustomNotification;
 
         public NotificationService(UserSettings userSettings, IAudioService audioService, ISettingsService settingsService)
@@ -28,44 +26,45 @@ namespace Quantra.DAL.Services
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         }
 
-        public void ShowNotification(string message, PackIconKind icon, Color iconColor)
+        public void ShowNotification(string message, PackIconKind icon, Color color)
         {
-            OnShowNotification?.Invoke(message, icon, iconColor);
+            var notificationIcon = ConvertPackIconKindToNotificationIcon(icon);
+            var colorHex = ConvertColorToHex(color);
+            OnShowNotification?.Invoke(message, notificationIcon, colorHex);
         }
 
         public void ShowSuccess(string message)
         {
-            OnShowNotification?.Invoke(message, PackIconKind.Check, Colors.Green);
+            OnShowNotification?.Invoke(message, NotificationIcon.Success, "#00C853"); // green
         }
 
         public void ShowError(string message)
         {
-            OnShowNotification?.Invoke(message, PackIconKind.Error, Colors.Red);
+            OnShowNotification?.Invoke(message, NotificationIcon.Error, "#FF1744"); // red
         }
 
         public void ShowWarning(string message)
         {
-            OnShowNotification?.Invoke(message, PackIconKind.AlertCircle, Colors.Orange);
+            OnShowNotification?.Invoke(message, NotificationIcon.Warning, "#FFA000"); // orange
         }
 
         public void ShowInfo(string message)
         {
-            OnShowNotification?.Invoke(message, PackIconKind.Information, Colors.Blue);
+            OnShowNotification?.Invoke(message, NotificationIcon.Info, "#2196F3"); // blue
         }
         
         public void ShowTradeNotification(TradeRecord trade)
         {
-            // Format a detailed trade notification message
+            if (trade == null) return;
+
             string message = $"Trade Executed: {trade.Action} {trade.Symbol}\n" +
                             $"Quantity: {trade.Quantity}\n" + 
                             $"Price: ${trade.Price:F2}\n" +
                             $"Target: ${trade.TargetPrice:F2}\n" + 
                             $"Time: {trade.ExecutionTime:g}";
             
-            // Use success icon and color for trade notifications
-            OnShowNotification?.Invoke(message, PackIconKind.TrendingUp, Colors.Green);
+            OnShowNotification?.Invoke(message, NotificationIcon.TrendingUp, "#00C853");
             
-            // Send push notification if enabled
             try
             {
                 var settings = _settingsService.GetDefaultSettingsProfile();
@@ -88,7 +87,6 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                // Log error but don't throw - push notifications shouldn't break the main flow
                 DatabaseMonolith.Log("Error", $"Failed to send push notification for trade: {ex.Message}", ex.ToString());
             }
         }
@@ -98,73 +96,78 @@ namespace Quantra.DAL.Services
             if (alert == null)
                 return;
                 
-            // Play the alert sound if enabled
             if (_audioService != null && _userSettings.EnableAlertSounds && alert.EnableSound)
             {
                 _audioService.PlayAlertSound(alert);
             }
             
-            // Prepare notification message
             string message = $"Alert Triggered: {alert.Name}\n" +
                             $"Symbol: {alert.Symbol}\n" +
                             $"Condition: {alert.Condition}\n" +
                             $"Time: {DateTime.Now:g}";
             
-            // Show visual indicator if enabled
             if (_userSettings.EnableVisualIndicators)
             {
-                // Determine which type of visual indicator to show
                 string visualType = alert.VisualIndicatorType.ToString();
                 
-                // Get the color for the visual indicator, use the alert-specific color if set
-                Color backgroundColor;
+                string backgroundColorHex;
                 if (!string.IsNullOrEmpty(alert.VisualIndicatorColor))
                 {
-                    try
-                    {
-                        var brush = new BrushConverter().ConvertFrom(alert.VisualIndicatorColor) as SolidColorBrush;
-                        backgroundColor = brush?.Color ?? Colors.Yellow;
-                    }
-                    catch
-                    {
-                        backgroundColor = Colors.Yellow; // Default if conversion fails
-                    }
+                    backgroundColorHex = alert.VisualIndicatorColor;
                 }
                 else
                 {
-                    // Default colors based on alert category
-                    backgroundColor = alert.Category switch
+                    backgroundColorHex = alert.Category switch
                     {
-                        AlertCategory.Opportunity => Colors.Green,
-                        AlertCategory.Prediction => Colors.Blue,
-                        AlertCategory.TechnicalIndicator => Colors.Purple,
-                        _ => Colors.Orange
+                        AlertCategory.Opportunity => "#00C853", // green
+                        AlertCategory.Prediction => "#2196F3", // blue
+                        AlertCategory.TechnicalIndicator => "#9C27B0", // purple
+                        _ => "#FFA000" // orange
                     };
                 }
                 
-                // Show the custom visual notification
-                OnShowCustomNotification?.Invoke(message, visualType, backgroundColor, _userSettings.VisualIndicatorDuration);
+                OnShowCustomNotification?.Invoke(message, visualType, backgroundColorHex, _userSettings.VisualIndicatorDuration);
             }
             else
             {
-                // Fall back to standard notification if custom visuals are disabled
-                PackIconKind icon = alert.Category switch
+                NotificationIcon icon = alert.Category switch
                 {
-                    AlertCategory.Opportunity => PackIconKind.ChartLine,
-                    AlertCategory.Prediction => PackIconKind.ChartBubble,
-                    AlertCategory.TechnicalIndicator => PackIconKind.Calculator,
-                    _ => PackIconKind.AlertCircle
+                    AlertCategory.Opportunity => NotificationIcon.ChartLine,
+                    AlertCategory.Prediction => NotificationIcon.ChartBubble,
+                    AlertCategory.TechnicalIndicator => NotificationIcon.Calculator,
+                    _ => NotificationIcon.Warning
                 };
                 
-                Color iconColor = alert.Priority switch
+                string iconColorHex = alert.Priority switch
                 {
-                    1 => Colors.Red,      // High priority
-                    3 => Colors.Blue,     // Low priority
-                    _ => Colors.Orange    // Medium priority or default
+                    1 => "#FF1744", // red high priority
+                    3 => "#2196F3", // blue low priority
+                    _ => "#FFA000"  // orange medium/default
                 };
                 
-                OnShowNotification?.Invoke(message, icon, iconColor);
+                OnShowNotification?.Invoke(message, icon, iconColorHex);
             }
+        }
+
+        private NotificationIcon ConvertPackIconKindToNotificationIcon(PackIconKind packIcon)
+        {
+            return packIcon switch
+            {
+                PackIconKind.Info => NotificationIcon.Info,
+                PackIconKind.CheckCircle => NotificationIcon.Success,
+                PackIconKind.Warning => NotificationIcon.Warning,
+                PackIconKind.Error => NotificationIcon.Error,
+                PackIconKind.TrendingUp => NotificationIcon.TrendingUp,
+                PackIconKind.ChartLine => NotificationIcon.ChartLine,
+                PackIconKind.ChartBubble => NotificationIcon.ChartBubble,
+                PackIconKind.Calculator => NotificationIcon.Calculator,
+                _ => NotificationIcon.Info
+            };
+        }
+
+        private string ConvertColorToHex(Color color)
+        {
+            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
         }
     }
 }

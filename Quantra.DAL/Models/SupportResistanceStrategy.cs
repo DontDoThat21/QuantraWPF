@@ -31,9 +31,6 @@ namespace Quantra.Models
         
         // Cached levels for UI visualization
         private List<PriceLevelAnalyzer.PriceLevel> _cachedLevels;
-        
-        // Visual representations of detected levels
-        private List<PriceLevelVisualization.VisualPriceLevel> _visualLevels;
 
         public SupportResistanceStrategy()
         {
@@ -53,7 +50,6 @@ namespace Quantra.Models
             
             // Initialize collections
             _cachedLevels = new List<PriceLevelAnalyzer.PriceLevel>();
-            _visualLevels = new List<PriceLevelVisualization.VisualPriceLevel>();
         }
 
         #region Properties
@@ -235,14 +231,54 @@ namespace Quantra.Models
         {
             return _cachedLevels.ToList();
         }
-        
+
         /// <summary>
-        /// Get visual representations of support/resistance levels for chart rendering
+        /// Convert cached detected levels into visual levels for chart rendering
         /// </summary>
-        /// <returns>List of visual price levels</returns>
         public List<PriceLevelVisualization.VisualPriceLevel> GetVisualLevels()
         {
-            return _visualLevels.ToList();
+            var result = new List<PriceLevelVisualization.VisualPriceLevel>();
+            if (_cachedLevels == null || _cachedLevels.Count == 0)
+                return result;
+
+            foreach (var lvl in _cachedLevels)
+            {
+                var color = lvl.IsSupport ? Colors.LimeGreen : (lvl.IsResistance ? Colors.IndianRed : Colors.SteelBlue);
+
+                var style = PriceLevelVisualization.LineStyle.Solid;
+                switch (lvl.DetectionMethod)
+                {
+                    case PriceLevelAnalyzer.LevelDetectionMethod.PivotPoint:
+                        style = PriceLevelVisualization.LineStyle.Dashed;
+                        break;
+                    case PriceLevelAnalyzer.LevelDetectionMethod.Fibonacci:
+                        style = PriceLevelVisualization.LineStyle.Dotted;
+                        break;
+                    default:
+                        style = PriceLevelVisualization.LineStyle.Solid;
+                        break;
+                }
+
+                double thickness = Math.Clamp(1.0 + (lvl.Strength * 2.0), 1.0, 4.0);
+                double opacity = Math.Clamp(0.5 + (lvl.Strength * 0.5), 0.5, 1.0);
+
+                string type = lvl.IsSupport ? "Support" : (lvl.IsResistance ? "Resistance" : "Level");
+                string label = string.IsNullOrWhiteSpace(lvl.Description)
+                    ? $"{type} ({lvl.Price:0.##})"
+                    : $"{type} ({lvl.Price:0.##}) - {lvl.Description}";
+
+                result.Add(new PriceLevelVisualization.VisualPriceLevel
+                {
+                    Price = lvl.Price,
+                    Label = label,
+                    LineColor = color,
+                    LineThickness = thickness,
+                    Opacity = opacity,
+                    Style = style
+                });
+            }
+
+            return result;
         }
 
         public override string GenerateSignal(List<HistoricalPrice> prices, int? index = null)
@@ -306,9 +342,6 @@ namespace Quantra.Models
                 .OrderByDescending(l => l.Strength)
                 .Take(10) // Limit to most significant levels
                 .ToList();
-                
-            // Generate visual representations
-            _visualLevels = PriceLevelVisualization.CreateVisuals(_cachedLevels);
         }
         
         /// <summary>

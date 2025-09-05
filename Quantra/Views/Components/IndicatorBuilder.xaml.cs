@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Data;  // Add this for CollectionViewSource
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
-using Quantra.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Views.Components
 {

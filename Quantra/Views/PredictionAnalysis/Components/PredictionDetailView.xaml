@@ -64,10 +64,10 @@
                                     Fill="Transparent"/>
                 </lvc:CartesianChart.Series>
                 <lvc:CartesianChart.AxisX>
-                    <lvc:Axis Title="Date" Style="{StaticResource EnhancedTextBlockStyle}" LabelFormatter="{Binding DateFormatter}"/>
+                    <lvc:Axis Title="Date" LabelFormatter="{Binding DateFormatter}"/>
                 </lvc:CartesianChart.AxisX>
                 <lvc:CartesianChart.AxisY>
-                    <lvc:Axis Title="Price" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                    <lvc:Axis Title="Price"/>
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
 

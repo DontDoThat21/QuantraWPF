@@ -683,7 +683,7 @@ namespace Quantra
             try
             {
                 // Create a new instance of our custom PredictionAnalysisControl with explicit sizing
-                var predictionAnalysisControl = new redictionAnalysisControl();
+                var predictionAnalysisControl = new PredictionAnalysisControl();
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width

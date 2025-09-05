@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Quantra.Configuration;
-using Quantra.Configuration.Models;
 using Quantra.CrossCutting.ErrorHandling;
-using Quantra.Helpers;
 using Quantra.Models;
 
 namespace Quantra.DAL.Services
@@ -40,7 +39,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Set up the HTTP client with API key from settings
-                var apiKey = ApiKeyHelper.GetOpenAiApiKey();
+                var apiKey = GetOpenAiApiKey();
                 _httpClient.BaseAddress = new Uri(OpenAiBaseUrl);
                 _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
                 _httpClient.Timeout = TimeSpan.FromSeconds(OpenAiTimeout);
@@ -348,6 +347,42 @@ namespace Quantra.DAL.Services
             }
             
             return "Market Closed (Weekend)";
+        }
+
+        /// <summary>
+        /// Retrieves the OpenAI API key from environment or settings file.
+        /// </summary>
+        private static string GetOpenAiApiKey()
+        {
+            // Prefer environment variable if available
+            var envKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            if (!string.IsNullOrWhiteSpace(envKey))
+            {
+                return envKey;
+            }
+
+            // Fallback to local settings file
+             const string settingsFile = "alphaVantageSettings.json";
+            const string openAiApiKeyProperty = "OpenAiApiKey";
+
+            if (!File.Exists(settingsFile))
+            {
+                throw new FileNotFoundException($"Settings file '{settingsFile}' not found.");
+            }
+
+            var json = File.ReadAllText(settingsFile);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty(openAiApiKeyProperty, out var apiKeyElement))
+            {
+                var key = apiKeyElement.GetString();
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    throw new InvalidOperationException($"'{openAiApiKeyProperty}' is empty in settings file.");
+                }
+                return key;
+            }
+
+            throw new KeyNotFoundException($"'{openAiApiKeyProperty}' not found in settings file.");
         }
     }
 }

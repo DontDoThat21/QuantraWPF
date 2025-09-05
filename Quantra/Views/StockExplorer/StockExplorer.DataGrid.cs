@@ -12,7 +12,8 @@ using Quantra.Utilities; // Added for VisualTreeHelperExtensions
 using Quantra.Views.Shared; // Added for ConfirmationModal
 using Quantra.ViewModels; // Added for StockExplorerViewModel
 using Quantra; // Added for QuoteData class
-using System.Windows.Threading; // Added for DispatcherTimer
+using System.Windows.Threading;
+using Quantra.DAL.Services; // Added for DispatcherTimer
 
 namespace Quantra.Controls
 {

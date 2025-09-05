@@ -1,10 +1,14 @@
+using MaterialDesignThemes.Wpf;
+using Quantra.DAL.Notifications;
 using Quantra.Models;
+using System.Windows.Media;
 
 namespace Quantra.DAL.Services.Interfaces
 {
     public interface INotificationService
     {
-        void ShowNotification(string message, PackIconKind icon, Color iconColor);
+        // Decoupled from WPF/MaterialDesign: use a DAL enum and hex color string
+        void ShowNotification(string message, PackIconKind icon, Color color);
         void ShowInfo(string message);
         void ShowSuccess(string message);
         void ShowWarning(string message);
