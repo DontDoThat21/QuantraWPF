@@ -70,14 +70,14 @@ namespace Quantra
     public class DatabaseMonolith
     {
         private static readonly string DbFilePath = "Quantra.db";
-        public static readonly string ConnectionString = $"Data Source={DbFilePath};Version=3;Journal Mode=WAL;Busy Timeout=30000;";
-        private static bool initialized = false;
-        private static IConfiguration _configuration;
-        private static SettingsService _settingsService;
+        public readonly string ConnectionString = $"Data Source={DbFilePath};Version=3;Journal Mode=WAL;Busy Timeout=30000;";
+        private bool initialized = false;
+        private IConfiguration _configuration;
+        private SettingsService _settingsService;
 
 
         // Store API keys for backward compatibility
-        public static string AlphaVantageApiKey { get; internal set; }
+        public string AlphaVantageApiKey { get; internal set; }
 
         /// <summary>
         /// Gets a new SQLite database connection with automatic initialization.
@@ -97,7 +97,7 @@ namespace Quantra
         /// }
         /// </code>
         /// </example>
-        public static SQLiteConnection GetConnection()
+        public SQLiteConnection GetConnection()
         {
             if (!initialized)
                 Initialize();
@@ -132,7 +132,7 @@ namespace Quantra
         /// DatabaseMonolith.Log("Warning", "API rate limit approaching", "85% of daily quota used");
         /// </code>
         /// </example>
-        public static void Log(string level, string message, string details = null)
+        public void Log(string level, string message, string details = null)
         {
             try
             {
@@ -208,7 +208,7 @@ namespace Quantra
         /// DatabaseMonolith.SetConfiguration(config);
         /// </code>
         /// </example>
-        public static void SetConfiguration(IConfiguration configuration)
+        public void SetConfiguration(IConfiguration configuration)
         {
             _configuration = configuration;
             
@@ -240,7 +240,7 @@ namespace Quantra
             _settingsService = settingsService;
         }
 
-        private static void CreateDatabase()
+        private void CreateDatabase()
         {
             SQLiteConnection.CreateFile(DbFilePath);
 
@@ -306,7 +306,7 @@ namespace Quantra
             }
         }
 
-        public static void EnsureUserAppSettingsTable()
+        public void EnsureUserAppSettingsTable()
         {
             using (var connection = GetConnection())
             {
@@ -355,7 +355,7 @@ namespace Quantra
         }
 
         // Rest of your methods remain unchanged
-        public static void SaveCardPositions(string cardPositions)
+        public void SaveCardPositions(string cardPositions)
         {
             using (var connection = GetConnection())
             {
@@ -365,7 +365,7 @@ namespace Quantra
             }
         }
 
-        public static string LoadCardPositions()
+        public string LoadCardPositions()
         {
             using (var connection = GetConnection())
             {
@@ -393,7 +393,7 @@ namespace Quantra
         /// DatabaseMonolith.RememberAccount("trader123", "encryptedPassword", "1234");
         /// </code>
         /// </example>
-        public static void RememberAccount(string username, string password, string pin)
+        public void RememberAccount(string username, string password, string pin)
         {
             using (var connection = GetConnection())
             {
@@ -428,7 +428,7 @@ namespace Quantra
         /// }
         /// </code>
         /// </example>
-        public static Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
+        public Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
         {
             using (var connection = GetConnection())
             {
@@ -456,7 +456,7 @@ namespace Quantra
             }
         }
 
-        public static void SaveUserSettings(string pin, bool enableApiModalChecks)
+        public void SaveUserSettings(string pin, bool enableApiModalChecks)
         {
             using (var connection = GetConnection())
             {
@@ -488,7 +488,7 @@ namespace Quantra
         /// DatabaseMonolith.SaveControlsConfig("Trading Dashboard", config);
         /// </code>
         /// </example>
-        public static void SaveControlsConfig(string tabName, string controlsConfig)
+        public void SaveControlsConfig(string tabName, string controlsConfig)
         {
             using (var connection = GetConnection())
             {
@@ -533,7 +533,7 @@ namespace Quantra
         /// }
         /// </code>
         /// </example>
-        public static string LoadControlsConfig(string tabName)
+        public string LoadControlsConfig(string tabName)
         {
             using (var connection = GetConnection())
             {
@@ -543,7 +543,7 @@ namespace Quantra
             }
         }
 
-        public static (int Rows, int Columns) LoadGridConfig(string tabName)
+        public (int Rows, int Columns) LoadGridConfig(string tabName)
         {
             using (var connection = GetConnection())
             {
@@ -560,7 +560,7 @@ namespace Quantra
             }
         }
 
-        public static Models.DataGridSettings LoadDataGridConfig(string tabName, string controlName)
+        public Models.DataGridSettings LoadDataGridConfig(string tabName, string controlName)
         {
             using (var connection = GetConnection())
             {
@@ -591,7 +591,7 @@ namespace Quantra
             }
         }
         
-        public static void SaveDataGridConfig(string tabName, string controlName, Models.DataGridSettings settings)
+        public void SaveDataGridConfig(string tabName, string controlName, Models.DataGridSettings settings)
         {
             using (var connection = GetConnection())
             {
@@ -649,7 +649,7 @@ namespace Quantra
             }
         }
 
-        public static void UpdateControlPosition(string tabName, int controlIndex, int row, int column, int rowSpan, int columnSpan)
+        public void UpdateControlPosition(string tabName, int controlIndex, int row, int column, int rowSpan, int columnSpan)
         {
             try
             {
@@ -696,7 +696,7 @@ namespace Quantra
             }
         }
 
-        public static void AddCustomControlWithSpans(string tabName, string controlType, int row, int column, int rowSpan, int columnSpan)
+        public void AddCustomControlWithSpans(string tabName, string controlType, int row, int column, int rowSpan, int columnSpan)
         {
             try
             {
@@ -722,7 +722,7 @@ namespace Quantra
             }
         }
 
-        public static void RemoveControl(string tabName, int controlIndex)
+        public void RemoveControl(string tabName, int controlIndex)
         {
             try
             {
@@ -760,7 +760,7 @@ namespace Quantra
             }
         }
 
-        public static UserSettings GetUserSettings()
+        public UserSettings GetUserSettings()
         {
             try
             {
@@ -780,7 +780,7 @@ namespace Quantra
             return new UserSettings();
         }
 
-        private static void EnsureSettingsTable(SQLiteConnection connection)
+        private void EnsureSettingsTable(SQLiteConnection connection)
         {
             // Check if Settings table exists
             var tableCheckQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='Settings'";
@@ -888,7 +888,7 @@ namespace Quantra
         /// DatabaseMonolith.SaveUserSettings(settings);
         /// </code>
         /// </example>
-        public static void SaveUserSettings(UserSettings settings)
+        public void SaveUserSettings(UserSettings settings)
         {
             try
             {
@@ -963,7 +963,7 @@ namespace Quantra
         /// DatabaseMonolith.AddOrderToHistory(order);
         /// </code>
         /// </example>
-        public static void AddOrderToHistory(OrderModel order)
+        public void AddOrderToHistory(OrderModel order)
         {
             if (order == null)
             {
@@ -1012,7 +1012,7 @@ namespace Quantra
             }
         }
 
-        public static string GetUserPreference(string key, string defaultValue = null)
+        public string GetUserPreference(string key, string defaultValue = null)
         {
             try
             {
@@ -1053,13 +1053,13 @@ namespace Quantra
             }
         }
 
-        public static void SaveSetting(string key, string value)
+        public void SaveSetting(string key, string value)
         {
             // Alias for SaveUserPreference to maintain compatibility
             SaveUserPreference(key, value);
         }
 
-        public static void SaveUserPreference(string key, string value)
+        public void SaveUserPreference(string key, string value)
         {
             try
             {
@@ -1102,7 +1102,7 @@ namespace Quantra
             }
         }
 
-        private static void EnsureUserPreferencesTable(SQLiteConnection connection)
+        private void EnsureUserPreferencesTable(SQLiteConnection connection)
         {
             // Check if UserPreferences table exists
             var tableCheckQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='UserPreferences'";
@@ -1133,7 +1133,7 @@ namespace Quantra
         /// </summary>
         /// <param name="tabName">The name of the tab to load controls for</param>
         /// <returns>List of ControlModel objects for the tab</returns>
-        public static List<ControlModel> LoadControlsForTab(string tabName)
+        public List<ControlModel> LoadControlsForTab(string tabName)
         {
             var controlModels = new List<ControlModel>();
             
@@ -1185,7 +1185,7 @@ namespace Quantra
             return controlModels;
         }
 
-        public static async Task<List<double>> GetHistoricalIndicatorData(string symbol, string indicatorType)
+        public async Task<List<double>> GetHistoricalIndicatorData(string symbol, string indicatorType)
         {
             try
             {
@@ -1272,7 +1272,7 @@ namespace Quantra
         /// <param name="symbol">Stock symbol</param>
         /// <param name="interval">Data interval</param>
         /// <returns>List of cached historical prices</returns>
-        private static async Task<List<HistoricalPrice>> GetCachedHistoricalPrices(string symbol, string interval)
+        private async Task<List<HistoricalPrice>> GetCachedHistoricalPrices(string symbol, string interval)
         {
             // Convert interval to timeRange format expected by database
             string timeRange = interval switch
@@ -1331,7 +1331,7 @@ namespace Quantra
         /// <summary>
         /// Calculate RSI (Relative Strength Index) from price data
         /// </summary>
-        private static List<double> CalculateRSI(List<double> prices, int period)
+        private List<double> CalculateRSI(List<double> prices, int period)
         {
             var result = new List<double>();
             
@@ -1385,7 +1385,7 @@ namespace Quantra
         /// <summary>
         /// Calculate MACD (Moving Average Convergence Divergence)
         /// </summary>
-        private static (List<double> MacdLine, List<double> SignalLine, List<double> Histogram) CalculateMACD(List<double> prices, int fastPeriod, int slowPeriod, int signalPeriod)
+        private (List<double> MacdLine, List<double> SignalLine, List<double> Histogram) CalculateMACD(List<double> prices, int fastPeriod, int slowPeriod, int signalPeriod)
         {
             // Calculate EMAs
             var fastEMA = CalculateEMA(prices, fastPeriod);
@@ -1428,7 +1428,7 @@ namespace Quantra
         /// <summary>
         /// Calculate EMA (Exponential Moving Average)
         /// </summary>
-        private static List<double> CalculateEMA(List<double> prices, int period)
+        private List<double> CalculateEMA(List<double> prices, int period)
         {
             var result = new List<double>();
             
@@ -1462,7 +1462,7 @@ namespace Quantra
         /// <summary>
         /// Calculate SMA (Simple Moving Average)
         /// </summary>
-        private static List<double> CalculateSMA(List<double> prices, int period)
+        private List<double> CalculateSMA(List<double> prices, int period)
         {
             var result = new List<double>();
             
@@ -1489,7 +1489,7 @@ namespace Quantra
         /// <summary>
         /// Calculate ADX (Average Directional Index)
         /// </summary>
-        private static List<double> CalculateADX(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period = 14)
+        private List<double> CalculateADX(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period = 14)
         {
             var result = new List<double>();
             
@@ -1573,7 +1573,7 @@ namespace Quantra
         /// <summary>
         /// Calculate ROC (Rate of Change)
         /// </summary>
-        private static List<double> CalculateROC(List<double> prices, int period = 10)
+        private List<double> CalculateROC(List<double> prices, int period = 10)
         {
             var result = new List<double>();
             
@@ -1606,7 +1606,7 @@ namespace Quantra
         /// <summary>
         /// Calculate Bollinger Bands
         /// </summary>
-        private static (List<double> Upper, List<double> Middle, List<double> Lower) CalculateBollingerBands(List<double> prices, int period, double stdDevMultiplier)
+        private (List<double> Upper, List<double> Middle, List<double> Lower) CalculateBollingerBands(List<double> prices, int period, double stdDevMultiplier)
         {
             var result = (Upper: new List<double>(), Middle: new List<double>(), Lower: new List<double>());
             
@@ -1655,7 +1655,7 @@ namespace Quantra
         /// DatabaseMonolith.Initialize();
         /// </code>
         /// </example>
-        public static void Initialize()
+        public void Initialize()
         {
             if (!initialized)
             {
@@ -1752,7 +1752,7 @@ namespace Quantra
             }
         }
 
-        private static void EnsureUserAppSettingsTables(SQLiteConnection connection)
+        private void EnsureUserAppSettingsTables(SQLiteConnection connection)
         {
             var createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS UserAppSettings (
@@ -1818,7 +1818,7 @@ namespace Quantra
         }
 
         // todo why is there a custom ExecuteNonQuery wrapper... why not use dapper?
-        public static void ExecuteNonQuery(string sql, params SQLiteParameter[] parameters)
+        public void ExecuteNonQuery(string sql, params SQLiteParameter[] parameters)
         {
             ResilienceHelper.Retry(() =>
             {
@@ -1845,7 +1845,7 @@ namespace Quantra
             }, RetryOptions.ForCriticalOperation());
         }
 
-        public static T ExecuteScalar<T>(string sql, params SQLiteParameter[] parameters)
+        public T ExecuteScalar<T>(string sql, params SQLiteParameter[] parameters)
         {
             try
             {
@@ -1877,7 +1877,7 @@ namespace Quantra
         /// If symbols already exist, their information will be updated.
         /// </summary>
         /// <param name="symbols">List of stock symbols to cache</param>
-        public static void CacheStockSymbols(List<StockSymbol> symbols)
+        public void CacheStockSymbols(List<StockSymbol> symbols)
         {
             if (symbols == null || !symbols.Any())
             {
@@ -1931,7 +1931,7 @@ namespace Quantra
         /// Retrieves all cached stock symbols from the database.
         /// </summary>
         /// <returns>ObservableCollection of StockSymbol objects</returns>
-        public static ObservableCollection<StockSymbol> GetAllStockSymbols()
+        public ObservableCollection<StockSymbol> GetAllStockSymbols()
         {
             var symbols = new ObservableCollection<StockSymbol>();
             
@@ -1974,7 +1974,7 @@ namespace Quantra
         /// </summary>
         /// <param name="symbol">The stock symbol to retrieve</param>
         /// <returns>StockSymbol object or null if not found</returns>
-        public static StockSymbol GetStockSymbol(string symbol)
+        public StockSymbol GetStockSymbol(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
             {
@@ -2027,7 +2027,7 @@ namespace Quantra
         /// </summary>
         /// <param name="maxAgeDays">Maximum age of the cache in days (default: 7)</param>
         /// <returns>True if cache is valid, false otherwise</returns>
-        public static bool IsSymbolCacheValid(int maxAgeDays = 7)
+        public bool IsSymbolCacheValid(int maxAgeDays = 7)
         {
             try
             {
@@ -2067,7 +2067,7 @@ namespace Quantra
         /// Forces a refresh of the symbol cache by updating the LastUpdated timestamp.
         /// </summary>
         /// <returns>Number of symbols refreshed</returns>
-        public static int RefreshSymbolCache()
+        public int RefreshSymbolCache()
         {
             try
             {
@@ -2097,7 +2097,7 @@ namespace Quantra
         /// </summary>
         /// <param name="searchTerm">Search term to match against symbol or name</param>
         /// <returns>List of matching StockSymbol objects</returns>
-        public static List<StockSymbol> SearchSymbols(string searchTerm)
+        public List<StockSymbol> SearchSymbols(string searchTerm)
         {
             var results = new List<StockSymbol>();
             
@@ -2156,7 +2156,7 @@ namespace Quantra
         /// </summary>
         /// <param name="symbol">The stock symbol to fetch.</param>
         /// <returns>The latest QuoteData object, or null if not found.</returns>
-        public static async Task<QuoteData> GetLatestQuoteData(string symbol)
+        public async Task<QuoteData> GetLatestQuoteData(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
                 return null;
@@ -2179,7 +2179,7 @@ namespace Quantra
         /// </summary>
         /// <param name="symbols">A list of stock symbols.</param>
         /// <returns>A list of QuoteData objects.</returns>
-        public static async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)
+        public async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)
         {
             var results = new List<QuoteData>();
             if (symbols == null)
@@ -2206,7 +2206,7 @@ namespace Quantra
         /// Gets the latest stock quote data and its timestamp for a symbol.
         /// Returns (QuoteData, DateTime?) where DateTime is the LastUpdated time if available.
         /// </summary>
-        public static async Task<(QuoteData, DateTime?)> GetLatestQuoteDataWithTimestamp(string symbol)
+        public async Task<(QuoteData, DateTime?)> GetLatestQuoteDataWithTimestamp(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
                 return (null, null);
@@ -2265,7 +2265,7 @@ namespace Quantra
         /// Gets the latest stock data and its timestamp for a symbol and timeRange.
         /// Returns (StockData, DateTime?) where DateTime is the most recent date in the data if available.
         /// </summary>
-        public static async Task<(StockData, DateTime?)> GetStockDataWithTimestamp(string symbol, string timeRange)
+        public async Task<(StockData, DateTime?)> GetStockDataWithTimestamp(string symbol, string timeRange)
         {
             if (string.IsNullOrWhiteSpace(symbol) || string.IsNullOrWhiteSpace(timeRange))
                 return (null, null);
@@ -2290,7 +2290,7 @@ namespace Quantra
             }
         }
 
-        public static void EnsureAlphaVantageApiUsageTable()
+        public void EnsureAlphaVantageApiUsageTable()
         {
             using (var conn = GetConnection())
             {
@@ -2327,7 +2327,7 @@ namespace Quantra
         ///     "symbol=AAPL&outputsize=compact");
         /// </code>
         /// </example>
-        public static void LogAlphaVantageApiUsage(string endpoint, string parameters)
+        public void LogAlphaVantageApiUsage(string endpoint, string parameters)
         {
             try
             {
@@ -2369,7 +2369,7 @@ namespace Quantra
         /// }
         /// </code>
         /// </example>
-        public static int GetAlphaVantageApiUsageCount(DateTime utcNow)
+        public int GetAlphaVantageApiUsageCount(DateTime utcNow)
         {
             EnsureAlphaVantageApiUsageTable();
             using (var conn = GetConnection())
@@ -2388,7 +2388,7 @@ namespace Quantra
         /// <summary>
         /// Deletes all error logs older than 7 days from the Logs table.
         /// </summary>
-        public static void DeleteOldErrors()
+        public void DeleteOldErrors()
         {
             try
             {
@@ -2410,12 +2410,12 @@ namespace Quantra
             }
         }
 
-        private static readonly string StockCacheKey = "StockCache";
-        private static readonly string VolatileStocksCacheKey = "VolatileStocks";
-        private static readonly string AnalystRatingHistoryKey = "AnalystRatingsHistory";
-        private static readonly string ConsensusHistoryKey = "ConsensusHistory";
+        private readonly string StockCacheKey = "StockCache";
+        private readonly string VolatileStocksCacheKey = "VolatileStocks";
+        private readonly string AnalystRatingHistoryKey = "AnalystRatingsHistory";
+        private readonly string ConsensusHistoryKey = "ConsensusHistory";
 
-        public static void CacheSymbols(List<string> symbols)
+        public void CacheSymbols(List<string> symbols)
         {
             if (symbols == null || !symbols.Any())
                 return;
@@ -2432,7 +2432,7 @@ namespace Quantra
             }
         }
 
-        public static List<string> GetCachedSymbols()
+        public List<string> GetCachedSymbols()
         {
             try
             {
@@ -2477,7 +2477,7 @@ namespace Quantra
         /// DatabaseMonolith.SaveAnalystRatings("AAPL", ratings);
         /// </code>
         /// </example>
-        public static void SaveAnalystRatings(string symbol, List<AnalystRating> ratings)
+        public void SaveAnalystRatings(string symbol, List<AnalystRating> ratings)
         {
             if (string.IsNullOrWhiteSpace(symbol) || ratings == null || !ratings.Any())
                 return;
@@ -2537,7 +2537,7 @@ namespace Quantra
         /// <summary>
         /// Ensures the AnalystRatings table exists in the database
         /// </summary>
-        private static void EnsureAnalystRatingsTable(SQLiteConnection connection)
+        private void EnsureAnalystRatingsTable(SQLiteConnection connection)
         {
             var createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS AnalystRatings (
@@ -2574,7 +2574,7 @@ namespace Quantra
         /// <summary>
         /// Saves analyst consensus history to the database
         /// </summary>
-        public static void SaveConsensusHistory(AnalystRatingAggregate consensus) 
+        public void SaveConsensusHistory(AnalystRatingAggregate consensus) 
         {
             if (consensus == null || string.IsNullOrWhiteSpace(consensus.Symbol))
                 return;
@@ -2630,7 +2630,7 @@ namespace Quantra
         /// <summary>
         /// Ensures the ConsensusHistory table exists in the database
         /// </summary>
-        private static void EnsureConsensusHistoryTable(SQLiteConnection connection)
+        private void EnsureConsensusHistoryTable(SQLiteConnection connection)
         {
             var createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS ConsensusHistory (
@@ -2670,7 +2670,7 @@ namespace Quantra
         /// <summary>
         /// Gets historical consensus data for trend analysis
         /// </summary>
-        public static List<AnalystRatingAggregate> GetConsensusHistory(string symbol, int daysBack = 90)
+        public List<AnalystRatingAggregate> GetConsensusHistory(string symbol, int daysBack = 90)
         {
             var result = new List<AnalystRatingAggregate>();
             
@@ -2736,7 +2736,7 @@ namespace Quantra
             return result;
         }
 
-        public static void CacheVolatileStocks(List<string> volatileStocks)
+        public void CacheVolatileStocks(List<string> volatileStocks)
         {
             if (volatileStocks == null || !volatileStocks.Any())
                 return;
@@ -2780,7 +2780,7 @@ namespace Quantra
         /// }
         /// </code>
         /// </example>
-        public static List<TradingRule> GetTradingRules(string symbol = null)
+        public List<TradingRule> GetTradingRules(string symbol = null)
         {
             try
             {
@@ -2866,7 +2866,7 @@ namespace Quantra
         /// DatabaseMonolith.SaveTradingRule(rule);
         /// </code>
         /// </example>
-        public static void SaveTradingRule(TradingRule rule)
+        public void SaveTradingRule(TradingRule rule)
         {
             try
             {
@@ -2921,7 +2921,7 @@ namespace Quantra
             }
         }
 
-        public static void DeleteRule(int ruleId)
+        public void DeleteRule(int ruleId)
         {
             try
             {
@@ -2941,7 +2941,7 @@ namespace Quantra
             }
         }
 
-        public static List<string> GetCachedVolatileStocks()
+        public List<string> GetCachedVolatileStocks()
         {
             try
             {
@@ -2985,7 +2985,7 @@ namespace Quantra
         /// DatabaseMonolith.SaveTradeRecord(trade);
         /// </code>
         /// </example>
-        public static void SaveTradeRecord(TradeRecord trade)
+        public void SaveTradeRecord(TradeRecord trade)
         {
             if (trade == null)
             {
@@ -3044,7 +3044,7 @@ namespace Quantra
         }
 
         // Ensures the Logs table has a Details column (migrates if needed)
-        private static void EnsureLogsTableHasDetailsColumn(SQLiteConnection connection)
+        private void EnsureLogsTableHasDetailsColumn(SQLiteConnection connection)
         {
             // Check if Details column exists
             var columnCheckQuery = "PRAGMA table_info(Logs)";
@@ -3074,7 +3074,7 @@ namespace Quantra
         }
 
         // Ensures the Logs table has a Level column (migrates from LogLevel if needed)
-        private static void EnsureLogsTableHasLevelColumn(SQLiteConnection connection)
+        private void EnsureLogsTableHasLevelColumn(SQLiteConnection connection)
         {
             // Check what columns exist
             var columnCheckQuery = "PRAGMA table_info(Logs)";
@@ -3185,7 +3185,7 @@ namespace Quantra
         /// </summary>
         /// <param name="symbol">The stock symbol to delete</param>
         /// <returns>True if the symbol was deleted successfully, false otherwise</returns>
-        public static bool DeleteStockSymbol(string symbol)
+        public bool DeleteStockSymbol(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
             {
@@ -3252,7 +3252,7 @@ namespace Quantra
         /// <summary>
         /// Ensures the fundamental data cache table exists in the database
         /// </summary>
-        private static void EnsureFundamentalCacheTableExists()
+        private void EnsureFundamentalCacheTableExists()
         {
             try
             {
@@ -3282,7 +3282,7 @@ namespace Quantra
         /// <param name="symbol">Stock symbol</param>
         /// <param name="dataType">Type of fundamental data (e.g., "PE_RATIO")</param>
         /// <param name="value">The value to cache</param>
-        public static void CacheFundamentalData(string symbol, string dataType, double? value)
+        public void CacheFundamentalData(string symbol, string dataType, double? value)
         {
             if (string.IsNullOrWhiteSpace(symbol) || string.IsNullOrWhiteSpace(dataType))
                 return;
@@ -3320,7 +3320,7 @@ namespace Quantra
         /// <param name="dataType">Type of fundamental data (e.g., "PE_RATIO")</param>
         /// <param name="maxAgeHours">Maximum age of cached data in hours (default: 24)</param>
         /// <returns>Cached value or null if not found or expired</returns>
-        public static double? GetCachedFundamentalData(string symbol, string dataType, int maxAgeHours = 24)
+        public double? GetCachedFundamentalData(string symbol, string dataType, int maxAgeHours = 24)
         {
             if (string.IsNullOrWhiteSpace(symbol) || string.IsNullOrWhiteSpace(dataType))
                 return null;
@@ -3364,7 +3364,7 @@ namespace Quantra
         /// <param name="ex">The exception to log</param>
         /// <param name="message">A short message describing the error</param>
         /// <param name="details">Optional additional details</param>
-        public static void LogErrorWithContext(Exception ex, string message = null, string details = null)
+        public void LogErrorWithContext(Exception ex, string message = null, string details = null)
         {
             var stack = new System.Diagnostics.StackTrace(1, true);
             var frame = stack.GetFrame(0);

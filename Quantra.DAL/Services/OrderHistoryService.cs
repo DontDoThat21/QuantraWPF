@@ -4,11 +4,18 @@ using System.Data.SQLite;
 
 namespace Quantra.DAL.Services
 {
-    public static class OrderHistoryService
+    public class OrderHistoryService
     {
-        public static void AddOrderToHistory(OrderModel order)
+        DatabaseMonolith _databaseMonolith;
+
+        public OrderHistoryService(DatabaseMonolith databaseMonolith)
         {
-            DatabaseMonolith.AddOrderToHistory(order);
+            _databaseMonolith = databaseMonolith;
+        }   
+
+        public void AddOrderToHistory(OrderModel order)
+        {
+            _databaseMonolith.AddOrderToHistory(order);
         }
     }
 }
