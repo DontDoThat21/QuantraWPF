@@ -85,3 +85,10 @@ Quantra is a sophisticated WPF-based algorithmic trading platform providing a co
 App uses the Alpha Vantage Premium API for Historicals, Webull API for sending trades currently (likely to be re-written), Benzinga premium. The Benzinga premium features should all be ready to go, but an API key will not be acquired until MVP is ready. 
 
 Application is running on a Ryzen 9 7950X3D, 64GB Ram, RX 9070 XT.
+
+Early PoC:
+<img width="1205" height="807" alt="image" src="https://github.com/user-attachments/assets/63bdc911-8aa1-4de4-8487-0f5e1fb43357" />
+<img width="1694" height="945" alt="image" src="https://github.com/user-attachments/assets/85a2ec59-0f15-4a12-926a-8d349729a02b" />
+<img width="720" height="405" alt="image" src="https://github.com/user-attachments/assets/5fcd8807-5de7-4358-ad32-5f19795abaa7" />
+<img width="862" height="939" alt="image" src="https://github.com/user-attachments/assets/1b747974-faa0-4ff7-b579-a765369181ae" />
+
