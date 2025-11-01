@@ -1847,9 +1847,17 @@ namespace Quantra.DAL.Services
                         command.Parameters.AddWithValue("@Price", order.Price);
                         command.Parameters.AddWithValue("@StopLoss", order.StopLoss);
                         command.Parameters.AddWithValue("@TakeProfit", order.TakeProfit);
-                        command.Parameters.AddWithValue("@IsPaperTrade", order.IsPaperTrade ? 1 : 0);
+                        
+                        // Use SqlDbType.Bit for boolean values in SQL Server
+                        var isPaperTradeParam = command.Parameters.Add("@IsPaperTrade", System.Data.SqlDbType.Bit);
+                        isPaperTradeParam.Value = order.IsPaperTrade;
+                        
                         command.Parameters.AddWithValue("@Status", order.Status);
-                        command.Parameters.AddWithValue("@PredictionSource", order.PredictionSource ?? string.Empty);
+                        
+                        // Use DBNull.Value for null strings to properly represent NULL in database
+                        command.Parameters.AddWithValue("@PredictionSource", 
+                            (object)order.PredictionSource ?? DBNull.Value);
+                        
                         command.Parameters.AddWithValue("@Timestamp", order.Timestamp);
 
                         command.ExecuteNonQuery();

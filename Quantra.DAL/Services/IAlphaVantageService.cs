@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Quantra.Models;
 
+// NOTE: This interface is deprecated and should be consolidated with
+// Quantra.DAL.Services.Interfaces.IAlphaVantageService
+// Kept for backward compatibility with existing code
 public interface IAlphaVantageService
 {
     void LogApiUsage();
