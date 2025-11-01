@@ -21,6 +21,7 @@ namespace Quantra.DAL.Services
         // Comprehensive sector-to-symbol mapping for real market data
         private static readonly Dictionary<string, string[]> _sectorSymbols = new Dictionary<string, string[]>
         {
+            // TODO: what the heck is this hard coded mess?
             ["Technology"] = new[] { "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "CRM" },
             ["Financial"] = new[] { "JPM", "BAC", "GS", "WFC", "MS", "C", "AXP" },
             ["Energy"] = new[] { "XOM", "CVX", "COP", "EOG", "SLB", "OXY", "HAL" },

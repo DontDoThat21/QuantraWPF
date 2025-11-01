@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Quantra.Models;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 
 namespace Quantra.DAL.Services
 {

@@ -1,203 +1,142 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Quantra.Models;
-using Quantra;
+using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 
 namespace Quantra.Repositories
 {
     public class IndicatorSettingsRepository
     {
-        // Ensure the indicator settings table exists
-        public static void EnsureIndicatorSettingsTableExists()
+        private readonly QuantraDbContext _context;
+
+        public IndicatorSettingsRepository(QuantraDbContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        // Save or update a single indicator setting using EF Core
+        public void SaveIndicatorSetting(IndicatorSettingsModel setting)
         {
             try
             {
-                string createTableQuery = @"
-                    CREATE TABLE IF NOT EXISTS IndicatorSettings (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ControlId INTEGER NOT NULL,
-                        IndicatorName TEXT NOT NULL,
-                        IsEnabled INTEGER NOT NULL,
-                        LastUpdated DATETIME NOT NULL,
-                        UNIQUE(ControlId, IndicatorName)
-                    )";
+                // Check if entity already exists
+                var existingEntity = _context.IndicatorSettings
+                    .FirstOrDefault(i => i.ControlId == setting.ControlId && 
+                                         i.IndicatorName == setting.IndicatorName);
 
-                // Fix: Use fully qualified namespace to ensure correct method resolution
-                DatabaseMonolith.ExecuteNonQuery(createTableQuery);
-                //DatabaseMonolith.Log("Info", "IndicatorSettings table created or verified");
+                if (existingEntity != null)
+                {
+                    // Update existing
+                    existingEntity.IsEnabled = setting.IsEnabled;
+                    existingEntity.LastUpdated = DateTime.Now;
+                    _context.IndicatorSettings.Update(existingEntity);
+                }
+                else
+                {
+                    // Add new
+                    var entity = new IndicatorSettingsEntity
+                    {
+                        ControlId = setting.ControlId,
+                        IndicatorName = setting.IndicatorName,
+                        IsEnabled = setting.IsEnabled,
+                        LastUpdated = DateTime.Now
+                    };
+                    _context.IndicatorSettings.Add(entity);
+                }
+
+                _context.SaveChanges();
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to create IndicatorSettings table", ex.ToString());
+                // Log error if logging service is available
+                Console.WriteLine($"Failed to save indicator setting for {setting.IndicatorName}: {ex.Message}");
                 throw;
             }
         }
 
-        // Save or update a single indicator setting
-        public static void SaveIndicatorSetting(IndicatorSettingsModel setting)
+        // Save multiple indicator settings at once (atomically) using EF Core
+        public void SaveIndicatorSettings(List<IndicatorSettingsModel> settings)
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                foreach (var setting in settings)
                 {
-                    connection.Open();
+                    var existingEntity = _context.IndicatorSettings
+                        .FirstOrDefault(i => i.ControlId == setting.ControlId && 
+                                             i.IndicatorName == setting.IndicatorName);
 
-                    using (var transaction = connection.BeginTransaction())
+                    if (existingEntity != null)
                     {
-                        try
+                        existingEntity.IsEnabled = setting.IsEnabled;
+                        existingEntity.LastUpdated = DateTime.Now;
+                        _context.IndicatorSettings.Update(existingEntity);
+                    }
+                    else
+                    {
+                        var entity = new IndicatorSettingsEntity
                         {
-                            string upsertQuery = @"
-                                    INSERT INTO IndicatorSettings (ControlId, IndicatorName, IsEnabled, LastUpdated)
-                                    VALUES (@ControlId, @IndicatorName, @IsEnabled, @LastUpdated)
-                                    ON CONFLICT(ControlId, IndicatorName) 
-                                    DO UPDATE SET IsEnabled = @IsEnabled, LastUpdated = @LastUpdated";
-
-                            using (var command = new SQLiteCommand(upsertQuery, connection))
-                            {
-                                command.Parameters.AddWithValue("@ControlId", setting.ControlId);
-                                command.Parameters.AddWithValue("@IndicatorName", setting.IndicatorName);
-                                command.Parameters.AddWithValue("@IsEnabled", setting.IsEnabled ? 1 : 0);
-                                command.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
-                                command.ExecuteNonQuery();
-                            }
-
-                            transaction.Commit();
-                        }
-                        catch (Exception)
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
+                            ControlId = setting.ControlId,
+                            IndicatorName = setting.IndicatorName,
+                            IsEnabled = setting.IsEnabled,
+                            LastUpdated = DateTime.Now
+                        };
+                        _context.IndicatorSettings.Add(entity);
                     }
                 }
+
+                _context.SaveChanges();
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to save indicator setting for {setting.IndicatorName}", ex.ToString());
+                Console.WriteLine($"Failed to save multiple indicator settings: {ex.Message}");
                 throw;
             }
         }
 
-        // Save multiple indicator settings at once (atomically)
-        public static void SaveIndicatorSettings(List<IndicatorSettingsModel> settings)
+        // Get all indicator settings for a specific control using EF Core
+        public List<IndicatorSettingsModel> GetIndicatorSettingsForControl(string controlId)
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                if (!int.TryParse(controlId, out int controlIdInt))
                 {
-                    connection.Open();
-
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            string upsertQuery = @"
-                                    INSERT INTO IndicatorSettings (ControlId, IndicatorName, IsEnabled, LastUpdated)
-                                    VALUES (@ControlId, @IndicatorName, @IsEnabled, @LastUpdated)
-                                    ON CONFLICT(ControlId, IndicatorName) 
-                                    DO UPDATE SET IsEnabled = @IsEnabled, LastUpdated = @LastUpdated";
-
-                            using (var command = new SQLiteCommand(upsertQuery, connection))
-                            {
-                                foreach (var setting in settings)
-                                {
-                                    command.Parameters.Clear();
-                                    command.Parameters.AddWithValue("@ControlId", setting.ControlId);
-                                    command.Parameters.AddWithValue("@IndicatorName", setting.IndicatorName);
-                                    command.Parameters.AddWithValue("@IsEnabled", setting.IsEnabled ? 1 : 0);
-                                    command.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
-                                    command.ExecuteNonQuery();
-                                }
-                            }
-
-                            transaction.Commit();
-                        }
-                        catch (Exception)
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
+                    return new List<IndicatorSettingsModel>();
                 }
+
+                return _context.IndicatorSettings
+                    .AsNoTracking()
+                    .Where(i => i.ControlId == controlIdInt)
+                    .Select(i => new IndicatorSettingsModel
+                    {
+                        Id = i.Id,
+                        ControlId = i.ControlId,
+                        IndicatorName = i.IndicatorName,
+                        IsEnabled = i.IsEnabled,
+                        LastUpdated = i.LastUpdated
+                    })
+                    .ToList();
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
+                Console.WriteLine($"Failed to retrieve indicator settings for control {controlId}: {ex.Message}");
                 throw;
             }
-        }
-
-        // Get all indicator settings for a specific control
-        public static List<IndicatorSettingsModel> GetIndicatorSettingsForControl(string controlId)
-        {
-            List<IndicatorSettingsModel> settings = new List<IndicatorSettingsModel>();
-
-            try
-            {
-                using (var connection = DatabaseMonolith.GetConnection())
-                {
-                    connection.Open();
-
-                    string query = @"
-                            SELECT Id, ControlId, IndicatorName, IsEnabled, LastUpdated 
-                            FROM IndicatorSettings 
-                            WHERE ControlId = @ControlId";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ControlId", controlId);
-
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                settings.Add(new IndicatorSettingsModel
-                                {
-                                    Id = Convert.ToInt32(reader["Id"]),
-                                    ControlId = Convert.ToInt32(reader["ControlId"]),
-                                    IndicatorName = reader["IndicatorName"].ToString(),
-                                    IsEnabled = Convert.ToBoolean(reader["IsEnabled"]),
-                                    LastUpdated = Convert.ToDateTime(reader["LastUpdated"])
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
-                throw;
-            }
-
-            return settings;
         }
 
         public bool Exists(int controlId)
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
-                {
-                    connection.Open();
-
-                    string query = @"
-                        SELECT COUNT(*) 
-                        FROM IndicatorSettings 
-                        WHERE ControlId = @ControlId";
-
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@ControlId", controlId);
-                        int count = Convert.ToInt32(command.ExecuteScalar());
-                        return count > 0;
-                    }
-                }
+                return _context.IndicatorSettings
+                    .AsNoTracking()
+                    .Any(i => i.ControlId == controlId);
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to check existence of indicator settings for control {controlId}", ex.ToString());
+                Console.WriteLine($"Failed to check existence of indicator settings for control {controlId}: {ex.Message}");
                 throw;
             }
         }
@@ -206,70 +145,48 @@ namespace Quantra.Repositories
         {
             try
             {
+                var entities = _context.IndicatorSettings
+                    .AsNoTracking()
+                    .Where(i => i.ControlId == controlId)
+                    .ToList();
+
+                if (!entities.Any())
+                {
+                    return null;
+                }
+
                 var settings = new IndicatorSettingsModel
                 {
-                    ControlId = controlId
+                    ControlId = controlId,
+                    Id = entities.First().Id
                 };
 
-                using (var connection = DatabaseMonolith.GetConnection())
+                // Map indicators to properties
+                foreach (var entity in entities)
                 {
-                    connection.Open();
-
-                    string query = @"
-                        SELECT Id, ControlId, IndicatorName, IsEnabled, LastUpdated 
-                        FROM IndicatorSettings 
-                        WHERE ControlId = @ControlId";
-
-                    using (var command = new SQLiteCommand(query, connection))
+                    switch (entity.IndicatorName)
                     {
-                        command.Parameters.AddWithValue("@ControlId", controlId);
-
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                // Set the first record's ID to the model
-                                if (settings.Id == 0)
-                                {
-                                    settings.Id = Convert.ToInt32(reader["Id"]);
-                                }
-
-                                // Map indicators to properties
-                                string indicatorName = reader["IndicatorName"].ToString();
-                                bool isEnabled = Convert.ToBoolean(reader["IsEnabled"]);
-
-                                switch (indicatorName)
-                                {
-                                    case "VWAP":
-                                        settings.UseVwap = isEnabled;
-                                        break;
-                                    case "MACD":
-                                        settings.UseMacd = isEnabled;
-                                        break;
-                                    case "RSI":
-                                        settings.UseRsi = isEnabled;
-                                        break;
-                                    case "Bollinger":
-                                        settings.UseBollinger = isEnabled;
-                                        break;
-                                    case "MA":
-                                        settings.UseMa = isEnabled;
-                                        break;
-                                    case "Volume":
-                                        settings.UseVolume = isEnabled;
-                                        break;
-                                    case "BreadthThrust":
-                                        settings.UseBreadthThrust = isEnabled;
-                                        break;
-                                }
-                            }
-
-                            // Check if any records were found
-                            if (settings.Id == 0)
-                            {
-                                return null; // No settings found for this control ID
-                            }
-                        }
+                        case "VWAP":
+                            settings.UseVwap = entity.IsEnabled;
+                            break;
+                        case "MACD":
+                            settings.UseMacd = entity.IsEnabled;
+                            break;
+                        case "RSI":
+                            settings.UseRsi = entity.IsEnabled;
+                            break;
+                        case "Bollinger":
+                            settings.UseBollinger = entity.IsEnabled;
+                            break;
+                        case "MA":
+                            settings.UseMa = entity.IsEnabled;
+                            break;
+                        case "Volume":
+                            settings.UseVolume = entity.IsEnabled;
+                            break;
+                        case "BreadthThrust":
+                            settings.UseBreadthThrust = entity.IsEnabled;
+                            break;
                     }
                 }
 
@@ -277,7 +194,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
+                Console.WriteLine($"Failed to retrieve indicator settings for control {controlId}: {ex.Message}");
                 throw;
             }
         }
@@ -286,36 +203,18 @@ namespace Quantra.Repositories
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
-                {
-                    connection.Open();
-
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            // Save each indicator setting individually
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "VWAP", settings.UseVwap));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "MACD", settings.UseMacd));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "RSI", settings.UseRsi));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "Bollinger", settings.UseBollinger));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "MA", settings.UseMa));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "Volume", settings.UseVolume));
-                            SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "BreadthThrust", settings.UseBreadthThrust));
-                            
-                            transaction.Commit();
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
-                }
+                // Save each indicator setting individually
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "VWAP", settings.UseVwap));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "MACD", settings.UseMacd));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "RSI", settings.UseRsi));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "Bollinger", settings.UseBollinger));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "MA", settings.UseMa));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "Volume", settings.UseVolume));
+                SaveIndicatorSetting(new IndicatorSettingsModel(settings.ControlId, "BreadthThrust", settings.UseBreadthThrust));
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to save indicator settings for control {settings.ControlId}", ex.ToString());
+                Console.WriteLine($"Failed to save indicator settings for control {settings.ControlId}: {ex.Message}");
                 throw;
             }
         }
@@ -324,12 +223,12 @@ namespace Quantra.Repositories
         {
             try
             {
-                // Since the SaveIndicatorSetting uses UPSERT logic, we can reuse the same Save method
+                // Since SaveIndicatorSetting uses upsert logic, we can reuse the same Save method
                 Save(settings);
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to update indicator settings for control {settings.ControlId}", ex.ToString());
+                Console.WriteLine($"Failed to update indicator settings for control {settings.ControlId}: {ex.Message}");
                 throw;
             }
         }

@@ -2,120 +2,115 @@ using System;
 using System.Collections.Generic;
 using Quantra.Models;
 using Quantra.Repositories;
+using Quantra.DAL.Data;
 
 namespace Quantra.DAL.Services
 {
     public class IndicatorSettingsService
-    {
-        private readonly IndicatorSettingsRepository repository = new IndicatorSettingsRepository();
+ {
+        private readonly IndicatorSettingsRepository _repository;
 
-        // Initialize the service by ensuring table exists
-        public static void InitializeService()
+        public IndicatorSettingsService(QuantraDbContext context)
         {
-            try
-            {
-                IndicatorSettingsRepository.EnsureIndicatorSettingsTableExists();
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to initialize IndicatorSettingsService", ex.ToString());
-            }
-        }
+         _repository = new IndicatorSettingsRepository(context);
+      }
 
         // Save a single indicator setting
-        public static void SaveIndicatorSetting(int controlId, string indicatorName, bool isEnabled)
+    public void SaveIndicatorSetting(int controlId, string indicatorName, bool isEnabled)
+ {
+ try
+            {
+      var setting = new IndicatorSettingsModel(controlId, indicatorName, isEnabled);
+         _repository.SaveIndicatorSetting(setting);
+  }
+            catch (Exception ex)
+   {
+                Console.WriteLine($"Failed to save indicator setting: {indicatorName}: {ex.Message}");
+     throw;
+   }
+}
+
+     // Save multiple indicator settings at once
+        public void SaveIndicatorSettings(int controlId, Dictionary<string, bool> indicators)
         {
             try
-            {
-                var setting = new IndicatorSettingsModel(controlId, indicatorName, isEnabled);
-                IndicatorSettingsRepository.SaveIndicatorSetting(setting);
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to save indicator setting: {indicatorName}", ex.ToString());
-            }
-        }
+   {
+         var settings = new List<IndicatorSettingsModel>();
 
-        // Save multiple indicator settings at once
-        public static void SaveIndicatorSettings(int controlId, Dictionary<string, bool> indicators)
+           foreach (var indicator in indicators)
         {
-            try
-            {
-                var settings = new List<IndicatorSettingsModel>();
+           settings.Add(new IndicatorSettingsModel(controlId, indicator.Key, indicator.Value));
+     }
 
-                foreach (var indicator in indicators)
-                {
-                    settings.Add(new IndicatorSettingsModel(controlId, indicator.Key, indicator.Value));
-                }
-
-                IndicatorSettingsRepository.SaveIndicatorSettings(settings);
+          _repository.SaveIndicatorSettings(settings);
+       }
+ catch (Exception ex)
+       {
+          Console.WriteLine($"Failed to save multiple indicator settings: {ex.Message}");
+                throw;
             }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
-            }
-        }
+     }
 
         // Get all settings for a control and return as dictionary
-        public static Dictionary<string, bool> GetIndicatorSettingsForControl(string controlId)
+        public Dictionary<string, bool> GetIndicatorSettingsForControl(string controlId)
         {
             var indicatorDictionary = new Dictionary<string, bool>();
 
             try
             {
-                var settings = IndicatorSettingsRepository.GetIndicatorSettingsForControl(controlId);
+  var settings = _repository.GetIndicatorSettingsForControl(controlId);
 
-                foreach (var setting in settings)
-                {
-                    indicatorDictionary[setting.IndicatorName] = setting.IsEnabled;
-                }
-                
-                // Add default value for Breadth Thrust if not present
-                if (!indicatorDictionary.ContainsKey("BreadthThrust"))
-                {
-                    indicatorDictionary["BreadthThrust"] = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
-            }
+         foreach (var setting in settings)
+  {
+               indicatorDictionary[setting.IndicatorName] = setting.IsEnabled;
+     }
+    
+    // Add default value for Breadth Thrust if not present
+     if (!indicatorDictionary.ContainsKey("BreadthThrust"))
+         {
+         indicatorDictionary["BreadthThrust"] = false;
+             }
+        }
+         catch (Exception ex)
+        {
+      Console.WriteLine($"Failed to retrieve indicator settings for control {controlId}: {ex.Message}");
+        }
 
-            return indicatorDictionary;
+      return indicatorDictionary;
         }
 
         public IndicatorSettingsModel GetSettingsForControl(int controlId)
         {
-            var settings = repository.GetByControlId(controlId);
-            
-            // If no settings exist yet, initialize with defaults
+            var settings = _repository.GetByControlId(controlId);
+        
+ // If no settings exist yet, initialize with defaults
             if (settings == null)
-            {
-                settings = new IndicatorSettingsModel
-                {
-                    ControlId = controlId,
-                    UseVwap = true,
-                    UseMacd = true,
-                    UseRsi = true,
-                    UseBollinger = true,
-                    UseMa = true,
-                    UseVolume = true,
-                    UseBreadthThrust = false
+       {
+        settings = new IndicatorSettingsModel
+          {
+   ControlId = controlId,
+        UseVwap = true,
+       UseMacd = true,
+       UseRsi = true,
+         UseBollinger = true,
+UseMa = true,
+    UseVolume = true,
+      UseBreadthThrust = false
                 };
-            }
-            return settings;
+        }
+    return settings;
         }
 
-        public void SaveOrUpdateSettingsForControl(IndicatorSettingsModel settings)
+   public void SaveOrUpdateSettingsForControl(IndicatorSettingsModel settings)
         {
-            if (repository.Exists(settings.ControlId))
-            {
-                repository.Update(settings);
+   if (_repository.Exists(settings.ControlId))
+ {
+     _repository.Update(settings);
             }
             else
-            {
-                repository.Save(settings);
-            }
-        }
+   {
+        _repository.Save(settings);
+      }
+   }
     }
 }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Quantra.CrossCutting.Logging;
 using Quantra.CrossCutting.Monitoring.Models;
+using Quantra.DAL.Data;
 
 namespace Quantra.CrossCutting.Monitoring
 {
@@ -571,7 +572,7 @@ namespace Quantra.CrossCutting.Monitoring
         {
             try
             {
-                using var connection = DatabaseMonolith.GetConnection();
+                using var connection = ConnectionHelper.GetConnection();
                 await connection.OpenAsync().ConfigureAwait(false);
                 
                 using var command = connection.CreateCommand();

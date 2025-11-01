@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 
 namespace Quantra
 {
@@ -10,65 +13,50 @@ namespace Quantra
     /// </summary>
     public static class SymbolCacheUtility
     {
+        private static QuantraDbContext CreateContext()
+        {
+            // Use default OnConfiguring in QuantraDbContext when no options are provided
+            var options = new DbContextOptionsBuilder<QuantraDbContext>().Options;
+            return new QuantraDbContext(options);
+        }
+
         /// <summary>
         /// Checks if the symbol cache is stale based on specified criteria
         /// </summary>
-        /// <param name="maxAgeHours">Maximum age of cache in hours before considered stale (default: 24)</param>
+        /// <param name="maxAgeHours">Maximum age of cache in hours before considered stale (default:24)</param>
         /// <returns>True if cache is stale or unusable, false if cache is valid</returns>
         public static bool IsSymbolCacheStale(int maxAgeHours = 24)
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var context = CreateContext())
                 {
-                    connection.Open();
-                    
-                    // Check if table exists
-                    bool tableExists = DatabaseMonolith.ExecuteScalar<int>(
-                        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='StockSymbols'") > 0;
-                    
-                    if (!tableExists)
+                    // Try to connect to the database
+                    if (!context.Database.CanConnect())
                     {
-                        //DatabaseMonolith.Log("Info", "StockSymbols table does not exist - cache is stale");
                         return true;
                     }
-                    
-                    // Check if table has symbols
-                    int symbolCount = DatabaseMonolith.ExecuteScalar<int>("SELECT COUNT(*) FROM StockSymbols");
-                    if (symbolCount == 0)
+
+                    // If table doesn't exist or has no symbols, consider stale
+                    if (!context.StockSymbols.Any())
                     {
-                        //DatabaseMonolith.Log("Info", "StockSymbols table is empty - cache is stale");
                         return true;
                     }
-                    
-                    // Check age of cache
-                    var query = "SELECT MIN(LastUpdated) FROM StockSymbols";
-                    using (var command = new SQLiteCommand(query, connection))
+
+                    // Determine the oldest LastUpdated value
+                    DateTime? oldestUpdate = context.StockSymbols.Min(s => s.LastUpdated);
+                    if (!oldestUpdate.HasValue)
                     {
-                        var result = command.ExecuteScalar();
-                        if (result == null || result == DBNull.Value)
-                        {
-                            //DatabaseMonolith.Log("Warning", "Could not determine cache age - assuming stale");
-                            return true;
-                        }
-                        
-                        DateTime oldestUpdate = Convert.ToDateTime(result);
-                        TimeSpan age = DateTime.Now - oldestUpdate;
-                        
-                        bool isStale = age.TotalHours > maxAgeHours;
-                        if (isStale)
-                        {
-                            //DatabaseMonolith.Log("Info", $"Symbol cache is stale (age: {age.TotalHours:F1} hours, max: {maxAgeHours} hours)");
-                        }
-                        
-                        return isStale;
+                        return true;
                     }
+
+                    TimeSpan age = DateTime.Now - oldestUpdate.Value;
+                    return age.TotalHours > maxAgeHours;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", "Error checking symbol cache status", ex.ToString());
-                return true; // Assume cache is stale on error
+                return true; // Assume stale on error
             }
         }
 
@@ -76,77 +64,80 @@ namespace Quantra
         /// Finds symbols that match a search pattern, prioritizing exact and prefix matches
         /// </summary>
         /// <param name="searchPattern">The pattern to search for</param>
-        /// <param name="maxResults">Maximum number of results to return (default: 20)</param>
+        /// <param name="maxResults">Maximum number of results to return (default:20)</param>
         /// <returns>List of matching StockSymbol objects in priority order</returns>
         public static List<Quantra.Models.StockSymbol> FindSymbolMatches(string searchPattern, int maxResults = 20)
         {
             var results = new List<Quantra.Models.StockSymbol>();
-            
+
             if (string.IsNullOrWhiteSpace(searchPattern))
             {
                 return results;
             }
-            
-            searchPattern = searchPattern.Trim().ToUpper();
-            
+
+            string pattern = searchPattern.Trim();
+            string patternUpper = pattern.ToUpperInvariant();
+
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var context = CreateContext())
                 {
-                    connection.Open();
-                    
-                    // Use a sophisticated query that prioritizes matching using a CASE expression
-                    string query = @"
-                        SELECT Symbol, Name, Sector, Industry, LastUpdated
-                        FROM StockSymbols
-                        WHERE Symbol LIKE @SearchPattern OR Name LIKE @SearchPattern
-                        ORDER BY
-                            CASE
-                                WHEN Symbol = @ExactMatch THEN 1                           -- Exact match has highest priority
-                                WHEN Symbol LIKE @StartsWith THEN 2                        -- Starts with has next priority
-                                WHEN Symbol LIKE @Contains THEN 3                          -- Contains has third priority
-                                WHEN Name LIKE @StartsWith OR Name LIKE @ExactMatch THEN 4 -- Name matches have lower priority
-                                ELSE 5                                                     -- Everything else
-                            END,
-                            LENGTH(Symbol),  -- Shorter symbols come first
-                            Symbol           -- Alphabetical within each category
-                        LIMIT @MaxResults";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        // Add parameters with appropriate wildcards for different matching scenarios
-                        command.Parameters.AddWithValue("@SearchPattern", $"%{searchPattern}%");
-                        command.Parameters.AddWithValue("@ExactMatch", searchPattern);
-                        command.Parameters.AddWithValue("@StartsWith", $"{searchPattern}%");
-                        command.Parameters.AddWithValue("@Contains", $"%{searchPattern}%");
-                        command.Parameters.AddWithValue("@MaxResults", maxResults);
-                        
-                        using (var reader = command.ExecuteReader())
+                    // Load symbols into memory to avoid complex EF translations
+                    var all = context.StockSymbols.AsNoTracking().ToList();
+
+                    var matches = all
+                        .Where(s => (!string.IsNullOrEmpty(s.Symbol) && s.Symbol.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                                    (!string.IsNullOrEmpty(s.Name) && s.Name.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0))
+                        .Select(s => new
                         {
-                            while (reader.Read())
-                            {
-                                results.Add(new Quantra.Models.StockSymbol
-                                {
-                                    Symbol = reader["Symbol"].ToString(),
-                                    Name = reader["Name"]?.ToString() ?? string.Empty,
-                                    Sector = reader["Sector"]?.ToString() ?? string.Empty,
-                                    Industry = reader["Industry"]?.ToString() ?? string.Empty,
-                                    LastUpdated = reader["LastUpdated"] != DBNull.Value ? 
-                                        Convert.ToDateTime(reader["LastUpdated"]) : DateTime.MinValue
-                                });
-                            }
-                        }
+                            Entity = s,
+                            Priority = GetPriority(s, patternUpper)
+                        })
+                        .OrderBy(x => x.Priority)
+                        .ThenBy(x => string.IsNullOrEmpty(x.Entity.Symbol) ? int.MaxValue : x.Entity.Symbol.Length)
+                        .ThenBy(x => x.Entity.Symbol)
+                        .Take(maxResults)
+                        .ToList();
+
+                    foreach (var item in matches)
+                    {
+                        var s = item.Entity;
+                        results.Add(new Quantra.Models.StockSymbol
+                        {
+                            Symbol = s.Symbol,
+                            Name = s.Name ?? string.Empty,
+                            Sector = s.Sector ?? string.Empty,
+                            Industry = s.Industry ?? string.Empty,
+                            LastUpdated = s.LastUpdated ?? DateTime.MinValue
+                        });
                     }
-                    
-                    //DatabaseMonolith.Log("Info", $"Found {results.Count} symbol matches for pattern '{searchPattern}'");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", $"Error finding symbol matches for pattern '{searchPattern}'", ex.ToString());
+                // ignore and return what we have
             }
-            
+
             return results;
+        }
+
+        private static int GetPriority(StockSymbolEntity s, string patternUpper)
+        {
+            if (!string.IsNullOrEmpty(s.Symbol))
+            {
+                var symUpper = s.Symbol.ToUpperInvariant();
+                if (symUpper == patternUpper) return 1;
+                if (symUpper.StartsWith(patternUpper)) return 2;
+                if (symUpper.Contains(patternUpper)) return 3;
+            }
+
+            if (!string.IsNullOrEmpty(s.Name))
+            {
+                var nameUpper = s.Name.ToUpperInvariant();
+                if (nameUpper.StartsWith(patternUpper) || nameUpper == patternUpper) return 4;
+            }
+
+            return 5;
         }
 
         /// <summary>
@@ -157,27 +148,25 @@ namespace Quantra
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var context = CreateContext())
                 {
-                    connection.Open();
-                    string query = "UPDATE StockSymbols SET LastUpdated = @Now";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
+                    var all = context.StockSymbols.ToList();
+                    var now = DateTime.Now;
+                    foreach (var s in all)
                     {
-                        command.Parameters.AddWithValue("@Now", DateTime.Now);
-                        int count = command.ExecuteNonQuery();
-                        //DatabaseMonolith.Log("Info", $"Refreshed symbol cache: updated {count} symbols");
-                        return count;
+                        s.LastUpdated = now;
                     }
+
+                    context.SaveChanges();
+                    return all.Count;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", "Failed to refresh symbol cache", ex.ToString());
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Retrieves the total count of symbols in the cache
         /// </summary>
@@ -186,11 +175,13 @@ namespace Quantra
         {
             try
             {
-                return DatabaseMonolith.ExecuteScalar<int>("SELECT COUNT(*) FROM StockSymbols");
+                using (var context = CreateContext())
+                {
+                    return context.StockSymbols.Count();
+                }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", "Error getting symbol count", ex.ToString());
                 return 0;
             }
         }
@@ -202,42 +193,28 @@ namespace Quantra
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var context = CreateContext())
                 {
-                    connection.Open();
-                    
-                    // Check if VIX already exists
-                    string checkQuery = "SELECT COUNT(*) FROM StockSymbols WHERE Symbol = @Symbol";
-                    using (var checkCommand = new SQLiteCommand(checkQuery, connection))
+                    bool exists = context.StockSymbols.Any(s => s.Symbol == "VIX");
+                    if (!exists)
                     {
-                        checkCommand.Parameters.AddWithValue("@Symbol", "VIX");
-                        int count = Convert.ToInt32(checkCommand.ExecuteScalar());
-                        
-                        if (count == 0)
+                        var entity = new StockSymbolEntity
                         {
-                            // Insert VIX if it doesn't exist
-                            string insertQuery = @"
-                                INSERT INTO StockSymbols (Symbol, Name, Sector, Industry, LastUpdated)
-                                VALUES (@Symbol, @Name, @Sector, @Industry, @LastUpdated)";
-                            
-                            using (var insertCommand = new SQLiteCommand(insertQuery, connection))
-                            {
-                                insertCommand.Parameters.AddWithValue("@Symbol", "VIX");
-                                insertCommand.Parameters.AddWithValue("@Name", "CBOE Volatility Index");
-                                insertCommand.Parameters.AddWithValue("@Sector", "Index");
-                                insertCommand.Parameters.AddWithValue("@Industry", "Volatility Index");
-                                insertCommand.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
-                                insertCommand.ExecuteNonQuery();
-                                
-                                //DatabaseMonolith.Log("Info", "Added VIX to symbol cache");
-                            }
-                        }
+                            Symbol = "VIX",
+                            Name = "CBOE Volatility Index",
+                            Sector = "Index",
+                            Industry = "Volatility Index",
+                            LastUpdated = DateTime.Now
+                        };
+
+                        context.StockSymbols.Add(entity);
+                        context.SaveChanges();
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", "Error ensuring VIX in cache", ex.ToString());
+                // ignore errors
             }
         }
     }

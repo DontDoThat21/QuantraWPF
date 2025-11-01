@@ -40,6 +40,7 @@ namespace Quantra.Extensions
             // Audio and notification services depend on UserSettings from DatabaseMonolith, so construct via factories
             services.AddSingleton<IAudioService>(sp => new AudioService(DatabaseMonolith.GetUserSettings()));
             services.AddSingleton<ISettingsService, SettingsService>();
+            services.AddSingleton<IUserSettingsService, UserSettingsService>();
             services.AddSingleton<INotificationService>(sp =>
             {
                 var userSettings = DatabaseMonolith.GetUserSettings();

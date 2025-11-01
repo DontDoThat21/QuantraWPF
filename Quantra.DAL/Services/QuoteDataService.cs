@@ -9,7 +9,7 @@ namespace Quantra.DAL.Services
     {
         public static async Task<QuoteData> GetLatestQuoteData(string symbol)
         {
-            return await DatabaseMonolith.GetLatestQuoteData(symbol);
+            return await AlphaVantageService.GetLatestQuoteData(symbol);
         }
 
         public static async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)

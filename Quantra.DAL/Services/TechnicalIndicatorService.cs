@@ -18,7 +18,7 @@ namespace Quantra.DAL.Services
     {
         private static readonly HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(25) };
         private readonly HistoricalDataService _historicalDataService;
-        private readonly AlphaVantageService _alphaVantageService;
+        private readonly IAlphaVantageService _alphaVantageService;
         private readonly string _apiKey;
         private readonly Dictionary<string, Func<string, string, Task<double>>> _indicators;
         
@@ -33,8 +33,10 @@ namespace Quantra.DAL.Services
         private readonly IMonitoringManager _monitoringManager;
         private bool _disposed = false;
 
-        public TechnicalIndicatorService()
+        public TechnicalIndicatorService(IAlphaVantageService alphaVantageService)
         {
+            _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
+
             // Read API key from JSON file
             var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "alphaVantageSettings.json");
             if (!File.Exists(configPath))
@@ -48,9 +50,8 @@ namespace Quantra.DAL.Services
             _apiKey = apiKeyElement.GetString();
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("AlphaVantageApiKey is empty in settings file.");
-            
+
             _historicalDataService = new HistoricalDataService();
-            _alphaVantageService = new AlphaVantageService();
 
             _indicators = new Dictionary<string, Func<string, string, Task<double>>>
             {
@@ -851,8 +852,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Calculate Stochastic RSI using RSI values
-                var alphaVantage = new AlphaVantageService();
-                var closingPrices = await alphaVantage.GetHistoricalClosingPricesAsync(symbol, 20); // 14+6 for window
+                var closingPrices = await _alphaVantageService.GetHistoricalClosingPricesAsync(symbol, 20); // 14+6 for window
                 if (closingPrices == null || closingPrices.Count < 15)
                     return 0.5; // Neutral
                 var rsiList = new List<double>();

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(Select-String -Pattern \"error|warning\" -Context 0,2)",
+      "Bash(dotnet clean:*)",
+      "Bash(Select-String -Pattern \"TransactionService.cs.*error|Build succeeded|Build FAILED\" -Context 0,2)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

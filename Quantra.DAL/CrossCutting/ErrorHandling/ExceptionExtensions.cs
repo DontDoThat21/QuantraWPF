@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,8 +21,8 @@ namespace Quantra.CrossCutting.ErrorHandling
             typeof(SocketException),
             typeof(WebException),
             typeof(HttpRequestException),
-            typeof(IOException),
-            typeof(SQLiteException)
+            typeof(IOException)//,
+            //typeof(SQLiteException)
         };
 
         // Error codes that typically indicate transient issues for SQLite

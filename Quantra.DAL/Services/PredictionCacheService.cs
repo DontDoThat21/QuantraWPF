@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Quantra.Models;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
 
 namespace Quantra.DAL.Services
 {
@@ -15,140 +16,137 @@ namespace Quantra.DAL.Services
     /// </summary>
     public class PredictionCacheService
     {
-        private readonly string _databasePath;
         private readonly TimeSpan _cacheValidityPeriod;
 
         public PredictionCacheService(TimeSpan? cacheValidityPeriod = null)
         {
-            _databasePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Quantra", "prediction_cache.db");
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1); // Default 1 hour cache
             EnsureCacheTableExists();
         }
 
+        /// <summary>
+        /// Ensures the prediction cache table exists using Entity Framework Core
+        /// </summary>
         private void EnsureCacheTableExists()
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_databasePath));
+                // Create DbContext using default configuration
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
 
-                using (var connection = new SQLiteConnection($"Data Source={_databasePath};Version=3;"))
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    connection.Open();
-                    var command = new SQLiteCommand(@"
-                        CREATE TABLE IF NOT EXISTS PredictionCache (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            Symbol TEXT NOT NULL,
-                            ModelVersion TEXT NOT NULL,
-                            InputDataHash TEXT NOT NULL,
-                            PredictedPrice REAL,
-                            PredictedAction TEXT,
-                            Confidence REAL,
-                            PredictionTimestamp TEXT,
-                            CreatedAt TEXT,
-                            UNIQUE(Symbol, ModelVersion, InputDataHash)
-                        )", connection);
-                    command.ExecuteNonQuery();
+                    // Ensure the database and tables are created
+                    // This will create all tables defined in the DbContext including PredictionCache
+                    dbContext.Database.EnsureCreated();
+
+                    LoggingService.Log("Info", "Prediction cache table created or verified using EF Core");
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Error creating prediction cache table", ex.ToString());
+                LoggingService.Log("Error", "Failed to ensure prediction cache table exists", ex.ToString());
             }
         }
 
         /// <summary>
-        /// Get cached prediction result if available and valid
+        /// Get cached prediction result if available and valid using Entity Framework
         /// </summary>
         public PredictionResult GetCachedPrediction(string symbol, string modelVersion, string inputDataHash)
         {
             try
             {
-                using (var connection = new SQLiteConnection($"Data Source={_databasePath};Version=3;"))
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    connection.Open();
-                    var command = new SQLiteCommand(@"
-                        SELECT PredictedPrice, PredictedAction, Confidence, PredictionTimestamp, CreatedAt
-                        FROM PredictionCache 
-                        WHERE Symbol = @Symbol AND ModelVersion = @ModelVersion AND InputDataHash = @InputDataHash
-                        ORDER BY CreatedAt DESC
-                        LIMIT 1", connection);
-                    
-                    command.Parameters.AddWithValue("@Symbol", symbol);
-                    command.Parameters.AddWithValue("@ModelVersion", modelVersion);
-                    command.Parameters.AddWithValue("@InputDataHash", inputDataHash);
+                    // Query using LINQ - EF Core will translate to appropriate SQL (works with both SQLite and SQL Server)
+                    var cachedEntry = dbContext.PredictionCache
+                        .Where(pc => pc.Symbol == symbol
+                                  && pc.ModelVersion == modelVersion
+                                  && pc.InputDataHash == inputDataHash)
+                        .OrderByDescending(pc => pc.CreatedAt)
+                        .FirstOrDefault();
 
-                    using (var reader = command.ExecuteReader())
+                    if (cachedEntry != null)
                     {
-                        if (reader.Read())
+                        // Check if cache is still valid
+                        if (DateTime.Now - cachedEntry.CreatedAt <= _cacheValidityPeriod)
                         {
-                            var createdAtStr = reader["CreatedAt"].ToString();
-                            var predictionTsStr = reader["PredictionTimestamp"].ToString();
-
-                            // Parse with fixed format, fallback to general parse
-                            var format = "yyyy-MM-dd HH:mm:ss";
-                            var createdAt = DateTime.TryParseExact(createdAtStr, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ca)
-                                ? ca
-                                : DateTime.Parse(createdAtStr, CultureInfo.InvariantCulture);
-                            var predictionTs = DateTime.TryParseExact(predictionTsStr, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var pt)
-                                ? pt
-                                : DateTime.Parse(predictionTsStr, CultureInfo.InvariantCulture);
-                            
-                            // Check if cache is still valid
-                            if (DateTime.Now - createdAt <= _cacheValidityPeriod)
+                            return new PredictionResult
                             {
-                                return new PredictionResult
-                                {
-                                    Symbol = symbol,
-                                    CurrentPrice = 0, // Will be set by caller
-                                    TargetPrice = Convert.ToDouble(reader["PredictedPrice"], CultureInfo.InvariantCulture),
-                                    Action = reader["PredictedAction"].ToString(),
-                                    Confidence = Convert.ToDouble(reader["Confidence"], CultureInfo.InvariantCulture),
-                                    PredictionDate = predictionTs,
-                                    ModelType = "cached"
-                                };
-                            }
+                                Symbol = symbol,
+                                CurrentPrice = 0, // Will be set by caller
+                                TargetPrice = cachedEntry.PredictedPrice ?? 0,
+                                Action = cachedEntry.PredictedAction ?? string.Empty,
+                                Confidence = cachedEntry.Confidence ?? 0,
+                                PredictionDate = cachedEntry.PredictionTimestamp ?? DateTime.Now,
+                                ModelType = "cached"
+                            };
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
+                LoggingService.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
             }
 
             return null;
         }
 
         /// <summary>
-        /// Cache a prediction result
+        /// Cache a prediction result using Entity Framework
         /// </summary>
         public void CachePrediction(string symbol, string modelVersion, string inputDataHash, PredictionResult prediction)
         {
             try
             {
-                using (var connection = new SQLiteConnection($"Data Source={_databasePath};Version=3;"))
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    connection.Open();
-                    var command = new SQLiteCommand(@"
-                        INSERT OR REPLACE INTO PredictionCache 
-                        (Symbol, ModelVersion, InputDataHash, PredictedPrice, PredictedAction, Confidence, PredictionTimestamp, CreatedAt)
-                        VALUES (@Symbol, @ModelVersion, @InputDataHash, @PredictedPrice, @PredictedAction, @Confidence, @PredictionTimestamp, @CreatedAt)", connection);
+                    // Check if entry already exists
+                    var existingEntry = dbContext.PredictionCache
+                        .FirstOrDefault(pc => pc.Symbol == symbol
+                                           && pc.ModelVersion == modelVersion
+                                           && pc.InputDataHash == inputDataHash);
 
-                    command.Parameters.AddWithValue("@Symbol", symbol);
-                    command.Parameters.AddWithValue("@ModelVersion", modelVersion);
-                    command.Parameters.AddWithValue("@InputDataHash", inputDataHash);
-                    command.Parameters.AddWithValue("@PredictedPrice", prediction.TargetPrice);
-                    command.Parameters.AddWithValue("@PredictedAction", prediction.Action);
-                    command.Parameters.AddWithValue("@Confidence", prediction.Confidence);
-                    command.Parameters.AddWithValue("@PredictionTimestamp", prediction.PredictionDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-                    command.Parameters.AddWithValue("@CreatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                    if (existingEntry != null)
+                    {
+                        // Update existing entry
+                        existingEntry.PredictedPrice = prediction.TargetPrice;
+                        existingEntry.PredictedAction = prediction.Action;
+                        existingEntry.Confidence = prediction.Confidence;
+                        existingEntry.PredictionTimestamp = prediction.PredictionDate;
+                        existingEntry.CreatedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Insert new entry
+                        var newEntry = new Data.Entities.PredictionCacheEntity
+                        {
+                            Symbol = symbol,
+                            ModelVersion = modelVersion,
+                            InputDataHash = inputDataHash,
+                            PredictedPrice = prediction.TargetPrice,
+                            PredictedAction = prediction.Action,
+                            Confidence = prediction.Confidence,
+                            PredictionTimestamp = prediction.PredictionDate,
+                            CreatedAt = DateTime.Now
+                        };
+                        dbContext.PredictionCache.Add(newEntry);
+                    }
 
-                    command.ExecuteNonQuery();
+                    dbContext.SaveChanges();
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
+                LoggingService.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
             }
         }
 
@@ -180,27 +178,34 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Clear old cache entries
+        /// Clear old cache entries using Entity Framework
         /// </summary>
         public void ClearExpiredCache()
         {
             try
             {
                 var expiryDate = DateTime.Now - _cacheValidityPeriod;
-                using (var connection = new SQLiteConnection($"Data Source={_databasePath};Version=3;"))
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    connection.Open();
-                    var command = new SQLiteCommand(@"
-                        DELETE FROM PredictionCache 
-                        WHERE datetime(CreatedAt) < datetime(@ExpiryDate)", connection);
-                    
-                    command.Parameters.AddWithValue("@ExpiryDate", expiryDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-                    command.ExecuteNonQuery();
+                    // Find expired entries using LINQ
+                    var expiredEntries = dbContext.PredictionCache
+                        .Where(pc => pc.CreatedAt < expiryDate)
+                        .ToList();
+
+                    if (expiredEntries.Any())
+                    {
+                        dbContext.PredictionCache.RemoveRange(expiredEntries);
+                        dbContext.SaveChanges();
+                        LoggingService.Log("Info", $"Cleared {expiredEntries.Count} expired cache entries");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Error clearing expired cache", ex.ToString());
+                LoggingService.Log("Error", "Error clearing expired cache", ex.ToString());
             }
         }
     }

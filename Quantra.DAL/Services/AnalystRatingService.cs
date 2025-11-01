@@ -262,8 +262,8 @@ namespace Quantra.DAL.Services
             }
             
             // Not in cache or cache expired, get from database
-            var historyData = DatabaseMonolith.GetConsensusHistory(symbol, days);
-            
+            var historyData = GetConsensusHistory(symbol, days);
+
             // Cache the results
             _consensusHistoryCache[cacheKey] = (historyData, DateTime.Now);
             
@@ -332,10 +332,10 @@ namespace Quantra.DAL.Services
                 // Fetch fresh data
                 var ratings = await GetRecentRatingsAsync(symbol);
                 var aggregate = await GetAggregatedRatingsAsync(symbol);
-                
+
                 // Save data to database for historical tracking
-                DatabaseMonolith.SaveAnalystRatings(symbol, ratings);
-                DatabaseMonolith.SaveConsensusHistory(aggregate);
+                SaveAnalystRatings(symbol, ratings);
+                SaveConsensusHistory(aggregate);
                 
                 // Check for significant changes and create alerts if needed
                 await CheckForSignificantChanges(symbol, ratings);
@@ -933,8 +933,39 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
             
             return ratings.OrderByDescending(r => r.RatingDate).ToList();
         }
+
+        /// <summary>
+        /// Saves analyst ratings to database for historical tracking
+        /// </summary>
+        private void SaveAnalystRatings(string symbol, List<AnalystRating> ratings)
+        {
+            // TODO: Implement database persistence for analyst ratings
+            // For now, this is a no-op to allow compilation
+            LoggingService.Log("Info", $"SaveAnalystRatings called for {symbol} with {ratings?.Count ?? 0} ratings");
+        }
+
+        /// <summary>
+        /// Saves consensus history to database for trend analysis
+        /// </summary>
+        private void SaveConsensusHistory(AnalystRatingAggregate aggregate)
+        {
+            // TODO: Implement database persistence for consensus history
+            // For now, this is a no-op to allow compilation
+            LoggingService.Log("Info", $"SaveConsensusHistory called for {aggregate?.Symbol}");
+        }
+
+        /// <summary>
+        /// Gets historical consensus data from database
+        /// </summary>
+        private List<AnalystRatingAggregate> GetConsensusHistory(string symbol, int days)
+        {
+            // TODO: Implement database retrieval for consensus history
+            // For now, return empty list to allow compilation
+            LoggingService.Log("Info", $"GetConsensusHistory called for {symbol} for {days} days");
+            return new List<AnalystRatingAggregate>();
+        }
     }
-    
+
     // Extension method to clone AnalystRating objects
     public static class AnalystRatingExtensions
     {

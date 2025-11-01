@@ -1,14 +1,51 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Quantra.Models;
+using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 
 namespace Quantra.Repositories
 {
     public class PredictionAnalysisRepository
     {
-        // Remove in-memory _db, use database
+        private readonly QuantraDbContext _context;
+
+        public PredictionAnalysisRepository(QuantraDbContext context)
+        {
+            _context = context;
+        }
+
+        // Parameterless constructor for backward compatibility
+        public PredictionAnalysisRepository()
+        {
+            // For legacy code that doesn't use DI
+            // Prefer a relational SQL Server connection named "QuantraRelational" provided
+            // via environment variable or standard ConnectionStrings__QuantraRelational.
+            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+
+            string sqlConn = Environment.GetEnvironmentVariable("QUANTRA_RELATIONAL_CONNECTION");
+            if (string.IsNullOrWhiteSpace(sqlConn))
+            {
+                // Try ASP.NET style JSON environment variable name
+                sqlConn = Environment.GetEnvironmentVariable("ConnectionStrings__QuantraRelational");
+            }
+
+            if (!string.IsNullOrWhiteSpace(sqlConn))
+            {
+                // Use SQL Server if connection string provided
+                optionsBuilder.UseSqlServer(sqlConn);
+            }
+            else
+            {
+                // Fallback to local SQLite database for compatibility
+                optionsBuilder.UseSqlite("Data Source=Quantra.db");
+            }
+
+            _context = new QuantraDbContext(optionsBuilder.Options);
+        }
 
         public void SaveAnalysisResults(IEnumerable<PredictionAnalysisResult> results)
         {
@@ -17,93 +54,81 @@ namespace Quantra.Repositories
 
         public List<PredictionAnalysisResult> GetLatestAnalyses(int count = 50)
         {
+            return GetLatestAnalysesAsync(count).GetAwaiter().GetResult();
+        }
+
+        public async Task<List<PredictionAnalysisResult>> GetLatestAnalysesAsync(int count = 50)
+        {
             var result = new List<PredictionAnalysisResult>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                // Query using LINQ with EF Core
+                var latestPredictions = await _context.StockPredictions
+                    .AsNoTracking()
+                    .GroupBy(p => p.Symbol)
+                    .Select(g => g.OrderByDescending(p => p.CreatedDate).FirstOrDefault())
+                    .Where(p => p != null)
+                    .OrderByDescending(p => p.Confidence)
+                    .Take(count)
+                    .ToListAsync();
+
+                foreach (var prediction in latestPredictions)
                 {
-                    connection.Open();
-                    string sql = @"
-                        SELECT p1.Id, p1.Symbol, p1.PredictedAction, p1.Confidence, p1.CurrentPrice, p1.TargetPrice, p1.PotentialReturn, p1.CreatedDate
-                        FROM StockPredictions p1
-                        INNER JOIN (
-                            SELECT Symbol, MAX(CreatedDate) AS MaxDate
-                            FROM StockPredictions
-                            GROUP BY Symbol
-                        ) p2 ON p1.Symbol = p2.Symbol AND p1.CreatedDate = p2.MaxDate
-                        ORDER BY p1.Confidence DESC
-                        LIMIT @Count
-                    ";
-                    using (var command = new SQLiteCommand(sql, connection))
+                    var model = new PredictionAnalysisResult
                     {
-                        command.Parameters.AddWithValue("@Count", count);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var model = new PredictionAnalysisResult
-                                {
-                                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                                    Symbol = reader["Symbol"].ToString(),
-                                    PredictedAction = reader["PredictedAction"].ToString(),
-                                    Confidence = reader.GetDouble(reader.GetOrdinal("Confidence")),
-                                    CurrentPrice = reader.GetDouble(reader.GetOrdinal("CurrentPrice")),
-                                    TargetPrice = reader.GetDouble(reader.GetOrdinal("TargetPrice")),
-                                    PotentialReturn = reader.GetDouble(reader.GetOrdinal("PotentialReturn")),
-                                    TradingRule = null, // TradingRule column removed from query
-                                    AnalysisTime = reader.GetDateTime(reader.GetOrdinal("CreatedDate")),
-                                    Indicators = new Dictionary<string, double>()
-                                };
-                                // Load indicators for this prediction
-                                using (var indCmd = new SQLiteCommand("SELECT IndicatorName, IndicatorValue FROM PredictionIndicators WHERE PredictionId = @PredictionId", connection))
-                                {
-                                    indCmd.Parameters.AddWithValue("@PredictionId", model.Id);
-                                    using (var indReader = indCmd.ExecuteReader())
-                                    {
-                                        while (indReader.Read())
-                                        {
-                                            string name = indReader["IndicatorName"].ToString();
-                                            double value = Convert.ToDouble(indReader["IndicatorValue"]);
-                                            model.Indicators[name] = value;
-                                        }
-                                    }
-                                }
-                                result.Add(model);
-                            }
-                        }
+                        Id = prediction.Id,
+                        Symbol = prediction.Symbol,
+                        PredictedAction = prediction.PredictedAction,
+                        Confidence = prediction.Confidence,
+                        CurrentPrice = prediction.CurrentPrice,
+                        TargetPrice = prediction.TargetPrice,
+                        PotentialReturn = prediction.PotentialReturn,
+                        TradingRule = null, // Not stored in entity
+                        AnalysisTime = prediction.CreatedDate,
+                        Indicators = new Dictionary<string, double>()
+                    };
+
+                    // Load indicators for this prediction using EF Core
+                    var indicators = await _context.PredictionIndicators
+                        .AsNoTracking()
+                        .Where(i => i.PredictionId == prediction.Id)
+                        .ToListAsync();
+
+                    foreach (var indicator in indicators)
+                    {
+                        model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
                     }
+
+                    result.Add(model);
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Error retrieving latest analyses from database", ex.ToString());
+                Console.WriteLine($"Error retrieving latest analyses from database: {ex.Message}");
             }
             return result;
         }
 
         public List<string> GetSymbols()
         {
-            var symbols = new List<string>();
+            return GetSymbolsAsync().GetAwaiter().GetResult();
+        }
+
+        public async Task<List<string>> GetSymbolsAsync()
+        {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand("SELECT DISTINCT Symbol FROM StockPredictions", connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            symbols.Add(reader["Symbol"].ToString());
-                        }
-                    }
-                }
+                return await _context.StockPredictions
+                    .AsNoTracking()
+                    .Select(p => p.Symbol)
+                    .Distinct()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Error retrieving symbols from database", ex.ToString());
+                Console.WriteLine($"Error retrieving symbols from database: {ex.Message}");
+                return new List<string>();
             }
-            return symbols;
         }
 
         public PredictionAnalysisResult AnalyzeSymbol(string symbol)
@@ -136,40 +161,38 @@ namespace Quantra.Repositories
         // Returns historical price data for a symbol, ordered by date ascending
         public List<HistoricalPrice> GetHistoricalPrices(string symbol)
         {
-            var prices = new List<HistoricalPrice>();
+            return GetHistoricalPricesAsync(symbol).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Returns historical price data for a symbol, ordered by date ascending (async version)
+        /// Uses Entity Framework Core to query the HistoricalPrices table.
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <returns>List of historical prices ordered by date</returns>
+        public async Task<List<HistoricalPrice>> GetHistoricalPricesAsync(string symbol)
+        {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
-                {
-                    connection.Open();
-                    string sql = @"SELECT Date, Open, High, Low, Close, Volume, AdjClose FROM HistoricalPrices WHERE Symbol = @Symbol ORDER BY Date ASC";
-                    using (var command = new SQLiteCommand(sql, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", symbol);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                prices.Add(new HistoricalPrice
-                                {
-                                    Date = reader.GetDateTime(reader.GetOrdinal("Date")),
-                                    Open = reader.GetDouble(reader.GetOrdinal("Open")),
-                                    High = reader.GetDouble(reader.GetOrdinal("High")),
-                                    Low = reader.GetDouble(reader.GetOrdinal("Low")),
-                                    Close = reader.GetDouble(reader.GetOrdinal("Close")),
-                                    Volume = reader.GetInt64(reader.GetOrdinal("Volume")),
-                                    AdjClose = reader.GetDouble(reader.GetOrdinal("AdjClose"))
-                                });
-                            }
-                        }
-                    }
-                }
+                // Query the HistoricalPrices table using raw SQL via EF Core
+                // This assumes the HistoricalPrices table exists in the database
+                // Using SqlQuery with FormattableString for proper parameterization
+                var prices = await _context.Database
+                    .SqlQuery<HistoricalPrice>($@"
+                         SELECT Date, Open, High, Low, Close, Volume, AdjClose 
+                         FROM HistoricalPrices 
+                         WHERE Symbol = {symbol} 
+                         ORDER BY Date ASC")
+                    .ToListAsync();
+
+                return prices;
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error retrieving historical prices for {symbol}", ex.ToString());
+                // Log error if logging is available
+                Console.WriteLine($"Error retrieving historical prices for {symbol}: {ex.Message}");
+                return new List<HistoricalPrice>();
             }
-            return prices;
         }
     }
 }

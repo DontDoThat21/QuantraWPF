@@ -6,6 +6,8 @@ using System.Data.SQLite;
 using Dapper; // Add Dapper namespace import
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.DAL.Services
 {
@@ -46,7 +48,7 @@ namespace Quantra.DAL.Services
                 if (tableExists == 0)
                 {
                     // Create the OrderHistory table if it doesn't exist
-                    CreateOrderHistoryTable(connection);
+                    CreateOrderHistoryTable();
                     return transactions; // Return empty list as the table was just created
                 }
                 
@@ -99,26 +101,19 @@ namespace Quantra.DAL.Services
             return transactions;
         }
 
-        private void CreateOrderHistoryTable(SQLiteConnection connection)
+        private void CreateOrderHistoryTable()
         {
-            // Create the OrderHistory table if it doesn't exist
-            var createTableCommand = new SQLiteCommand(@"
-                CREATE TABLE OrderHistory (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Symbol TEXT NOT NULL,
-                    OrderType TEXT NOT NULL,
-                    Quantity INTEGER NOT NULL,
-                    Price REAL NOT NULL,
-                    StopLoss REAL,
-                    TakeProfit REAL,
-                    IsPaperTrade INTEGER NOT NULL,
-                    Status TEXT NOT NULL,
-                    PredictionSource TEXT,
-                    Timestamp DATETIME NOT NULL
-                )", connection);
-            
-            createTableCommand.ExecuteNonQuery();
-            //DatabaseMonolith.Log("Info", "Created OrderHistory table");
+            // Entity Framework will create the OrderHistory table automatically
+            // This method ensures the database is initialized with all required tables
+            var options = new DbContextOptionsBuilder<QuantraDbContext>()
+                .UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;")
+                .Options;
+
+            using (var dbContext = new QuantraDbContext(options))
+            {
+                dbContext.Initialize();
+            }
+            //DatabaseMonolith.Log("Info", "Ensured OrderHistory table exists via Entity Framework");
         }
 
         // Sample data method preserved for reference or testing

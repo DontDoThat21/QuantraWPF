@@ -1,14 +1,14 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Quantra.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System.Threading;
-using Newtonsoft.Json.Linq;
 using System.IO;
-using Quantra.Models;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Quantra.DAL.Services
 {
@@ -17,24 +17,27 @@ namespace Quantra.DAL.Services
         private readonly HttpClient _client;
         private readonly string _apiKey;
         private readonly SemaphoreSlim _apiSemaphore;
-        
+        private readonly IUserSettingsService _userSettingsService;
+
         // Standard API rate limits
         private const int StandardApiCallsPerMinute = 75;
         private const int PremiumApiCallsPerMinute = 600; // Premium tier rate limit (can be adjusted based on plan)
-        
+        private const string StockCacheKey = "stock_symbols_cache";
+
         // Current rate limit - will be determined based on API key type one day
         private int _maxApiCallsPerMinute;
-        
+
         public static int ApiCallLimit => Instance?._maxApiCallsPerMinute ?? StandardApiCallsPerMinute;
-        
+
         // Property to check if using premium API
         public bool IsPremiumKey => IsPremiumApiKey(_apiKey);
-        
+
         // Singleton pattern for easy access
         private static AlphaVantageService Instance { get; set; }
 
-        public AlphaVantageService()
+        public AlphaVantageService(IUserSettingsService userSettingsService)
         {
+            _userSettingsService = userSettingsService;
             _client = new HttpClient
             {
                 BaseAddress = new Uri("https://www.alphavantage.co/")
@@ -42,7 +45,7 @@ namespace Quantra.DAL.Services
             _apiKey = GetApiKey();
             _apiSemaphore = new SemaphoreSlim(1, 1);
             _maxApiCallsPerMinute = StandardApiCallsPerMinute;
-            
+
             Instance = this;
         }
         
@@ -63,7 +66,13 @@ namespace Quantra.DAL.Services
 
         public int GetCurrentDbApiCallCount()
         {
-            return DatabaseMonolith.GetAlphaVantageApiUsageCount(DateTime.UtcNow);
+            return GetAlphaVantageApiUsageCount(DateTime.UtcNow);
+        }
+
+        public int GetAlphaVantageApiUsageCount(DateTime utcNow)
+        {
+            // TODO: Implement API usage tracking if needed
+            return 0;
         }
 
         public void LogApiUsage()
@@ -97,7 +106,7 @@ namespace Quantra.DAL.Services
             // Defensive: If the response is not valid JSON for T, return default or throw a more helpful error
             try
             {
-                return JsonSerializer.Deserialize<T>(content);
+                return JsonConvert.DeserializeObject<T>(content);
             }
             catch (JsonException ex)
             {
@@ -203,17 +212,8 @@ namespace Quantra.DAL.Services
 
         public async Task<List<string>> GetAllStockSymbols()
         {
-            // First check cache
-            var cachedSymbols = DatabaseMonolith.GetCachedSymbols();
-            if (cachedSymbols != null && cachedSymbols.Any())
-            {
-                // Ensure VIX is included in cached symbols
-                if (!cachedSymbols.Contains("VIX"))
-                {
-                    cachedSymbols.Add("VIX");
-                }
-                return cachedSymbols;
-            }
+            // TODO: Implement caching via UserSettingsService if needed
+            // var cachedSymbols = _userSettingsService.GetUserPreference(StockCacheKey, null);
 
             await WaitForApiLimit();
             var endpoint = $"query?function=LISTING_STATUS&apikey={_apiKey}";
@@ -236,12 +236,30 @@ namespace Quantra.DAL.Services
                 }
 
                 // Cache the symbols
-                DatabaseMonolith.CacheSymbols(symbols);
+                CacheSymbols(symbols);
                 return symbols;
             }
 
             // Return VIX as a fallback if API fails
             return new List<string> { "VIX" };
+        }
+
+        public void CacheSymbols(List<string> symbols)
+        {
+            if (symbols == null || !symbols.Any())
+                return;
+
+            try
+            {
+                // Store in UserPreferences table with timestamp
+                string symbolsJson = JsonConvert.SerializeObject(symbols);
+                _userSettingsService.SaveUserPreference(StockCacheKey, symbolsJson);
+                LoggingService.Log("Info", $"Cached {symbols.Count} symbols to database");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogErrorWithContext(ex, "Failed to cache symbols");
+            }
         }
 
         public async Task<double> GetRSI(string symbol, string interval = "1min")
@@ -393,10 +411,7 @@ namespace Quantra.DAL.Services
 
         public async Task<List<string>> GetMostVolatileStocksAsync()
         {
-            // Check cache first
-            var cachedVolatileStocks = DatabaseMonolith.GetCachedVolatileStocks();
-            if (cachedVolatileStocks != null && cachedVolatileStocks.Any())
-                return cachedVolatileStocks;
+            // TODO: Implement caching if needed
 
             await WaitForApiLimit();
             var endpoint = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
@@ -416,8 +431,7 @@ namespace Quantra.DAL.Services
                 if (data["top_losers"] is JArray losers)
                     volatileStocks.AddRange(losers.Select(l => l["ticker"]?.ToString()).Where(ticker => !string.IsNullOrEmpty(ticker)));
 
-                // Cache the volatile stocks
-                DatabaseMonolith.CacheVolatileStocks(volatileStocks);
+                // TODO: Cache the volatile stocks if needed
                 return volatileStocks;
             }
 
@@ -918,39 +932,15 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var (stockData, timestamp) = await DatabaseMonolith.GetStockDataWithTimestamp(symbol, timeRange);
-                
-                if (stockData?.Dates != null && stockData.Dates.Count > 0)
-                {
-                    var historicalPrices = new List<HistoricalPrice>();
-                    
-                    for (int i = 0; i < stockData.Dates.Count && i < stockData.Prices.Count; i++)
-                    {
-                        // Use Close prices for High/Low/Open if not available
-                        var price = stockData.Prices[i];
-                        var volume = stockData.Volumes != null && i < stockData.Volumes.Count ? (long)stockData.Volumes[i] : 1000;
-                        
-                        historicalPrices.Add(new HistoricalPrice
-                        {
-                            Date = stockData.Dates[i],
-                            Open = price,
-                            High = price * 1.01, // Approximate high as 1% above close
-                            Low = price * 0.99,  // Approximate low as 1% below close
-                            Close = price,
-                            Volume = volume,
-                            AdjClose = price // what is adjusted close used for?
-                        });
-                    }
-                    
-                    // Sort by date to ensure chronological order
-                    return historicalPrices.OrderBy(h => h.Date).ToList();
-                }
+                // Try to get cached data from database
+                // Note: GetStockDataWithTimestamp was removed - caching not implemented
+                // Return empty list to fallback to API call
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
+                LoggingService.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
             }
-            
+
             return new List<HistoricalPrice>();
         }
 
@@ -1307,14 +1297,9 @@ namespace Quantra.DAL.Services
             if (string.IsNullOrWhiteSpace(symbol))
                 return null;
 
-            // Check cache first
-            var cachedPeRatio = DatabaseMonolith.GetCachedFundamentalData(symbol, "PE_RATIO", 24);
-            if (cachedPeRatio.HasValue)
-            {
-                return cachedPeRatio.Value;
-            }
+            // TODO: Implement caching via UserSettingsService if needed
 
-            // If not in cache, fetch from API
+            // Fetch from API
             await WaitForApiLimit();
             var endpoint = $"query?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
             await LogApiCall("OVERVIEW", symbol);
@@ -1326,14 +1311,11 @@ namespace Quantra.DAL.Services
                 var data = JObject.Parse(content);
                 if (data["PERatio"] != null && double.TryParse(data["PERatio"].ToString(), out double peRatio))
                 {
-                    // Cache the result
-                    DatabaseMonolith.CacheFundamentalData(symbol, "PE_RATIO", peRatio);
+                    // TODO: Cache the result
                     return peRatio;
                 }
             }
 
-            // Cache null result to avoid repeated API calls for invalid symbols
-            DatabaseMonolith.CacheFundamentalData(symbol, "PE_RATIO", null);
             return null;
         }
         
@@ -1342,77 +1324,101 @@ namespace Quantra.DAL.Services
         private static List<double> CalculateADXInternal(List<double> highs, List<double> lows, List<double> closes, int period = 14)
         {
             var result = new List<double>();
-            int length = Math.Min(Math.Min(highs.Count, lows.Count), closes.Count);
-            
-            if (length < period + 1)
-            {
-                for (int i = 0; i < length; i++)
-                    result.Add(double.NaN);
-                return result;
-            }
+       int length = Math.Min(Math.Min(highs.Count, lows.Count), closes.Count);
+       
+ if (length < period + 1)
+       {
+ for (int i = 0; i < length; i++)
+        result.Add(double.NaN);
+ return result;
+   }
             
             // Calculate True Range and Directional Movement
-            var trueRanges = new List<double>();
-            var plusDMs = new List<double>();
+ var trueRanges = new List<double>();
+         var plusDMs = new List<double>();
             var minusDMs = new List<double>();
+       
+        for (int i = 1; i < length; i++)
+     {
+      // True Range
+    double tr1 = highs[i] - lows[i];
+            double tr2 = Math.Abs(highs[i] - closes[i - 1]);
+     double tr3 = Math.Abs(lows[i] - closes[i - 1]);
+    double tr = Math.Max(tr1, Math.Max(tr2, tr3));
+      trueRanges.Add(tr);
             
-            for (int i = 1; i < length; i++)
-            {
-                // True Range
-                double tr1 = highs[i] - lows[i];
-                double tr2 = Math.Abs(highs[i] - closes[i - 1]);
-                double tr3 = Math.Abs(lows[i] - closes[i - 1]);
-                double tr = Math.Max(tr1, Math.Max(tr2, tr3));
-                trueRanges.Add(tr);
-                
                 // Directional Movement
-                double highDiff = highs[i] - highs[i - 1];
-                double lowDiff = lows[i - 1] - lows[i];
+        double highDiff = highs[i] - highs[i - 1];
+    double lowDiff = lows[i - 1] - lows[i];
+     
+    double plusDM = highDiff > lowDiff && highDiff > 0 ? highDiff : 0;
+   double minusDM = lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0;
                 
-                double plusDM = highDiff > lowDiff && highDiff > 0 ? highDiff : 0;
-                double minusDM = lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0;
-                
-                plusDMs.Add(plusDM);
-                minusDMs.Add(minusDM);
+   plusDMs.Add(plusDM);
+     minusDMs.Add(minusDM);
+         }
+  
+            // Smooth the values using Wilder's smoothing (EMA-like)
+ var smoothedTRs = new List<double>();
+            var smoothedPlusDMs = new List<double>();
+            var smoothedMinusDMs = new List<double>();
+            
+    if (trueRanges.Count >= period)
+  {
+      // First smoothed value is SMA
+  double trSum = 0, plusDMSum = 0, minusDMSum = 0;
+     for (int i = 0; i < period; i++)
+         {
+              trSum += trueRanges[i];
+       plusDMSum += plusDMs[i];
+   minusDMSum += minusDMs[i];
+   }
+        
+         smoothedTRs.Add(trSum / period);
+      smoothedPlusDMs.Add(plusDMSum / period);
+    smoothedMinusDMs.Add(minusDMSum / period);
+             
+         // Subsequent values use Wilder's smoothing
+ for (int i = period; i < trueRanges.Count; i++)
+     {
+     smoothedTRs.Add((smoothedTRs.Last() * (period - 1) + trueRanges[i]) / period);
+        smoothedPlusDMs.Add((smoothedPlusDMs.Last() * (period - 1) + plusDMs[i]) / period);
+          smoothedMinusDMs.Add((smoothedMinusDMs.Last() * (period - 1) + minusDMs[i]) / period);
+       }
             }
+       
+       // Calculate +DI and -DI
+    var plusDIs = new List<double>();
+      var minusDIs = new List<double>();
             
-            // Calculate smoothed versions using EMA
-            var smoothedTRs = CalculateEMAInternal(trueRanges, period);
-            var smoothedPlusDMs = CalculateEMAInternal(plusDMs, period);
-            var smoothedMinusDMs = CalculateEMAInternal(minusDMs, period);
-            
-            // Calculate +DI and -DI
-            var plusDIs = new List<double>();
-            var minusDIs = new List<double>();
-            
-            for (int i = 0; i < smoothedTRs.Count; i++)
-            {
+    for (int i = 0; i < smoothedTRs.Count; i++)
+         {
                 double plusDI = smoothedTRs[i] == 0 ? 0 : smoothedPlusDMs[i] / smoothedTRs[i] * 100;
-                double minusDI = smoothedTRs[i] == 0 ? 0 : smoothedMinusDMs[i] / smoothedTRs[i] * 100;
-                
-                plusDIs.Add(plusDI);
-                minusDIs.Add(minusDI);
-            }
-            
+ double minusDI = smoothedTRs[i] == 0 ? 0 : smoothedMinusDMs[i] / smoothedTRs[i] * 100;
+          
+      plusDIs.Add(plusDI);
+            minusDIs.Add(minusDI);
+        }
+       
             // Calculate DX
-            var dxValues = new List<double>();
-            for (int i = 0; i < plusDIs.Count; i++)
-            {
-                double diSum = plusDIs[i] + minusDIs[i];
-                double dx = diSum == 0 ? 0 : Math.Abs(plusDIs[i] - minusDIs[i]) / diSum * 100;
-                dxValues.Add(dx);
+ var dxValues = new List<double>();
+      for (int i = 0; i < plusDIs.Count; i++)
+  {
+    double diSum = plusDIs[i] + minusDIs[i];
+         double dx = diSum == 0 ? 0 : Math.Abs(plusDIs[i] - minusDIs[i]) / diSum * 100;
+ dxValues.Add(dx);
             }
+     
+        // Calculate ADX (EMA of DX)
+     var adxValues = CalculateEMAInternal(dxValues, period);
             
-            // Calculate ADX (EMA of DX)
-            var adxValues = CalculateEMAInternal(dxValues, period);
-            
-            // Pad with NaN for initial periods
+      // Pad with NaN for initial periods
             for (int i = 0; i < period; i++)
-                result.Add(double.NaN);
+     result.Add(double.NaN);
             
             result.AddRange(adxValues);
-            return result;
-        }
+ return result;
+  }
         
         private static List<double> CalculateATRInternal(List<double> highs, List<double> lows, List<double> closes, int period = 14)
         {

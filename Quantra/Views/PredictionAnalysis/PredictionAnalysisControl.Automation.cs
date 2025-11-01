@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Quantra.DAL.Services.Interfaces;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 using Quantra;
 using System.Windows.Threading;  // Add this explicit namespace reference
 using Quantra.Adapters; // Add this to use the PredictionModelAdapter

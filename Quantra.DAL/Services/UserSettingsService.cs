@@ -1,39 +1,39 @@
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+//using System.Data.SQLite;
 using Quantra.Models;
 using Newtonsoft.Json;
 
 namespace Quantra.DAL.Services
 {
-    public static class UserSettingsService
+    public class UserSettingsService : IUserSettingsService
     {
-        public static void SaveUserSettings(UserSettings settings)
+        public void SaveUserSettings(UserSettings settings)
         {
             DatabaseMonolith.SaveUserSettings(settings);
         }
 
-        public static UserSettings GetUserSettings()
+        public UserSettings GetUserSettings()
         {
             return DatabaseMonolith.GetUserSettings();
         }
 
-        public static string GetUserPreference(string key, string defaultValue = null)
+        public string GetUserPreference(string key, string defaultValue = null)
         {
             return DatabaseMonolith.GetUserPreference(key, defaultValue);
         }
 
-        public static void SaveUserPreference(string key, string value)
+        public void SaveUserPreference(string key, string value)
         {
             DatabaseMonolith.SaveUserPreference(key, value);
         }
 
-        public static Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
+        public Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
         {
             return DatabaseMonolith.GetRememberedAccounts();
         }
 
-        public static void RememberAccount(string username, string password, string pin)
+        public void RememberAccount(string username, string password, string pin)
         {
             DatabaseMonolith.RememberAccount(username, password, pin);
         }
@@ -41,7 +41,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Get the active benchmark configuration
         /// </summary>
-        public static (string type, string id) GetActiveBenchmark()
+        public (string type, string id) GetActiveBenchmark()
         {
             var settings = GetUserSettings();
             return (settings.ActiveBenchmarkType ?? "SPY", settings.ActiveBenchmarkId);
@@ -50,7 +50,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Set the active benchmark (standard benchmark like SPY, QQQ, etc.)
         /// </summary>
-        public static void SetActiveBenchmark(string benchmarkType)
+        public void SetActiveBenchmark(string benchmarkType)
         {
             var settings = GetUserSettings();
             settings.ActiveBenchmarkType = benchmarkType;
@@ -61,7 +61,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Set the active custom benchmark
         /// </summary>
-        public static void SetActiveCustomBenchmark(string customBenchmarkId)
+        public void SetActiveCustomBenchmark(string customBenchmarkId)
         {
             var settings = GetUserSettings();
             settings.ActiveBenchmarkType = "CUSTOM";
@@ -72,7 +72,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Save the window state (maximized/normal) for restoration on next startup
         /// </summary>
-        public static void SaveWindowState(System.Windows.WindowState windowState)
+        public void SaveWindowState(System.Windows.WindowState windowState)
         {
             var settings = GetUserSettings();
             if (settings.RememberWindowState)
@@ -85,7 +85,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Get the saved window state for restoration
         /// </summary>
-        public static System.Windows.WindowState? GetSavedWindowState()
+        public System.Windows.WindowState? GetSavedWindowState()
         {
             var settings = GetUserSettings();
             if (settings.RememberWindowState)

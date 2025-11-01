@@ -17,7 +17,6 @@ using Quantra.CrossCutting.Monitoring;
 using Quantra.Utilities;
 using Quantra.DAL.Services;
 using System.Reflection;
-using Quantra.Services;
 
 namespace Quantra
 {
