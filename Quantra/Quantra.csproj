@@ -66,17 +66,17 @@
 
   <ItemGroup>
     <Compile Remove="Controls\**" />
+    <Compile Remove="Data\**" />
     <EmbeddedResource Remove="Controls\**" />
+    <EmbeddedResource Remove="Data\**" />
     <None Remove="Controls\**" />
+    <None Remove="Data\**" />
     <Page Remove="Controls\**" />
+    <Page Remove="Data\**" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="quantraIcon.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\" />
   </ItemGroup>
 
   <ItemGroup>
