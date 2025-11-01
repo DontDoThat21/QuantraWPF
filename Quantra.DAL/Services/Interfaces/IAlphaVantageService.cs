@@ -35,6 +35,9 @@ namespace Quantra.DAL.Services.Interfaces
         Task<List<HistoricalPrice>> GetCryptoHistoricalData(string symbol, string market = "USD", string interval = "daily");
         Task<List<HistoricalPrice>> GetExtendedHistoricalData(string symbol, string interval = "daily", string outputSize = "full", string dataType = "json");
         
+        // Order history management
+        void AddOrderToHistory(OrderModel order);
+        
         // Property to check if using premium API
         bool IsPremiumKey { get; }
     }

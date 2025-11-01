@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Data.SQLite;
+using Microsoft.Data.SqlClient;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,18 +22,27 @@ namespace Quantra.CrossCutting.ErrorHandling
             typeof(WebException),
             typeof(HttpRequestException),
             typeof(IOException),
-            typeof(SQLiteException)
+            typeof(SqlException)
         };
 
-        // Error codes that typically indicate transient issues for SQLite
-        private static readonly int[] _transientSqliteErrorCodes = new[]
+        // Error codes that typically indicate transient issues for SQL Server
+        private static readonly int[] _transientSqlErrorCodes = new[]
         {
-            5,   // SQLite_BUSY
-            6,   // SQLite_LOCKED
-            261, // SQLite_BUSY_RECOVERY
-            262, // SQLite_LOCKED_SHAREDCACHE
-            517, // SQLite_BUSY_SNAPSHOT
-            1555 // SQLite_BUSY_TIMEOUT
+            -2,     // Timeout
+            -1,     // Connection broken
+            2,      // Network error
+            53,     // Connection broken
+            64,     // Server error
+            233,    // Connection initialization error
+            10053,  // Transport-level error
+            10054,  // Connection reset by peer
+            10060,  // Connection timeout
+            40197,  // Service error processing request
+            40501,  // Service busy
+            40613,  // Database unavailable
+            49918,  // Cannot process request
+            49919,  // Cannot process create or update request
+            49920   // Cannot process request (too many operations)
         };
 
         /// <summary>
@@ -48,11 +57,19 @@ namespace Quantra.CrossCutting.ErrorHandling
             var exceptionType = exception.GetType();
             if (_transientExceptionTypes.Contains(exceptionType))
             {
-                // For SQLite exceptions, check the error code
-                if (exceptionType == typeof(SQLiteException))
+                // For SQL Server exceptions, check the error code
+                if (exceptionType == typeof(SqlException))
                 {
-                    var sqliteEx = (SQLiteException)exception;
-                    return _transientSqliteErrorCodes.Contains(sqliteEx.ErrorCode);
+                    var sqlEx = (SqlException)exception;
+                    // Check if any of the errors in the exception collection are transient
+                    foreach (SqlError error in sqlEx.Errors)
+                    {
+                        if (_transientSqlErrorCodes.Contains(error.Number))
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
                 }
                 
                 return true;

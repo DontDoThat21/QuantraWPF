@@ -36,6 +36,7 @@
     <!-- Resilience and database providers used by ErrorHandling -->
     <PackageReference Include="Polly" Version="8.4.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.5" />
   </ItemGroup>
 
 </Project>

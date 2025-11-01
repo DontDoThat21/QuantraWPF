@@ -9,6 +9,8 @@ using Newtonsoft.Json.Linq;
 using System.IO;
 using Quantra.Models;
 using System.Net;
+using Quantra.DAL.Services.Interfaces;
+using Microsoft.Data.SqlClient;
 
 namespace Quantra.DAL.Services
 {
@@ -17,6 +19,7 @@ namespace Quantra.DAL.Services
         private readonly HttpClient _client;
         private readonly string _apiKey;
         private readonly SemaphoreSlim _apiSemaphore;
+        private readonly ISettingsService _settingsService;
         
         // Standard API rate limits
         private const int StandardApiCallsPerMinute = 75;
@@ -33,8 +36,9 @@ namespace Quantra.DAL.Services
         // Singleton pattern for easy access
         private static AlphaVantageService Instance { get; set; }
 
-        public AlphaVantageService()
+        public AlphaVantageService(ISettingsService settingsService)
         {
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _client = new HttpClient
             {
                 BaseAddress = new Uri("https://www.alphavantage.co/")
@@ -757,9 +761,23 @@ namespace Quantra.DAL.Services
             }
         }
 
-        public static string GetApiKey()
+        public string GetApiKey()
         {
-            // Get API key from configuration or environment
+            // Try to get API key from settings service first
+            try
+            {
+                var defaultProfile = _settingsService?.GetDefaultSettingsProfile();
+                if (defaultProfile != null && !string.IsNullOrWhiteSpace(defaultProfile.AlphaVantageApiKey))
+                {
+                    return defaultProfile.AlphaVantageApiKey;
+                }
+            }
+            catch
+            {
+                // Fall through to environment variable if settings service fails
+            }
+            
+            // Get API key from environment variable as fallback
             return Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY") 
                 ?? "686FIILJC6K24MAS"; // TODO: remove me
         }
@@ -1767,6 +1785,101 @@ namespace Quantra.DAL.Services
                 return result;
             
             return DateTime.Now;
+        }
+
+        #endregion
+
+        #region Order History Management
+
+        /// <summary>
+        /// Adds an order to the order history database
+        /// </summary>
+        /// <param name="order">The order to add to history</param>
+        public void AddOrderToHistory(OrderModel order)
+        {
+            if (order == null)
+            {
+                Log("Error", "Cannot add null order to history");
+                return;
+            }
+
+            try
+            {
+                // Get connection string from DatabaseMonolith or configuration
+                string connectionString = GetSqlServerConnectionString();
+                
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = new SqlCommand())
+                    {
+                        command.Connection = connection;
+                        command.CommandText = @"
+                            INSERT INTO OrderHistory (
+                                Symbol, OrderType, Quantity, Price, StopLoss, TakeProfit, 
+                                IsPaperTrade, Status, PredictionSource, Timestamp
+                            )
+                            VALUES (
+                                @Symbol, @OrderType, @Quantity, @Price, @StopLoss, @TakeProfit, 
+                                @IsPaperTrade, @Status, @PredictionSource, @Timestamp
+                            );";
+
+                        command.Parameters.AddWithValue("@Symbol", order.Symbol);
+                        command.Parameters.AddWithValue("@OrderType", order.OrderType);
+                        command.Parameters.AddWithValue("@Quantity", order.Quantity);
+                        command.Parameters.AddWithValue("@Price", order.Price);
+                        command.Parameters.AddWithValue("@StopLoss", order.StopLoss);
+                        command.Parameters.AddWithValue("@TakeProfit", order.TakeProfit);
+                        command.Parameters.AddWithValue("@IsPaperTrade", order.IsPaperTrade ? 1 : 0);
+                        command.Parameters.AddWithValue("@Status", order.Status);
+                        command.Parameters.AddWithValue("@PredictionSource", order.PredictionSource ?? string.Empty);
+                        command.Parameters.AddWithValue("@Timestamp", order.Timestamp);
+
+                        command.ExecuteNonQuery();
+                    }
+                }
+
+                Log("Info", $"Order added to history: {order.Symbol} {order.OrderType} {order.Quantity} @ {order.Price:C2}");
+            }
+            catch (Exception ex)
+            {
+                DatabaseMonolith.LogErrorWithContext(ex, $"Failed to add order to history: {order.Symbol}");
+            }
+        }
+
+        
+        /// <summary>
+        /// Log a message (convenience method that delegates to DatabaseMonolith)
+        /// </summary>
+        private void Log(string level, string message, string details = null)
+        {
+            DatabaseMonolith.Log(level, message, details);
+        }
+
+        /// <summary>
+        /// Gets the SQL Server connection string from configuration or DatabaseMonolith
+        /// </summary>
+        /// <returns>SQL Server connection string</returns>
+        private string GetSqlServerConnectionString()
+        {
+            // For now, return a connection string that can be configured
+            // In a real implementation, this would come from appsettings.json or DatabaseMonolith
+            // TODO: Update this to use actual SQL Server configuration
+            string server = Environment.GetEnvironmentVariable("SQL_SERVER") ?? "localhost";
+            string database = Environment.GetEnvironmentVariable("SQL_DATABASE") ?? "Quantra";
+            string userId = Environment.GetEnvironmentVariable("SQL_USER") ?? "sa";
+            string password = Environment.GetEnvironmentVariable("SQL_PASSWORD") ?? "";
+            
+            // Use integrated security if no password is provided
+            if (string.IsNullOrEmpty(password))
+            {
+                return $"Server={server};Database={database};Integrated Security=true;TrustServerCertificate=true;";
+            }
+            else
+            {
+                return $"Server={server};Database={database};User Id={userId};Password={password};TrustServerCertificate=true;";
+            }
         }
 
         #endregion

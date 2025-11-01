@@ -107,7 +107,9 @@ namespace Quantra.CrossCutting.ErrorHandling
                 }
                 
                 // Avoid direct reference to external packages; match by type name
-                if (string.Equals(ex.GetType().Name, "SQLiteException", StringComparison.Ordinal) || ex.Message.Contains("database", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(ex.GetType().Name, "SqlException", StringComparison.Ordinal) || 
+                    string.Equals(ex.GetType().Name, "SQLiteException", StringComparison.Ordinal) ||
+                    ex.Message.Contains("database", StringComparison.OrdinalIgnoreCase))
                 {
                     return ErrorCategory.DatabaseError;
                 }
