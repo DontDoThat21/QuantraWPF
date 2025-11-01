@@ -772,14 +772,25 @@ namespace Quantra.DAL.Services
                     return defaultProfile.AlphaVantageApiKey;
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fall through to environment variable if settings service fails
+                // Log the error but continue to environment variable fallback
+                DatabaseMonolith.Log("Warning", "Failed to retrieve API key from settings service", ex.Message);
             }
             
             // Get API key from environment variable as fallback
-            return Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY") 
-                ?? "686FIILJC6K24MAS"; // TODO: remove me
+            var apiKey = Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY");
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                return apiKey;
+            }
+            
+            // Log warning if no API key is configured
+            DatabaseMonolith.Log("Warning", "No Alpha Vantage API key configured. API calls will fail.", 
+                "Please configure AlphaVantageApiKey in settings or set ALPHA_VANTAGE_API_KEY environment variable");
+            
+            // Return empty string instead of hardcoded key
+            return string.Empty;
         }
         
         /// <summary>
@@ -1795,6 +1806,11 @@ namespace Quantra.DAL.Services
         /// Adds an order to the order history database
         /// </summary>
         /// <param name="order">The order to add to history</param>
+        /// <remarks>
+        /// This method currently uses a separate SQL Server connection.
+        /// Once DatabaseMonolith is fully migrated to SQL Server, this should use
+        /// DatabaseMonolith's connection infrastructure for consistency.
+        /// </remarks>
         public void AddOrderToHistory(OrderModel order)
         {
             if (order == null)
@@ -1858,21 +1874,35 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets the SQL Server connection string from configuration or DatabaseMonolith
+        /// Gets the SQL Server connection string from DatabaseMonolith or configuration
         /// </summary>
         /// <returns>SQL Server connection string</returns>
         private string GetSqlServerConnectionString()
         {
-            // For now, return a connection string that can be configured
-            // In a real implementation, this would come from appsettings.json or DatabaseMonolith
-            // TODO: Update this to use actual SQL Server configuration
-            string server = Environment.GetEnvironmentVariable("SQL_SERVER") ?? "localhost";
-            string database = Environment.GetEnvironmentVariable("SQL_DATABASE") ?? "Quantra";
-            string userId = Environment.GetEnvironmentVariable("SQL_USER") ?? "sa";
-            string password = Environment.GetEnvironmentVariable("SQL_PASSWORD") ?? "";
+            // TODO: This should be centralized in DatabaseMonolith or a configuration service
+            // For now, this provides a basic SQL Server connection string from environment variables
+            // Once DatabaseMonolith is fully migrated to SQL Server, use its connection infrastructure
             
-            // Use integrated security if no password is provided
-            if (string.IsNullOrEmpty(password))
+            string server = Environment.GetEnvironmentVariable("SQL_SERVER");
+            string database = Environment.GetEnvironmentVariable("SQL_DATABASE");
+            string userId = Environment.GetEnvironmentVariable("SQL_USER");
+            string password = Environment.GetEnvironmentVariable("SQL_PASSWORD");
+            
+            // Validate required configuration
+            if (string.IsNullOrWhiteSpace(server))
+            {
+                DatabaseMonolith.Log("Warning", "SQL_SERVER environment variable not set, using default 'localhost'");
+                server = "localhost";
+            }
+            
+            if (string.IsNullOrWhiteSpace(database))
+            {
+                DatabaseMonolith.Log("Warning", "SQL_DATABASE environment variable not set, using default 'Quantra'");
+                database = "Quantra";
+            }
+            
+            // Use integrated security if no credentials provided
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password))
             {
                 return $"Server={server};Database={database};Integrated Security=true;TrustServerCertificate=true;";
             }
