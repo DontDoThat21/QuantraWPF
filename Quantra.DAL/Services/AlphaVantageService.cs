@@ -1819,6 +1819,25 @@ namespace Quantra.DAL.Services
                 return;
             }
 
+            // Validate required properties
+            if (string.IsNullOrWhiteSpace(order.Symbol))
+            {
+                Log("Error", "Cannot add order to history: Symbol is required");
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(order.OrderType))
+            {
+                Log("Error", $"Cannot add order to history for {order.Symbol}: OrderType is required");
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(order.Status))
+            {
+                Log("Error", $"Cannot add order to history for {order.Symbol}: Status is required");
+                return;
+            }
+
             try
             {
                 // Get connection string from DatabaseMonolith or configuration
@@ -1885,6 +1904,12 @@ namespace Quantra.DAL.Services
         /// Gets the SQL Server connection string from DatabaseMonolith or configuration
         /// </summary>
         /// <returns>SQL Server connection string</returns>
+        /// <remarks>
+        /// Security considerations:
+        /// - TrustServerCertificate=true bypasses SSL certificate validation (development only)
+        /// - Environment variables should be properly secured in production
+        /// - Consider using Azure Key Vault or similar secure configuration providers
+        /// </remarks>
         private string GetSqlServerConnectionString()
         {
             // TODO: This should be centralized in DatabaseMonolith or a configuration service
@@ -1916,6 +1941,8 @@ namespace Quantra.DAL.Services
             }
             else
             {
+                // NOTE: TrustServerCertificate=true is for development only
+                // In production, use proper SSL certificate validation
                 return $"Server={server};Database={database};User Id={userId};Password={password};TrustServerCertificate=true;";
             }
         }
