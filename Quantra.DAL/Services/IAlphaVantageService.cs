@@ -21,4 +21,10 @@ public interface IAlphaVantageService
     /// <param name="symbol">The stock symbol.</param>
     /// <returns>A list of indicator data.</returns>
     Task<List<StockIndicator>> GetIndicatorsAsync(string symbol);
+    
+    /// <summary>
+    /// Adds an order to the order history database.
+    /// </summary>
+    /// <param name="order">The order to add to history.</param>
+    void AddOrderToHistory(OrderModel order);
 }
