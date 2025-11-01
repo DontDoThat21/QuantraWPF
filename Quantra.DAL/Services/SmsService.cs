@@ -23,7 +23,7 @@ namespace Quantra.DAL.Services
             {
                 // For now, we'll just log the SMS that would be sent
                 // In a real implementation, this would call an SMS API service
-                DatabaseMonolith.Log("Info", $"SMS would be sent to {to}", $"Message: {message}");
+                //DatabaseMonolith.Log("Info", $"SMS would be sent to {to}", $"Message: {message}");
                 
                 // Simulate API call latency
                 await Task.Delay(100);
@@ -32,7 +32,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error sending SMS to {to}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error sending SMS to {to}: {ex.Message}", ex.ToString());
                 throw;
             }
         }

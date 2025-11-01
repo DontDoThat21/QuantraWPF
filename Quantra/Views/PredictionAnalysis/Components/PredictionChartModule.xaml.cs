@@ -211,7 +211,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             catch (Exception ex)
             {
                 _notificationService.ShowError($"Error updating chart: {ex.Message}");
-                DatabaseMonolith.Log("Error", $"Failed to update chart for {Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to update chart for {Symbol}", ex.ToString());
             }
             finally
             {
@@ -297,7 +297,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to load indicator data as fallback for {Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to load indicator data as fallback for {Symbol}", ex.ToString());
             }
         }
 
@@ -318,7 +318,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to update chart from symbol data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to update chart from symbol data for {symbol}", ex.ToString());
             }
         }
 
@@ -338,7 +338,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to update chart from cached symbol data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to update chart from cached symbol data for {symbol}", ex.ToString());
             }
         }
 
@@ -351,7 +351,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to handle symbol updated event for {e.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to handle symbol updated event for {e.Symbol}", ex.ToString());
             }
         }
 
@@ -364,7 +364,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to handle cached symbol updated event for {e.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to handle cached symbol updated event for {e.Symbol}", ex.ToString());
             }
         }
 

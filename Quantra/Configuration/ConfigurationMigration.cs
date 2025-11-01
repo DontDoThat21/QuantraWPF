@@ -22,7 +22,7 @@ namespace Quantra.Configuration
         public static async Task MigrateFromLegacySources(IConfigurationManager configManager)
         {
             // Log start of migration
-            DatabaseMonolith.Log("Info", "Starting configuration migration from legacy sources");
+            //DatabaseMonolith.Log("Info", "Starting configuration migration from legacy sources");
             
             try
             {
@@ -33,7 +33,7 @@ namespace Quantra.Configuration
                 if (File.Exists(userSettingsPath))
                 {
                     // Already migrated
-                    DatabaseMonolith.Log("Info", "Configuration already migrated, skipping");
+                    //DatabaseMonolith.Log("Info", "Configuration already migrated, skipping");
                     return;
                 }
                 
@@ -195,12 +195,12 @@ namespace Quantra.Configuration
                 await configManager.ReloadAsync();
                 
                 // Log successful migration
-                DatabaseMonolith.Log("Info", "Successfully migrated configuration from legacy sources");
+                //DatabaseMonolith.Log("Info", "Successfully migrated configuration from legacy sources");
             }
             catch (Exception ex)
             {
                 // Log error
-                DatabaseMonolith.Log("Error", "Error migrating configuration from legacy sources", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error migrating configuration from legacy sources", ex.ToString());
             }
         }
     }

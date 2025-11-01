@@ -95,7 +95,7 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 ShowNotification($"Export failed: {ex.Message}", PackIconKind.Error, Colors.Red);
-                DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
             }
         }
 

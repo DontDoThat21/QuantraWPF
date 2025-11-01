@@ -59,7 +59,7 @@ namespace Quantra.DAL.Services
                 
                 // Fetch real data only
                 result = FetchRealSectorMomentumData(timeframe);
-                DatabaseMonolith.Log("Info", $"Successfully fetched real sector momentum data for timeframe {timeframe}");
+                //DatabaseMonolith.Log("Info", $"Successfully fetched real sector momentum data for timeframe {timeframe}");
                 
                 // Cache the new data
                 _cachedData[timeframe] = result;
@@ -69,7 +69,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting sector momentum data for timeframe {timeframe}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting sector momentum data for timeframe {timeframe}", ex.ToString());
                 
                 // Return cached data if available
                 if (_cachedData.ContainsKey(timeframe))
@@ -101,7 +101,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting sector momentum data async for timeframe {timeframe}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting sector momentum data async for timeframe {timeframe}", ex.ToString());
                 throw;
             }
         }
@@ -136,7 +136,7 @@ namespace Quantra.DAL.Services
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to fetch data for symbol {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to fetch data for symbol {symbol}", ex.ToString());
                         // Continue with other symbols even if one fails
                     }
                 }
@@ -179,7 +179,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to calculate momentum for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to calculate momentum for {symbol}", ex.ToString());
                 return 0.0; // Return neutral momentum if calculation fails
             }
         }
@@ -194,7 +194,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get current price for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get current price for {symbol}", ex.ToString());
                 return 0.0;
             }
         }
@@ -216,12 +216,12 @@ namespace Quantra.DAL.Services
                 
                 // TODO: Implement real historical price fetching from Alpha Vantage TIME_SERIES_DAILY
                 // For now, return 0 to indicate we need real historical data implementation
-                DatabaseMonolith.Log("Warning", $"Historical price fetching not yet implemented for {symbol}, timeframe {timeframe}");
+                //DatabaseMonolith.Log("Warning", $"Historical price fetching not yet implemented for {symbol}, timeframe {timeframe}");
                 return 0.0;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get historical price for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get historical price for {symbol}", ex.ToString());
                 return 0.0;
             }
         }
@@ -232,7 +232,7 @@ namespace Quantra.DAL.Services
             {
                 // TODO: Implement real volume fetching from Alpha Vantage quote data
                 // For now, return 0 to indicate we need real volume data implementation
-                DatabaseMonolith.Log("Warning", $"Volume fetching not yet implemented for {symbol}");
+                //DatabaseMonolith.Log("Warning", $"Volume fetching not yet implemented for {symbol}");
                 return 0;
             }
             catch

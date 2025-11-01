@@ -43,7 +43,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error sending email: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error sending email: {ex.Message}", ex.ToString());
                 throw;
             }
         }

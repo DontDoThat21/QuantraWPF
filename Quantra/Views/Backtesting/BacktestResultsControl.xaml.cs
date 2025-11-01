@@ -54,7 +54,7 @@ namespace Quantra.Views.Backtesting
             CustomBenchmarkComboBox.SelectionChanged += (s, e) => {
                 if (CustomBenchmarkComboBox.SelectedItem != null)
                 {
-                    DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox Selection: {CustomBenchmarkComboBox.SelectedItem.GetType().Name} - {CustomBenchmarkComboBox.SelectedItem}");
+                    //DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox Selection: {CustomBenchmarkComboBox.SelectedItem.GetType().Name} - {CustomBenchmarkComboBox.SelectedItem}");
                 }
             };
         }
@@ -240,7 +240,7 @@ namespace Quantra.Views.Backtesting
             catch (Exception ex)
             {
                 // Log error
-                DatabaseMonolith.Log("Error", "Failed to load benchmark data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load benchmark data", ex.ToString());
             }
         }
         
@@ -335,7 +335,7 @@ namespace Quantra.Views.Backtesting
                 
                 if (filteredData.Count == 0)
                 {
-                    DatabaseMonolith.Log("Warning", $"No benchmark data for {symbol} in date range {startDate} to {endDate}");
+                    //DatabaseMonolith.Log("Warning", $"No benchmark data for {symbol} in date range {startDate} to {endDate}");
                     return null;
                 }
                 
@@ -431,7 +431,7 @@ namespace Quantra.Views.Backtesting
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to load benchmark data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to load benchmark data for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -1613,7 +1613,7 @@ namespace Quantra.Views.Backtesting
                 _customBenchmarks.Add(benchmark);
                 
                 // Log the benchmark details for debugging
-                DatabaseMonolith.Log("Debug", $"Loaded custom benchmark: ID={benchmark.Id}, Name={benchmark.Name}, DisplaySymbol={benchmark.DisplaySymbol}");
+                //DatabaseMonolith.Log("Debug", $"Loaded custom benchmark: ID={benchmark.Id}, Name={benchmark.Name}, DisplaySymbol={benchmark.DisplaySymbol}");
             }
             
             // Apply custom benchmarks to ComboBox
@@ -1621,7 +1621,7 @@ namespace Quantra.Views.Backtesting
             CustomBenchmarkComboBox.ItemsSource = _customBenchmarks;
             
             // Log the count and types for debugging
-            DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox ItemsSource set with {_customBenchmarks.Count} items");
+            //DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox ItemsSource set with {_customBenchmarks.Count} items");
             
             // Restore previous selection if possible
             if (currentSelection != null)
@@ -1906,7 +1906,7 @@ namespace Quantra.Views.Backtesting
             catch (Exception ex)
             {
                 MonteCarloStatusText.Text = "Simulation failed";
-                DatabaseMonolith.Log("Error", "Monte Carlo simulation failed", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Monte Carlo simulation failed", ex.ToString());
             }
             finally
             {
@@ -2200,7 +2200,7 @@ namespace Quantra.Views.Backtesting
                 string tabHeader = selectedTab.Header?.ToString() ?? "";
                 
                 // Log the tab selection for debugging
-                DatabaseMonolith.Log("Info", $"BacktestResultsControl: Tab selected - {tabHeader}");
+                //DatabaseMonolith.Log("Info", $"BacktestResultsControl: Tab selected - {tabHeader}");
 
                 // Handle specific tab selections that might need data refresh or special handling
                 switch (tabHeader)
@@ -2271,7 +2271,7 @@ namespace Quantra.Views.Backtesting
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error handling tab selection change in BacktestResultsControl: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error handling tab selection change in BacktestResultsControl: {ex.Message}", ex.ToString());
             }
         }
     }

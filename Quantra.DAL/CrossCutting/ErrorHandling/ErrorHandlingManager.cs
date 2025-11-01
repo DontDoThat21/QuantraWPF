@@ -666,7 +666,7 @@ namespace Quantra.CrossCutting.ErrorHandling
                 };
 
                 // Avoid cross-project dependencies from DAL. Log the alert; UI layer can subscribe and display.
-                DatabaseMonolith.Log(category.ToString(), alert.Name, alert.Notes);
+                //DatabaseMonolith.Log(category.ToString(), alert.Name, alert.Notes);
             }
             catch (Exception ex)
             {

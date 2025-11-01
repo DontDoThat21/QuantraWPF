@@ -300,11 +300,11 @@ namespace Quantra
 
                 // Then ensure settings profiles exist
                 _settingsService.EnsureSettingsProfiles();
-                DatabaseMonolith.Log("Info", "SharedTitleBar: Database and settings profiles initialized successfully");
+                //DatabaseMonolith.Log("Info", "SharedTitleBar: Database and settings profiles initialized successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "SharedTitleBar: Failed to initialize database or settings profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "SharedTitleBar: Failed to initialize database or settings profiles", ex.ToString());
             }
 
             // Start updating API usage count
@@ -376,7 +376,7 @@ namespace Quantra
             
             try
             {
-                DatabaseMonolith.Log("Info", "RefreshVixDisplay: Starting VIX refresh");
+                //DatabaseMonolith.Log("Info", "RefreshVixDisplay: Starting VIX refresh");
                 
                 // Check if VIX monitoring is enabled in settings using resilient retry logic
                 var activeProfile = ResilienceHelper.Retry(() => _settingsService.GetDefaultSettingsProfile(), 
@@ -385,7 +385,7 @@ namespace Quantra
                 // If no profile found, try to initialize settings
                 if (activeProfile == null)
                 {
-                    DatabaseMonolith.Log("Warning", "RefreshVixDisplay: No settings profile found, attempting initialization");
+                    //DatabaseMonolith.Log("Warning", "RefreshVixDisplay: No settings profile found, attempting initialization");
                     
                     try
                     {
@@ -397,17 +397,17 @@ namespace Quantra
                         
                         if (activeProfile != null)
                         {
-                            DatabaseMonolith.Log("Info", "RefreshVixDisplay: Settings profile initialized successfully");
+                            //DatabaseMonolith.Log("Info", "RefreshVixDisplay: Settings profile initialized successfully");
                         }
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", "RefreshVixDisplay: Failed to initialize settings", ex.ToString());
+                        //DatabaseMonolith.Log("Error", "RefreshVixDisplay: Failed to initialize settings", ex.ToString());
                     }
                     
                     if (activeProfile == null)
                     {
-                        DatabaseMonolith.Log("Warning", "RefreshVixDisplay: Setting VIX to disabled - no profile");
+                        //DatabaseMonolith.Log("Warning", "RefreshVixDisplay: Setting VIX to disabled - no profile");
                         VixDisplay = "VIX: Disabled";
                         return;
                     }
@@ -415,14 +415,14 @@ namespace Quantra
                 
                 if (activeProfile.EnableVixMonitoring != true)
                 {
-                    DatabaseMonolith.Log("Info", "RefreshVixDisplay: VIX monitoring disabled in settings");
+                    //DatabaseMonolith.Log("Info", "RefreshVixDisplay: VIX monitoring disabled in settings");
                     VixDisplay = "VIX: Disabled";
                     return;
                 }
 
                 // Check if market is open (use trading hours logic)
                 bool marketOpen = IsMarketOpen();
-                DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Market open status: {marketOpen}");
+                //DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Market open status: {marketOpen}");
                 
                 if (!marketOpen)
                 {
@@ -450,28 +450,28 @@ namespace Quantra
                         }
                         
                         VixDisplay = $"VIX: {cachedVixValue:F1} ({dateDisplay})";
-                        DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set cached VIX value: {VixDisplay}");
+                        //DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set cached VIX value: {VixDisplay}");
                     }
                     else
                     {
                         // Fallback to Market Closed if no cached data available
                         VixDisplay = "VIX: Market Closed";
-                        DatabaseMonolith.Log("Info", "RefreshVixDisplay: No cached data, market closed");
+                        //DatabaseMonolith.Log("Info", "RefreshVixDisplay: No cached data, market closed");
                     }
                     return;
                 }
 
                 // Fetch VIX data (market is open)
-                DatabaseMonolith.Log("Info", "RefreshVixDisplay: Fetching live VIX data");
+                //DatabaseMonolith.Log("Info", "RefreshVixDisplay: Fetching live VIX data");
                 double vixValue = await GetVixValue();
                 string timestamp = DateTime.Now.ToString("HH:mm");
                 VixDisplay = $"VIX: {vixValue:F1} ({timestamp})";
-                DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set live VIX value: {VixDisplay}");
+                //DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set live VIX value: {VixDisplay}");
             }
             catch (Exception ex)
             {
                 VixDisplay = "VIX: Error";
-                DatabaseMonolith.Log("Error", "Failed to refresh VIX display", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to refresh VIX display", ex.ToString());
             }
         }
 
@@ -479,15 +479,15 @@ namespace Quantra
         {
             try
             {
-                DatabaseMonolith.Log("Info", "GetVixValue: Calling AlphaVantage API for VIX data");
+                //DatabaseMonolith.Log("Info", "GetVixValue: Calling AlphaVantage API for VIX data");
                 // Use AlphaVantage service directly to get VIX data
                 double vixValue = await _alphaVantageService.GetQuoteData("^VIX");
-                DatabaseMonolith.Log("Info", $"GetVixValue: Received VIX value: {vixValue}");
+                //DatabaseMonolith.Log("Info", $"GetVixValue: Received VIX value: {vixValue}");
                 return vixValue;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "GetVixValue: Failed to get VIX data from API", ex.ToString());
+                //DatabaseMonolith.Log("Error", "GetVixValue: Failed to get VIX data from API", ex.ToString());
                 return 15.0; // Default moderate volatility fallback
             }
         }
@@ -508,7 +508,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get cached VIX value", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get cached VIX value", ex.ToString());
             }
             
             // Return default if no cached data available

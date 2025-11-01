@@ -31,7 +31,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Log device registration
-                DatabaseMonolith.Log("Info", $"Registering device {deviceToken} for user {userId}", $"Device type: {deviceType}");
+                //DatabaseMonolith.Log("Info", $"Registering device {deviceToken} for user {userId}", $"Device type: {deviceType}");
                 
                 // Store device information (would be in a database in production)
                 if (!_userDevices.ContainsKey(userId))
@@ -58,7 +58,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error registering device {deviceToken}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error registering device {deviceToken}: {ex.Message}", ex.ToString());
                 throw;
             }
         }
@@ -68,7 +68,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Log device unregistration
-                DatabaseMonolith.Log("Info", $"Unregistering device {deviceToken}");
+                //DatabaseMonolith.Log("Info", $"Unregistering device {deviceToken}");
                 
                 // Remove device from in-memory store
                 foreach (var userId in _userDevices.Keys)
@@ -83,7 +83,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error unregistering device {deviceToken}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error unregistering device {deviceToken}: {ex.Message}", ex.ToString());
                 throw;
             }
         }
@@ -93,7 +93,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Log notification
-                DatabaseMonolith.Log("Info", $"Push notification would be sent to device {deviceToken}", $"Title: {title}, Message: {message}");
+                //DatabaseMonolith.Log("Info", $"Push notification would be sent to device {deviceToken}", $"Title: {title}, Message: {message}");
                 
                 // Create notification payload
                 var notificationPayload = new 
@@ -117,7 +117,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error sending push notification to device {deviceToken}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error sending push notification to device {deviceToken}: {ex.Message}", ex.ToString());
                 throw;
             }
         }
@@ -132,7 +132,7 @@ namespace Quantra.DAL.Services
             if (!_userDevices.ContainsKey(userId) || _userDevices[userId].Count == 0)
             {
                 // No registered devices for this user
-                DatabaseMonolith.Log("Warning", $"No registered devices found for user {userId}");
+                //DatabaseMonolith.Log("Warning", $"No registered devices found for user {userId}");
                 return;
             }
             

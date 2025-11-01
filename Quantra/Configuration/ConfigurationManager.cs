@@ -363,7 +363,7 @@ namespace Quantra.Configuration
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to save configuration changes", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save configuration changes", ex.ToString());
                 throw;
             }
             finally
@@ -630,7 +630,7 @@ namespace Quantra.Configuration
                 if (File.Exists(_userSettingsFilePath))
                 {
                     File.Copy(_userSettingsFilePath, backupPath, true);
-                    Quantra.DatabaseMonolith.Log("Info", $"Configuration backup created at {backupPath}");
+                    //DatabaseMonolith.Log("Info", $"Configuration backup created at {backupPath}");
                     return backupPath;
                 }
                 
@@ -640,7 +640,7 @@ namespace Quantra.Configuration
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to create configuration backup", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create configuration backup", ex.ToString());
                 return null;
             }
         }
@@ -656,7 +656,7 @@ namespace Quantra.Configuration
             {
                 if (!File.Exists(backupPath))
                 {
-                    Quantra.DatabaseMonolith.Log("Error", $"Configuration backup file not found: {backupPath}");
+                    //DatabaseMonolith.Log("Error", $"Configuration backup file not found: {backupPath}");
                     return false;
                 }
                 
@@ -669,12 +669,12 @@ namespace Quantra.Configuration
                 // Reload configuration
                 ReloadAsync().GetAwaiter().GetResult();
                 
-                Quantra.DatabaseMonolith.Log("Info", $"Configuration restored from backup: {backupPath}");
+                //DatabaseMonolith.Log("Info", $"Configuration restored from backup: {backupPath}");
                 return true;
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to restore configuration from backup", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to restore configuration from backup", ex.ToString());
                 return false;
             }
         }
@@ -747,7 +747,7 @@ namespace Quantra.Configuration
                     // Force configuration reload
                     ReloadAsync().GetAwaiter().GetResult();
                     
-                    Quantra.DatabaseMonolith.Log("Info", $"Configuration reset to defaults{(string.IsNullOrEmpty(sectionPath) ? "" : $" for section {sectionPath}")}");
+                    //DatabaseMonolith.Log("Info", $"Configuration reset to defaults{(string.IsNullOrEmpty(sectionPath) ? "" : $" for section {sectionPath}")}");
                 }
                 finally
                 {
@@ -756,7 +756,7 @@ namespace Quantra.Configuration
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to reset configuration to defaults", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to reset configuration to defaults", ex.ToString());
                 throw;
             }
         }

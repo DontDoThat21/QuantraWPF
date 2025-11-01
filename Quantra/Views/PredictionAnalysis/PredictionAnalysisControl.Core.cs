@@ -56,7 +56,7 @@ namespace Quantra.Controls
             this.MinHeight = 300;
 
             // Log the control creation with dimensions
-            DatabaseMonolith.Log("Info", $"PredictionAnalysisControl created with MinSize: {this.MinWidth}x{this.MinHeight}");
+            //DatabaseMonolith.Log("Info", $"PredictionAnalysisControl created with MinSize: {this.MinWidth}x{this.MinHeight}");
 
             // Initialize the AutoModeToggle if it exists - remove event handler registration to avoid duplicates
             if (AutoModeToggle != null)
@@ -64,14 +64,14 @@ namespace Quantra.Controls
                 // Initialize with auto mode off
                 isAutomatedMode = false;
                 AutoModeToggle.IsChecked = false;
-                DatabaseMonolith.Log("Info", "Auto mode initialized to OFF");
+                //DatabaseMonolith.Log("Info", "Auto mode initialized to OFF");
             }
 
             // Fix: Use a dispatcher to measure after UI layout completes
             this.Loaded += (s, e) =>
             {
                 // Additional initialization after loading if needed
-                DatabaseMonolith.Log("Info", "PredictionAnalysisControl layout completed");
+                //DatabaseMonolith.Log("Info", "PredictionAnalysisControl layout completed");
             };
 
             InitializeChartData(); // Call the implementation from Charts.cs;
@@ -106,11 +106,11 @@ namespace Quantra.Controls
                 this.UpdateLayout();
 
                 // Log the control size after manual layout
-                DatabaseMonolith.Log("Info", $"PredictionAnalysisControl after forced layout: {this.ActualWidth}x{this.ActualHeight}");
+                //DatabaseMonolith.Log("Info", $"PredictionAnalysisControl after forced layout: {this.ActualWidth}x{this.ActualHeight}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error during layout update", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error during layout update", ex.ToString());
             }
         }
 
@@ -153,7 +153,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting price for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting price for {symbol}", ex.ToString());
                 return 0.0;
             }
         }

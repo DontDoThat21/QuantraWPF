@@ -33,7 +33,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load default grid settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load default grid settings", ex.ToString());
                 // Fall back to 4x4 grid
                 GridRowsTextBox.Text = "4";
                 GridColumnsTextBox.Text = "4";
@@ -124,7 +124,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to update grid preview", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to update grid preview", ex.ToString());
                 // Don't show error to user - preview isn't critical functionality
             }
         }

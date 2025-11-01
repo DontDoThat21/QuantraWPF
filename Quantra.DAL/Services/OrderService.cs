@@ -29,7 +29,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
                 return false;
             }
         }
@@ -42,7 +42,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get market price", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get market price", ex.ToString());
                 throw;
             }
         }

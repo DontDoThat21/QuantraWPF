@@ -71,7 +71,7 @@ namespace Quantra.Configuration.Utilities
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to protect sensitive configuration data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to protect sensitive configuration data", ex.ToString());
                 return plainText; // Return unencrypted if encryption fails
             }
         }
@@ -103,7 +103,7 @@ namespace Quantra.Configuration.Utilities
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to unprotect sensitive configuration data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to unprotect sensitive configuration data", ex.ToString());
                 return encryptedText; // Return encrypted if decryption fails
             }
         }

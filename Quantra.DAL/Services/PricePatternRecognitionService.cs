@@ -109,7 +109,7 @@ namespace Quantra.DAL.Services
             
             if (historicalData == null || historicalData.Count < 30)
             {
-                DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect patterns");
+                //DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect patterns");
                 return patterns;
             }
             
@@ -716,7 +716,7 @@ namespace Quantra.DAL.Services
             
             if (historicalData == null || historicalData.Count < 50)
             {
-                DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect cup and handle patterns");
+                //DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect cup and handle patterns");
                 return new List<PricePattern>();
             }
             
@@ -733,7 +733,7 @@ namespace Quantra.DAL.Services
             
             if (historicalData == null || historicalData.Count < 50)
             {
-                DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect bearish cup and handle patterns");
+                //DatabaseMonolith.Log("Warning", $"Insufficient historical data for {symbol} to detect bearish cup and handle patterns");
                 return new List<PricePattern>();
             }
             

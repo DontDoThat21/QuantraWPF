@@ -140,11 +140,11 @@ namespace Quantra.DAL.Services
                 // Set the balanced profile as active by default
                 _activeRebalancingProfileId = balancedProfile.ProfileId;
                 
-                DatabaseMonolith.Log("Info", $"Initialized default rebalancing profiles: Conservative, Balanced, Growth");
+                //DatabaseMonolith.Log("Info", $"Initialized default rebalancing profiles: Conservative, Balanced, Growth");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to initialize rebalancing profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to initialize rebalancing profiles", ex.ToString());
             }
         }
         
@@ -161,11 +161,11 @@ namespace Quantra.DAL.Services
                     await MonitorPositions(_monitoringCancellationTokenSource.Token);
                 });
                 
-                DatabaseMonolith.Log("Info", "Position monitoring started successfully");
+                //DatabaseMonolith.Log("Info", "Position monitoring started successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to start position monitoring", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to start position monitoring", ex.ToString());
             }
         }
         
@@ -182,11 +182,11 @@ namespace Quantra.DAL.Services
                     _monitoringCancellationTokenSource = null;
                 }
                 
-                DatabaseMonolith.Log("Info", "Position monitoring stopped");
+                //DatabaseMonolith.Log("Info", "Position monitoring stopped");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error stopping position monitoring", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error stopping position monitoring", ex.ToString());
             }
         }
         
@@ -210,11 +210,11 @@ namespace Quantra.DAL.Services
                 _rebalancingScheduleTimer.AutoReset = true;
                 _rebalancingScheduleTimer.Start();
                 
-                DatabaseMonolith.Log("Info", "Portfolio rebalancing scheduler started (checking hourly)");
+                //DatabaseMonolith.Log("Info", "Portfolio rebalancing scheduler started (checking hourly)");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to start rebalancing scheduler", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to start rebalancing scheduler", ex.ToString());
             }
         }
         
@@ -252,11 +252,11 @@ namespace Quantra.DAL.Services
                     // Check market session
                     if (!IsTradingAllowed())
                     {
-                        DatabaseMonolith.Log("Info", "Scheduled rebalancing deferred: Trading not allowed at this time based on market session");
+                        //DatabaseMonolith.Log("Info", "Scheduled rebalancing deferred: Trading not allowed at this time based on market session");
                         return;
                     }
                     
-                    DatabaseMonolith.Log("Info", $"Executing scheduled portfolio rebalancing for profile: {activeProfile.Name}");
+                    //DatabaseMonolith.Log("Info", $"Executing scheduled portfolio rebalancing for profile: {activeProfile.Name}");
                     
                     // Execute rebalancing using the active profile
                     bool result = await RebalancePortfolioWithProfile(activeProfile);
@@ -265,17 +265,17 @@ namespace Quantra.DAL.Services
                     {
                         // Update last rebalance date and calculate next scheduled date
                         activeProfile.LastRebalanceDate = DateTime.Now;
-                        DatabaseMonolith.Log("Info", $"Scheduled rebalancing completed successfully. Next scheduled: {activeProfile.NextScheduledRebalance?.ToString("g")}");
+                        //DatabaseMonolith.Log("Info", $"Scheduled rebalancing completed successfully. Next scheduled: {activeProfile.NextScheduledRebalance?.ToString("g")}");
                     }
                     else
                     {
-                        DatabaseMonolith.Log("Warning", "Scheduled rebalancing failed");
+                        //DatabaseMonolith.Log("Warning", "Scheduled rebalancing failed");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error during scheduled rebalancing check", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error during scheduled rebalancing check", ex.ToString());
             }
         }
 
@@ -369,7 +369,7 @@ namespace Quantra.DAL.Services
             // Check if trading is allowed based on our market session and time restrictions
             if (!IsTradingAllowed())
             {
-                DatabaseMonolith.Log("Warning", $"ExecuteOptimalRiskTrading called but trading is not allowed at this time based on market session filters");
+                //DatabaseMonolith.Log("Warning", $"ExecuteOptimalRiskTrading called but trading is not allowed at this time based on market session filters");
                 return; // Exit early if trading is not allowed
             }
             
@@ -452,7 +452,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate position size for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate position size for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -495,7 +495,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate adaptive position size for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate adaptive position size for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -513,7 +513,7 @@ namespace Quantra.DAL.Services
                 if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) || 
                     parameters.Price <= 0 || parameters.AccountSize <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
+                    //DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
                     return 0;
                 }
                 
@@ -554,14 +554,14 @@ namespace Quantra.DAL.Services
                 
                 // Log the calculation
                 string methodName = parameters.Method.ToString();
-                DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
-                    $"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
+                //DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
+                    //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
                 
                 return shares;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate position size for {parameters.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate position size for {parameters.Symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -632,8 +632,8 @@ namespace Quantra.DAL.Services
             
             if (riskPerShare <= 0)
             {
-                DatabaseMonolith.Log("Warning", $"Invalid risk parameters for {parameters.Symbol}: " +
-                    $"Price {parameters.Price:C2}, Stop Loss {parameters.StopLossPrice:C2}");
+                //DatabaseMonolith.Log("Warning", $"Invalid risk parameters for {parameters.Symbol}: " +
+                    //$"Price {parameters.Price:C2}, Stop Loss {parameters.StopLossPrice:C2}");
                 return 0;
             }
             
@@ -677,7 +677,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Failed to retrieve ATR for {parameters.Symbol}, using estimate", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Failed to retrieve ATR for {parameters.Symbol}, using estimate", ex.ToString());
                     
                     // Estimate ATR as a percentage of price if retrieval fails (e.g., 2% of price)
                     atr = parameters.Price * 0.02;
@@ -692,7 +692,7 @@ namespace Quantra.DAL.Services
             
             if (riskPerShare <= 0)
             {
-                DatabaseMonolith.Log("Warning", $"Invalid risk per share for {parameters.Symbol}: ATR={atr}, Multiple={parameters.ATRMultiple}");
+                //DatabaseMonolith.Log("Warning", $"Invalid risk per share for {parameters.Symbol}: ATR={atr}, Multiple={parameters.ATRMultiple}");
                 return 0;
             }
             
@@ -841,11 +841,11 @@ namespace Quantra.DAL.Services
             adjustedRiskPercentage = Math.Max(minRiskPercentage, Math.Min(adjustedRiskPercentage, maxRiskPercentage));
             
             // Log the adaptive calculation factors
-            DatabaseMonolith.Log("Info", $"Adaptive sizing for {parameters.Symbol}: Base={parameters.BasePositionPercentage:P2}, " +
-                $"Vol={volatilityFactor:F2} (adj={volatilityAdjustment:F2}), " +
-                $"Perf={performanceFactor:F2} (adj={performanceAdjustment:F2}), " +
-                $"Trend={trendStrengthFactor:F2} (adj={trendAdjustment:F2}), " +
-                $"Final Risk={adjustedRiskPercentage:P2}");
+            //DatabaseMonolith.Log("Info", $"Adaptive sizing for {parameters.Symbol}: Base={parameters.BasePositionPercentage:P2}, " +
+                //$"Vol={volatilityFactor:F2} (adj={volatilityAdjustment:F2}), " +
+                //$"Perf={performanceFactor:F2} (adj={performanceAdjustment:F2}), " +
+                //$"Trend={trendStrengthFactor:F2} (adj={trendAdjustment:F2}), " +
+                //$"Final Risk={adjustedRiskPercentage:P2}");
             
             // Update risk percentage and use fixed risk calculation
             parameters.RiskPercentage = adjustedRiskPercentage;
@@ -869,7 +869,7 @@ namespace Quantra.DAL.Services
                 // Validate parameters
                 if (string.IsNullOrWhiteSpace(symbol) || totalShares <= 0 || numberOfOrders <= 0 || intervalDays < 0)
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: shares={totalShares}, orders={numberOfOrders}, interval={intervalDays}");
+                    //DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: shares={totalShares}, orders={numberOfOrders}, interval={intervalDays}");
                     return null;
                 }
                 
@@ -895,14 +895,14 @@ namespace Quantra.DAL.Services
                 // Schedule the first order
                 ScheduleDollarCostAveragingOrder(strategy.StrategyId);
                 
-                DatabaseMonolith.Log("Info", $"Share-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
-                    $"{totalShares} shares over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
+                //DatabaseMonolith.Log("Info", $"Share-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
+                    //$"{totalShares} shares over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
                 
                 return strategy.StrategyId;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to set up dollar-cost averaging for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to set up dollar-cost averaging for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -924,7 +924,7 @@ namespace Quantra.DAL.Services
                 // Validate parameters
                 if (string.IsNullOrWhiteSpace(symbol) || totalAmount <= 0 || numberOfOrders <= 0 || intervalDays < 0)
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: amount=${totalAmount}, orders={numberOfOrders}, interval={intervalDays}");
+                    //DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: amount=${totalAmount}, orders={numberOfOrders}, interval={intervalDays}");
                     return null;
                 }
                 
@@ -950,14 +950,14 @@ namespace Quantra.DAL.Services
                 // Schedule the first order
                 ScheduleDollarCostAveragingOrder(strategy.StrategyId);
                 
-                DatabaseMonolith.Log("Info", $"Dollar-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
-                    $"${totalAmount:N2} over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
+                //DatabaseMonolith.Log("Info", $"Dollar-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
+                    //$"${totalAmount:N2} over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
                 
                 return strategy.StrategyId;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to set up dollar-cost averaging for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to set up dollar-cost averaging for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -973,7 +973,7 @@ namespace Quantra.DAL.Services
             {
                 if (!_dollarCostAveraging.ContainsKey(strategyId))
                 {
-                    DatabaseMonolith.Log("Warning", $"Cannot pause DCA strategy: Strategy ID {strategyId} not found");
+                    //DatabaseMonolith.Log("Warning", $"Cannot pause DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
                 
@@ -981,19 +981,19 @@ namespace Quantra.DAL.Services
                 
                 if (strategy.IsPaused)
                 {
-                    DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is already paused");
+                    //DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is already paused");
                     return true;
                 }
                 
                 strategy.IsPaused = true;
                 strategy.PausedAt = DateTime.Now;
                 
-                DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been paused");
+                //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been paused");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to pause DCA strategy {strategyId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to pause DCA strategy {strategyId}", ex.ToString());
                 return false;
             }
         }
@@ -1009,7 +1009,7 @@ namespace Quantra.DAL.Services
             {
                 if (!_dollarCostAveraging.ContainsKey(strategyId))
                 {
-                    DatabaseMonolith.Log("Warning", $"Cannot resume DCA strategy: Strategy ID {strategyId} not found");
+                    //DatabaseMonolith.Log("Warning", $"Cannot resume DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
                 
@@ -1017,7 +1017,7 @@ namespace Quantra.DAL.Services
                 
                 if (!strategy.IsPaused)
                 {
-                    DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is not paused");
+                    //DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is not paused");
                     return true;
                 }
                 
@@ -1036,12 +1036,12 @@ namespace Quantra.DAL.Services
                     ScheduleDollarCostAveragingOrder(strategyId);
                 }
                 
-                DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been resumed");
+                //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been resumed");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to resume DCA strategy {strategyId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to resume DCA strategy {strategyId}", ex.ToString());
                 return false;
             }
         }
@@ -1057,7 +1057,7 @@ namespace Quantra.DAL.Services
             {
                 if (!_dollarCostAveraging.ContainsKey(strategyId))
                 {
-                    DatabaseMonolith.Log("Warning", $"Cannot cancel DCA strategy: Strategy ID {strategyId} not found");
+                    //DatabaseMonolith.Log("Warning", $"Cannot cancel DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
                 
@@ -1084,15 +1084,15 @@ namespace Quantra.DAL.Services
                         _scheduledOrders.Remove(symbol);
                     }
                     
-                    DatabaseMonolith.Log("Info", $"Cancelled {ordersToRemove.Count} pending orders for DCA strategy {strategyId}");
+                    //DatabaseMonolith.Log("Info", $"Cancelled {ordersToRemove.Count} pending orders for DCA strategy {strategyId}");
                 }
                 
-                DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {symbol} has been cancelled");
+                //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {symbol} has been cancelled");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to cancel DCA strategy {strategyId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to cancel DCA strategy {strategyId}", ex.ToString());
                 return false;
             }
         }
@@ -1137,14 +1137,14 @@ namespace Quantra.DAL.Services
                 // Check if strategy is paused or completed
                 if (strategy.IsPaused)
                 {
-                    DatabaseMonolith.Log("Info", $"Skipped scheduling DCA order for {strategy.Symbol}: Strategy is paused");
+                    //DatabaseMonolith.Log("Info", $"Skipped scheduling DCA order for {strategy.Symbol}: Strategy is paused");
                     return;
                 }
                 
                 if (strategy.OrdersRemaining <= 0)
                 {
-                    DatabaseMonolith.Log("Info", $"DCA strategy completed for {strategy.Symbol} (ID: {strategyId}): " + 
-                        $"{strategy.OrdersExecuted} orders executed, {strategy.SharesAcquired} shares acquired, ${strategy.AmountInvested:N2} invested");
+                    //DatabaseMonolith.Log("Info", $"DCA strategy completed for {strategy.Symbol} (ID: {strategyId}): " + 
+                        //$"{strategy.OrdersExecuted} orders executed, {strategy.SharesAcquired} shares acquired, ${strategy.AmountInvested:N2} invested");
                     _dollarCostAveraging.Remove(strategyId);
                     return;
                 }
@@ -1197,12 +1197,12 @@ namespace Quantra.DAL.Services
                 // Update tracking after execution (will be applied when order is actually executed)
                 // These values get updated when the scheduled order is executed in MonitorScheduledOrders
                 
-                DatabaseMonolith.Log("Info", $"Dollar-cost averaging order scheduled for {strategy.Symbol}: " + 
-                    $"{quantity} shares (${orderAmount:N2}) at {price:C2} on {order.ExecutionTime}");
+                //DatabaseMonolith.Log("Info", $"Dollar-cost averaging order scheduled for {strategy.Symbol}: " + 
+                    //$"{quantity} shares (${orderAmount:N2}) at {price:C2} on {order.ExecutionTime}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to schedule dollar-cost averaging order for strategy {strategyId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to schedule dollar-cost averaging order for strategy {strategyId}", ex.ToString());
             }
         }
         
@@ -1351,17 +1351,17 @@ namespace Quantra.DAL.Services
                 double total = allocations.Values.Sum();
                 if (Math.Abs(total - 1.0) > 0.0001)
                 {
-                    DatabaseMonolith.Log("Warning", $"Portfolio allocations do not sum to 100%: {total:P2}");
+                    //DatabaseMonolith.Log("Warning", $"Portfolio allocations do not sum to 100%: {total:P2}");
                     return false;
                 }
                 
                 _targetAllocations = new Dictionary<string, double>(allocations);
-                DatabaseMonolith.Log("Info", $"Portfolio allocations set with {_targetAllocations.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Portfolio allocations set with {_targetAllocations.Count} symbols");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to set portfolio allocations", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to set portfolio allocations", ex.ToString());
                 return false;
             }
         }
@@ -1377,18 +1377,18 @@ namespace Quantra.DAL.Services
             {
                 if (profile == null)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot add null rebalancing profile");
+                    //DatabaseMonolith.Log("Warning", "Cannot add null rebalancing profile");
                     return false;
                 }
                 
                 if (!profile.ValidateAllocations())
                 {
-                    DatabaseMonolith.Log("Warning", $"Invalid allocations in rebalancing profile: {profile.Name}");
+                    //DatabaseMonolith.Log("Warning", $"Invalid allocations in rebalancing profile: {profile.Name}");
                     return false;
                 }
                 
                 _rebalancingProfiles[profile.ProfileId] = profile;
-                DatabaseMonolith.Log("Info", $"Added rebalancing profile: {profile.Name} ({profile.ProfileId})");
+                //DatabaseMonolith.Log("Info", $"Added rebalancing profile: {profile.Name} ({profile.ProfileId})");
                 
                 // If this is the first profile, set it as active
                 if (_activeRebalancingProfileId == null)
@@ -1400,7 +1400,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to add rebalancing profile: {profile?.Name}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to add rebalancing profile: {profile?.Name}", ex.ToString());
                 return false;
             }
         }
@@ -1436,7 +1436,7 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrEmpty(profileId))
             {
-                DatabaseMonolith.Log("Warning", "Cannot set null or empty rebalancing profile ID as active");
+                //DatabaseMonolith.Log("Warning", "Cannot set null or empty rebalancing profile ID as active");
                 return false;
             }
             
@@ -1448,11 +1448,11 @@ namespace Quantra.DAL.Services
                 // Update the target allocations based on the profile
                 _targetAllocations = new Dictionary<string, double>(profile.TargetAllocations);
                 
-                DatabaseMonolith.Log("Info", $"Set active rebalancing profile to: {profile.Name} ({profileId})");
+                //DatabaseMonolith.Log("Info", $"Set active rebalancing profile to: {profile.Name} ({profileId})");
                 return true;
             }
             
-            DatabaseMonolith.Log("Warning", $"Rebalancing profile not found with ID: {profileId}");
+            //DatabaseMonolith.Log("Warning", $"Rebalancing profile not found with ID: {profileId}");
             return false;
         }
         
@@ -1505,7 +1505,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get current portfolio allocations", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get current portfolio allocations", ex.ToString());
                 return result;
             }
         }
@@ -1569,7 +1569,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Error getting market conditions, using defaults", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Error getting market conditions, using defaults", ex.ToString());
                 return conditions; // Return default conditions on error
             }
         }
@@ -1603,20 +1603,20 @@ namespace Quantra.DAL.Services
             {
                 if (profile == null)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot rebalance: Null profile provided");
+                    //DatabaseMonolith.Log("Warning", "Cannot rebalance: Null profile provided");
                     return false;
                 }
                 
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
-                    DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
+                    //DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
                     return false;
                 }
                 
                 if (!profile.ValidateAllocations())
                 {
-                    DatabaseMonolith.Log("Warning", $"Cannot rebalance: Invalid target allocations in profile {profile.Name}");
+                    //DatabaseMonolith.Log("Warning", $"Cannot rebalance: Invalid target allocations in profile {profile.Name}");
                     return false;
                 }
                 
@@ -1628,10 +1628,10 @@ namespace Quantra.DAL.Services
                     targetAllocations = profile.GetMarketAdjustedAllocations(marketConditions);
                     
                     // Log market conditions and any adjustments
-                    DatabaseMonolith.Log("Info", $"Market conditions for rebalancing: " +
-                        $"VIX={marketConditions.VolatilityIndex:F1}, " +
-                        $"Trend={marketConditions.MarketTrend:F2}, " +
-                        $"Risk={marketConditions.OverallRiskLevel:F2}");
+                    //DatabaseMonolith.Log("Info", $"Market conditions for rebalancing: " +
+                        //$"VIX={marketConditions.VolatilityIndex:F1}, " +
+                        //$"Trend={marketConditions.MarketTrend:F2}, " +
+                        //$"Risk={marketConditions.OverallRiskLevel:F2}");
                 }
                 else
                 {
@@ -1656,7 +1656,7 @@ namespace Quantra.DAL.Services
                 
                 if (portfolioValue <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
+                    //DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
                     return false;
                 }
                 
@@ -1697,7 +1697,7 @@ namespace Quantra.DAL.Services
                 // If no rebalancing is needed, return early
                 if (!anyRebalanceNeeded)
                 {
-                    DatabaseMonolith.Log("Info", $"No rebalancing needed - all positions within tolerance of {profile.TolerancePercentage:P2}");
+                    //DatabaseMonolith.Log("Info", $"No rebalancing needed - all positions within tolerance of {profile.TolerancePercentage:P2}");
                     return true;
                 }
                 
@@ -1736,7 +1736,7 @@ namespace Quantra.DAL.Services
                         }
                         _scheduledOrders[order.Symbol].Add(rebalanceOrder);
                         
-                        DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {order.Symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
+                        //DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {order.Symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
                     }
                     
                     // Update the last rebalance date on the profile
@@ -1749,7 +1749,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to rebalance portfolio with profile", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to rebalance portfolio with profile", ex.ToString());
                 return false;
             }
         }
@@ -1766,13 +1766,13 @@ namespace Quantra.DAL.Services
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
-                    DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
+                    //DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
                     return false;
                 }
                 
                 if (_targetAllocations.Count == 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot rebalance: No target allocations set");
+                    //DatabaseMonolith.Log("Warning", "Cannot rebalance: No target allocations set");
                     return false;
                 }
                 
@@ -1794,7 +1794,7 @@ namespace Quantra.DAL.Services
                 
                 if (portfolioValue <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
+                    //DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
                     return false;
                 }
                 
@@ -1836,7 +1836,7 @@ namespace Quantra.DAL.Services
                             }
                             _scheduledOrders[symbol].Add(order);
                             
-                            DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {symbol}: {orderType} {sharesToAdjust} shares at {price:C2}");
+                            //DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {symbol}: {orderType} {sharesToAdjust} shares at {price:C2}");
                         }
                     }
                 }
@@ -1845,7 +1845,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to rebalance portfolio", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to rebalance portfolio", ex.ToString());
                 return false;
             }
         }
@@ -1873,7 +1873,7 @@ namespace Quantra.DAL.Services
                 // Check if emergency stop is active
                 if (_emergencyStopActive)
                 {
-                    DatabaseMonolith.Log("Warning", $"Bracket order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {price:C2}");
+                    //DatabaseMonolith.Log("Warning", $"Bracket order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {price:C2}");
                     return false;
                 }
                 
@@ -1949,17 +1949,17 @@ namespace Quantra.DAL.Services
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to create exit orders for bracket order on {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to create exit orders for bracket order on {symbol}", ex.ToString());
                         // Main order was placed, continue despite exit order failure
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Bracket order placed for {symbol}: Entry at {price:C2}, Stop Loss at {stopLossPrice:C2}, Take Profit at {takeProfitPrice:C2}");
+                //DatabaseMonolith.Log("Info", $"Bracket order placed for {symbol}: Entry at {price:C2}, Stop Loss at {stopLossPrice:C2}, Take Profit at {takeProfitPrice:C2}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to place bracket order for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to place bracket order for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -1980,25 +1980,25 @@ namespace Quantra.DAL.Services
                 // Validate parameters
                 if (string.IsNullOrWhiteSpace(symbol))
                 {
-                    DatabaseMonolith.Log("Error", "Failed to set trailing stop: Symbol cannot be empty");
+                    //DatabaseMonolith.Log("Error", "Failed to set trailing stop: Symbol cannot be empty");
                     return false;
                 }
                 
                 if (initialPrice <= 0)
                 {
-                    DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Initial price must be positive");
+                    //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Initial price must be positive");
                     return false;
                 }
                 
                 if (trailingDistance <= 0 || trailingDistance >= 1)
                 {
-                    DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Trailing distance must be between 0 and 1");
+                    //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Trailing distance must be between 0 and 1");
                     return false;
                 }
                 
                 if (orderType != "BUY" && orderType != "SELL")
                 {
-                    DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Order type must be BUY or SELL");
+                    //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Order type must be BUY or SELL");
                     return false;
                 }
                 
@@ -2018,12 +2018,12 @@ namespace Quantra.DAL.Services
                 // Add or update trailing stop
                 _trailingStops[symbol] = new TrailingStopInfo(symbol, initialPrice, trailingDistance);
                 
-                DatabaseMonolith.Log("Info", $"Trailing stop ({orderType}) set for {symbol}: Initial price {initialPrice:C2}, Distance {trailingDistance:P2}, Trigger at {initialPrice * (1 - trailingDistance):C2}");
+                //DatabaseMonolith.Log("Info", $"Trailing stop ({orderType}) set for {symbol}: Initial price {initialPrice:C2}, Distance {trailingDistance:P2}, Trigger at {initialPrice * (1 - trailingDistance):C2}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -2060,7 +2060,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", "Error in position monitoring", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Error in position monitoring", ex.ToString());
                     // Wait a bit longer on error to avoid spamming logs
                     try
                     {
@@ -2098,7 +2098,7 @@ namespace Quantra.DAL.Services
                     // Check if we have a valid price
                     if (currentPrice <= 0)
                     {
-                        DatabaseMonolith.Log("Warning", $"Invalid market price for {symbol}: {currentPrice}");
+                        //DatabaseMonolith.Log("Warning", $"Invalid market price for {symbol}: {currentPrice}");
                         continue;
                     }
                     
@@ -2123,12 +2123,12 @@ namespace Quantra.DAL.Services
                         // Remove the trailing stop
                         _trailingStops.Remove(symbol);
                         
-                        DatabaseMonolith.Log("Info", $"Trailing stop triggered for {symbol} at {currentPrice:C2}: Executed {orderType} order for {quantity} shares");
+                        //DatabaseMonolith.Log("Info", $"Trailing stop triggered for {symbol} at {currentPrice:C2}: Executed {orderType} order for {quantity} shares");
                     }
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error monitoring trailing stop for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error monitoring trailing stop for {symbol}", ex.ToString());
                 }
             }
         }
@@ -2149,7 +2149,7 @@ namespace Quantra.DAL.Services
                     {
                         // Stop loss triggered - execute exit order
                         await PlaceLimitOrder(stock, 100, "SELL", currentPrice);
-                        DatabaseMonolith.Log("Info", $"Stop loss triggered for {stock} at {currentPrice:C2}");
+                        //DatabaseMonolith.Log("Info", $"Stop loss triggered for {stock} at {currentPrice:C2}");
                         
                         // Clean up after executing the stop loss
                         trailingStopLoss.Remove(stock);
@@ -2183,7 +2183,7 @@ namespace Quantra.DAL.Services
                     {
                         // Take profit triggered - execute exit order
                         await PlaceLimitOrder(stock, 100, "SELL", currentPrice);
-                        DatabaseMonolith.Log("Info", $"Take profit triggered for {stock} at {currentPrice:C2}");
+                        //DatabaseMonolith.Log("Info", $"Take profit triggered for {stock} at {currentPrice:C2}");
                         
                         // Clean up after executing the take profit
                         trailingStopLoss.Remove(stock);
@@ -2218,12 +2218,12 @@ namespace Quantra.DAL.Services
                     {
                         double oldStopLoss = trailingStopLoss[stock];
                         trailingStopLoss[stock] = currentPrice * 0.95;
-                        DatabaseMonolith.Log("Info", $"Trailing stop updated for {stock}: {oldStopLoss:C2} -> {trailingStopLoss[stock]:C2}");
+                        //DatabaseMonolith.Log("Info", $"Trailing stop updated for {stock}: {oldStopLoss:C2} -> {trailingStopLoss[stock]:C2}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error monitoring bracket orders for {stock}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error monitoring bracket orders for {stock}", ex.ToString());
                 }
             }
         }
@@ -2260,7 +2260,7 @@ namespace Quantra.DAL.Services
                         await PlaceLimitOrder(symbol, quantity, "SELL", currentPrice);
                         
                         // Log the execution with the specific strategy type
-                        DatabaseMonolith.Log("Info", $"Time-based exit ({exitStrategy.Strategy}) executed for {symbol} at {currentPrice:C2}");
+                        //DatabaseMonolith.Log("Info", $"Time-based exit ({exitStrategy.Strategy}) executed for {symbol} at {currentPrice:C2}");
                         
                         // Clean up after executing the exit
                         _timeBasedExits.Remove(symbol);
@@ -2281,13 +2281,13 @@ namespace Quantra.DAL.Services
                             exitStrategy.ExitTime = DateTime.Now.AddMinutes(exitStrategy.DurationMinutes.Value);
                             _timeBasedExits[symbol] = exitStrategy.ExitTime;
                             
-                            DatabaseMonolith.Log("Info", $"Position re-entry detected for {symbol}, time-based exit updated to {exitStrategy.ExitTime}");
+                            //DatabaseMonolith.Log("Info", $"Position re-entry detected for {symbol}, time-based exit updated to {exitStrategy.ExitTime}");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error monitoring time-based exit for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error monitoring time-based exit for {symbol}", ex.ToString());
                 }
             }
             
@@ -2314,7 +2314,7 @@ namespace Quantra.DAL.Services
                         await PlaceLimitOrder(symbol, quantity, "SELL", currentPrice);
                         
                         // Log the execution
-                        DatabaseMonolith.Log("Info", $"Basic time-based exit executed for {symbol} at {currentPrice:C2}");
+                        //DatabaseMonolith.Log("Info", $"Basic time-based exit executed for {symbol} at {currentPrice:C2}");
                         
                         // Clean up after executing the exit
                         _timeBasedExits.Remove(symbol);
@@ -2322,7 +2322,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error monitoring basic time-based exit for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error monitoring basic time-based exit for {symbol}", ex.ToString());
                 }
             }
         }
@@ -2372,14 +2372,14 @@ namespace Quantra.DAL.Services
                                 }
                                 else
                                 {
-                                    DatabaseMonolith.Log("Info", $"DCA strategy completed for {symbol} (ID: {dcaStrategy.StrategyId}): " +
-                                        $"{dcaStrategy.OrdersExecuted} orders executed, {dcaStrategy.SharesAcquired} shares acquired, " +
-                                        $"${dcaStrategy.AmountInvested:N2} invested, avg price: ${dcaStrategy.AveragePricePerShare:N2}");
+                                    //DatabaseMonolith.Log("Info", $"DCA strategy completed for {symbol} (ID: {dcaStrategy.StrategyId}): " +
+                                        //$"{dcaStrategy.OrdersExecuted} orders executed, {dcaStrategy.SharesAcquired} shares acquired, " +
+                                        //$"${dcaStrategy.AmountInvested:N2} invested, avg price: ${dcaStrategy.AveragePricePerShare:N2}");
                                 }
                             }
                         }
                         
-                        DatabaseMonolith.Log("Info", $"Scheduled order executed for {symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
+                        //DatabaseMonolith.Log("Info", $"Scheduled order executed for {symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
                     }
                     
                     if (_scheduledOrders[symbol].Count == 0)
@@ -2389,7 +2389,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error monitoring scheduled orders for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error monitoring scheduled orders for {symbol}", ex.ToString());
                 }
             }
         }
@@ -2446,7 +2446,7 @@ namespace Quantra.DAL.Services
                     case TimeBasedExitStrategy.Duration:
                         if (!durationMinutes.HasValue)
                         {
-                            DatabaseMonolith.Log("Error", $"Duration minutes must be specified for Duration exit strategy on {symbol}");
+                            //DatabaseMonolith.Log("Error", $"Duration minutes must be specified for Duration exit strategy on {symbol}");
                             return false;
                         }
                         exitTime = DateTime.Now.AddMinutes(durationMinutes.Value);
@@ -2455,7 +2455,7 @@ namespace Quantra.DAL.Services
                     case TimeBasedExitStrategy.SpecificTimeOfDay:
                         if (!specificTime.HasValue)
                         {
-                            DatabaseMonolith.Log("Error", $"Specific time must be specified for SpecificTimeOfDay exit strategy on {symbol}");
+                            //DatabaseMonolith.Log("Error", $"Specific time must be specified for SpecificTimeOfDay exit strategy on {symbol}");
                             return false;
                         }
                         
@@ -2471,7 +2471,7 @@ namespace Quantra.DAL.Services
                         break;
                         
                     default:
-                        DatabaseMonolith.Log("Error", $"Unknown time-based exit strategy: {strategy}");
+                        //DatabaseMonolith.Log("Error", $"Unknown time-based exit strategy: {strategy}");
                         return false;
                 }
                 
@@ -2480,12 +2480,12 @@ namespace Quantra.DAL.Services
                 _timeBasedExitStrategies[symbol] = exitStrategy;
                 _timeBasedExits[symbol] = exitTime; // For backward compatibility
                 
-                DatabaseMonolith.Log("Info", $"Time-based exit strategy set for {symbol}: {strategy}, Exit time: {exitTime}");
+                //DatabaseMonolith.Log("Info", $"Time-based exit strategy set for {symbol}: {strategy}, Exit time: {exitTime}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to set time-based exit strategy for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to set time-based exit strategy for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -2559,14 +2559,14 @@ namespace Quantra.DAL.Services
                 
                 if (removed)
                 {
-                    DatabaseMonolith.Log("Info", $"Time-based exit removed for {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Time-based exit removed for {symbol}");
                 }
                 
                 return removed;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to remove time-based exit for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to remove time-based exit for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -2667,14 +2667,14 @@ namespace Quantra.DAL.Services
                 }
                 
                 // Log the entire emergency stop operation
-                DatabaseMonolith.Log("Warning", $"EMERGENCY STOP ACTIVATED - All trading halted. Cancelled {canceledOrderCount} pending orders.");
-                DatabaseMonolith.Log("Info", logBuilder.ToString());
+                //DatabaseMonolith.Log("Warning", $"EMERGENCY STOP ACTIVATED - All trading halted. Cancelled {canceledOrderCount} pending orders.");
+                //DatabaseMonolith.Log("Info", logBuilder.ToString());
                 
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to activate emergency stop", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to activate emergency stop", ex.ToString());
                 return false;
             }
         }
@@ -2693,12 +2693,12 @@ namespace Quantra.DAL.Services
                 // Restart position monitoring
                 StartMonitoring();
                 
-                DatabaseMonolith.Log("Info", "Emergency stop deactivated - Trading resumed");
+                //DatabaseMonolith.Log("Info", "Emergency stop deactivated - Trading resumed");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to deactivate emergency stop", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to deactivate emergency stop", ex.ToString());
                 return false;
             }
         }
@@ -2754,7 +2754,7 @@ namespace Quantra.DAL.Services
                 // Validate times
                 if (marketClose <= marketOpen)
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid trading hours: Market close ({marketClose}) must be after market open ({marketOpen})");
+                    //DatabaseMonolith.Log("Error", $"Invalid trading hours: Market close ({marketClose}) must be after market open ({marketOpen})");
                     return false;
                 }
                 
@@ -2765,12 +2765,12 @@ namespace Quantra.DAL.Services
                 _tradingHourRestrictions.Add(marketOpen);
                 _tradingHourRestrictions.Add(marketClose);
                 
-                DatabaseMonolith.Log("Info", $"Trading hour restrictions set: {marketOpen} - {marketClose}");
+                //DatabaseMonolith.Log("Info", $"Trading hour restrictions set: {marketOpen} - {marketClose}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to set trading hour restrictions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to set trading hour restrictions", ex.ToString());
                 return false;
             }
         }
@@ -2787,12 +2787,12 @@ namespace Quantra.DAL.Services
                 _enabledMarketSessions = sessions;
                 
                 string enabledSessions = GetEnabledSessionsDescription(sessions);
-                DatabaseMonolith.Log("Info", $"Enabled market sessions for trading: {enabledSessions}");
+                //DatabaseMonolith.Log("Info", $"Enabled market sessions for trading: {enabledSessions}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to set enabled market sessions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to set enabled market sessions", ex.ToString());
                 return false;
             }
         }
@@ -2827,7 +2827,7 @@ namespace Quantra.DAL.Services
                     regularMarketOpenTime >= regularMarketCloseTime ||
                     regularMarketCloseTime >= afterHoursCloseTime)
                 {
-                    DatabaseMonolith.Log("Error", "Invalid market session times: Times must be in sequence (preMarket < regularOpen < regularClose < afterHoursClose)");
+                    //DatabaseMonolith.Log("Error", "Invalid market session times: Times must be in sequence (preMarket < regularOpen < regularClose < afterHoursClose)");
                     return false;
                 }
                 
@@ -2836,13 +2836,13 @@ namespace Quantra.DAL.Services
                 _regularMarketCloseTime = regularMarketCloseTime;
                 _afterHoursCloseTime = afterHoursCloseTime;
                 
-                DatabaseMonolith.Log("Info", $"Market session times set: Pre-market {preMarketOpenTime} to {regularMarketOpenTime}, " +
-                    $"Regular {regularMarketOpenTime} to {regularMarketCloseTime}, After-hours {regularMarketCloseTime} to {afterHoursCloseTime}");
+                //DatabaseMonolith.Log("Info", $"Market session times set: Pre-market {preMarketOpenTime} to {regularMarketOpenTime}, " +
+                    //$"Regular {regularMarketOpenTime} to {regularMarketCloseTime}, After-hours {regularMarketCloseTime} to {afterHoursCloseTime}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to set market session times", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to set market session times", ex.ToString());
                 return false;
             }
         }
@@ -2900,7 +2900,7 @@ namespace Quantra.DAL.Services
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
-                    DatabaseMonolith.Log("Warning", $"Multi-leg order rejected: Trading not allowed at this time based on market session filters. Order count: {orders.Count}");
+                    //DatabaseMonolith.Log("Warning", $"Multi-leg order rejected: Trading not allowed at this time based on market session filters. Order count: {orders.Count}");
                     return false;
                 }
                 
@@ -2917,12 +2917,12 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Multi-leg order executed with {orders.Count} legs");
+                //DatabaseMonolith.Log("Info", $"Multi-leg order executed with {orders.Count} legs");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to place multi-leg order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to place multi-leg order", ex.ToString());
                 return false;
             }
         }
@@ -2938,21 +2938,21 @@ namespace Quantra.DAL.Services
             {
                 if (strategy == null || strategy.Legs == null || strategy.Legs.Count == 0)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot place multi-leg strategy: Strategy or legs are null or empty");
+                    //DatabaseMonolith.Log("Error", "Cannot place multi-leg strategy: Strategy or legs are null or empty");
                     return false;
                 }
                 
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
-                    DatabaseMonolith.Log("Warning", $"Multi-leg strategy rejected: Trading not allowed at this time based on market session filters. Strategy: {strategy.Name}");
+                    //DatabaseMonolith.Log("Warning", $"Multi-leg strategy rejected: Trading not allowed at this time based on market session filters. Strategy: {strategy.Name}");
                     return false;
                 }
                 
                 // Validate the strategy
                 if (!strategy.Validate())
                 {
-                    DatabaseMonolith.Log("Error", $"Multi-leg strategy validation failed: {strategy.Name} ({strategy.StrategyType})");
+                    //DatabaseMonolith.Log("Error", $"Multi-leg strategy validation failed: {strategy.Name} ({strategy.StrategyType})");
                     return false;
                 }
                 
@@ -2983,7 +2983,7 @@ namespace Quantra.DAL.Services
                 {
                     // In a real implementation, we would verify availability, market conditions, etc.
                     // For now, we'll just log that we're running in All-or-None mode
-                    DatabaseMonolith.Log("Info", $"Executing multi-leg strategy {strategy.Name} in All-or-None mode");
+                    //DatabaseMonolith.Log("Info", $"Executing multi-leg strategy {strategy.Name} in All-or-None mode");
                 }
                 
                 bool success = false;
@@ -3011,7 +3011,7 @@ namespace Quantra.DAL.Services
                 // Additional strategy-specific post-execution logic
                 if (success)
                 {
-                    DatabaseMonolith.Log("Info", $"Multi-leg strategy executed successfully: {strategy.Name} ({strategy.StrategyType}) with {strategy.Legs.Count} legs");
+                    //DatabaseMonolith.Log("Info", $"Multi-leg strategy executed successfully: {strategy.Name} ({strategy.StrategyType}) with {strategy.Legs.Count} legs");
                     
                     // For certain strategies, set up monitoring or additional management
                     switch (strategy.StrategyType)
@@ -3029,7 +3029,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to place multi-leg strategy: {strategy?.Name}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to place multi-leg strategy: {strategy?.Name}", ex.ToString());
                 return false;
             }
         }
@@ -3044,7 +3044,7 @@ namespace Quantra.DAL.Services
             // tracking overall P&L, approaching expiration dates, etc.
             
             // For now, we'll just log that we're setting up monitoring
-            DatabaseMonolith.Log("Info", $"Setting up monitoring for strategy {strategy.Name} ({strategy.StrategyType})");
+            //DatabaseMonolith.Log("Info", $"Setting up monitoring for strategy {strategy.Name} ({strategy.StrategyType})");
         }
         
         /// <summary>
@@ -3072,7 +3072,7 @@ namespace Quantra.DAL.Services
                 // Validate inputs
                 if (string.IsNullOrEmpty(symbol) || quantity <= 0 || lowerStrike >= upperStrike)
                 {
-                    DatabaseMonolith.Log("Error", "Invalid parameters for vertical spread");
+                    //DatabaseMonolith.Log("Error", "Invalid parameters for vertical spread");
                     return null;
                 }
                 
@@ -3200,7 +3200,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to create vertical spread for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create vertical spread for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -3220,7 +3220,7 @@ namespace Quantra.DAL.Services
                 // Validate inputs
                 if (string.IsNullOrEmpty(symbol) || quantity <= 0 || strikePrice <= 0)
                 {
-                    DatabaseMonolith.Log("Error", "Invalid parameters for straddle");
+                    //DatabaseMonolith.Log("Error", "Invalid parameters for straddle");
                     return null;
                 }
                 
@@ -3282,7 +3282,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to create straddle for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create straddle for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -3309,7 +3309,7 @@ namespace Quantra.DAL.Services
                 if (string.IsNullOrEmpty(longSymbol) || string.IsNullOrEmpty(shortSymbol) || 
                     longQuantity <= 0 || shortQuantity <= 0)
                 {
-                    DatabaseMonolith.Log("Error", "Invalid parameters for pairs trade");
+                    //DatabaseMonolith.Log("Error", "Invalid parameters for pairs trade");
                     return null;
                 }
                 
@@ -3365,7 +3365,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to create pairs trade: {longSymbol}/{shortSymbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create pairs trade: {longSymbol}/{shortSymbol}", ex.ToString());
                 return null;
             }
         }
@@ -3390,7 +3390,7 @@ namespace Quantra.DAL.Services
                 if (symbols == null || quantities == null || orderTypes == null ||
                     symbols.Count != quantities.Count || symbols.Count != orderTypes.Count)
                 {
-                    DatabaseMonolith.Log("Error", "Invalid parameters for basket order");
+                    //DatabaseMonolith.Log("Error", "Invalid parameters for basket order");
                     return null;
                 }
                 
@@ -3444,7 +3444,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to create basket order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create basket order", ex.ToString());
                 return null;
             }
         }
@@ -3460,21 +3460,21 @@ namespace Quantra.DAL.Services
             {
                 if (strategy == null)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot validate null strategy");
+                    //DatabaseMonolith.Log("Error", "Cannot validate null strategy");
                     return false;
                 }
                 
                 // Check if trading is allowed
                 if (!IsTradingAllowed())
                 {
-                    DatabaseMonolith.Log("Warning", $"Strategy validation failed: Trading not allowed at this time");
+                    //DatabaseMonolith.Log("Warning", $"Strategy validation failed: Trading not allowed at this time");
                     return false;
                 }
                 
                 // Check legs existence
                 if (strategy.Legs == null || strategy.Legs.Count == 0)
                 {
-                    DatabaseMonolith.Log("Error", "Strategy validation failed: No legs defined");
+                    //DatabaseMonolith.Log("Error", "Strategy validation failed: No legs defined");
                     return false;
                 }
                 
@@ -3482,16 +3482,16 @@ namespace Quantra.DAL.Services
                 bool isHighRisk = strategy.RiskLevel >= 8;
                 if (isHighRisk && riskMode != RiskMode.Aggressive)
                 {
-                    DatabaseMonolith.Log("Warning", 
-                        $"Strategy validation failed: Risk level {strategy.RiskLevel} exceeds current risk mode {riskMode}");
+                    //DatabaseMonolith.Log("Warning", 
+                        //$"Strategy validation failed: Risk level {strategy.RiskLevel} exceeds current risk mode {riskMode}");
                     return false;
                 }
                 
                 // Perform strategy-specific validation
                 if (!strategy.Validate())
                 {
-                    DatabaseMonolith.Log("Error", 
-                        $"Strategy validation failed: Failed strategy-specific validation for {strategy.StrategyType}");
+                    //DatabaseMonolith.Log("Error", 
+                        //$"Strategy validation failed: Failed strategy-specific validation for {strategy.StrategyType}");
                     return false;
                 }
                 
@@ -3499,7 +3499,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error validating multi-leg strategy", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error validating multi-leg strategy", ex.ToString());
                 return false;
             }
         }
@@ -3613,14 +3613,14 @@ namespace Quantra.DAL.Services
                 // Calculate all Greeks including Theta
                 var greeks = greekEngine.CalculateGreeks(position, marketConditions);
                 
-                DatabaseMonolith.Log("Info", $"Option Greeks calculated for {symbol} {optionType} {strikePrice}: " +
-                    $"Theta={greeks.Theta:F4} (time decay per day), Delta={greeks.Delta:F4}, Gamma={greeks.Gamma:F4}");
+                //DatabaseMonolith.Log("Info", $"Option Greeks calculated for {symbol} {optionType} {strikePrice}: " +
+                    //$"Theta={greeks.Theta:F4} (time decay per day), Delta={greeks.Delta:F4}, Gamma={greeks.Gamma:F4}");
                 
                 return greeks;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Error calculating option Greeks for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Error calculating option Greeks for {symbol}", ex.ToString());
                 
                 // Return default Greeks on error
                 return new GreekMetrics
@@ -3717,7 +3717,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error analyzing time decay for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error analyzing time decay for {symbol}", ex.ToString());
                 return $"Error analyzing time decay: {ex.Message}";
             }
         }
@@ -3762,7 +3762,7 @@ namespace Quantra.DAL.Services
                 // Validate parameters
                 if (chunks <= 0 || quantity <= 0 || string.IsNullOrEmpty(symbol))
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
+                    //DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
                     return false;
                 }
                 
@@ -3828,15 +3828,15 @@ namespace Quantra.DAL.Services
                 string intervalType = randomizeIntervals ? "randomized" : "fixed";
                 string priceVariance = priceVariancePercent > 0 ? $" with price variance of ±{priceVariancePercent:F1}%" : "";
                 
-                DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
-                    $"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
-                    $"Group ID: {splitOrderGroupId}");
+                //DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
+                    //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
+                    //$"Group ID: {splitOrderGroupId}");
                 
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to split large order for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to split large order for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -3988,14 +3988,14 @@ namespace Quantra.DAL.Services
                 
                 if (cancelCount > 0)
                 {
-                    DatabaseMonolith.Log("Info", $"Cancelled {cancelCount} remaining chunks of split order group {splitOrderGroupId}");
+                    //DatabaseMonolith.Log("Info", $"Cancelled {cancelCount} remaining chunks of split order group {splitOrderGroupId}");
                 }
                 
                 return cancelCount;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to cancel split order group {splitOrderGroupId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to cancel split order group {splitOrderGroupId}", ex.ToString());
                 return 0;
             }
         }
@@ -4023,7 +4023,7 @@ namespace Quantra.DAL.Services
                 if (_trailingStops.ContainsKey(symbol))
                 {
                     _trailingStops.Remove(symbol);
-                    DatabaseMonolith.Log("Info", $"Trailing stop removed for {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Trailing stop removed for {symbol}");
                     return true;
                 }
                 
@@ -4031,7 +4031,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error removing trailing stop for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error removing trailing stop for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -4411,12 +4411,12 @@ namespace Quantra.DAL.Services
             {
                 // In a real implementation, this would query external services or APIs
                 // Here we're just logging the call
-                DatabaseMonolith.Log("Info", "Market conditions updated");
+                //DatabaseMonolith.Log("Info", "Market conditions updated");
                 await Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update market conditions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update market conditions", ex.ToString());
             }
         }
         
@@ -4450,12 +4450,12 @@ namespace Quantra.DAL.Services
                 
                 _scheduledOrders[symbol].Add(order);
                 
-                DatabaseMonolith.Log("Info", $"Scheduled DCA order for {quantity} shares of {symbol} at {executionTime:g}");
+                //DatabaseMonolith.Log("Info", $"Scheduled DCA order for {quantity} shares of {symbol} at {executionTime:g}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to schedule DCA order for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to schedule DCA order for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -4496,12 +4496,12 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Canceled DCA strategy for {strategy.Symbol}, removed {removedCount} scheduled orders");
+                //DatabaseMonolith.Log("Info", $"Canceled DCA strategy for {strategy.Symbol}, removed {removedCount} scheduled orders");
                 return removedCount;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to cancel DCA strategy {strategyId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to cancel DCA strategy {strategyId}", ex.ToString());
                 return 0;
             }
         }
@@ -4516,7 +4516,7 @@ namespace Quantra.DAL.Services
             var profile = _rebalancingProfiles.FirstOrDefault(p => p.Value.ProfileId == profileId).Value;
             if (profile == null)
             {
-                DatabaseMonolith.Log("Warning", $"Rebalancing profile not found: {profileId}");
+                //DatabaseMonolith.Log("Warning", $"Rebalancing profile not found: {profileId}");
                 return false;
             }
             
@@ -4560,12 +4560,12 @@ namespace Quantra.DAL.Services
                     Strategy = TimeBasedExitStrategy.Custom
                 };
                 
-                DatabaseMonolith.Log("Info", $"Time-based exit set for {symbol} at {exitTime:g}");
+                //DatabaseMonolith.Log("Info", $"Time-based exit set for {symbol} at {exitTime:g}");
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to set time-based exit for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to set time-based exit for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -4598,14 +4598,14 @@ namespace Quantra.DAL.Services
             // Check if emergency stop is active
             if (_emergencyStopActive)
             {
-                DatabaseMonolith.Log("Warning", $"Order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
+                //DatabaseMonolith.Log("Warning", $"Order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
                 throw new InvalidOperationException("Cannot place order: Emergency stop is active");
             }
             
             // Check if trading is allowed based on market session and time restrictions
             if (!IsTradingAllowed())
             {
-                DatabaseMonolith.Log("Warning", $"Order rejected: Trading not allowed at this time based on market session filters. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
+                //DatabaseMonolith.Log("Warning", $"Order rejected: Trading not allowed at this time based on market session filters. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
                 throw new InvalidOperationException("Cannot place order: Trading not allowed at this time");
             }
             
@@ -4650,12 +4650,12 @@ namespace Quantra.DAL.Services
                     if (!response.IsSuccessStatusCode)
                     {
                         var resp = await response.Content.ReadAsStringAsync();
-                        DatabaseMonolith.Log("Error", $"Webull paper trade failed: {response.StatusCode} {resp}");
+                        //DatabaseMonolith.Log("Error", $"Webull paper trade failed: {response.StatusCode} {resp}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", "Exception placing paper trade in Webull account", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Exception placing paper trade in Webull account", ex.ToString());
                 }
             }
             else

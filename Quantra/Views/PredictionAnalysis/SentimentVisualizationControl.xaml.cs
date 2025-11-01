@@ -167,7 +167,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
             }
         }
         

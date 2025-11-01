@@ -627,7 +627,7 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 // Log error and show user-friendly message
-                DatabaseMonolith.Log("Error", $"Failed to open layout customization dialog: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to open layout customization dialog: {ex.Message}", ex.ToString());
                 MessageBox.Show("Failed to open layout customization. Please check the logs for details.", 
                     "Layout Customization Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -725,7 +725,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to apply layout configuration: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to apply layout configuration: {ex.Message}", ex.ToString());
                 throw;
             }
         }
@@ -771,7 +771,7 @@ namespace Quantra.Controls
                 // Save to UIConfig (this would be persisted by the configuration system)
                 // Note: This would require access to the configuration manager
                 // For now, we'll just log that it would be saved
-                DatabaseMonolith.Log("Info", $"Layout '{layout.LayoutName}' configuration saved", json);
+                //DatabaseMonolith.Log("Info", $"Layout '{layout.LayoutName}' configuration saved", json);
                 
                 // In a full implementation, you would:
                 // 1. Get the configuration manager instance
@@ -780,7 +780,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save layout configuration: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save layout configuration: {ex.Message}", ex.ToString());
             }
         }
         

@@ -79,7 +79,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to generate consensus report for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to generate consensus report for {symbol}", ex.ToString());
                 return null;
             }
         }

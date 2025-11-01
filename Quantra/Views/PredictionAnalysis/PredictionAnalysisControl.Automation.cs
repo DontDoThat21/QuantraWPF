@@ -82,7 +82,7 @@ namespace Quantra.Controls
             if (StatusText != null)
                 StatusText.Text = "Auto Mode enabled. Analysis will refresh every 10 minutes.";
 
-            DatabaseMonolith.Log("Info", "Auto Mode enabled for PredictionAnalysisControl");
+            //DatabaseMonolith.Log("Info", "Auto Mode enabled for PredictionAnalysisControl");
         }
 
         private void StopAutoMode()
@@ -95,11 +95,11 @@ namespace Quantra.Controls
                     if (autoRefreshTimer.IsEnabled)
                     {
                         autoRefreshTimer.Stop();
-                        DatabaseMonolith.Log("Info", "Auto refresh timer stopped successfully.");
+                        //DatabaseMonolith.Log("Info", "Auto refresh timer stopped successfully.");
                     }
                     else
                     {
-                        DatabaseMonolith.Log("Info", "Auto refresh timer was already stopped.");
+                        //DatabaseMonolith.Log("Info", "Auto refresh timer was already stopped.");
                     }
                 }
                 
@@ -110,11 +110,11 @@ namespace Quantra.Controls
                 if (StatusText != null)
                     StatusText.Text = "Auto Mode disabled. Manual refresh required.";
                     
-                DatabaseMonolith.Log("Info", "Auto Mode disabled for PredictionAnalysisControl");
+                //DatabaseMonolith.Log("Info", "Auto Mode disabled for PredictionAnalysisControl");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error stopping auto mode", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error stopping auto mode", ex.ToString());
             }
         }
         
@@ -123,7 +123,7 @@ namespace Quantra.Controls
             // First check if we're already disposed - safety guard
             if (isDisposed)
             {
-                DatabaseMonolith.Log("Warning", "Timer tick occurred after disposal. Stopping timer.");
+                //DatabaseMonolith.Log("Warning", "Timer tick occurred after disposal. Stopping timer.");
                 SafelyStopTimer();
                 return;
             }
@@ -133,18 +133,18 @@ namespace Quantra.Controls
             {
                 try
                 {
-                    DatabaseMonolith.Log("Info", "Auto refresh timer triggered analysis");
+                    //DatabaseMonolith.Log("Info", "Auto refresh timer triggered analysis");
                     _ = GlobalLoadingStateService.WithLoadingState(RunAutomatedAnalysis());
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", "Error during auto refresh timer analysis", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Error during auto refresh timer analysis", ex.ToString());
                 }
             }
             else
             {
                 // If auto mode was disabled but timer somehow still active, stop it
-                DatabaseMonolith.Log("Warning", "Auto refresh timer triggered but auto mode is disabled. Stopping timer.");
+                //DatabaseMonolith.Log("Warning", "Auto refresh timer triggered but auto mode is disabled. Stopping timer.");
                 SafelyStopTimer();
             }
         }
@@ -193,7 +193,7 @@ namespace Quantra.Controls
                 {
                     if (!analysisTokenSource.IsCancellationRequested)
                     {
-                        DatabaseMonolith.Log("Info", "Cancelling ongoing analysis tasks");
+                        //DatabaseMonolith.Log("Info", "Cancelling ongoing analysis tasks");
                         analysisTokenSource.Cancel();
                     }
                     
@@ -207,14 +207,14 @@ namespace Quantra.Controls
                 if (isAutomatedMode || !isDisposed)
                 {
                     analysisTokenSource = new CancellationTokenSource();
-                    DatabaseMonolith.Log("Info", "Created new analysis token source");
+                    //DatabaseMonolith.Log("Info", "Created new analysis token source");
                 }
                 
-                DatabaseMonolith.Log("Info", "Analysis tasks cancelled");
+                //DatabaseMonolith.Log("Info", "Analysis tasks cancelled");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error cancelling analysis tasks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error cancelling analysis tasks", ex.ToString());
                 
                 // Ensure we have a valid token source even after an error
                 if (analysisTokenSource == null && (isAutomatedMode || !isDisposed))
@@ -252,7 +252,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load cached predictions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load cached predictions", ex.ToString());
             }
         }
 
@@ -262,7 +262,7 @@ namespace Quantra.Controls
             var result = new List<Quantra.Models.PredictionModel>();
             try
             {
-                using (var connection = Quantra.DatabaseMonolith.GetConnection())
+                using (var connection = DatabaseMonolith.GetConnection())
                 {
                     connection.Open();
                     // Get the most recent prediction for each symbol
@@ -317,7 +317,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error retrieving latest predictions from database", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error retrieving latest predictions from database", ex.ToString());
             }
             return result;
         }
@@ -362,7 +362,7 @@ namespace Quantra.Controls
             
             if (!isAutomatedMode && !isManualTrigger)
             {
-                DatabaseMonolith.Log("Warning", "Automated analysis attempted while auto mode is disabled. Skipping.");
+                //DatabaseMonolith.Log("Warning", "Automated analysis attempted while auto mode is disabled. Skipping.");
                 SafelyStopTimer();
                 return;
             }
@@ -373,7 +373,7 @@ namespace Quantra.Controls
                 if (analysisTokenSource == null || analysisTokenSource.IsCancellationRequested)
                 {
                     analysisTokenSource = new CancellationTokenSource();
-                    DatabaseMonolith.Log("Info", "Created new analysis token source for analysis run");
+                    //DatabaseMonolith.Log("Info", "Created new analysis token source for analysis run");
                 }
                 token = analysisTokenSource.Token;
                 
@@ -389,12 +389,12 @@ namespace Quantra.Controls
                 
                 if (majorStocks == null || majorStocks.Count == 0)
                 {
-                    DatabaseMonolith.Log("Warning", "No stock symbols retrieved for automated analysis");
+                    //DatabaseMonolith.Log("Warning", "No stock symbols retrieved for automated analysis");
                     if (StatusText != null) StatusText.Text = "Failed to retrieve stock symbols for analysis";
                     return;
                 }
 
-                DatabaseMonolith.Log("Info", $"Beginning automated analysis on {majorStocks.Count} stocks");
+                //DatabaseMonolith.Log("Info", $"Beginning automated analysis on {majorStocks.Count} stocks");
 
                 int processedCount = 0;
                 var batchedResults = new List<Quantra.Models.PredictionModel>();
@@ -417,12 +417,12 @@ namespace Quantra.Controls
                         }
                     }
                     catch (OperationCanceledException) {
-                        DatabaseMonolith.Log("Info", $"Analysis for {symbol} was cancelled.");
+                        //DatabaseMonolith.Log("Info", $"Analysis for {symbol} was cancelled.");
                         break; 
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", $"Failed to analyze {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Error", $"Failed to analyze {symbol}", ex.ToString());
                     }
                     finally
                     {
@@ -462,7 +462,7 @@ namespace Quantra.Controls
                         LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm}";
                 }, System.Windows.Threading.DispatcherPriority.Background);
 
-                DatabaseMonolith.Log("Info", $"Automated analysis complete. Generated {this.Predictions.Count} predictions");
+                //DatabaseMonolith.Log("Info", $"Automated analysis complete. Generated {this.Predictions.Count} predictions");
 
                 if (isAutomatedMode && this.Predictions.Any())
                 {
@@ -474,12 +474,12 @@ namespace Quantra.Controls
             }
             catch (OperationCanceledException)
             {
-                DatabaseMonolith.Log("Info", "Automated analysis cancelled");
+                //DatabaseMonolith.Log("Info", "Automated analysis cancelled");
                  if (StatusText != null) StatusText.Text = "Analysis cancelled";
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error during automated analysis", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error during automated analysis", ex.ToString());
                  if (StatusText != null) StatusText.Text = "Error during automated analysis";
             }
         }
@@ -494,13 +494,13 @@ namespace Quantra.Controls
                     if (autoRefreshTimer.IsEnabled)
                     {
                         autoRefreshTimer.Stop();
-                        DatabaseMonolith.Log("Info", "Auto refresh timer stopped successfully.");
+                        //DatabaseMonolith.Log("Info", "Auto refresh timer stopped successfully.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error stopping timer", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error stopping timer", ex.ToString());
             }
         }
 
@@ -509,7 +509,7 @@ namespace Quantra.Controls
             try
             {
                 // Create stock symbols table
-                Quantra.DatabaseMonolith.ExecuteNonQuery(@"
+                DatabaseMonolith.ExecuteNonQuery(@"
                     CREATE TABLE IF NOT EXISTS StockSymbols (
                         Symbol TEXT PRIMARY KEY,
                         Name TEXT,
@@ -519,7 +519,7 @@ namespace Quantra.Controls
                     )");
 
                 // Create predictions table
-                Quantra.DatabaseMonolith.ExecuteNonQuery(@"
+                DatabaseMonolith.ExecuteNonQuery(@"
                     CREATE TABLE IF NOT EXISTS StockPredictions (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         Symbol TEXT NOT NULL,
@@ -534,7 +534,7 @@ namespace Quantra.Controls
                     )");
 
                 // Create indicators table
-                Quantra.DatabaseMonolith.ExecuteNonQuery(@"
+                DatabaseMonolith.ExecuteNonQuery(@"
                     CREATE TABLE IF NOT EXISTS PredictionIndicators (
                         PredictionId INTEGER NOT NULL,
                         IndicatorName TEXT NOT NULL,
@@ -544,7 +544,7 @@ namespace Quantra.Controls
                     )");
                 
                 // Create StockDataCache table
-                Quantra.DatabaseMonolith.ExecuteNonQuery(@"
+                DatabaseMonolith.ExecuteNonQuery(@"
                     CREATE TABLE IF NOT EXISTS StockDataCache (
                         Symbol TEXT NOT NULL,
                         TimeRange TEXT NOT NULL,
@@ -555,7 +555,7 @@ namespace Quantra.Controls
                     )");
                 
                 // Create OrderHistory table
-                Quantra.DatabaseMonolith.ExecuteNonQuery(@"
+                DatabaseMonolith.ExecuteNonQuery(@"
                     CREATE TABLE IF NOT EXISTS OrderHistory (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         Symbol TEXT NOT NULL,
@@ -570,11 +570,11 @@ namespace Quantra.Controls
                         Timestamp DATETIME NOT NULL
                     )");
 
-                DatabaseMonolith.Log("Info", "Ensured all required database tables exist");
+                //DatabaseMonolith.Log("Info", "Ensured all required database tables exist");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error ensuring database tables exist", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error ensuring database tables exist", ex.ToString());
             }
         }
 
@@ -590,7 +590,7 @@ namespace Quantra.Controls
                     double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
                     double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
                 {
-                    Quantra.DatabaseMonolith.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+                    //DatabaseMonolith.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
                     return;
                 }
 
@@ -657,7 +657,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
             }
         }
 
@@ -670,30 +670,30 @@ namespace Quantra.Controls
 
                 if (symbols != null && symbols.Count > 0)
                 {
-                    DatabaseMonolith.Log("Info", $"Fetched {symbols.Count} US stock symbols from database");
+                    //DatabaseMonolith.Log("Info", $"Fetched {symbols.Count} US stock symbols from database");
                     return symbols;
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Warning", "No symbols found in database, falling back to default list. API call for symbols has been removed.");
+                    //DatabaseMonolith.Log("Warning", "No symbols found in database, falling back to default list. API call for symbols has been removed.");
                     // API call removed: var symbols = await alphaVantageService.GetAllUsStockSymbolsAsync(token); 
                     // Fallback to a default list if database is empty and API call is removed
                     var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" }; 
                     // Optionally, save these default symbols to the database if that's desired behavior
                     // SaveSymbolsToDatabase(defaultSymbols); // This line can be uncommented if defaults should be saved
-                    DatabaseMonolith.Log("Info", $"Using default hardcoded list of {defaultSymbols.Count} symbols.");
+                    //DatabaseMonolith.Log("Info", $"Using default hardcoded list of {defaultSymbols.Count} symbols.");
                     return defaultSymbols;
                 }
             }
             catch (OperationCanceledException)
             {
-                DatabaseMonolith.Log("Info", "Fetching major US stocks was cancelled.");
+                //DatabaseMonolith.Log("Info", "Fetching major US stocks was cancelled.");
                 return new List<string>();
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
-                DatabaseMonolith.Log("Warning", "Falling back to default list due to error.");
+                //DatabaseMonolith.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Falling back to default list due to error.");
                 var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
                 // SaveSymbolsToDatabase(defaultSymbols); // This line can be uncommented if defaults should be saved
                 return defaultSymbols;
@@ -705,7 +705,7 @@ namespace Quantra.Controls
             List<string> symbols = new List<string>();
             try
             {
-                using (var connection = Quantra.DatabaseMonolith.GetConnection())
+                using (var connection = DatabaseMonolith.GetConnection())
                 {
                     connection.Open();
                     using (var command = new SQLiteCommand("SELECT Symbol FROM StockSymbols", connection))
@@ -722,7 +722,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Error retrieving symbols from database", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error retrieving symbols from database", ex.ToString());
             }
             return symbols;
         }
@@ -731,7 +731,7 @@ namespace Quantra.Controls
         {
             try
             {
-                using (var connection = Quantra.DatabaseMonolith.GetConnection())
+                using (var connection = DatabaseMonolith.GetConnection())
                 {
                     connection.Open();
                     using (var transaction = connection.BeginTransaction())
@@ -760,11 +760,11 @@ namespace Quantra.Controls
                         }
                     }
                 }
-                Quantra.DatabaseMonolith.Log("Info", $"Saved {symbols.Count} symbols to database");
+                //DatabaseMonolith.Log("Info", $"Saved {symbols.Count} symbols to database");
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Error saving symbols to database", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error saving symbols to database", ex.ToString());
             }
         }
 

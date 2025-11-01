@@ -29,7 +29,7 @@ namespace Quantra
                     
                     if (!tableExists)
                     {
-                        DatabaseMonolith.Log("Info", "StockSymbols table does not exist - cache is stale");
+                        //DatabaseMonolith.Log("Info", "StockSymbols table does not exist - cache is stale");
                         return true;
                     }
                     
@@ -37,7 +37,7 @@ namespace Quantra
                     int symbolCount = DatabaseMonolith.ExecuteScalar<int>("SELECT COUNT(*) FROM StockSymbols");
                     if (symbolCount == 0)
                     {
-                        DatabaseMonolith.Log("Info", "StockSymbols table is empty - cache is stale");
+                        //DatabaseMonolith.Log("Info", "StockSymbols table is empty - cache is stale");
                         return true;
                     }
                     
@@ -48,7 +48,7 @@ namespace Quantra
                         var result = command.ExecuteScalar();
                         if (result == null || result == DBNull.Value)
                         {
-                            DatabaseMonolith.Log("Warning", "Could not determine cache age - assuming stale");
+                            //DatabaseMonolith.Log("Warning", "Could not determine cache age - assuming stale");
                             return true;
                         }
                         
@@ -58,7 +58,7 @@ namespace Quantra
                         bool isStale = age.TotalHours > maxAgeHours;
                         if (isStale)
                         {
-                            DatabaseMonolith.Log("Info", $"Symbol cache is stale (age: {age.TotalHours:F1} hours, max: {maxAgeHours} hours)");
+                            //DatabaseMonolith.Log("Info", $"Symbol cache is stale (age: {age.TotalHours:F1} hours, max: {maxAgeHours} hours)");
                         }
                         
                         return isStale;
@@ -67,7 +67,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error checking symbol cache status", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error checking symbol cache status", ex.ToString());
                 return true; // Assume cache is stale on error
             }
         }
@@ -138,12 +138,12 @@ namespace Quantra
                         }
                     }
                     
-                    DatabaseMonolith.Log("Info", $"Found {results.Count} symbol matches for pattern '{searchPattern}'");
+                    //DatabaseMonolith.Log("Info", $"Found {results.Count} symbol matches for pattern '{searchPattern}'");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error finding symbol matches for pattern '{searchPattern}'", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error finding symbol matches for pattern '{searchPattern}'", ex.ToString());
             }
             
             return results;
@@ -166,14 +166,14 @@ namespace Quantra
                     {
                         command.Parameters.AddWithValue("@Now", DateTime.Now);
                         int count = command.ExecuteNonQuery();
-                        DatabaseMonolith.Log("Info", $"Refreshed symbol cache: updated {count} symbols");
+                        //DatabaseMonolith.Log("Info", $"Refreshed symbol cache: updated {count} symbols");
                         return count;
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to refresh symbol cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to refresh symbol cache", ex.ToString());
                 return 0;
             }
         }
@@ -190,7 +190,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting symbol count", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting symbol count", ex.ToString());
                 return 0;
             }
         }
@@ -229,7 +229,7 @@ namespace Quantra
                                 insertCommand.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
                                 insertCommand.ExecuteNonQuery();
                                 
-                                DatabaseMonolith.Log("Info", "Added VIX to symbol cache");
+                                //DatabaseMonolith.Log("Info", "Added VIX to symbol cache");
                             }
                         }
                     }
@@ -237,7 +237,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error ensuring VIX in cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error ensuring VIX in cache", ex.ToString());
             }
         }
     }

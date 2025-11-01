@@ -43,7 +43,7 @@ namespace Quantra
             }
             
             // Log initialization
-            DatabaseMonolith.Log("Info", "Main window loaded successfully");
+            //DatabaseMonolith.Log("Info", "Main window loaded successfully");
         }
 
         private void Window_Initialized(object sender, EventArgs e)
@@ -227,7 +227,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 AppendAlert($"Error fetching data for {currentTicker}: {ex.Message}");
-                DatabaseMonolith.Log("Error", $"Error fetching data for {currentTicker}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching data for {currentTicker}", ex.ToString());
             }
         }
 
@@ -394,7 +394,7 @@ namespace Quantra
                 catch (Exception ex)
                 {
                     AppendAlert($"Error updating data for {currentTicker}: {ex.Message}");
-                    DatabaseMonolith.Log("Error", $"Error updating data for {currentTicker}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error updating data for {currentTicker}", ex.ToString());
                 }
             }
         }
@@ -443,7 +443,7 @@ namespace Quantra
         {
             string fullMessage = ex == null ? message : $"{message}: {ex.Message}";
             AppendAlert(fullMessage, "negative");
-            DatabaseMonolith.Log("Error", message, ex?.ToString());
+            //DatabaseMonolith.Log("Error", message, ex?.ToString());
         }
 
         #endregion
@@ -460,7 +460,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 AppendAlert($"Error during authentication: {ex.Message}");
-                DatabaseMonolith.Log("Error", "Authentication error", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Authentication error", ex.ToString());
             }
         }
 
@@ -575,7 +575,7 @@ namespace Quantra
                 {
                     this.TabAdded -= addControlWindow.RefreshTabs;
                     this.TabAdded += addControlWindow.RefreshTabs;
-                    DatabaseMonolith.Log("Info", "TabAdded event connected to AddControlWindow in AddControlButton_Click");
+                    //DatabaseMonolith.Log("Info", "TabAdded event connected to AddControlWindow in AddControlButton_Click");
                 }
 
                 addControlWindow.Show();
@@ -784,7 +784,7 @@ namespace Quantra
                 DrawGridLines(grid);
 
                 // Log grid initialization
-                DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
+                //DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
             }
         }
     }

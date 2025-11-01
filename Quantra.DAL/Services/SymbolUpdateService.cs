@@ -31,7 +31,7 @@ namespace Quantra.DAL.Services
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", $"Failed to invoke symbol data retrieved event for {symbol} on UI thread", ex.ToString());
+                            //DatabaseMonolith.Log("Error", $"Failed to invoke symbol data retrieved event for {symbol} on UI thread", ex.ToString());
                         }
                     });
                 }
@@ -43,7 +43,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to notify symbol data retrieved for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to notify symbol data retrieved for {symbol}", ex.ToString());
             }
         }
 
@@ -67,7 +67,7 @@ namespace Quantra.DAL.Services
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", $"Failed to invoke cached symbol data accessed event for {symbol} on UI thread", ex.ToString());
+                            //DatabaseMonolith.Log("Error", $"Failed to invoke cached symbol data accessed event for {symbol} on UI thread", ex.ToString());
                         }
                     });
                 }
@@ -79,7 +79,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to notify cached symbol data accessed for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to notify cached symbol data accessed for {symbol}", ex.ToString());
             }
         }
     }

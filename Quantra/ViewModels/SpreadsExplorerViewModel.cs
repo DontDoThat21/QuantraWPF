@@ -200,11 +200,11 @@ namespace Quantra.ViewModels
                 OnPropertyChanged(nameof(TotalVega));
                 OnPropertyChanged(nameof(AverageImpliedVolatility));
 
-                DatabaseMonolith.Log("Info", $"Calculated metrics for {SpreadType}: NetCost={NetCost:C}, MaxProfit={MaxProfit:C}, MaxLoss={MaxLoss:C}");
+                //DatabaseMonolith.Log("Info", $"Calculated metrics for {SpreadType}: NetCost={NetCost:C}, MaxProfit={MaxProfit:C}, MaxLoss={MaxLoss:C}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error calculating spread metrics", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error calculating spread metrics", ex.ToString());
                 ResetMetrics();
             }
         }
@@ -399,7 +399,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Error calculating probability of profit", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Error calculating probability of profit", ex.ToString());
                 ProbabilityOfProfit = 0.5; // Default fallback
             }
         }
@@ -459,11 +459,11 @@ namespace Quantra.ViewModels
                     }
                 }
 
-                DatabaseMonolith.Log("Info", $"Generated payoff chart with {chartValues.Count} data points");
+                //DatabaseMonolith.Log("Info", $"Generated payoff chart with {chartValues.Count} data points");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error generating payoff chart", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error generating payoff chart", ex.ToString());
                 PayoffSeries.Clear();
             }
         }

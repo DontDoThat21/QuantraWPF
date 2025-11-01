@@ -47,13 +47,13 @@ namespace Quantra.Configuration
                 var settings = CreateUserSettingsFromConfig();
 
                 // Save to database
-                Quantra.DatabaseMonolith.SaveUserSettings(settings);
+                DatabaseMonolith.SaveUserSettings(settings);
 
-                Quantra.DatabaseMonolith.Log("Info", "Configuration synchronized to database");
+                //DatabaseMonolith.Log("Info", "Configuration synchronized to database");
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to synchronize configuration to database", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to synchronize configuration to database", ex.ToString());
             }
         }
 
@@ -65,7 +65,7 @@ namespace Quantra.Configuration
             try
             {
                 // Get user settings from database
-                var settings = Quantra.DatabaseMonolith.GetUserSettings();
+                var settings = DatabaseMonolith.GetUserSettings();
 
                 // Update config values (but don't persist yet)
                 UpdateConfigFromUserSettings(settings, false);
@@ -73,11 +73,11 @@ namespace Quantra.Configuration
                 // Persist all changes at once
                 _configManager.SaveChangesAsync().GetAwaiter().GetResult();
 
-                Quantra.DatabaseMonolith.Log("Info", "Database configuration synchronized to config system");
+                //DatabaseMonolith.Log("Info", "Database configuration synchronized to config system");
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to synchronize database to configuration", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to synchronize database to configuration", ex.ToString());
             }
         }
 

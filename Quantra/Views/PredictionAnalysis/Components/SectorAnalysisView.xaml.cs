@@ -58,7 +58,7 @@ namespace Quantra.Controls.Components
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error generating sector heatmap: {ex.Message}");
+                //DatabaseMonolith.Log("Error", $"Error generating sector heatmap: {ex.Message}");
             }
 
             // Update top performers

@@ -57,7 +57,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", "Error reading combo box values for filtering, using defaults", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", "Error reading combo box values for filtering, using defaults", ex.ToString());
                 }
 
                 if (view != null)
@@ -65,7 +65,7 @@ namespace Quantra.Controls
                     // Ensure predictions collection is not null, though it should be initialized.
                     if (this.Predictions == null)
                     {
-                        DatabaseMonolith.Log("Error", "Predictions collection is null after analysis. Aborting filtering.");
+                        //DatabaseMonolith.Log("Error", "Predictions collection is null after analysis. Aborting filtering.");
                         if (StatusText != null)
                             StatusText.Text = "Error: No predictions available to filter.";
                         if (AnalyzeButton != null)
@@ -107,7 +107,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error during prediction analysis: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error during prediction analysis: {ex.Message}", ex.ToString());
                 if (StatusText != null)
                     StatusText.Text = "Error during analysis.";
             }
@@ -135,7 +135,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in PredictionDataGrid_SelectionChanged", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in PredictionDataGrid_SelectionChanged", ex.ToString());
             }
         }
 
@@ -149,7 +149,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update sector charts in batched operation", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update sector charts in batched operation", ex.ToString());
             }
         }
 
@@ -174,11 +174,11 @@ namespace Quantra.Controls
 
                 var service = new IndicatorSettingsService();
                 service.SaveOrUpdateSettingsForControl(settings);
-                DatabaseMonolith.Log("Info", $"Indicator settings saved for control {settings.ControlId}");
+                //DatabaseMonolith.Log("Info", $"Indicator settings saved for control {settings.ControlId}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error saving indicator settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error saving indicator settings", ex.ToString());
             }
         }
 
@@ -270,7 +270,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error adding/updating symbol in grid", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error adding/updating symbol in grid", ex.ToString());
             }
         }
 
@@ -299,7 +299,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error selecting all symbols", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error selecting all symbols", ex.ToString());
             }
         }
 

@@ -47,7 +47,7 @@ namespace Quantra.DAL.Services
                 // In a production system, you'd call a transcript provider API
                 // For prototype, we'll simulate fetching from a mock service or database
                 
-                DatabaseMonolith.Log("Info", $"Fetching earnings transcript for {symbol}");
+                //DatabaseMonolith.Log("Info", $"Fetching earnings transcript for {symbol}");
                 
                 // Simulated API call - in production, replace with actual API call
                 await Task.Delay(200); // Simulate network delay
@@ -59,7 +59,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error fetching earnings transcript for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching earnings transcript for {symbol}", ex.ToString());
                 return string.Empty;
             }
         }
@@ -80,7 +80,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error fetching recent earnings content for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching recent earnings content for {symbol}", ex.ToString());
             }
             return transcripts;
         }
@@ -112,7 +112,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error analyzing earnings transcript sentiment", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error analyzing earnings transcript sentiment", ex.ToString());
                 return 0.0;
             }
         }
@@ -133,7 +133,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting detailed sentiment for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting detailed sentiment for {symbol}", ex.ToString());
             }
             
             return new Dictionary<string, double>();
@@ -179,7 +179,7 @@ namespace Quantra.DAL.Services
                 
                 if (!string.IsNullOrWhiteSpace(error))
                 {
-                    DatabaseMonolith.Log("Warning", $"Python transcript analysis script stderr: {error}");
+                    //DatabaseMonolith.Log("Warning", $"Python transcript analysis script stderr: {error}");
                 }
                 
                 if (!string.IsNullOrEmpty(output))
@@ -231,7 +231,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error analyzing earnings transcript", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error analyzing earnings transcript", ex.ToString());
             }
             
             return result;
@@ -276,7 +276,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting historical earnings analysis for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting historical earnings analysis for {symbol}", ex.ToString());
             }
             
             return result;

@@ -70,13 +70,13 @@ namespace Quantra.Controls
                     tradingRules.Add(rule);
                 }
 
-                DatabaseMonolith.Log("Info", $"Loaded {rules.Count} trading rules from database");
+                //DatabaseMonolith.Log("Info", $"Loaded {rules.Count} trading rules from database");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading trading rules: {ex.Message}", "Error", 
                                MessageBoxButton.OK, MessageBoxImage.Error);
-                DatabaseMonolith.Log("Error", "Failed to load trading rules from database", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load trading rules from database", ex.ToString());
             }
         }
 
@@ -173,13 +173,13 @@ namespace Quantra.Controls
                     // Then remove from the UI collection
                     tradingRules.Remove(rule);
                     
-                    DatabaseMonolith.Log("Info", $"Trading rule '{rule.Name}' deleted");
+                    //DatabaseMonolith.Log("Info", $"Trading rule '{rule.Name}' deleted");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error deleting rule: {ex.Message}", "Error",
                                    MessageBoxButton.OK, MessageBoxImage.Error);
-                    DatabaseMonolith.Log("Error", "Error deleting trading rule", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Error deleting trading rule", ex.ToString());
                 }
             }
         }
@@ -258,7 +258,7 @@ namespace Quantra.Controls
 
                     // Let DatabaseMonolith handle ID creation
                     DatabaseMonolith.SaveTradingRule(currentRule);
-                    DatabaseMonolith.Log("Info", $"New trading rule '{currentRule.Name}' created");
+                    //DatabaseMonolith.Log("Info", $"New trading rule '{currentRule.Name}' created");
                 }
                 else
                 {
@@ -266,7 +266,7 @@ namespace Quantra.Controls
                     int index = tradingRules.IndexOf(currentRule);
                     tradingRules[index] = tradingRules[index]; // This triggers UI refresh
                     DatabaseMonolith.SaveTradingRule(currentRule);
-                    DatabaseMonolith.Log("Info", $"Trading rule '{currentRule.Name}' updated");
+                    //DatabaseMonolith.Log("Info", $"Trading rule '{currentRule.Name}' updated");
                 }
 
                 // Close the popup
@@ -276,7 +276,7 @@ namespace Quantra.Controls
             {
                 MessageBox.Show($"Error saving rule: {ex.Message}", "Error", 
                                MessageBoxButton.OK, MessageBoxImage.Error);
-                DatabaseMonolith.Log("Error", "Error saving trading rule", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error saving trading rule", ex.ToString());
             }
         }
 
@@ -497,7 +497,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error updating rule indicators", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error updating rule indicators", ex.ToString());
             }
         }
 

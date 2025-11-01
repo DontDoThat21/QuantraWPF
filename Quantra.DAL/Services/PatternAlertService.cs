@@ -72,7 +72,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to detect patterns for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to detect patterns for {symbol}", ex.ToString());
                 return 0;
             }
         }

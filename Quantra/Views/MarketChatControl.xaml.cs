@@ -149,7 +149,7 @@ namespace Quantra.Controls
                     LogLevel.Information => "Info",
                     _ => "Debug"
                 };
-                DatabaseMonolith.Log(level, $"{_name}: {message}", exception?.ToString());
+                //DatabaseMonolith.Log(level, $"{_name}: {message}", exception?.ToString());
             }
             catch
             {

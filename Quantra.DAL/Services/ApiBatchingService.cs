@@ -54,7 +54,7 @@ namespace Quantra.DAL.Services
             if (itemList.Count == 0)
                 return results;
 
-            DatabaseMonolith.Log("Info", $"Starting batch operation for {itemList.Count} items (batch size: {batchSize})");
+            //DatabaseMonolith.Log("Info", $"Starting batch operation for {itemList.Count} items (batch size: {batchSize})");
 
             var delay = delayBetweenBatches ?? _apiIntervals.GetValueOrDefault(apiProvider, _apiIntervals["Default"]);
 
@@ -76,7 +76,7 @@ namespace Quantra.DAL.Services
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Batch operation failed for item: {item}", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Batch operation failed for item: {item}", ex.ToString());
                             return new KeyValuePair<TInput, TOutput>(item, default(TOutput));
                         }
                     }));
@@ -95,10 +95,10 @@ namespace Quantra.DAL.Services
                     await Task.Delay(delay);
                 }
                 
-                DatabaseMonolith.Log("Debug", $"Completed batch {i / batchSize + 1}/{(itemList.Count + batchSize - 1) / batchSize}");
+                //DatabaseMonolith.Log("Debug", $"Completed batch {i / batchSize + 1}/{(itemList.Count + batchSize - 1) / batchSize}");
             }
 
-            DatabaseMonolith.Log("Info", $"Batch operation completed. Processed {results.Count}/{itemList.Count} items successfully");
+            //DatabaseMonolith.Log("Info", $"Batch operation completed. Processed {results.Count}/{itemList.Count} items successfully");
             return results;
         }
 

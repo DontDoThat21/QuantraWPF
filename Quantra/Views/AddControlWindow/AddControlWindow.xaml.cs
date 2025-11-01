@@ -125,7 +125,7 @@ namespace Quantra
                     mainWindow.TabAdded += _instance.RefreshTabs;
                     
                     // Log that we're connecting to the event
-                    DatabaseMonolith.Log("Info", "AddControlWindow connected to MainWindow TabAdded event");
+                    //DatabaseMonolith.Log("Info", "AddControlWindow connected to MainWindow TabAdded event");
                 }
             }
             else
@@ -259,7 +259,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error extracting control type from ComboBox selection", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error extracting control type from ComboBox selection", ex.ToString());
                 controlType = null;
             }
             
@@ -274,7 +274,7 @@ namespace Quantra
             } 
 
             // Log the control type to help with debugging
-            DatabaseMonolith.Log("Info", $"Adding control of type: '{controlType}'");
+            //DatabaseMonolith.Log("Info", $"Adding control of type: '{controlType}'");
 
             chosenControlDefinition = $"{controlType},{row},{column},{rowSpan},{columnSpan}";
 
@@ -289,7 +289,7 @@ namespace Quantra
                     // Force refresh the tab to ensure controls render properly - especially for Prediction Analysis
                     if (controlType == "Prediction Analysis")
                     {
-                        DatabaseMonolith.Log("Info", $"Special handling for Prediction Analysis control - ensuring visibility");
+                        //DatabaseMonolith.Log("Info", $"Special handling for Prediction Analysis control - ensuring visibility");
                         
                         // Force refresh of the tab immediately to ensure control is properly initialized
                         mainWindow.RefreshTabControls(selectedTab);
@@ -375,7 +375,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to initialize AddControlWindow with position: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to initialize AddControlWindow with position: {ex.Message}", ex.ToString());
             }
         }
 
@@ -426,7 +426,7 @@ namespace Quantra
             UpdatePositionValidation();
 
             // Log success
-            DatabaseMonolith.Log("Info", $"Initialized AddControlWindow with tab '{tabName}' at position ({displayRow},{displayCol})");
+            //DatabaseMonolith.Log("Info", $"Initialized AddControlWindow with tab '{tabName}' at position ({displayRow},{displayCol})");
         }
 
         private void Window_MouseMove(object sender, MouseEventArgs e)

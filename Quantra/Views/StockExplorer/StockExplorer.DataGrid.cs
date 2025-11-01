@@ -88,7 +88,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to load DataGrid settings", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to load DataGrid settings", ex.ToString());
             }
             finally
             {
@@ -127,7 +127,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to save DataGrid settings", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to save DataGrid settings", ex.ToString());
             }
         }
 
@@ -156,7 +156,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to get tab name for DataGrid settings", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to get tab name for DataGrid settings", ex.ToString());
             }
 
             return $"StockExplorer_{_instanceId}"; // Stable fallback per instance
@@ -263,7 +263,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in StockDataGrid_MouseRightButtonUp", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in StockDataGrid_MouseRightButtonUp", ex.ToString());
                 // Clear context menu on error
                 StockDataGrid.ContextMenu = null;
             }
@@ -287,7 +287,7 @@ namespace Quantra.Controls
                 var cacheService = new StockDataCacheService();
                 int deletedEntries = cacheService.DeleteCachedDataForSymbol(symbol);
                 (Application.Current.MainWindow as MainWindow)?.AppendAlert($"Deleted {deletedEntries} cache entries for {symbol}.", "positive");
-                DatabaseMonolith.Log("Info", $"User deleted cache for symbol: {symbol}. Entries removed: {deletedEntries}.");
+                //DatabaseMonolith.Log("Info", $"User deleted cache for symbol: {symbol}. Entries removed: {deletedEntries}.");
                 
                 // Optionally, refresh the grid or the specific row if needed
                 // RefreshDataGrid(); 
@@ -326,7 +326,7 @@ namespace Quantra.Controls
                     }
                     
                     (Application.Current.MainWindow as MainWindow)?.AppendAlert($"Successfully deleted stock entry for {symbol}.", "positive");
-                    DatabaseMonolith.Log("Info", $"User deleted stock entry for symbol: {symbol}.");
+                    //DatabaseMonolith.Log("Info", $"User deleted stock entry for symbol: {symbol}.");
                 }
                 else
                 {

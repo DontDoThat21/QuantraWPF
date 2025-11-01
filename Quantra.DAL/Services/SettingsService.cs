@@ -115,7 +115,7 @@ namespace Quantra.DAL.Services
                                 using (var addCmd = new SQLiteCommand($"ALTER TABLE SettingsProfiles ADD COLUMN {col} INTEGER DEFAULT 0", connection))
                                 {
                                     addCmd.ExecuteNonQuery();
-                                    DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
+                                    //DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
                                 }
                             }
                         }
@@ -129,7 +129,7 @@ namespace Quantra.DAL.Services
                                 using (var addCmd = new SQLiteCommand($"ALTER TABLE SettingsProfiles ADD COLUMN {col} {(col == "AlertPhoneNumber" ? "TEXT" : "INTEGER")} {defaultValue}", connection))
                                 {
                                     addCmd.ExecuteNonQuery();
-                                    DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
+                                    //DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
                                 }
                             }
                         }
@@ -143,7 +143,7 @@ namespace Quantra.DAL.Services
                                 using (var addCmd = new SQLiteCommand($"ALTER TABLE SettingsProfiles ADD COLUMN {col} {(col == "PushNotificationUserId" ? "TEXT" : "INTEGER")} {defaultValue}", connection))
                                 {
                                     addCmd.ExecuteNonQuery();
-                                    DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
+                                    //DatabaseMonolith.Log("Info", $"Added {col} column to SettingsProfiles table");
                                 }
                             }
                         }
@@ -172,7 +172,7 @@ namespace Quantra.DAL.Services
                         using (var command = new SQLiteCommand("ALTER TABLE SettingsProfiles ADD COLUMN AlertEmail TEXT DEFAULT 'tylortrub@gmail.com'", connection))
                         {
                             command.ExecuteNonQuery();
-                            DatabaseMonolith.Log("Info", "Added AlertEmail column to SettingsProfiles table");
+                            //DatabaseMonolith.Log("Info", "Added AlertEmail column to SettingsProfiles table");
                         }
                     }
 
@@ -199,7 +199,7 @@ namespace Quantra.DAL.Services
                         using (var command = new SQLiteCommand("ALTER TABLE SettingsProfiles ADD COLUMN EnableVixMonitoring INTEGER DEFAULT 1", connection))
                         {
                             command.ExecuteNonQuery();
-                            DatabaseMonolith.Log("Info", "Added EnableVixMonitoring column to SettingsProfiles table");
+                            //DatabaseMonolith.Log("Info", "Added EnableVixMonitoring column to SettingsProfiles table");
                         }
                     }
 
@@ -226,7 +226,7 @@ namespace Quantra.DAL.Services
                         using (var command = new SQLiteCommand("ALTER TABLE SettingsProfiles ADD COLUMN AlphaVantageApiKey TEXT DEFAULT ''", connection))
                         {
                             command.ExecuteNonQuery();
-                            DatabaseMonolith.Log("Info", "Added AlphaVantageApiKey column to SettingsProfiles table");
+                            //DatabaseMonolith.Log("Info", "Added AlphaVantageApiKey column to SettingsProfiles table");
                         }
                     }
                 
@@ -267,7 +267,7 @@ namespace Quantra.DAL.Services
                             };
                             CreateSettingsProfile(defaultProfile);
                         
-                            DatabaseMonolith.Log("Info", "Created default settings profile");
+                            //DatabaseMonolith.Log("Info", "Created default settings profile");
                         }
                     }
                 }
@@ -801,7 +801,7 @@ namespace Quantra.DAL.Services
                             };
                             CreateSettingsProfile(defaultProfile);
                         
-                            DatabaseMonolith.Log("Info", "Created default settings profile");
+                            //DatabaseMonolith.Log("Info", "Created default settings profile");
                         }
                     }
                 }

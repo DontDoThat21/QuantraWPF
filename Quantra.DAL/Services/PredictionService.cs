@@ -94,7 +94,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to predict stock movement for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to predict stock movement for {symbol}", ex.ToString());
                 throw;
             }
         }

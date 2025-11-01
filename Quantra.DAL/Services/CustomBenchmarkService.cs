@@ -76,7 +76,7 @@ namespace Quantra.DAL.Services
                 // Validate benchmark
                 if (!benchmark.Validate(out string errorMessage))
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid custom benchmark: {errorMessage}");
+                    //DatabaseMonolith.Log("Error", $"Invalid custom benchmark: {errorMessage}");
                     return false;
                 }
                 
@@ -99,7 +99,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save custom benchmark", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save custom benchmark", ex.ToString());
                 return false;
             }
         }
@@ -124,7 +124,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to delete custom benchmark", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to delete custom benchmark", ex.ToString());
                 return false;
             }
         }
@@ -164,7 +164,7 @@ namespace Quantra.DAL.Services
                     }
                     else
                     {
-                        DatabaseMonolith.Log("Warning", $"No historical data for {component.Symbol} in date range {startDate} to {endDate}");
+                        //DatabaseMonolith.Log("Warning", $"No historical data for {component.Symbol} in date range {startDate} to {endDate}");
                     }
                 }
                 
@@ -179,7 +179,7 @@ namespace Quantra.DAL.Services
                 // If the common date range is invalid, return null
                 if (commonStartDate > commonEndDate)
                 {
-                    DatabaseMonolith.Log("Warning", "No overlapping date range for custom benchmark components");
+                    //DatabaseMonolith.Log("Warning", "No overlapping date range for custom benchmark components");
                     return null;
                 }
                 
@@ -268,7 +268,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate custom benchmark data for {benchmark.Name}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate custom benchmark data for {benchmark.Name}", ex.ToString());
                 return null;
             }
         }
@@ -365,18 +365,18 @@ namespace Quantra.DAL.Services
                     if (benchmarks != null)
                     {
                         _customBenchmarks = benchmarks;
-                        DatabaseMonolith.Log("Info", $"Loaded {_customBenchmarks.Count} custom benchmarks from file");
+                        //DatabaseMonolith.Log("Info", $"Loaded {_customBenchmarks.Count} custom benchmarks from file");
                     }
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Info", "No custom benchmarks file found, creating sample benchmarks");
+                    //DatabaseMonolith.Log("Info", "No custom benchmarks file found, creating sample benchmarks");
                     CreateSampleBenchmarks();
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load custom benchmarks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load custom benchmarks", ex.ToString());
                 _customBenchmarks = new List<CustomBenchmark>();
                 
                 // Create sample benchmarks if loading failed
@@ -399,11 +399,11 @@ namespace Quantra.DAL.Services
                 // Validate balanced benchmark before saving
                 if (!balanced.Validate(out string balancedError))
                 {
-                    DatabaseMonolith.Log("Error", $"Balanced benchmark validation failed: {balancedError}");
+                    //DatabaseMonolith.Log("Error", $"Balanced benchmark validation failed: {balancedError}");
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Debug", $"Created balanced benchmark: Name='{balanced.Name}', DisplaySymbol='{balanced.DisplaySymbol}'");
+                    //DatabaseMonolith.Log("Debug", $"Created balanced benchmark: Name='{balanced.Name}', DisplaySymbol='{balanced.DisplaySymbol}'");
                 }
                 
                 // Create a Technology focused portfolio
@@ -415,22 +415,22 @@ namespace Quantra.DAL.Services
                 // Validate tech benchmark before saving
                 if (!tech.Validate(out string techError))
                 {
-                    DatabaseMonolith.Log("Error", $"Tech benchmark validation failed: {techError}");
+                    //DatabaseMonolith.Log("Error", $"Tech benchmark validation failed: {techError}");
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Debug", $"Created tech benchmark: Name='{tech.Name}', DisplaySymbol='{tech.DisplaySymbol}'");
+                    //DatabaseMonolith.Log("Debug", $"Created tech benchmark: Name='{tech.Name}', DisplaySymbol='{tech.DisplaySymbol}'");
                 }
                 
                 // Save sample benchmarks
                 SaveCustomBenchmark(balanced);
                 SaveCustomBenchmark(tech);
                 
-                DatabaseMonolith.Log("Info", "Created sample custom benchmarks");
+                //DatabaseMonolith.Log("Info", "Created sample custom benchmarks");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to create sample benchmarks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create sample benchmarks", ex.ToString());
             }
         }
         
@@ -447,7 +447,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save custom benchmarks to file", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save custom benchmarks to file", ex.ToString());
                 return false;
             }
         }

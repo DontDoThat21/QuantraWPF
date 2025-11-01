@@ -69,7 +69,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to load indicator definition {id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to load indicator definition {id}", ex.ToString());
             }
 
             return null;
@@ -102,7 +102,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save indicator definition {definition.Id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save indicator definition {definition.Id}", ex.ToString());
                 return false;
             }
         }
@@ -130,7 +130,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to delete indicator definition {id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to delete indicator definition {id}", ex.ToString());
                 return false;
             }
         }
@@ -164,13 +164,13 @@ namespace Quantra.Repositories
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", $"Failed to load indicator definition file {file}", ex.ToString());
+                        //DatabaseMonolith.Log("Error", $"Failed to load indicator definition file {file}", ex.ToString());
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to list indicator definition files", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to list indicator definition files", ex.ToString());
             }
             
             return indicators;

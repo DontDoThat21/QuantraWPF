@@ -50,14 +50,14 @@ namespace Quantra.Controls
                 } 
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Failed to get current price for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Failed to get current price for {symbol}", ex.ToString());
                     currentPrice = 0.0;
                 }
 
                 Dictionary<string, double> indicators = new Dictionary<string, double>();
 
                 // API Calls for technical indicators removed.
-                DatabaseMonolith.Log("Warning", $"API calls for technical indicators for {symbol} have been removed. Indicators will be empty.");
+                //DatabaseMonolith.Log("Warning", $"API calls for technical indicators for {symbol} have been removed. Indicators will be empty.");
 
                 // Sentiment analysis integration
                 try
@@ -129,7 +129,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", "Error fetching detailed earnings transcript analysis", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", "Error fetching detailed earnings transcript analysis", ex.ToString());
                     }
                     
                     // Store individual news source sentiment for detailed analysis if needed
@@ -143,7 +143,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", "Error fetching detailed news source sentiment", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", "Error fetching detailed news source sentiment", ex.ToString());
                     }
                     
                     // Store analyst rating data for detailed analysis
@@ -163,7 +163,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", "Error fetching analyst rating data", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", "Error fetching analyst rating data", ex.ToString());
                     }
 
                     // Store insider trading data for detailed analysis
@@ -184,7 +184,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", "Error fetching insider trading metrics", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", "Error fetching insider trading metrics", ex.ToString());
                     }
                     
                     // Set the main sentiment score for later use
@@ -192,7 +192,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex) 
                 { 
-                    DatabaseMonolith.Log("Warning", "Error fetching social media sentiment", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", "Error fetching social media sentiment", ex.ToString());
                 }
 
                 // --- NEW: Call PythonStockPredictor for ML-based predictionModel ---
@@ -215,7 +215,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Python ML predictionModel failed for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Python ML predictionModel failed for {symbol}", ex.ToString());
                     // Fallback to legacy logic if Python fails
                     (action, confidence, targetPrice) = DeterminePredictionFromIndicators(currentPrice, indicators);
                     weights = null;
@@ -361,7 +361,7 @@ namespace Quantra.Controls
                     if (action == "SELL") potentialReturn *= -1;
                 }
                 
-                DatabaseMonolith.Log("Debug", $"AnalyzeStockWithAllAlgorithms (ML+API): symbol={symbol}, action={action}, currentPrice={currentPrice}, targetPrice={targetPrice}, potentialReturn={potentialReturn}, sentiment={sentimentScore}, earnings_quarter={earningsQuarter}, weights={weights}");
+                //DatabaseMonolith.Log("Debug", $"AnalyzeStockWithAllAlgorithms (ML+API): symbol={symbol}, action={action}, currentPrice={currentPrice}, targetPrice={targetPrice}, potentialReturn={potentialReturn}, sentiment={sentimentScore}, earnings_quarter={earningsQuarter}, weights={weights}");
 
                 // Run sentiment-price correlation analysis if not already done
                 try
@@ -378,7 +378,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", "Error performing sentiment-price correlation analysis", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", "Error performing sentiment-price correlation analysis", ex.ToString());
                 }
 
                 // Create the prediction model with all available data
@@ -511,7 +511,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to analyze {symbol} with all algorithms (ML/API)", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to analyze {symbol} with all algorithms (ML/API)", ex.ToString());
                 return new Quantra.Models.PredictionModel // Return a default/error model
                 {
                     Symbol = symbol,

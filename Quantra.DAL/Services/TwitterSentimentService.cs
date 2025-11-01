@@ -33,7 +33,7 @@ namespace Quantra.DAL.Services
                 var response = await client.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    DatabaseMonolith.Log("Warning", $"Twitter API call failed for {symbol}: {response.StatusCode}");
+                    //DatabaseMonolith.Log("Warning", $"Twitter API call failed for {symbol}: {response.StatusCode}");
                     return tweets;
                 }
                 var json = await response.Content.ReadAsStringAsync();
@@ -49,7 +49,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error fetching tweets for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching tweets for {symbol}", ex.ToString());
             }
             return tweets;
         }
@@ -85,16 +85,16 @@ namespace Quantra.DAL.Services
                 process.WaitForExit();
                 if (!string.IsNullOrWhiteSpace(error))
                 {
-                    DatabaseMonolith.Log("Warning", $"Python sentiment script stderr: {error}");
+                    //DatabaseMonolith.Log("Warning", $"Python sentiment script stderr: {error}");
                 }
                 if (double.TryParse(output, out double sentiment))
                     return sentiment;
-                else
-                    DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
+                //else
+                    //DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error running Python sentiment analysis script", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error running Python sentiment analysis script", ex.ToString());
             }
             return 0.0;
         }

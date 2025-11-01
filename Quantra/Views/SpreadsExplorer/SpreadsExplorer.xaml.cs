@@ -43,11 +43,11 @@ namespace Quantra.Controls
                 // Add initial legs for a simple spread
                 AddDefaultLegs();
                 
-                DatabaseMonolith.Log("Info", "SpreadsExplorer initialized with default spread");
+                //DatabaseMonolith.Log("Info", "SpreadsExplorer initialized with default spread");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error initializing SpreadsExplorer", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error initializing SpreadsExplorer", ex.ToString());
             }
         }
 
@@ -113,12 +113,12 @@ namespace Quantra.Controls
                     // Auto-configure legs based on spread type
                     ConfigureLegsForSpreadType(spreadType);
                     
-                    DatabaseMonolith.Log("Info", $"Spread type changed to: {spreadType}");
+                    //DatabaseMonolith.Log("Info", $"Spread type changed to: {spreadType}");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error changing spread type", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error changing spread type", ex.ToString());
             }
         }
 
@@ -183,7 +183,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error configuring legs for spread type", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error configuring legs for spread type", ex.ToString());
             }
         }
 
@@ -452,7 +452,7 @@ namespace Quantra.Controls
                         leg.Option.UnderlyingSymbol = symbol;
                     }
                     
-                    DatabaseMonolith.Log("Info", $"Loaded symbol {symbol} with price {quoteData.Price:C}");
+                    //DatabaseMonolith.Log("Info", $"Loaded symbol {symbol} with price {quoteData.Price:C}");
                 }
                 else
                 {
@@ -461,7 +461,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading symbol", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading symbol", ex.ToString());
                 MessageBox.Show("Error loading symbol data. Please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -496,11 +496,11 @@ namespace Quantra.Controls
                 };
                 
                 _viewModel.OptionLegs.Add(newLeg);
-                DatabaseMonolith.Log("Info", "Added new option leg");
+                //DatabaseMonolith.Log("Info", "Added new option leg");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error adding new leg", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error adding new leg", ex.ToString());
             }
         }
 
@@ -510,11 +510,11 @@ namespace Quantra.Controls
             {
                 _viewModel.CalculateSpreadMetrics();
                 _viewModel.GeneratePayoffChart();
-                DatabaseMonolith.Log("Info", "Calculated spread metrics and generated payoff chart");
+                //DatabaseMonolith.Log("Info", "Calculated spread metrics and generated payoff chart");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error calculating spread metrics", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error calculating spread metrics", ex.ToString());
                 MessageBox.Show("Error calculating spread metrics. Please check your inputs.", "Calculation Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

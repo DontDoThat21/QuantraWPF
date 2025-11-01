@@ -571,7 +571,7 @@ namespace Quantra.CrossCutting.Monitoring
         {
             try
             {
-                using var connection = Quantra.DatabaseMonolith.GetConnection();
+                using var connection = DatabaseMonolith.GetConnection();
                 await connection.OpenAsync().ConfigureAwait(false);
                 
                 using var command = connection.CreateCommand();

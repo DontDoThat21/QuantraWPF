@@ -104,13 +104,13 @@ namespace Quantra
                             }
 
                             // Log the refresh
-                            DatabaseMonolith.Log("Info", $"Refreshed tab list in AddControlWindow. Tab count: {tabs.Count}");
+                            //DatabaseMonolith.Log("Info", $"Refreshed tab list in AddControlWindow. Tab count: {tabs.Count}");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error refreshing tabs in AddControlWindow: {ex.Message}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error refreshing tabs in AddControlWindow: {ex.Message}", ex.ToString());
                 }
             }));
         }

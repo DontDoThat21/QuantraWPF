@@ -496,7 +496,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to initialize components", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to initialize components", ex.ToString());
             }
         }
 
@@ -522,7 +522,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to initialize sentiment visualization on load", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to initialize sentiment visualization on load", ex.ToString());
             }
         }
     }

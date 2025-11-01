@@ -126,7 +126,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update sentiment dashboard", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update sentiment dashboard", ex.ToString());
                 MessageBox.Show($"Error updating sentiment dashboard: {ex.Message}", "Error", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }

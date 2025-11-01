@@ -72,7 +72,7 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 UpdateStatus($"Error analyzing sentiment-price correlation: {ex.Message}", isError: true);
-                DatabaseMonolith.Log("Error", "Sentiment-price correlation analysis failed", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Sentiment-price correlation analysis failed", ex.ToString());
             }
         }
         
@@ -147,7 +147,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
             }
         }
         
@@ -205,11 +205,11 @@ namespace Quantra.Controls
             // Log the message
             if (isError)
             {
-                DatabaseMonolith.Log("Error", message);
+                //DatabaseMonolith.Log("Error", message);
             }
             else
             {
-                DatabaseMonolith.Log("Info", message);
+                //DatabaseMonolith.Log("Info", message);
             }
         }
     }

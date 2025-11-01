@@ -66,7 +66,7 @@ namespace Quantra.Controllers
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading all sectors data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading all sectors data", ex.ToString());
             }
         }
         
@@ -97,7 +97,7 @@ namespace Quantra.Controllers
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading details for sector {sector}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading details for sector {sector}", ex.ToString());
             }
         }
         
@@ -112,7 +112,7 @@ namespace Quantra.Controllers
                 
                 // This data could be displayed in a separate view or dialog
                 // For now, we'll just log some of the key findings
-                DatabaseMonolith.Log("Info", 
+                //DatabaseMonolith.Log("Info", 
                     $"Sector {sector} correlation analysis: " +
                     $"Overall Correlation: {correlation.OverallCorrelation:F2}, " +
                     $"Lead/Lag: {correlation.LeadLagRelationship:F1} days, " +
@@ -120,7 +120,7 @@ namespace Quantra.Controllers
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error analyzing sector correlation for {sector}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error analyzing sector correlation for {sector}", ex.ToString());
             }
         }
         
@@ -138,12 +138,12 @@ namespace Quantra.Controllers
                 foreach (var sector in trends.Keys)
                 {
                     double averageSentiment = trends[sector].Average(t => t.Sentiment);
-                    DatabaseMonolith.Log("Info", $"Sector {sector} average sentiment: {averageSentiment:F2}");
+                    //DatabaseMonolith.Log("Info", $"Sector {sector} average sentiment: {averageSentiment:F2}");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error comparing sectors", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error comparing sectors", ex.ToString());
             }
         }
         

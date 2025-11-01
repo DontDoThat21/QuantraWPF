@@ -30,7 +30,7 @@ namespace Quantra.Controls
             // Default to paper trading mode
             _tradingBot.SetTradingMode(Quantra.Enums.TradingMode.Paper);
             
-            DatabaseMonolith.Log("Info", "Trading components initialized in PredictionAnalysisControl");
+            //DatabaseMonolith.Log("Info", "Trading components initialized in PredictionAnalysisControl");
         }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Quantra.Controls
         internal void HandleAutoModeEnabled()
         {
             _isAutoTradingEnabled = true;
-            DatabaseMonolith.Log("Info", "Auto trading mode enabled");
+            //DatabaseMonolith.Log("Info", "Auto trading mode enabled");
 
             // Ensure trading components are initialized before starting auto trading
             if (_tradingBot == null || _stockDataCache == null)
@@ -59,7 +59,7 @@ namespace Quantra.Controls
         internal void HandleAutoModeDisabled()
         {
             _isAutoTradingEnabled = false;
-            DatabaseMonolith.Log("Info", "Auto trading mode disabled");
+            //DatabaseMonolith.Log("Info", "Auto trading mode disabled");
             
             // Update UI elements to indicate auto trading is disabled
             if (StatusText != null)
@@ -89,11 +89,11 @@ namespace Quantra.Controls
                 
                 if (tradablePredictions.Count == 0)
                 {
-                    DatabaseMonolith.Log("Info", "No predictions with trading rules found for auto trading");
+                    //DatabaseMonolith.Log("Info", "No predictions with trading rules found for auto trading");
                     return;
                 }
                 
-                DatabaseMonolith.Log("Info", $"Starting auto trading for {tradablePredictions.Count} predictions");
+                //DatabaseMonolith.Log("Info", $"Starting auto trading for {tradablePredictions.Count} predictions");
                 
                 foreach (var prediction in tradablePredictions)
                 {
@@ -107,7 +107,7 @@ namespace Quantra.Controls
                     var stockData = await GetStockDataForSymbol(prediction.Symbol);
                     if (stockData == null || stockData.Count == 0)
                     {
-                        DatabaseMonolith.Log("Warning", $"No stock data available for {prediction.Symbol}");
+                        //DatabaseMonolith.Log("Warning", $"No stock data available for {prediction.Symbol}");
                         continue;
                     }
                     
@@ -124,7 +124,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error during auto trading", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error during auto trading", ex.ToString());
             }
         }
 
@@ -134,7 +134,7 @@ namespace Quantra.Controls
         private void StopAutoTrading()
         {
             // Nothing to specifically stop if using event-based monitoring
-            DatabaseMonolith.Log("Info", "Auto trading stopped");
+            //DatabaseMonolith.Log("Info", "Auto trading stopped");
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting stock data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting stock data for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -206,7 +206,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error evaluating trading rule for {prediction.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error evaluating trading rule for {prediction.Symbol}", ex.ToString());
             }
             
             // Default to not trading if there's any issue
@@ -223,7 +223,7 @@ namespace Quantra.Controls
                 // Ensure trading components are initialized before executing a trade
                 if (_tradingBot == null)
                 {
-                    DatabaseMonolith.Log("Error", "Trading bot is not initialized. Cannot execute trade.");
+                    //DatabaseMonolith.Log("Error", "Trading bot is not initialized. Cannot execute trade.");
                     return;
                 }
 
@@ -240,7 +240,7 @@ namespace Quantra.Controls
                 // Determine if we should use a trailing stop for this prediction
                 bool useTrailingStop = ShouldUseTrailingStop(prediction);
                 
-                DatabaseMonolith.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
+                //DatabaseMonolith.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
                 
                 // Create order model
                 var order = new OrderModel
@@ -284,11 +284,11 @@ namespace Quantra.Controls
                     
                     if (trailingStopSet)
                     {
-                        DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+                        //DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
                     }
                     else
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+                        //DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
                     }
                 }
                 else
@@ -315,7 +315,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
             }
         }
 
@@ -336,7 +336,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error updating UI after trade", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error updating UI after trade", ex.ToString());
             }
         }
 
@@ -396,13 +396,13 @@ namespace Quantra.Controls
                 // Calculate position size using the trading bot
                 int shares = _tradingBot.CalculatePositionSize(parameters);
                 
-                DatabaseMonolith.Log("Info", $"Calculated position size for {prediction.Symbol}: {shares} shares using {parameters.Method}");
+                //DatabaseMonolith.Log("Info", $"Calculated position size for {prediction.Symbol}: {shares} shares using {parameters.Method}");
                 
                 return shares;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error calculating position size for {prediction.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error calculating position size for {prediction.Symbol}", ex.ToString());
                 
                 // Fallback to basic position sizing
                 int baseSize = 100;
@@ -614,7 +614,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Error calculating trailing stop distance, using default", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Error calculating trailing stop distance, using default", ex.ToString());
                 return 0.05; // Default to 5% if there's an error
             }
         }
@@ -684,11 +684,11 @@ namespace Quantra.Controls
                             
                             if (trailingStopSet)
                             {
-                                DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+                                //DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
                             }
                             else
                             {
-                                DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+                                //DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
                             }
                         }
                         else
@@ -706,7 +706,7 @@ namespace Quantra.Controls
 
                         // Log and update last trade time
                         _lastTradeTime[prediction.Symbol] = DateTime.Now;
-                        DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
+                        //DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
                         
                         // Save order history
                         DatabaseMonolith.AddOrderToHistory(order);
@@ -717,7 +717,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
                 }
             }
         }

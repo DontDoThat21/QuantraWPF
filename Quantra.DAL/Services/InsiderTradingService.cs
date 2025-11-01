@@ -54,7 +54,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get insider trading API key", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get insider trading API key", ex.ToString());
                 return "YOUR_API_KEY_HERE"; // Fallback
             }
         }
@@ -191,7 +191,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error calculating insider sentiment for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error calculating insider sentiment for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -363,7 +363,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error calculating insider metrics for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error calculating insider metrics for {symbol}", ex.ToString());
             }
             
             return metrics;
@@ -415,7 +415,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error calculating notable individual sentiment", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error calculating notable individual sentiment", ex.ToString());
             }
             
             return sentimentByIndividual;

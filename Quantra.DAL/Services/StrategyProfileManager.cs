@@ -119,7 +119,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to backup strategy profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to backup strategy profiles", ex.ToString());
             }
         }
 
@@ -140,7 +140,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to restore strategy profiles from backup", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to restore strategy profiles from backup", ex.ToString());
             }
             return false;
         }
@@ -167,7 +167,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to export strategy profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to export strategy profiles", ex.ToString());
                 return false;
             }
         }
@@ -217,7 +217,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to import strategy profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to import strategy profiles", ex.ToString());
                 return false;
             }
         }
@@ -365,7 +365,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load strategy profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load strategy profiles", ex.ToString());
                 LoadDefaultProfiles(); // Fallback to defaults
             }
         }
@@ -416,7 +416,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save strategy profiles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save strategy profiles", ex.ToString());
             }
         }
 

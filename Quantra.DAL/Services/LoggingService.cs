@@ -24,7 +24,7 @@ namespace Quantra.DAL.Services
         public static void Log(string level, string message, string details = null)
         {
             // For backward compatibility, map to both old and new logging systems
-            DatabaseMonolith.Log(level, message, details);
+            //DatabaseMonolith.Log(level, message, details);
             
             // Map to the new logging system
             ILogger logger = Quantra.CrossCutting.Logging.Log.ForContext("Legacy");
@@ -76,7 +76,7 @@ namespace Quantra.DAL.Services
             [CallerLineNumber] int sourceLineNumber = 0)
         {
             // For backward compatibility
-            DatabaseMonolith.LogErrorWithContext(ex, message, details);
+            //DatabaseMonolith.LogErrorWithContext(ex, message, details);
             
             // Use the new logging system with better context handling
             string errorMessage = message ?? ex.Message;

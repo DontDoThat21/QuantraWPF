@@ -99,7 +99,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error monitoring sentiment shifts for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error monitoring sentiment shifts for {symbol}", ex.ToString());
             }
         }
         
@@ -156,7 +156,7 @@ namespace Quantra.DAL.Services
             };
             
             // Fallback emission: log alert details; higher-level layers may subscribe and forward
-            DatabaseMonolith.Log("Alert", alert.Name, alert.Notes);
+            //DatabaseMonolith.Log("Alert", alert.Name, alert.Notes);
         }
         
         /// <summary>

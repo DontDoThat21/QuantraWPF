@@ -75,7 +75,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", "Error checking technical indicator alerts", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Error checking technical indicator alerts", ex.ToString());
                 }
             };
             alertMonitoringTimer.Start();
@@ -565,7 +565,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error refreshing alerts", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error refreshing alerts", ex.ToString());
             }
             
             ApplyFilter();

@@ -237,7 +237,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error in PredictionAnalysisViewModel.RefreshAsync: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in PredictionAnalysisViewModel.RefreshAsync: {ex.Message}", ex.ToString());
             }
             finally
             {
@@ -301,7 +301,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error loading trading rules: {ex.Message}";
-                DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
             }
         }
 
@@ -446,11 +446,11 @@ namespace Quantra.ViewModels
                 });
 
                 Models = new ObservableCollection<PredictionModel>(await Task.WhenAll(modelTasks));
-                DatabaseMonolith.Log("Info", $"Loaded {Models.Count} prediction models");
+                //DatabaseMonolith.Log("Info", $"Loaded {Models.Count} prediction models");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load prediction models", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load prediction models", ex.ToString());
                 throw;
             }
         }
@@ -460,11 +460,11 @@ namespace Quantra.ViewModels
             try
             {
                 // Save patterns to database 
-                DatabaseMonolith.Log("Info", $"Saving {patterns.Count} patterns for {symbol}");
+                //DatabaseMonolith.Log("Info", $"Saving {patterns.Count} patterns for {symbol}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save patterns for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save patterns for {symbol}", ex.ToString());
             }
         }
 
@@ -490,7 +490,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error in PredictForSymbolAsync for {symbol}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in PredictForSymbolAsync for {symbol}: {ex.Message}", ex.ToString());
                 return null;
             }
         }
@@ -521,7 +521,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error in PredictForMultipleSymbolsAsync: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in PredictForMultipleSymbolsAsync: {ex.Message}", ex.ToString());
                 return new List<PredictionModel>();
             }
         }

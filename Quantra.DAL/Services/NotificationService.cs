@@ -87,7 +87,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to send push notification for trade: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to send push notification for trade: {ex.Message}", ex.ToString());
             }
         }
         

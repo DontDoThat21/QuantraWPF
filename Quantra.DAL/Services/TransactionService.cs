@@ -23,7 +23,7 @@ namespace Quantra.DAL.Services
                 catch (Exception ex)
                 {
                     // Log the error
-                    DatabaseMonolith.Log("Error", "Failed to retrieve transactions from database", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Failed to retrieve transactions from database", ex.ToString());
                 
                 // Return empty list in case of error
                 return new List<TransactionModel>();
@@ -95,7 +95,7 @@ namespace Quantra.DAL.Services
                 }
             }
             
-            DatabaseMonolith.Log("Info", $"Retrieved {transactions.Count} transactions from database");
+            //DatabaseMonolith.Log("Info", $"Retrieved {transactions.Count} transactions from database");
             return transactions;
         }
 
@@ -118,7 +118,7 @@ namespace Quantra.DAL.Services
                 )", connection);
             
             createTableCommand.ExecuteNonQuery();
-            DatabaseMonolith.Log("Info", "Created OrderHistory table");
+            //DatabaseMonolith.Log("Info", "Created OrderHistory table");
         }
 
         // Sample data method preserved for reference or testing
@@ -203,7 +203,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get transaction with ID {id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get transaction with ID {id}", ex.ToString());
                 throw;
             }
         }
@@ -270,7 +270,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get transactions by date range", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get transactions by date range", ex.ToString());
                 throw;
             }
         }
@@ -336,7 +336,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get transactions for symbol {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get transactions for symbol {symbol}", ex.ToString());
                 throw;
             }
         }
@@ -380,11 +380,11 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Saved transaction for {transaction.Symbol} ({transaction.TransactionType})");
+                //DatabaseMonolith.Log("Info", $"Saved transaction for {transaction.Symbol} ({transaction.TransactionType})");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save transaction", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save transaction", ex.ToString());
                 throw;
             }
             }, RetryOptions.ForCriticalOperation());
@@ -409,11 +409,11 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Deleted transaction with ID {id}");
+                //DatabaseMonolith.Log("Info", $"Deleted transaction with ID {id}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to delete transaction with ID {id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to delete transaction with ID {id}", ex.ToString());
                 throw;
             }
             }, RetryOptions.ForCriticalOperation());

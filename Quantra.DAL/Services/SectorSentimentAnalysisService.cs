@@ -151,7 +151,7 @@ namespace Quantra.DAL.Services
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Error getting sentiment for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Error getting sentiment for {symbol}", ex.ToString());
                         return (Symbol: symbol, Sentiment: 0.0);
                     }
                 }));
@@ -190,7 +190,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error getting sentiment for sector {sector}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error getting sentiment for sector {sector}", ex.ToString());
                     result[sector] = 0.0;
                 }
             }
@@ -270,7 +270,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error getting news analysis for {symbol} in sector {sector}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error getting news analysis for {symbol} in sector {sector}", ex.ToString());
                 }
             }
             
@@ -349,7 +349,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error getting sentiment trend for sector {sector}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error getting sentiment trend for sector {sector}", ex.ToString());
                 }
             }
             

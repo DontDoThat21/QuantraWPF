@@ -161,7 +161,7 @@ namespace Quantra.Tests.CrossCutting
                 }
                 
                 // Act - temporarily use test database for logging
-                var originalDbPath = typeof(Quantra.DatabaseMonolith).GetField("DbFilePath", 
+                var originalDbPath = typeof(DatabaseMonolith).GetField("DbFilePath", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 var originalValue = originalDbPath?.GetValue(null);
                 originalDbPath?.SetValue(null, testDbPath);
@@ -169,7 +169,7 @@ namespace Quantra.Tests.CrossCutting
                 try
                 {
                     // This should trigger the column migration and succeed
-                    Quantra.DatabaseMonolith.Log("Info", "Test message", "Test details");
+                    //DatabaseMonolith.Log("Info", "Test message", "Test details");
                     
                     // Verify the Level column exists and data was inserted
                     using (var connection = new System.Data.SQLite.SQLiteConnection($"Data Source={testDbPath};Version=3;"))

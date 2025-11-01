@@ -60,7 +60,7 @@ namespace Quantra.DAL.Services
                 
                 if (!sentimentData.Any())
                 {
-                    DatabaseMonolith.Log("Info", $"No sentiment data available for {symbol}");
+                    //DatabaseMonolith.Log("Info", $"No sentiment data available for {symbol}");
                     return null;
                 }
                 
@@ -135,18 +135,18 @@ namespace Quantra.DAL.Services
                     signal.IsActedUpon = success;
                     
                     // Log trade execution result
-                    DatabaseMonolith.Log(
-                        success ? "Info" : "Warning",
-                        $"Automated trade execution for sentiment extreme signal on {symbol}",
-                        $"Action: {action}, Result: {(success ? "Success" : "Failed")}"
-                    );
+                    //DatabaseMonolith.Log(
+                        //success ? "Info" : "Warning",
+                        //$"Automated trade execution for sentiment extreme signal on {symbol}",
+                        //$"Action: {action}, Result: {(success ? "Success" : "Failed")}"
+                    //);
                 }
                 
                 return signal;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error analyzing sentiment extremes for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error analyzing sentiment extremes for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -175,7 +175,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error processing sentiment extreme analysis for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error processing sentiment extreme analysis for {symbol}", ex.ToString());
                 }
             }
             
@@ -216,7 +216,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error gathering sentiment data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error gathering sentiment data for {symbol}", ex.ToString());
             }
             
             return sentimentData;

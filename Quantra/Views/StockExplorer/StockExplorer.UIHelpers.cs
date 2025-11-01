@@ -33,11 +33,11 @@ namespace Quantra.Controls
                         catch (System.OperationCanceledException)
                         {
                             // Operation was cancelled - this is expected when user types quickly
-                            DatabaseMonolith.Log("Info", $"Keyboard symbol selection for {symbolToSelect} was cancelled");
+                            //DatabaseMonolith.Log("Info", $"Keyboard symbol selection for {symbolToSelect} was cancelled");
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", "Error selecting symbol via keyboard", ex.ToString());
+                            //DatabaseMonolith.Log("Error", "Error selecting symbol via keyboard", ex.ToString());
                             CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
                         }
                     }

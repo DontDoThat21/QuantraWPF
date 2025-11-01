@@ -49,13 +49,13 @@ namespace Quantra
     /// <example>
     /// <code>
     /// // Basic logging
-    /// DatabaseMonolith.Log("Info", "Application started", "Version 1.0");
+    /// //DatabaseMonolith.Log("Info", "Application started", "Version 1.0");
     /// 
     /// // Error logging with context
     /// try {
     ///     // Some operation
     /// } catch (Exception ex) {
-    ///     DatabaseMonolith.LogErrorWithContext(ex, "Operation failed");
+    ///     //DatabaseMonolith.LogErrorWithContext(ex, "Operation failed");
     /// }
     /// 
     /// // Save user settings
@@ -123,13 +123,13 @@ namespace Quantra
         /// <example>
         /// <code>
         /// // Basic info logging
-        /// DatabaseMonolith.Log("Info", "User logged in", "UserID: 123");
+        /// //DatabaseMonolith.Log("Info", "User logged in", "UserID: 123");
         /// 
         /// // Error logging (automatically adds context)
-        /// DatabaseMonolith.Log("Error", "Database connection failed", "Timeout after 30s");
+        /// //DatabaseMonolith.Log("Error", "Database connection failed", "Timeout after 30s");
         /// 
         /// // Warning logging
-        /// DatabaseMonolith.Log("Warning", "API rate limit approaching", "85% of daily quota used");
+        /// //DatabaseMonolith.Log("Warning", "API rate limit approaching", "85% of daily quota used");
         /// </code>
         /// </example>
         public void Log(string level, string message, string details = null)
@@ -2322,7 +2322,7 @@ namespace Quantra
         /// <example>
         /// <code>
         /// // Log an API call
-        /// DatabaseMonolith.LogAlphaVantageApiUsage(
+        /// //DatabaseMonolith.LogAlphaVantageApiUsage(
         ///     "TIME_SERIES_DAILY", 
         ///     "symbol=AAPL&outputsize=compact");
         /// </code>

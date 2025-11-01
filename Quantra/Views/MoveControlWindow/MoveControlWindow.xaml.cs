@@ -140,12 +140,12 @@ namespace Quantra.Views.MoveControlWindow
                     _occupiedCells.AddRange(cells);
                     _tabOccupiedCells[tabName] = new List<(int Row, int Col)>(cells);
 
-                    DatabaseMonolith.Log("Info", $"Loaded {cells.Count} occupied cells for tab '{tabName}' in MoveControlWindow");
+                    //DatabaseMonolith.Log("Info", $"Loaded {cells.Count} occupied cells for tab '{tabName}' in MoveControlWindow");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading occupied cells: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading occupied cells: {ex.Message}", ex.ToString());
             }
         }
 

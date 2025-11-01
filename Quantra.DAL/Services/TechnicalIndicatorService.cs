@@ -404,7 +404,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Failed to get indicators for {symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Failed to get indicators for {symbol}", ex.ToString());
                 }
 
                 return result;
@@ -428,7 +428,7 @@ namespace Quantra.DAL.Services
                 int batchSize = 5;
                 var result = new Dictionary<string, Dictionary<string, double>>();
                 
-                DatabaseMonolith.Log("Info", $"Fetching indicators for {symbols.Count} symbols in batches of {batchSize} with throttling");
+                //DatabaseMonolith.Log("Info", $"Fetching indicators for {symbols.Count} symbols in batches of {batchSize} with throttling");
                 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -454,12 +454,12 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Successfully fetched indicators for {result.Count} symbols in batch with throttling");
+                //DatabaseMonolith.Log("Info", $"Successfully fetched indicators for {result.Count} symbols in batch with throttling");
                 return result;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error batching technical indicator requests: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error batching technical indicator requests: {ex.Message}", ex.ToString());
                 return new Dictionary<string, Dictionary<string, double>>();
             }
         }
@@ -479,7 +479,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get indicators for symbol {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get indicators for symbol {symbol}", ex.ToString());
                 return new KeyValuePair<string, Dictionary<string, double>>(symbol, new Dictionary<string, double>());
             }
         }
@@ -517,7 +517,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get algorithmic signals for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get algorithmic signals for {symbol}", ex.ToString());
             }
 
             return result;
@@ -616,7 +616,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
                 return 50; // Neutral default
             }
         }
@@ -650,7 +650,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate ADX for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate ADX for {symbol}", ex.ToString());
                 return 25; // Neutral default
             }
         }
@@ -684,7 +684,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate ATR for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate ATR for {symbol}", ex.ToString());
                 return 1.0; // Default value
             }
         }
@@ -716,7 +716,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate momentum for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate momentum for {symbol}", ex.ToString());
                 return 0; // Neutral default
             }
         }
@@ -752,7 +752,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate stochastic for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate stochastic for {symbol}", ex.ToString());
                 return (50, 50); // Neutral default
             }
         }
@@ -805,7 +805,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate MFI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate MFI for {symbol}", ex.ToString());
                 return 50; // Default value
             }
         }
@@ -841,7 +841,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate STOCH for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate STOCH for {symbol}", ex.ToString());
                 return (50, 50); // Neutral default
             }
         }
@@ -880,7 +880,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get StochRSI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get StochRSI for {symbol}", ex.ToString());
                 return 0.5; // Neutral
             }
         }
@@ -914,7 +914,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate Ultimate Oscillator for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate Ultimate Oscillator for {symbol}", ex.ToString());
                 return 50; // Neutral default
             }
         }
@@ -960,7 +960,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate OBV for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate OBV for {symbol}", ex.ToString());
                 return 0; // Default value
             }
         }
@@ -993,7 +993,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get Parabolic SAR for {symbol}: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get Parabolic SAR for {symbol}: {ex.Message}", ex.ToString());
                 return 0;
             }
         }
@@ -1134,7 +1134,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate CCI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate CCI for {symbol}", ex.ToString());
                 return 0; // Neutral default
             }
         }
@@ -1195,7 +1195,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate indicator correlation for {symbol}: {firstIndicator} vs {secondIndicator}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate indicator correlation for {symbol}: {firstIndicator} vs {secondIndicator}", ex.ToString());
                 
                 return new IndicatorCorrelationResult
                 {
@@ -1248,7 +1248,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate all indicator correlations for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate all indicator correlations for {symbol}", ex.ToString());
             }
             
             return results;
@@ -1297,7 +1297,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to find confirmation patterns for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to find confirmation patterns for {symbol}", ex.ToString());
             }
             
             return patterns;
@@ -1367,13 +1367,13 @@ namespace Quantra.DAL.Services
                         
                     default:
                         // For unknown indicators, return empty list
-                        DatabaseMonolith.Log("Warning", $"Unknown indicator type for historical data: {indicatorType}", "");
+                        //DatabaseMonolith.Log("Warning", $"Unknown indicator type for historical data: {indicatorType}", "");
                         return new List<double>();
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get historical indicator data for {indicatorType}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get historical indicator data for {indicatorType}", ex.ToString());
                 return new List<double>();
             }
         }
@@ -1450,7 +1450,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error identifying trend-momentum pattern for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error identifying trend-momentum pattern for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -1524,7 +1524,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error identifying overextended pattern for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error identifying overextended pattern for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -1613,7 +1613,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error identifying volume-price pattern for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error identifying volume-price pattern for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -1841,15 +1841,15 @@ namespace Quantra.DAL.Services
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", $"Failed to load indicator {definition.Id}", ex.ToString());
+                        //DatabaseMonolith.Log("Error", $"Failed to load indicator {definition.Id}", ex.ToString());
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Loaded {_customIndicators.Count} custom indicators", "");
+                //DatabaseMonolith.Log("Info", $"Loaded {_customIndicators.Count} custom indicators", "");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to load custom indicators", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load custom indicators", ex.ToString());
             }
         }
 
@@ -1882,7 +1882,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to create indicator {indicatorId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create indicator {indicatorId}", ex.ToString());
             }
             
             return null;
@@ -1988,7 +1988,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get historical data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get historical data for {symbol}", ex.ToString());
                 throw new InvalidOperationException("Failed to get historical data", ex);
             }
             
@@ -2032,7 +2032,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Failed to update indicator {definition.Id}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Failed to update indicator {definition.Id}", ex.ToString());
                     // Don't fail the operation, the definition was saved successfully
                 }
             }

@@ -54,7 +54,7 @@ namespace Quantra
                 TabManager.TabAdded += (tabName) => {
                     // Raise the MainWindow's TabAdded event so AddControlWindow can be notified
                     TabAdded?.Invoke(tabName);
-                    DatabaseMonolith.Log("Info", $"MainWindow raised TabAdded event for tab: {tabName}");
+                    //DatabaseMonolith.Log("Info", $"MainWindow raised TabAdded event for tab: {tabName}");
                 };
             }
             catch
@@ -137,7 +137,7 @@ namespace Quantra
                 }
                 catch (Exception selEx)
                 {
-                    DatabaseMonolith.Log("Warning", $"Failed to select newly created tab '{newTabName}'", selEx.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Failed to select newly created tab '{newTabName}'", selEx.ToString());
                 }
 
                 // If AddControlWindow is open, refresh and select the new tab there as well
@@ -151,11 +151,11 @@ namespace Quantra
                 }
                 catch (Exception acwEx)
                 {
-                    DatabaseMonolith.Log("Warning", "Failed to refresh AddControlWindow after creating tab", acwEx.ToString());
+                    //DatabaseMonolith.Log("Warning", "Failed to refresh AddControlWindow after creating tab", acwEx.ToString());
                 }
 
                 // Log the creation
-                DatabaseMonolith.Log("Info", $"Created new tab: {newTabName} with grid dimensions {gridRows}x{gridColumns}");
+                //DatabaseMonolith.Log("Info", $"Created new tab: {newTabName} with grid dimensions {gridRows}x{gridColumns}");
 
                 // Show success message
                 AppendAlert($"Created new tab: {newTabName}", "positive");
@@ -311,7 +311,7 @@ namespace Quantra
             // Guard against recursive tab selection operations
             if (isTabSelectionInProgress)
             {
-                DatabaseMonolith.Log("Info", "MainWindow: Prevented recursive tab selection");
+                //DatabaseMonolith.Log("Info", "MainWindow: Prevented recursive tab selection");
                 return;
             }
 
@@ -389,14 +389,14 @@ namespace Quantra
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", "Error in LoadTabControls during tab selection", ex.ToString());
+                            //DatabaseMonolith.Log("Error", "Error in LoadTabControls during tab selection", ex.ToString());
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in MainTabControl_SelectionChanged", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in MainTabControl_SelectionChanged", ex.ToString());
             }
             finally
             {
@@ -412,7 +412,7 @@ namespace Quantra
             var tabItem = MainTabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == tabName);
             if (tabItem == null)
             {
-                DatabaseMonolith.Log("Warning", $"Tab '{tabName}' not found when loading controls");
+                //DatabaseMonolith.Log("Warning", $"Tab '{tabName}' not found when loading controls");
                 return;
             }
 
@@ -509,7 +509,7 @@ namespace Quantra
                         }
 
                         // Log success for debugging
-                        DatabaseMonolith.Log("Info", $"Successfully loaded {controls.Count} controls for tab {tabName}");
+                        //DatabaseMonolith.Log("Info", $"Successfully loaded {controls.Count} controls for tab {tabName}");
                     }
                 }
 
@@ -518,7 +518,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading controls for tab: {tabItem?.Header}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading controls for tab: {tabItem?.Header}", ex.ToString());
             }
         }
 
@@ -543,17 +543,17 @@ namespace Quantra
                     var parts = controlConfig.Split(',');
                     if (parts.Length < 3)
                     {
-                        DatabaseMonolith.Log("Error", $"Invalid control configuration format: {controlConfig}");
+                        //DatabaseMonolith.Log("Error", $"Invalid control configuration format: {controlConfig}");
                         continue; // Skip invalid control definitions
                     }
 
                     var controlType = parts[0].Trim();
-                    DatabaseMonolith.Log("Info", $"Deserializing control of type: {controlType}");
+                    //DatabaseMonolith.Log("Info", $"Deserializing control of type: {controlType}");
 
                     // Improved parsing with error handling for row and column
                     if (!int.TryParse(parts[1], out int row) || !int.TryParse(parts[2], out int column))
                     {
-                        DatabaseMonolith.Log("Error", $"Invalid row or column value in control config: {controlConfig}");
+                        //DatabaseMonolith.Log("Error", $"Invalid row or column value in control config: {controlConfig}");
                         continue; // Skip controls with invalid positions
                     }
 
@@ -593,7 +593,7 @@ namespace Quantra
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", $"Failed to create control of type '{controlType}'", ex.ToString());
+                        //DatabaseMonolith.Log("Error", $"Failed to create control of type '{controlType}'", ex.ToString());
 
                         // Create a fallback control to show the error
                         var errorPanel = new StackPanel();
@@ -613,7 +613,7 @@ namespace Quantra
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error deserializing control: {controlConfig}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error deserializing control: {controlConfig}", ex.ToString());
                 }
             }
 
@@ -640,14 +640,14 @@ namespace Quantra
                 symbolChartControl.Arrange(new Rect(0, 0, symbolChartControl.DesiredSize.Width, symbolChartControl.DesiredSize.Height));
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created StockExplorer control for custom tab");
+                //DatabaseMonolith.Log("Info", "Successfully created StockExplorer control for custom tab");
 
                 // Return the control
                 return symbolChartControl;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error creating StockExplorer control", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error creating StockExplorer control", ex.ToString());
                 
                 // Return a fallback UI element
                 var errorText = new TextBlock 
@@ -724,7 +724,7 @@ namespace Quantra
                 }
 
                 // Log success with dimensions
-                DatabaseMonolith.Log("Info", $"Successfully created PredictionAnalysisControl with size: {predictionAnalysisControl.DesiredSize.Width}x{predictionAnalysisControl.DesiredSize.Height}");
+                //DatabaseMonolith.Log("Info", $"Successfully created PredictionAnalysisControl with size: {predictionAnalysisControl.DesiredSize.Width}x{predictionAnalysisControl.DesiredSize.Height}");
 
                 // Return the control
                 return predictionAnalysisControl;
@@ -732,7 +732,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 // Log error and create fallback content
-                DatabaseMonolith.Log("Error", "Failed to create PredictionAnalysisControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create PredictionAnalysisControl", ex.ToString());
 
                 // Create a simple error display as fallback
                 var errorPanel = new StackPanel();
@@ -778,13 +778,13 @@ namespace Quantra
                 configurationControl.UpdateLayout();
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created ConfigurationControl");
+                //DatabaseMonolith.Log("Info", "Successfully created ConfigurationControl");
 
                 return configurationControl;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to create ConfigurationControl: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create ConfigurationControl: {ex.Message}", ex.ToString());
                 
                 // Return a fallback control to prevent null reference
                 var fallbackControl = new TextBlock
@@ -822,7 +822,7 @@ namespace Quantra
                 transactionsControl.UpdateLayout();
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created TransactionsUserControl");
+                //DatabaseMonolith.Log("Info", "Successfully created TransactionsUserControl");
 
                 // Return the control
                 return transactionsControl;
@@ -830,7 +830,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 // Log error and create fallback content
-                DatabaseMonolith.Log("Error", "Failed to create TransactionsUserControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create TransactionsUserControl", ex.ToString());
 
                 // Create a simple error display as fallback
                 var errorPanel = new StackPanel();
@@ -876,7 +876,7 @@ namespace Quantra
                 marketChatControl.UpdateLayout();
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created MarketChatControl");
+                //DatabaseMonolith.Log("Info", "Successfully created MarketChatControl");
 
                 // Return the control
                 return marketChatControl;
@@ -884,7 +884,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 // Log error and create fallback content
-                DatabaseMonolith.Log("Error", "Failed to create MarketChatControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create MarketChatControl", ex.ToString());
 
                 // Create a simple error display as fallback
                 var errorPanel = new StackPanel();
@@ -931,7 +931,7 @@ namespace Quantra
                 spreadsExplorerControl.UpdateLayout();
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created SpreadsExplorerControl");
+                //DatabaseMonolith.Log("Info", "Successfully created SpreadsExplorerControl");
 
                 // Return the control
                 return spreadsExplorerControl;
@@ -939,7 +939,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 // Log error and create fallback content
-                DatabaseMonolith.Log("Error", "Failed to create SpreadsExplorerControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create SpreadsExplorerControl", ex.ToString());
 
                 // Create a simple error display as fallback
                 var errorPanel = new StackPanel();
@@ -985,7 +985,7 @@ namespace Quantra
                 sectorHeatmapControl.Arrange(new Rect(0, 0, sectorHeatmapControl.DesiredSize.Width, sectorHeatmapControl.DesiredSize.Height));
 
                 // Log success
-                DatabaseMonolith.Log("Info", "Successfully created SectorAnalysisHeatmapControl");
+                //DatabaseMonolith.Log("Info", "Successfully created SectorAnalysisHeatmapControl");
 
                 // Return the control
                 return sectorHeatmapControl;
@@ -993,7 +993,7 @@ namespace Quantra
             catch (Exception ex)
             {
                 // Log error and create fallback content
-                DatabaseMonolith.Log("Error", "Failed to create SectorAnalysisHeatmapControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create SectorAnalysisHeatmapControl", ex.ToString());
 
                 // Create a simple error display as fallback
                 var errorPanel = new StackPanel();
@@ -1033,12 +1033,12 @@ namespace Quantra
                 backtestResultsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 backtestResultsControl.Arrange(new Rect(0, 0, backtestResultsControl.DesiredSize.Width, backtestResultsControl.DesiredSize.Height));
                 backtestResultsControl.UpdateLayout();
-                DatabaseMonolith.Log("Info", "Successfully created BacktestResultsControl");
+                //DatabaseMonolith.Log("Info", "Successfully created BacktestResultsControl");
                 return backtestResultsControl;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to create BacktestResultsControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create BacktestResultsControl", ex.ToString());
                 var errorPanel = new StackPanel();
                 errorPanel.Children.Add(new TextBlock
                 {
@@ -1240,7 +1240,7 @@ namespace Quantra
                         e.Handled = true;
 
                         // Log successful drag-drop operation
-                        DatabaseMonolith.Log("Info", "Control moved via drag-and-drop in tab: " + tabName);
+                        //DatabaseMonolith.Log("Info", "Control moved via drag-and-drop in tab: " + tabName);
                     }
                 }
             };
@@ -1318,7 +1318,7 @@ namespace Quantra
                                 
 
                                 // Log the resize operation
-                                DatabaseMonolith.Log("Info", $"Resized control via direct manipulation in tab '{tabName}' to ({newRow},{newCol}) with spans ({newRowSpan},{newColSpan})");
+                                //DatabaseMonolith.Log("Info", $"Resized control via direct manipulation in tab '{tabName}' to ({newRow},{newCol}) with spans ({newRowSpan},{newColSpan})");
                             }
                             else
                             {
@@ -1437,21 +1437,21 @@ namespace Quantra
                                     {
                                         // Fallback to current position
                                         startPosition = currentPosition;
-                                        DatabaseMonolith.Log("Warning", $"StartPoint property found but not a Point in MakeGridDraggable: {startPointValue?.GetType().ToString() ?? "null"}");
+                                        //DatabaseMonolith.Log("Warning", $"StartPoint property found but not a Point in MakeGridDraggable: {startPointValue?.GetType().ToString() ?? "null"}");
                                     }
                                 }
                                 else
                                 {
                                     // Fallback to current position
                                     startPosition = currentPosition;
-                                    DatabaseMonolith.Log("Warning", $"Tag does not have a StartPoint property in MakeGridDraggable. Tag type: {tagType.Name}");
+                                    //DatabaseMonolith.Log("Warning", $"Tag does not have a StartPoint property in MakeGridDraggable. Tag type: {tagType.Name}");
                                 }
                             }
                             else
                             {
                                 // If we can't extract a valid Point, use current position as fallback
                                 startPosition = currentPosition;
-                                DatabaseMonolith.Log("Warning", "Tag is null in MakeGridDraggable");
+                                //DatabaseMonolith.Log("Warning", "Tag is null in MakeGridDraggable");
                             }
 
                             double deltaX = currentPosition.X - startPosition.X;
@@ -1500,7 +1500,7 @@ namespace Quantra
                     int row = (int)(clickPoint.Y / cellHeight);
                     
                     // Log that we detected a grid cell click
-                    DatabaseMonolith.Log("Info", $"Grid cell clicked at ({row},{col}) in tab '{tabName}'");
+                    //DatabaseMonolith.Log("Info", $"Grid cell clicked at ({row},{col}) in tab '{tabName}'");
                     
                     // Here you can add code to highlight the cell or prepare for control placement
                 }
@@ -1646,7 +1646,7 @@ namespace Quantra
                 if (rowOverlap && columnOverlap)
                 {
                     // Log what child type is causing the overlap for debugging
-                    DatabaseMonolith.Log("Debug", $"Overlap detected with element of type {child.GetType().Name} at position ({childRow},{childColumn})");
+                    //DatabaseMonolith.Log("Debug", $"Overlap detected with element of type {child.GetType().Name} at position ({childRow},{childColumn})");
                     return true; // Overlap detected
                 }
             }
@@ -1758,7 +1758,7 @@ namespace Quantra
                                 $"as it would overlap with existing controls.",
                                 "Overlap Error", MessageBoxButton.OK, MessageBoxImage.Warning);
 
-                DatabaseMonolith.Log("Warning", $"Attempted to add overlapping control to tab '{tabName}' at position ({row},{column})");
+                //DatabaseMonolith.Log("Warning", $"Attempted to add overlapping control to tab '{tabName}' at position ({row},{column})");
                 return;
             }
 
@@ -1766,7 +1766,7 @@ namespace Quantra
             UIElement control = null;
             try {
                 // Log control creation attempt
-                DatabaseMonolith.Log("Info", $"Creating control of type: {controlType}");
+                //DatabaseMonolith.Log("Info", $"Creating control of type: {controlType}");
                 
                 control = controlType switch
                 {
@@ -1791,7 +1791,7 @@ namespace Quantra
                 }
             }
             catch (Exception ex) {
-                DatabaseMonolith.Log("Error", $"Failed to create control: {controlType}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to create control: {controlType}", ex.ToString());
                 throw; // Re-throw to handle in the calling code
             }
 
@@ -1816,18 +1816,18 @@ namespace Quantra
                 {
                     borderedControl.UpdateLayout();
                     predictionControl.ForceLayoutUpdate();
-                    DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
+                    //DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
                     
                     // Optional: Select the first tab in the control to ensure content is visible
                     predictionControl.SelectTopPredictionsTab();
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", "Could not select initial tab in Prediction Analysis control", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", "Could not select initial tab in Prediction Analysis control", ex.ToString());
                 }
             }
 
-            DatabaseMonolith.Log("Info", $"Control '{controlType}' added to tab '{tabName}' at position ({row},{column}) with spans ({rowSpan},{columnSpan})");
+            //DatabaseMonolith.Log("Info", $"Control '{controlType}' added to tab '{tabName}' at position ({row},{column}) with spans ({rowSpan},{columnSpan})");
         }
 
         public List<string> GetTabNames()
@@ -1879,22 +1879,22 @@ namespace Quantra
                                             predictionControl.SelectTopPredictionsTab();
                                         } 
                                         catch (Exception ex) {
-                                            DatabaseMonolith.Log("Warning", "Could not select tab in Prediction Analysis control during refresh", ex.ToString());
+                                            //DatabaseMonolith.Log("Warning", "Could not select tab in Prediction Analysis control during refresh", ex.ToString());
                                         }
                                         
-                                        DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
+                                        //DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
                                     }
                                 }
                             }
                         }
                         
-                        DatabaseMonolith.Log("Info", $"Refreshed controls in tab '{tabName}'");
+                        //DatabaseMonolith.Log("Info", $"Refreshed controls in tab '{tabName}'");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error refreshing tab controls: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error refreshing tab controls: {ex.Message}", ex.ToString());
             }
         }
 
@@ -1928,7 +1928,7 @@ namespace Quantra
                     DatabaseMonolith.RemoveControl(tabName, controlIndex);
                     
                     // Log the removal
-                    DatabaseMonolith.Log("Info", $"Removed control of type '{controlType}' from position ({row},{column}) in tab '{tabName}'");
+                    //DatabaseMonolith.Log("Info", $"Removed control of type '{controlType}' from position ({row},{column}) in tab '{tabName}'");
                     
                     // Show success message
                     AppendAlert($"Removed control from tab: {tabName}", "neutral");
@@ -1936,7 +1936,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error removing control from tab '{tabName}'", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error removing control from tab '{tabName}'", ex.ToString());
                 AppendAlert("Error removing control", "warning");
             }
         }
@@ -1987,7 +1987,7 @@ namespace Quantra
                     DatabaseMonolith.UpdateControlPosition(tabName, targetIndex, sourceRow, sourceColumn, sourceRowSpan, sourceColumnSpan);
                     
                     // Log the swap
-                    DatabaseMonolith.Log("Info", $"Swapped control positions in tab '{tabName}': ({sourceRow},{sourceColumn}) <-> ({targetRow},{targetColumn})");
+                    //DatabaseMonolith.Log("Info", $"Swapped control positions in tab '{tabName}': ({sourceRow},{sourceColumn}) <-> ({targetRow},{targetColumn})");
                     
                     // Reset borders
                     sourceBorder.BorderBrush = Brushes.Cyan;
@@ -1998,7 +1998,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error swapping control positions in tab '{tabName}'", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error swapping control positions in tab '{tabName}'", ex.ToString());
                 AppendAlert("Error swapping controls", "warning");
             }
         }
@@ -2031,7 +2031,7 @@ namespace Quantra
         //        tabItem.Content = grid;
 
         //        // Log grid initialization
-        //        DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
+        //        //DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
         //    }
         //}
 
@@ -2112,7 +2112,7 @@ namespace Quantra
             addControlWindow.Activate();
             
             // Log this action
-            DatabaseMonolith.Log("Info", $"Opened AddControlWindow for cell ({row+1},{col+1}) in tab '{tabName}'");
+            //DatabaseMonolith.Log("Info", $"Opened AddControlWindow for cell ({row+1},{col+1}) in tab '{tabName}'");
         }
 
 

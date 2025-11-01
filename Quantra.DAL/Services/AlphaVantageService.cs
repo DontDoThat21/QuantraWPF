@@ -73,7 +73,7 @@ namespace Quantra.DAL.Services
 
         public void LogApiUsage(string endpoint, string parameters)
         {
-            DatabaseMonolith.LogAlphaVantageApiUsage(endpoint, parameters);
+            //DatabaseMonolith.LogAlphaVantageApiUsage(endpoint, parameters);
         }
 
         public async Task<T> SendWithSlidingWindowAsync<T>(string functionName, Dictionary<string, string> parameters)
@@ -102,7 +102,7 @@ namespace Quantra.DAL.Services
             catch (JsonException ex)
             {
                 // Optionally log the error and the content for debugging
-                DatabaseMonolith.Log("Error", $"Failed to deserialize AlphaVantage response for {functionName}", $"Content: {content}\nException: {ex}");
+                //DatabaseMonolith.Log("Error", $"Failed to deserialize AlphaVantage response for {functionName}", $"Content: {content}\nException: {ex}");
                 // Otherwise, return default
                 return default;
             }
@@ -265,7 +265,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
                 return 50; // Neutral default
             }
         }
@@ -288,7 +288,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate ADX for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate ADX for {symbol}", ex.ToString());
                 return 25; // Neutral default
             }
         }
@@ -311,7 +311,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate ATR for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate ATR for {symbol}", ex.ToString());
                 return 1.0; // Default value
             }
         }
@@ -338,7 +338,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate momentum for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate momentum for {symbol}", ex.ToString());
                 return 0; // Neutral default
             }
         }
@@ -363,7 +363,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate Stochastic for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate Stochastic for {symbol}", ex.ToString());
                 return (50, 50); // Neutral default
             }
         }
@@ -386,7 +386,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate CCI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate CCI for {symbol}", ex.ToString());
                 return 0; // Neutral default
             }
         }
@@ -567,7 +567,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get indicators", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get indicators", ex.ToString());
             }
 
             return indicators;
@@ -591,7 +591,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate Ultimate Oscillator for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate Ultimate Oscillator for {symbol}", ex.ToString());
                 return 50; // Neutral default
             }
         }
@@ -644,7 +644,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate OBV for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate OBV for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -698,7 +698,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate MFI for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate MFI for {symbol}", ex.ToString());
                 return 50; // Default value
             }
         }
@@ -749,7 +749,7 @@ namespace Quantra.DAL.Services
             await _apiSemaphore.WaitAsync();
             try
             {
-                DatabaseMonolith.LogAlphaVantageApiUsage(endpoint, parameters);
+                //DatabaseMonolith.LogAlphaVantageApiUsage(endpoint, parameters);
             }
             finally
             {
@@ -880,17 +880,17 @@ namespace Quantra.DAL.Services
                 // If we have sufficient cached data (at least 50 data points for reliable calculations), use it
                 if (cachedData.Count >= 50)
                 {
-                    DatabaseMonolith.Log("Info", $"Using cached historical data for {symbol} - {cachedData.Count} data points");
+                    //DatabaseMonolith.Log("Info", $"Using cached historical data for {symbol} - {cachedData.Count} data points");
                     return cachedData;
                 }
                 
                 // If insufficient cached data, fall back to API
-                DatabaseMonolith.Log("Info", $"Insufficient cached data for {symbol} ({cachedData.Count} points), fetching from API");
+                //DatabaseMonolith.Log("Info", $"Insufficient cached data for {symbol} ({cachedData.Count} points), fetching from API");
                 return await GetExtendedHistoricalData(symbol, interval, "compact");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error in GetCachedHistoricalDataFirst for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in GetCachedHistoricalDataFirst for {symbol}", ex.ToString());
                 // Fall back to API on any error
                 return await GetExtendedHistoricalData(symbol, interval, "compact");
             }
@@ -948,7 +948,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
             }
             
             return new List<HistoricalPrice>();
@@ -1070,7 +1070,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to parse forex response", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to parse forex response", ex.ToString());
             }
             
             return result;
@@ -1143,7 +1143,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to parse crypto response", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to parse crypto response", ex.ToString());
             }
             
             return result;
@@ -1218,7 +1218,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to parse Alpha Vantage response", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to parse Alpha Vantage response", ex.ToString());
             }
             return result;
         }
@@ -1249,7 +1249,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate VWAP for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate VWAP for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -1294,7 +1294,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate MACD for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate MACD for {symbol}", ex.ToString());
                 return (0, 0, 0);
             }
         }

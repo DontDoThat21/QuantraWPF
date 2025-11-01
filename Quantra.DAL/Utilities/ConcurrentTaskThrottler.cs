@@ -93,7 +93,7 @@ namespace Quantra.Utilities
                 catch (Exception ex)
                 {
                     // Log the error but continue processing other tasks
-                    DatabaseMonolith.Log("Warning", "Throttled task failed", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", "Throttled task failed", ex.ToString());
                     continue;
                 }
                 
@@ -184,7 +184,7 @@ namespace Quantra.Utilities
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Throttled batch operation failed for item: {item}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Throttled batch operation failed for item: {item}", ex.ToString());
                         return new KeyValuePair<TInput, TOutput>(item, default(TOutput));
                     }
                 });

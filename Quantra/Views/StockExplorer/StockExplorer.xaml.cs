@@ -495,7 +495,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to initialize some sentiment services", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to initialize some sentiment services", ex.ToString());
             }
             
             this.DataContext = _viewModel;
@@ -568,7 +568,7 @@ namespace Quantra.Controls
                 
                 if (currentMemory > MEMORY_THRESHOLD_BYTES)
                 {
-                    DatabaseMonolith.Log("Info", $"Memory pressure detected: {currentMemory / (1024 * 1024)}MB. Triggering cleanup.");
+                    //DatabaseMonolith.Log("Info", $"Memory pressure detected: {currentMemory / (1024 * 1024)}MB. Triggering cleanup.");
                     
                     // Force ViewModel cache management
                     _viewModel?.ManageCacheSize();
@@ -585,12 +585,12 @@ namespace Quantra.Controls
                     GC.Collect();
                     
                     var memoryAfterCleanup = GC.GetTotalMemory(false);
-                    DatabaseMonolith.Log("Info", $"Memory after cleanup: {memoryAfterCleanup / (1024 * 1024)}MB. Freed: {(currentMemory - memoryAfterCleanup) / (1024 * 1024)}MB");
+                    //DatabaseMonolith.Log("Info", $"Memory after cleanup: {memoryAfterCleanup / (1024 * 1024)}MB. Freed: {(currentMemory - memoryAfterCleanup) / (1024 * 1024)}MB");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Error in memory monitoring", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Error in memory monitoring", ex.ToString());
             }
         }
 
@@ -1090,7 +1090,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error changing selection mode", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error changing selection mode", ex.ToString());
                 CustomModal.ShowError($"Error changing selection mode: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1188,7 +1188,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading symbols for mode {mode}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading symbols for mode {mode}", ex.ToString());
                 CustomModal.ShowError($"Error loading symbols: {ex.Message}", "Error", Window.GetWindow(this));
             }
             finally
@@ -1298,7 +1298,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading RSI oversold stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading RSI oversold stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading RSI oversold stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1337,7 +1337,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading RSI overbought stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading RSI overbought stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading RSI overbought stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1370,7 +1370,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading top volume RSI discrepancies", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading top volume RSI discrepancies", ex.ToString());
                 CustomModal.ShowError($"Error loading top volume RSI discrepancies: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1403,7 +1403,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading top P/E stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading top P/E stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading top P/E stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1436,7 +1436,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading high volume stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading high volume stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading high volume stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1469,7 +1469,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading low P/E stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading low P/E stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading low P/E stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1502,7 +1502,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading all database stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading all database stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading all database stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1534,7 +1534,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading high theta stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading high theta stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading high theta stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1566,7 +1566,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading high beta stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading high beta stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading high beta stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1598,7 +1598,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading high alpha stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading high alpha stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading high alpha stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1630,7 +1630,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading bullish cup and handle stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading bullish cup and handle stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading bullish cup and handle stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1662,7 +1662,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading bearish cup and handle stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading bearish cup and handle stocks", ex.ToString());
                 CustomModal.ShowError($"Error loading bearish cup and handle stocks: {ex.Message}", "Error", Window.GetWindow(this));
                 
                 // Show error status
@@ -1749,14 +1749,14 @@ namespace Quantra.Controls
                     catch (System.OperationCanceledException)
                     {
                         // Operation was cancelled - this is expected when user selects another symbol quickly
-                        DatabaseMonolith.Log("Info", $"Symbol selection for {selectedSymbol} was cancelled due to new selection");
+                        //DatabaseMonolith.Log("Info", $"Symbol selection for {selectedSymbol} was cancelled due to new selection");
                     }
                     catch (Exception backgroundEx)
                     {
                         // Handle errors on UI thread with proper owner window context
                         await Dispatcher.InvokeAsync(() =>
                         {
-                            DatabaseMonolith.Log("Error", $"Error in background data loading from {source}", backgroundEx.ToString());
+                            //DatabaseMonolith.Log("Error", $"Error in background data loading from {source}", backgroundEx.ToString());
                             CustomModal.ShowError($"Error loading symbol data: {backgroundEx.Message}", "Error", ownerWindow);
                         });
                     }
@@ -1768,13 +1768,13 @@ namespace Quantra.Controls
             catch (System.OperationCanceledException)
             {
                 // Operation was cancelled - this is expected behavior when user rapidly selects symbols
-                DatabaseMonolith.Log("Info", $"Symbol selection for {selectedSymbol} from {source} was cancelled due to new selection");
+                //DatabaseMonolith.Log("Info", $"Symbol selection for {selectedSymbol} from {source} was cancelled due to new selection");
                 // Reset cursor when operation is cancelled
                 Mouse.OverrideCursor = null;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error in HandleSymbolSelectionAsync from {source}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in HandleSymbolSelectionAsync from {source}", ex.ToString());
                 CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
                 // Reset cursor on error since LoadIndicatorDataAsync won't be reached
                 Mouse.OverrideCursor = null;
@@ -1811,7 +1811,7 @@ namespace Quantra.Controls
                     // Notify that cached symbol data was accessed
                     SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
                     
-                    DatabaseMonolith.Log("Info", $"Using cached data for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Using cached data for symbol: {symbol}");
                     return;
                 }
 
@@ -1834,7 +1834,7 @@ namespace Quantra.Controls
                     catch (Exception apiEx)
                     {
                         // If API fails, try to use any available cached data from the database
-                        DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
+                        //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
                         
                         cancellationToken.ThrowIfCancellationRequested();
                         var cacheService = new StockDataCacheService();
@@ -1884,7 +1884,7 @@ namespace Quantra.Controls
                             }
                             catch (Exception cacheEx)
                             {
-                                DatabaseMonolith.Log("Warning", $"Failed to cache data for {symbol}", cacheEx.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Failed to cache data for {symbol}", cacheEx.ToString());
                             }
                         }, cancellationToken));
                     }
@@ -1892,21 +1892,21 @@ namespace Quantra.Controls
                     // Notify other components that symbol data has been retrieved
                     SymbolUpdateService.NotifySymbolDataRetrieved(symbol, "StockExplorer");
                     
-                    DatabaseMonolith.Log("Info", $"Successfully loaded fresh data for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Successfully loaded fresh data for symbol: {symbol}");
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Warning", $"No data available for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Warning", $"No data available for symbol: {symbol}");
                 }
             }
             catch (System.OperationCanceledException)
             {
-                DatabaseMonolith.Log("Info", $"Symbol data loading for {symbol} was cancelled");
+                //DatabaseMonolith.Log("Info", $"Symbol data loading for {symbol} was cancelled");
                 throw; // Re-throw to handle at higher level
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting symbol data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting symbol data for {symbol}", ex.ToString());
                 throw;
             }
             finally
@@ -1946,7 +1946,7 @@ namespace Quantra.Controls
                     // Notify that cached symbol data was accessed
                     SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
                     
-                    DatabaseMonolith.Log("Info", $"Using cached data for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Using cached data for symbol: {symbol}");
                     return;
                 }
 
@@ -1961,7 +1961,7 @@ namespace Quantra.Controls
                     catch (Exception apiEx)
                     {
                         // If API fails, try to use any available cached data from the database
-                        DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
+                        //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
                         
                         var cacheService = new StockDataCacheService();
                         return await cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
@@ -1992,7 +1992,7 @@ namespace Quantra.Controls
                             }
                             catch (Exception cacheEx)
                             {
-                                DatabaseMonolith.Log("Warning", $"Failed to cache data for {symbol}", cacheEx.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Failed to cache data for {symbol}", cacheEx.ToString());
                             }
                         }));
                     }
@@ -2000,16 +2000,16 @@ namespace Quantra.Controls
                     // Notify other components that symbol data has been retrieved
                     SymbolUpdateService.NotifySymbolDataRetrieved(symbol, "StockExplorer");
                     
-                    DatabaseMonolith.Log("Info", $"Successfully loaded fresh data for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Successfully loaded fresh data for symbol: {symbol}");
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Warning", $"No data available for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Warning", $"No data available for symbol: {symbol}");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting symbol data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting symbol data for {symbol}", ex.ToString());
                 throw;
             }
             finally
@@ -2082,7 +2082,7 @@ namespace Quantra.Controls
                             }
                             catch (Exception cacheEx)
                             {
-                                DatabaseMonolith.Log("Warning", $"Failed to cache refreshed data for {symbol}", cacheEx.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Failed to cache refreshed data for {symbol}", cacheEx.ToString());
                             }
                         }));
                     }
@@ -2090,7 +2090,7 @@ namespace Quantra.Controls
                     // Notify other components that symbol data has been retrieved
                     SymbolUpdateService.NotifySymbolDataRetrieved(symbol, "StockExplorer");
                     
-                    DatabaseMonolith.Log("Info", $"Successfully refreshed data for symbol: {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Successfully refreshed data for symbol: {symbol}");
                 }
 
                 // Wait for all background tasks to complete
@@ -2104,12 +2104,12 @@ namespace Quantra.Controls
             catch (System.OperationCanceledException)
             {
                 // Operation was cancelled - this is expected, don't log as error
-                DatabaseMonolith.Log("Info", $"Symbol data refresh for {symbol} was cancelled");
+                //DatabaseMonolith.Log("Info", $"Symbol data refresh for {symbol} was cancelled");
                 // Don't re-throw cancellation exceptions in refresh operations
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error refreshing symbol data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error refreshing symbol data for {symbol}", ex.ToString());
                 throw;
             }
             finally
@@ -2143,7 +2143,7 @@ namespace Quantra.Controls
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", $"Error changing time range to {timeRange}", ex.ToString());
+                    //DatabaseMonolith.Log("Error", $"Error changing time range to {timeRange}", ex.ToString());
                     CustomModal.ShowError($"Error changing time range: {ex.Message}", "Error", Window.GetWindow(this));
                 }
             }
@@ -2201,7 +2201,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading chart data for {symbol} with time range {timeRange}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading chart data for {symbol} with time range {timeRange}", ex.ToString());
                 throw;
             }
             finally
@@ -2239,7 +2239,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error synchronizing UI components", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error synchronizing UI components", ex.ToString());
             }
         }
 
@@ -2300,7 +2300,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error updating price and symbol labels", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error updating price and symbol labels", ex.ToString());
                 SymbolText = !string.IsNullOrEmpty(symbol) ? $"Symbol: {symbol}" : "";
                 PriceText = "Price: --";
                 UpdatedTimestampText = "";
@@ -2323,12 +2323,12 @@ namespace Quantra.Controls
                     catch (System.OperationCanceledException)
                     {
                         // Operation was cancelled - handle gracefully for search
-                        DatabaseMonolith.Log("Info", "Stock symbol search was cancelled");
+                        //DatabaseMonolith.Log("Info", "Stock symbol search was cancelled");
                         CustomModal.ShowWarning("Symbol search was cancelled.", "Operation Cancelled", Window.GetWindow(this));
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", "Error searching for stock data", ex.ToString());
+                        //DatabaseMonolith.Log("Error", "Error searching for stock data", ex.ToString());
                         CustomModal.ShowError($"Error searching for data: {ex.Message}", "Error", Window.GetWindow(this));
                     }
                 }
@@ -2357,12 +2357,12 @@ namespace Quantra.Controls
                 catch (System.OperationCanceledException)
                 {
                     // Operation was cancelled - this shouldn't normally happen for refresh but handle gracefully
-                    DatabaseMonolith.Log("Info", "Stock data refresh was cancelled");
+                    //DatabaseMonolith.Log("Info", "Stock data refresh was cancelled");
                     CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Error", "Error refreshing stock data", ex.ToString());
+                    //DatabaseMonolith.Log("Error", "Error refreshing stock data", ex.ToString());
                     CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
                 }
             }
@@ -2414,7 +2414,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load RSI for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load RSI for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             RsiValue = "N/A";
@@ -2450,7 +2450,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load P/E Ratio for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load P/E Ratio for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             PeRatioValue = "N/A";
@@ -2479,7 +2479,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load MACD for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load MACD for {symbol}", ex.ToString());
                         // If MACD fails, set placeholder values
                         await Dispatcher.InvokeAsync(() =>
                         {
@@ -2509,7 +2509,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load VWAP for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load VWAP for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             VwapValue = "N/A";
@@ -2535,7 +2535,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load ADX for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load ADX for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             AdxValue = "N/A";
@@ -2560,7 +2560,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load CCI for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load CCI for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             CciValue = "N/A";
@@ -2586,7 +2586,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load ATR for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load ATR for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             AtrValue = "N/A";
@@ -2611,7 +2611,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load MFI for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load MFI for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             MfiValue = "N/A";
@@ -2637,7 +2637,7 @@ namespace Quantra.Controls
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Warning", $"Failed to load STOCH for {symbol}", ex.ToString());
+                        //DatabaseMonolith.Log("Warning", $"Failed to load STOCH for {symbol}", ex.ToString());
                         await Dispatcher.InvokeAsync(() =>
                         {
                             StochKValue = "N/A";
@@ -2663,12 +2663,12 @@ namespace Quantra.Controls
             }
             catch (System.OperationCanceledException)
             {
-                DatabaseMonolith.Log("Info", $"Indicator loading for {symbol} was cancelled");
+                //DatabaseMonolith.Log("Info", $"Indicator loading for {symbol} was cancelled");
                 throw; // Re-throw to handle at higher level
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading indicator data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading indicator data for {symbol}", ex.ToString());
                 // Set all indicator values to error state using batched update
                 _uiBatchUpdater.QueueUpdate("error_indicators", () =>
                 {
@@ -2708,36 +2708,36 @@ namespace Quantra.Controls
             
             try
             {
-                DatabaseMonolith.Log("Info", "Starting dynamic Top Volume RSI Discrepancies algorithm");
+                //DatabaseMonolith.Log("Info", "Starting dynamic Top Volume RSI Discrepancies algorithm");
                 
                 // Phase 1: Build comprehensive stock universe from multiple sources
                 var stockUniverse = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Phase 1 Complete: Built stock universe with {stockUniverse.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Phase 1 Complete: Built stock universe with {stockUniverse.Count} symbols");
                 
                 // Phase 2: Pre-filter for volume leaders to identify catalytic stocks
                 var volumeLeaders = await IdentifyVolumeLeaders(stockUniverse);
-                DatabaseMonolith.Log("Info", $"Phase 2 Complete: Identified {volumeLeaders.Count} volume leaders from stock universe");
+                //DatabaseMonolith.Log("Info", $"Phase 2 Complete: Identified {volumeLeaders.Count} volume leaders from stock universe");
                 
                 // Phase 3: Batch process volume leaders for RSI discrepancies
                 var rsiDiscrepancies = await BatchProcessRsiDiscrepancies(volumeLeaders);
-                DatabaseMonolith.Log("Info", $"Phase 3 Complete: Found {rsiDiscrepancies.Count} stocks with RSI discrepancies");
+                //DatabaseMonolith.Log("Info", $"Phase 3 Complete: Found {rsiDiscrepancies.Count} stocks with RSI discrepancies");
                 
                 // Phase 4: Calculate catalytic scores and rank results
                 var rankedResults = await CalculateCatalyticScores(rsiDiscrepancies);
-                DatabaseMonolith.Log("Info", $"Phase 4 Complete: Calculated catalytic scores for {rankedResults.Count} stocks");
+                //DatabaseMonolith.Log("Info", $"Phase 4 Complete: Calculated catalytic scores for {rankedResults.Count} stocks");
                 
                 // Phase 5: Return top 100 dynamic results
                 result = rankedResults.Take(100).ToList();
                 
                 var duration = DateTime.Now - startTime;
-                DatabaseMonolith.Log("Info", $"Dynamic algorithm completed in {duration.TotalSeconds:F2} seconds, returning {result.Count} top catalytic stocks");
+                //DatabaseMonolith.Log("Info", $"Dynamic algorithm completed in {duration.TotalSeconds:F2} seconds, returning {result.Count} top catalytic stocks");
                 
                 return result;
             }
             catch (Exception ex)
             {
                 var duration = DateTime.Now - startTime;
-                DatabaseMonolith.Log("Error", $"Error in dynamic top volume RSI discrepancies algorithm after {duration.TotalSeconds:F2} seconds", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in dynamic top volume RSI discrepancies algorithm after {duration.TotalSeconds:F2} seconds", ex.ToString());
                 return result;
             }
         }
@@ -2755,7 +2755,7 @@ namespace Quantra.Controls
             {
                 universe.Add(symbol);
             }
-            DatabaseMonolith.Log("Info", $"Added {coreSymbols.Count} core symbols to universe");
+            //DatabaseMonolith.Log("Info", $"Added {coreSymbols.Count} core symbols to universe");
             
             // Add major index components and ETFs for broader market coverage
             var indexComponents = new[]
@@ -2785,7 +2785,7 @@ namespace Quantra.Controls
             {
                 universe.Add(symbol);
             }
-            DatabaseMonolith.Log("Info", $"Added {indexComponents.Length} index components, total universe: {universe.Count}");
+            //DatabaseMonolith.Log("Info", $"Added {indexComponents.Length} index components, total universe: {universe.Count}");
             
             return universe.ToList();
         }
@@ -2800,7 +2800,7 @@ namespace Quantra.Controls
             var batchSize = 20; // Process in smaller batches to avoid API rate limits
             var processedCount = 0;
             
-            DatabaseMonolith.Log("Info", $"Processing {stockUniverse.Count} symbols in batches of {batchSize} to identify high volume stocks");
+            //DatabaseMonolith.Log("Info", $"Processing {stockUniverse.Count} symbols in batches of {batchSize} to identify high volume stocks");
             
             for (int i = 0; i < stockUniverse.Count; i += batchSize)
             {
@@ -2825,13 +2825,13 @@ namespace Quantra.Controls
                                     {
                                         highVolumeStocks.Add((symbol, quote.Volume, quote.Price, quote.ChangePercent));
                                     }
-                                    DatabaseMonolith.Log("Debug", $"High volume stock: {symbol} - Volume: {quote.Volume:N0}");
+                                    //DatabaseMonolith.Log("Debug", $"High volume stock: {symbol} - Volume: {quote.Volume:N0}");
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error processing volume data for {symbol}", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error processing volume data for {symbol}", ex.ToString());
                         }
                     }));
                 }
@@ -2845,7 +2845,7 @@ namespace Quantra.Controls
                     await Task.Delay(2000); // 2 second delay between batches
                 }
                 
-                DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{stockUniverse.Count}");
+                //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{stockUniverse.Count}");
             }
             
             // Sort by volume to get the highest volume stocks
@@ -2854,7 +2854,7 @@ namespace Quantra.Controls
                 .Take(50) // Take top 50 by volume for further processing
                 .ToList();
                 
-            DatabaseMonolith.Log("Info", $"Selected top {highVolumeStocks.Count} high volume stocks");
+            //DatabaseMonolith.Log("Info", $"Selected top {highVolumeStocks.Count} high volume stocks");
             return highVolumeStocks;
         }
 
@@ -2868,7 +2868,7 @@ namespace Quantra.Controls
             var batchSize = 15; // Smaller batches for indicator calls
             var processedCount = 0;
             
-            DatabaseMonolith.Log("Info", $"Converting {volumeStocks.Count} stocks to QuoteData format in batches of {batchSize}");
+            //DatabaseMonolith.Log("Info", $"Converting {volumeStocks.Count} stocks to QuoteData format in batches of {batchSize}");
             
             for (int i = 0; i < volumeStocks.Count; i += batchSize)
             {
@@ -2932,7 +2932,7 @@ namespace Quantra.Controls
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error converting {symbol} to QuoteData", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error converting {symbol} to QuoteData", ex.ToString());
                         }
                     }));
                 }
@@ -2946,7 +2946,7 @@ namespace Quantra.Controls
                     await Task.Delay(2000); // 2 second delay between batches
                 }
                 
-                DatabaseMonolith.Log("Info", $"Converted batch {i / batchSize + 1}, total stocks processed: {processedCount}/{volumeStocks.Count}");
+                //DatabaseMonolith.Log("Info", $"Converted batch {i / batchSize + 1}, total stocks processed: {processedCount}/{volumeStocks.Count}");
             }
             
             return result;
@@ -2962,7 +2962,7 @@ namespace Quantra.Controls
             var batchSize = 20; // Process in smaller batches to avoid API rate limits
             var processedCount = 0;
             
-            DatabaseMonolith.Log("Info", $"Processing {stockUniverse.Count} symbols in batches of {batchSize} to identify volume leaders");
+            //DatabaseMonolith.Log("Info", $"Processing {stockUniverse.Count} symbols in batches of {batchSize} to identify volume leaders");
             
             for (int i = 0; i < stockUniverse.Count; i += batchSize)
             {
@@ -2988,13 +2988,13 @@ namespace Quantra.Controls
                                     {
                                         volumeLeaders.Add((symbol, quote.Volume, quote.Price, quote.ChangePercent));
                                     }
-                                    DatabaseMonolith.Log("Debug", $"Volume leader identified: {symbol} - Volume: {quote.Volume:N0}, Change: {quote.ChangePercent:F2}%");
+                                    //DatabaseMonolith.Log("Debug", $"Volume leader identified: {symbol} - Volume: {quote.Volume:N0}, Change: {quote.ChangePercent:F2}%");
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error processing volume data for {symbol}", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error processing volume data for {symbol}", ex.ToString());
                         }
                     }));
                 }
@@ -3008,7 +3008,7 @@ namespace Quantra.Controls
                     await Task.Delay(2000); // 2 second delay between batches
                 }
                 
-                DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{stockUniverse.Count}");
+                //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{stockUniverse.Count}");
             }
             
             // Sort by volume * price movement score to prioritize most catalytic stocks
@@ -3017,7 +3017,7 @@ namespace Quantra.Controls
                 .Take(150) // Take top 150 volume leaders for RSI analysis
                 .ToList();
                 
-            DatabaseMonolith.Log("Info", $"Selected top {volumeLeaders.Count} volume leaders for RSI discrepancy analysis");
+            //DatabaseMonolith.Log("Info", $"Selected top {volumeLeaders.Count} volume leaders for RSI discrepancy analysis");
             return volumeLeaders;
         }
 
@@ -3031,7 +3031,7 @@ namespace Quantra.Controls
             var batchSize = 15; // Smaller batches for RSI calls which are more expensive
             var processedCount = 0;
             
-            DatabaseMonolith.Log("Info", $"Analyzing RSI discrepancies for {volumeLeaders.Count} volume leaders in batches of {batchSize}");
+            //DatabaseMonolith.Log("Info", $"Analyzing RSI discrepancies for {volumeLeaders.Count} volume leaders in batches of {batchSize}");
             
             for (int i = 0; i < volumeLeaders.Count; i += batchSize)
             {
@@ -3125,13 +3125,13 @@ namespace Quantra.Controls
                                         rsiDiscrepancies.Add(extendedQuote);
                                     }
                                     
-                                    DatabaseMonolith.Log("Debug", $"RSI discrepancy found: {leader.Symbol} - RSI: {rsi:F1} ({discrepancyType}), Volume: {leader.Volume:N0}, Score: {discrepancyScore:F2}");
+                                    //DatabaseMonolith.Log("Debug", $"RSI discrepancy found: {leader.Symbol} - RSI: {rsi:F1} ({discrepancyType}), Volume: {leader.Volume:N0}, Score: {discrepancyScore:F2}");
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error analyzing RSI for {leader.Symbol}", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error analyzing RSI for {leader.Symbol}", ex.ToString());
                         }
                     }));
                 }
@@ -3145,10 +3145,10 @@ namespace Quantra.Controls
                     await Task.Delay(3000); // 3 second delay between RSI batches
                 }
                 
-                DatabaseMonolith.Log("Info", $"Completed RSI batch {i / batchSize + 1}, analyzed: {processedCount}/{volumeLeaders.Count}, found {rsiDiscrepancies.Count} discrepancies so far");
+                //DatabaseMonolith.Log("Info", $"Completed RSI batch {i / batchSize + 1}, analyzed: {processedCount}/{volumeLeaders.Count}, found {rsiDiscrepancies.Count} discrepancies so far");
             }
             
-            DatabaseMonolith.Log("Info", $"RSI discrepancy analysis complete: {rsiDiscrepancies.Count} stocks with RSI discrepancies identified");
+            //DatabaseMonolith.Log("Info", $"RSI discrepancy analysis complete: {rsiDiscrepancies.Count} stocks with RSI discrepancies identified");
             return rsiDiscrepancies;
         }
 
@@ -3157,7 +3157,7 @@ namespace Quantra.Controls
         /// </summary>
         private async Task<List<QuoteData>> CalculateCatalyticScores(List<QuoteData> rsiDiscrepancies)
         {
-            DatabaseMonolith.Log("Info", $"Calculating catalytic scores for {rsiDiscrepancies.Count} stocks with RSI discrepancies");
+            //DatabaseMonolith.Log("Info", $"Calculating catalytic scores for {rsiDiscrepancies.Count} stocks with RSI discrepancies");
             
             var scoredStocks = new List<QuoteData>();
             
@@ -3194,20 +3194,20 @@ namespace Quantra.Controls
                     
                     scoredStocks.Add(stock);
                     
-                    DatabaseMonolith.Log("Debug", $"Catalytic score calculated for {stock.Symbol}: {catalyticScore:F1} " +
+                    //DatabaseMonolith.Log("Debug", $"Catalytic score calculated for {stock.Symbol}: {catalyticScore:F1} " +
                                                $"(Vol: {volumeScore:F1}, RSI: {rsiDiscrepancyScore:F1}, Price: {priceMovementScore:F1}, " +
                                                $"Volatility: {volatilityScore:F1}, Bonus: {extremeBonus:F1})");
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error calculating catalytic score for {stock.Symbol}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error calculating catalytic score for {stock.Symbol}", ex.ToString());
                 }
             }
             
             // Sort by catalytic score (highest first) to return most catalytic stocks
             var rankedResults = scoredStocks.OrderByDescending(x => x.PredictionConfidence).ToList();
             
-            DatabaseMonolith.Log("Info", $"Catalytic scoring complete. Top stock: {rankedResults.FirstOrDefault()?.Symbol} " +
+            //DatabaseMonolith.Log("Info", $"Catalytic scoring complete. Top stock: {rankedResults.FirstOrDefault()?.Symbol} " +
                                        $"(Score: {rankedResults.FirstOrDefault()?.PredictionConfidence:F1})");
             
             return rankedResults;
@@ -3218,7 +3218,7 @@ namespace Quantra.Controls
             var result = new List<QuoteData>();
             try
             {
-                DatabaseMonolith.Log("Info", "Starting dynamic Top P/E stock analysis...");
+                //DatabaseMonolith.Log("Info", "Starting dynamic Top P/E stock analysis...");
                 var alphaVantageService = new AlphaVantageService();
                 var cacheService = new StockDataCacheService();
 
@@ -3247,10 +3247,10 @@ namespace Quantra.Controls
                 {
                     // Fallback to common symbols if API fails
                     prioritizedSymbols.AddRange(StockSymbols.CommonSymbols.Where(s => !prioritizedSymbols.Contains(s)));
-                    DatabaseMonolith.Log("Warning", "API failed, using fallback common symbols for P/E analysis");
+                    //DatabaseMonolith.Log("Warning", "API failed, using fallback common symbols for P/E analysis");
                 }
 
-                DatabaseMonolith.Log("Info", $"Analyzing P/E ratios for {prioritizedSymbols.Count} symbols (prioritized order)...");
+                //DatabaseMonolith.Log("Info", $"Analyzing P/E ratios for {prioritizedSymbols.Count} symbols (prioritized order)...");
 
                 // Batch process symbols to respect API rate limits
                 const int batchSize = 8; // Process 8 symbols at a time (more conservative)
@@ -3262,7 +3262,7 @@ namespace Quantra.Controls
                 for (int i = 0; i < symbolsToProcess.Count; i += batchSize)
                 {
                     var batch = symbolsToProcess.Skip(i).Take(batchSize);
-                    DatabaseMonolith.Log("Info", $"Processing P/E batch {(i / batchSize) + 1}/{(symbolsToProcess.Count + batchSize - 1) / batchSize}");
+                    //DatabaseMonolith.Log("Info", $"Processing P/E batch {(i / batchSize) + 1}/{(symbolsToProcess.Count + batchSize - 1) / batchSize}");
 
                     // Process batch concurrently but with controlled parallelism
                     var batchTasks = batch.Select(async symbol =>
@@ -3346,7 +3346,7 @@ namespace Quantra.Controls
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for top P/E", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for top P/E", ex.ToString());
                         }
                         return null;
                     }).ToArray();
@@ -3371,14 +3371,14 @@ namespace Quantra.Controls
                     .Take(100)
                     .ToList();
 
-                DatabaseMonolith.Log("Info", $"Dynamic P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
+                //DatabaseMonolith.Log("Info", $"Dynamic P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
                                            $"Top stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
 
                 return result;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting dynamic top P/E stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting dynamic top P/E stocks", ex.ToString());
                 return result;
             }
         }
@@ -3390,32 +3390,32 @@ namespace Quantra.Controls
             
             try
             {
-                DatabaseMonolith.Log("Info", "Starting High Volume stocks analysis");
+                //DatabaseMonolith.Log("Info", "Starting High Volume stocks analysis");
                 
                 // Phase 1: Build comprehensive stock universe from multiple sources
                 var stockUniverse = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Phase 1 Complete: Built stock universe with {stockUniverse.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Phase 1 Complete: Built stock universe with {stockUniverse.Count} symbols");
                 
                 // Phase 2: Identify high volume stocks from the entire universe
                 var highVolumeStocks = await IdentifyHighVolumeStocks(stockUniverse);
-                DatabaseMonolith.Log("Info", $"Phase 2 Complete: Identified {highVolumeStocks.Count} high volume stocks");
+                //DatabaseMonolith.Log("Info", $"Phase 2 Complete: Identified {highVolumeStocks.Count} high volume stocks");
                 
                 // Phase 3: Convert to QuoteData format and return top results
                 result = await ConvertToQuoteDataList(highVolumeStocks);
-                DatabaseMonolith.Log("Info", $"Phase 3 Complete: Converted {result.Count} stocks to QuoteData format");
+                //DatabaseMonolith.Log("Info", $"Phase 3 Complete: Converted {result.Count} stocks to QuoteData format");
                 
                 // Return top 20 high volume stocks
                 result = result.OrderByDescending(x => x.Volume).Take(20).ToList();
                 
                 var duration = DateTime.Now - startTime;
-                DatabaseMonolith.Log("Info", $"High Volume analysis completed in {duration.TotalSeconds:F2} seconds, returning {result.Count} stocks");
+                //DatabaseMonolith.Log("Info", $"High Volume analysis completed in {duration.TotalSeconds:F2} seconds, returning {result.Count} stocks");
                 
                 return result;
             }
             catch (Exception ex)
             {
                 var duration = DateTime.Now - startTime;
-                DatabaseMonolith.Log("Error", $"Error in High Volume analysis after {duration.TotalSeconds:F2} seconds", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error in High Volume analysis after {duration.TotalSeconds:F2} seconds", ex.ToString());
                 return result;
             }
         }
@@ -3425,7 +3425,7 @@ namespace Quantra.Controls
             var result = new List<QuoteData>();
             try
             {
-                DatabaseMonolith.Log("Info", "Starting dynamic Low P/E stock analysis...");
+                //DatabaseMonolith.Log("Info", "Starting dynamic Low P/E stock analysis...");
                 var alphaVantageService = new AlphaVantageService();
                 var cacheService = new StockDataCacheService();
 
@@ -3454,10 +3454,10 @@ namespace Quantra.Controls
                 {
                     // Fallback to common symbols if API fails
                     prioritizedSymbols.AddRange(StockSymbols.CommonSymbols.Where(s => !prioritizedSymbols.Contains(s)));
-                    DatabaseMonolith.Log("Warning", "API failed, using fallback common symbols for Low P/E analysis");
+                    //DatabaseMonolith.Log("Warning", "API failed, using fallback common symbols for Low P/E analysis");
                 }
 
-                DatabaseMonolith.Log("Info", $"Analyzing P/E ratios for {prioritizedSymbols.Count} symbols (prioritized order)...");
+                //DatabaseMonolith.Log("Info", $"Analyzing P/E ratios for {prioritizedSymbols.Count} symbols (prioritized order)...");
 
                 // Batch process symbols to respect API rate limits
                 const int batchSize = 8; // Process 8 symbols at a time (more conservative)
@@ -3469,7 +3469,7 @@ namespace Quantra.Controls
                 for (int i = 0; i < symbolsToProcess.Count; i += batchSize)
                 {
                     var batch = symbolsToProcess.Skip(i).Take(batchSize);
-                    DatabaseMonolith.Log("Info", $"Processing Low P/E batch {(i / batchSize) + 1}/{(symbolsToProcess.Count + batchSize - 1) / batchSize}");
+                    //DatabaseMonolith.Log("Info", $"Processing Low P/E batch {(i / batchSize) + 1}/{(symbolsToProcess.Count + batchSize - 1) / batchSize}");
 
                     // Process batch concurrently but with controlled parallelism
                     var batchTasks = batch.Select(async symbol =>
@@ -3553,7 +3553,7 @@ namespace Quantra.Controls
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for low P/E", ex.ToString());
+                            //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for low P/E", ex.ToString());
                         }
                         return null;
                     }).ToArray();
@@ -3578,14 +3578,14 @@ namespace Quantra.Controls
                     .Take(100)
                     .ToList();
 
-                DatabaseMonolith.Log("Info", $"Dynamic Low P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
+                //DatabaseMonolith.Log("Info", $"Dynamic Low P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
                                            $"Lowest P/E stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
 
                 return result;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting dynamic low P/E stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting dynamic low P/E stocks", ex.ToString());
                 return result;
             }
         }
@@ -3597,14 +3597,14 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI oversold scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI oversold scan: {symbols.Count} symbols");
 
                 var alphaVantageService = new AlphaVantageService();
                 var batchSize = 20; // Process in smaller batches to avoid API rate limits
                 var processedCount = 0;
                 var oversoldThreshold = 35; // More flexible threshold for better results
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify RSI oversold stocks (threshold: < {oversoldThreshold})");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify RSI oversold stocks (threshold: < {oversoldThreshold})");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -3660,12 +3660,12 @@ namespace Quantra.Controls
                                         result.Add(extendedQuote);
                                     }
                                     
-                                    DatabaseMonolith.Log("Debug", $"RSI oversold found: {symbol} - RSI: {rsi:F1}, Price: ${quote.Price:F2}");
+                                    //DatabaseMonolith.Log("Debug", $"RSI oversold found: {symbol} - RSI: {rsi:F1}, Price: ${quote.Price:F2}");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for RSI oversold", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for RSI oversold", ex.ToString());
                             }
                         }));
                     }
@@ -3679,18 +3679,18 @@ namespace Quantra.Controls
                         await Task.Delay(2000); // 2 second delay between batches
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, oversold found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, oversold found: {result.Count}");
                 }
 
                 // Return all oversold stocks, ordered by RSI ascending (no Take(10) limit)
                 var sortedResult = result.OrderBy(x => x.RSI).ToList();
-                DatabaseMonolith.Log("Info", $"RSI oversold scan completed: {sortedResult.Count} oversold stocks found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"RSI oversold scan completed: {sortedResult.Count} oversold stocks found from {symbols.Count} symbols");
                 
                 return sortedResult;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting RSI oversold stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting RSI oversold stocks", ex.ToString());
                 return result;
             }
         }
@@ -3702,14 +3702,14 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI overbought scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI overbought scan: {symbols.Count} symbols");
 
                 var alphaVantageService = new AlphaVantageService();
                 var batchSize = 20; // Process in smaller batches to avoid API rate limits
                 var processedCount = 0;
                 var overboughtThreshold = 65; // More flexible threshold for better results
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify RSI overbought stocks (threshold: > {overboughtThreshold})");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify RSI overbought stocks (threshold: > {overboughtThreshold})");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -3765,12 +3765,12 @@ namespace Quantra.Controls
                                         result.Add(extendedQuote);
                                     }
                                     
-                                    DatabaseMonolith.Log("Debug", $"RSI overbought found: {symbol} - RSI: {rsi:F1}, Price: ${quote.Price:F2}");
+                                    //DatabaseMonolith.Log("Debug", $"RSI overbought found: {symbol} - RSI: {rsi:F1}, Price: ${quote.Price:F2}");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for RSI overbought", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for RSI overbought", ex.ToString());
                             }
                         }));
                     }
@@ -3784,18 +3784,18 @@ namespace Quantra.Controls
                         await Task.Delay(2000); // 2 second delay between batches
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, overbought found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, overbought found: {result.Count}");
                 }
 
                 // Return all overbought stocks, ordered by RSI descending (no Take(10) limit)
                 var sortedResult = result.OrderByDescending(x => x.RSI).ToList();
-                DatabaseMonolith.Log("Info", $"RSI overbought scan completed: {sortedResult.Count} overbought stocks found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"RSI overbought scan completed: {sortedResult.Count} overbought stocks found from {symbols.Count} symbols");
                 
                 return sortedResult;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting RSI overbought stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting RSI overbought stocks", ex.ToString());
                 return result;
             }
         }
@@ -3807,14 +3807,14 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Theta scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Theta scan: {symbols.Count} symbols");
 
                 var alphaVantageService = new AlphaVantageService();
                 var batchSize = 15; // Smaller batches due to additional calculations
                 var processedCount = 0;
                 var volatilityThreshold = 0.25; // High implied volatility threshold
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Theta opportunities (volatility > {volatilityThreshold})");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Theta opportunities (volatility > {volatilityThreshold})");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -3877,13 +3877,13 @@ namespace Quantra.Controls
                                             result.Add(extendedQuote);
                                         }
                                         
-                                        DatabaseMonolith.Log("Debug", $"High Theta opportunity found: {symbol} - Volatility: {volatility:F3}, Volume: {quote.Volume:N0}");
+                                        //DatabaseMonolith.Log("Debug", $"High Theta opportunity found: {symbol} - Volatility: {volatility:F3}, Volume: {quote.Volume:N0}");
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Theta", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Theta", ex.ToString());
                             }
                         }));
                     }
@@ -3897,18 +3897,18 @@ namespace Quantra.Controls
                         await Task.Delay(2500); // Longer delay due to additional calculations
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Theta found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Theta found: {result.Count}");
                 }
 
                 // Return stocks ordered by volatility descending (highest theta opportunities first)
                 var sortedResult = result.OrderByDescending(x => x.RSI).Take(25).ToList(); // Limit to top 25
-                DatabaseMonolith.Log("Info", $"High Theta scan completed: {sortedResult.Count} opportunities found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"High Theta scan completed: {sortedResult.Count} opportunities found from {symbols.Count} symbols");
                 
                 return sortedResult;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting High Theta stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting High Theta stocks", ex.ToString());
                 return result;
             }
         }
@@ -3920,14 +3920,14 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Beta scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Beta scan: {symbols.Count} symbols");
 
                 var alphaVantageService = new AlphaVantageService();
                 var batchSize = 15; // Smaller batches due to beta calculations
                 var processedCount = 0;
                 var betaThreshold = 1.2; // High beta threshold for momentum trading
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Beta stocks (beta > {betaThreshold})");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Beta stocks (beta > {betaThreshold})");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -3989,13 +3989,13 @@ namespace Quantra.Controls
                                             result.Add(extendedQuote);
                                         }
                                         
-                                        DatabaseMonolith.Log("Debug", $"High Beta stock found: {symbol} - Beta: {beta:F2}, Volume: {quote.Volume:N0}");
+                                        //DatabaseMonolith.Log("Debug", $"High Beta stock found: {symbol} - Beta: {beta:F2}, Volume: {quote.Volume:N0}");
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Beta", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Beta", ex.ToString());
                             }
                         }));
                     }
@@ -4009,18 +4009,18 @@ namespace Quantra.Controls
                         await Task.Delay(3000); // Longer delay due to beta calculations
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Beta found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Beta found: {result.Count}");
                 }
 
                 // Return stocks ordered by beta descending (highest beta first)
                 var sortedResult = result.OrderByDescending(x => x.RSI).Take(20).ToList(); // Limit to top 20
-                DatabaseMonolith.Log("Info", $"High Beta scan completed: {sortedResult.Count} high beta stocks found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"High Beta scan completed: {sortedResult.Count} high beta stocks found from {symbols.Count} symbols");
                 
                 return sortedResult;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting High Beta stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting High Beta stocks", ex.ToString());
                 return result;
             }
         }
@@ -4032,14 +4032,14 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Alpha scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Alpha scan: {symbols.Count} symbols");
 
                 var alphaVantageService = new AlphaVantageService();
                 var batchSize = 12; // Smaller batches due to complex alpha calculations
                 var processedCount = 0;
                 var alphaThreshold = 0.05; // 5% excess return threshold
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Alpha stocks (alpha > {alphaThreshold:P})");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify High Alpha stocks (alpha > {alphaThreshold:P})");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -4101,13 +4101,13 @@ namespace Quantra.Controls
                                             result.Add(extendedQuote);
                                         }
                                         
-                                        DatabaseMonolith.Log("Debug", $"High Alpha stock found: {symbol} - Alpha: {alpha:P2}, Volume: {quote.Volume:N0}");
+                                        //DatabaseMonolith.Log("Debug", $"High Alpha stock found: {symbol} - Alpha: {alpha:P2}, Volume: {quote.Volume:N0}");
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Alpha", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for High Alpha", ex.ToString());
                             }
                         }));
                     }
@@ -4121,18 +4121,18 @@ namespace Quantra.Controls
                         await Task.Delay(3500); // Longest delay due to most complex calculations
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Alpha found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, High Alpha found: {result.Count}");
                 }
 
                 // Return stocks ordered by alpha descending (highest alpha first)
                 var sortedResult = result.OrderByDescending(x => x.RSI).Take(15).ToList(); // Limit to top 15
-                DatabaseMonolith.Log("Info", $"High Alpha scan completed: {sortedResult.Count} high alpha stocks found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"High Alpha scan completed: {sortedResult.Count} high alpha stocks found from {symbols.Count} symbols");
                 
                 return sortedResult;  
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting High Alpha stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting High Alpha stocks", ex.ToString());
                 return result;
             }
         }
@@ -4144,7 +4144,7 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Cup and Handle scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Cup and Handle scan: {symbols.Count} symbols");
 
                 var patternService = new PricePatternRecognitionService(_cacheService);
                 var alphaVantageService = new AlphaVantageService();
@@ -4152,7 +4152,7 @@ namespace Quantra.Controls
                 var processedCount = 0;
                 var minConfidence = 70.0; // Minimum confidence for cup and handle patterns
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify Cup and Handle patterns (confidence > {minConfidence}%)");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify Cup and Handle patterns (confidence > {minConfidence}%)");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -4221,13 +4221,13 @@ namespace Quantra.Controls
                                             result.Add(extendedQuote);
                                         }
                                         
-                                        DatabaseMonolith.Log("Debug", $"Cup and Handle pattern found: {symbol} - Confidence: {bullishCupAndHandle.Confidence:F1}%, Volume: {quote.Volume:N0}");
+                                        //DatabaseMonolith.Log("Debug", $"Cup and Handle pattern found: {symbol} - Confidence: {bullishCupAndHandle.Confidence:F1}%, Volume: {quote.Volume:N0}");
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for Cup and Handle pattern", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for Cup and Handle pattern", ex.ToString());
                             }
                         }));
                     }
@@ -4241,18 +4241,18 @@ namespace Quantra.Controls
                         await Task.Delay(4000); // Longer delay due to pattern analysis complexity
                     }
 
-                    DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, Cup and Handle patterns found: {result.Count}");
+                    //DatabaseMonolith.Log("Info", $"Processed batch {i / batchSize + 1}, total symbols processed: {processedCount}/{symbols.Count}, Cup and Handle patterns found: {result.Count}");
                 }
 
                 // Return stocks ordered by pattern confidence descending (highest confidence first)
                 var sortedResult = result.OrderByDescending(x => x.RSI).Take(12).ToList(); // Limit to top 12
-                DatabaseMonolith.Log("Info", $"Cup and Handle scan completed: {sortedResult.Count} patterns found from {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Cup and Handle scan completed: {sortedResult.Count} patterns found from {symbols.Count} symbols");
                 
                 return sortedResult;  
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting Bullish Cup and Handle stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting Bullish Cup and Handle stocks", ex.ToString());
                 return result;
             }
         }
@@ -4264,7 +4264,7 @@ namespace Quantra.Controls
             {
                 // Use dynamic stock universe for broader market coverage
                 var symbols = await BuildDynamicStockUniverse();
-                DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Bearish Cup and Handle scan: {symbols.Count} symbols");
+                //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Bearish Cup and Handle scan: {symbols.Count} symbols");
 
                 var patternService = new PricePatternRecognitionService(_cacheService);
                 var alphaVantageService = new AlphaVantageService();
@@ -4272,7 +4272,7 @@ namespace Quantra.Controls
                 var processedCount = 0;
                 var minConfidence = 70.0; // Minimum confidence for bearish cup and handle patterns
 
-                DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify Bearish Cup and Handle patterns (confidence > {minConfidence}%)");
+                //DatabaseMonolith.Log("Info", $"Processing {symbols.Count} symbols in batches of {batchSize} to identify Bearish Cup and Handle patterns (confidence > {minConfidence}%)");
 
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
@@ -4341,13 +4341,13 @@ namespace Quantra.Controls
                                             result.Add(extendedQuote);
                                         }
                                         
-                                        DatabaseMonolith.Log("Debug", $"Bearish Cup and Handle pattern found: {symbol} - Confidence: {bearishCupAndHandle.Confidence:F1}%, Volume: {quote.Volume:N0}");
+                                        //DatabaseMonolith.Log("Debug", $"Bearish Cup and Handle pattern found: {symbol} - Confidence: {bearishCupAndHandle.Confidence:F1}%, Volume: {quote.Volume:N0}");
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for Bearish Cup and Handle pattern", ex.ToString());
+                                //DatabaseMonolith.Log("Warning", $"Error processing symbol {symbol} for Bearish Cup and Handle pattern", ex.ToString());
                             }
                         }));
                     }
@@ -4359,19 +4359,19 @@ namespace Quantra.Controls
                     // Log progress every 100 symbols
                     if (processedCount % 100 == 0 || processedCount == symbols.Count)
                     {
-                        DatabaseMonolith.Log("Info", $"Processed {processedCount}/{symbols.Count} symbols for Bearish Cup and Handle patterns. Found {result.Count} matches so far.");
+                        //DatabaseMonolith.Log("Info", $"Processed {processedCount}/{symbols.Count} symbols for Bearish Cup and Handle patterns. Found {result.Count} matches so far.");
                     }
 
                     // Small delay between batches to prevent API rate limiting
                     await Task.Delay(100);
                 }
 
-                DatabaseMonolith.Log("Info", $"Bearish Cup and Handle scan complete. Found {result.Count} stocks with bearish cup and handle patterns.");
+                //DatabaseMonolith.Log("Info", $"Bearish Cup and Handle scan complete. Found {result.Count} stocks with bearish cup and handle patterns.");
                 return result.OrderByDescending(s => s.RSI).ToList(); // Order by confidence (stored in RSI field)
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting Bearish Cup and Handle stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting Bearish Cup and Handle stocks", ex.ToString());
                 return result;
             }
         }
@@ -4402,7 +4402,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Error getting price history for {symbol}: {ex.Message}");
+                //DatabaseMonolith.Log("Warning", $"Error getting price history for {symbol}: {ex.Message}");
             }
             return prices;
         }
@@ -4518,7 +4518,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get symbols from database: {ex.Message}");
+                //DatabaseMonolith.Log("Warning", $"Failed to get symbols from database: {ex.Message}");
             }
             
             return symbols;
@@ -4570,7 +4570,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Error waiting for background tasks during dispose", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Error waiting for background tasks during dispose", ex.ToString());
             }
 
             // Clean up symbol search timer
@@ -4616,7 +4616,7 @@ namespace Quantra.Controls
 
                 string symbol = selectedStock.Symbol;
 
-                DatabaseMonolith.Log("Info", $"Starting sentiment analysis for {symbol}");
+                //DatabaseMonolith.Log("Info", $"Starting sentiment analysis for {symbol}");
 
                 // Run sentiment analysis for different sources in parallel
                 var sentimentTasks = new List<Task<double>>();
@@ -4656,11 +4656,11 @@ namespace Quantra.Controls
                     Mouse.OverrideCursor = null;
                 });
 
-                DatabaseMonolith.Log("Info", $"Sentiment analysis completed for {symbol}. Overall: {OverallSentimentScore:F2}");
+                //DatabaseMonolith.Log("Info", $"Sentiment analysis completed for {symbol}. Overall: {OverallSentimentScore:F2}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error during sentiment analysis", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error during sentiment analysis", ex.ToString());
                 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -4685,7 +4685,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get news sentiment for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get news sentiment for {symbol}", ex.ToString());
                 return 0.0;
             }
         }
@@ -4702,7 +4702,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get social media sentiment for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get social media sentiment for {symbol}", ex.ToString());
                 return 0.0;
             }
         }
@@ -4732,7 +4732,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to get analyst sentiment for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to get analyst sentiment for {symbol}", ex.ToString());
                 return 0.0;
             }
         }
@@ -4755,7 +4755,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to generate sentiment summary", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to generate sentiment summary", ex.ToString());
                 return "Sentiment analysis completed.";
             }
         }

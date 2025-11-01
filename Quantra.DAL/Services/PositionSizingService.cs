@@ -17,7 +17,7 @@ namespace Quantra.DAL.Services
             {
                 if (string.IsNullOrWhiteSpace(symbol) || price <= 0 || riskPercentage <= 0 || accountSize <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
+                    //DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
                     return 0;
                 }
 
@@ -26,17 +26,17 @@ namespace Quantra.DAL.Services
 
                 if (riskPerShare == 0)
                 {
-                    DatabaseMonolith.Log("Warning", $"Risk per share is zero for {symbol}, using 1% of price as default");
+                    //DatabaseMonolith.Log("Warning", $"Risk per share is zero for {symbol}, using 1% of price as default");
                     riskPerShare = price * 0.01;
                 }
 
                 int shares = (int)(riskAmount / riskPerShare);
-                DatabaseMonolith.Log("Info", $"Position sizing for {symbol}: {shares} shares with {riskPercentage}% risk on ${accountSize:F2} account");
+                //DatabaseMonolith.Log("Info", $"Position sizing for {symbol}: {shares} shares with {riskPercentage}% risk on ${accountSize:F2} account");
                 return shares;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate position size for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate position size for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -51,7 +51,7 @@ namespace Quantra.DAL.Services
             {
                 if (string.IsNullOrWhiteSpace(symbol) || price <= 0 || riskPercentage <= 0 || accountSize <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Invalid parameters for adaptive position sizing calculation");
+                    //DatabaseMonolith.Log("Warning", "Invalid parameters for adaptive position sizing calculation");
                     return 0;
                 }
 
@@ -86,12 +86,12 @@ namespace Quantra.DAL.Services
                 double adjustedRiskAmount = baseRiskAmount * volatilityAdjustment * winRateAdjustment;
                 int shares = (int)(adjustedRiskAmount / riskPerShare);
 
-                DatabaseMonolith.Log("Info", $"Adaptive position sizing for {symbol}: {shares} shares (Vol adj: {volatilityAdjustment:F2}, WinRate adj: {winRateAdjustment:F2})");
+                //DatabaseMonolith.Log("Info", $"Adaptive position sizing for {symbol}: {shares} shares (Vol adj: {volatilityAdjustment:F2}, WinRate adj: {winRateAdjustment:F2})");
                 return shares;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate adaptive position size for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate adaptive position size for {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -107,7 +107,7 @@ namespace Quantra.DAL.Services
                 if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) || 
                     parameters.Price <= 0 || parameters.AccountSize <= 0)
                 {
-                    DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
+                    //DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
                     return 0;
                 }
                 
@@ -148,14 +148,14 @@ namespace Quantra.DAL.Services
                 
                 // Log the calculation
                 string methodName = parameters.Method.ToString();
-                DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
-                    $"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
+                //DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
+                    //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
                 
                 return shares;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to calculate position size for {parameters.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to calculate position size for {parameters.Symbol}", ex.ToString());
                 return 0;
             }
         }

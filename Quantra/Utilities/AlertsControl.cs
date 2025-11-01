@@ -81,7 +81,7 @@ namespace Quantra.Utilities
                            .Information("Emitting alert: {AlertCondition}", alert.Condition);
                     
                     // Log the alert to the database for backward compatibility
-                    DatabaseMonolith.Log(alert.Category.ToString(), alert.Name, alert.Notes);
+                    //DatabaseMonolith.Log(alert.Category.ToString(), alert.Name, alert.Notes);
 
                     // Play sound if enabled
                     if (_audioService != null && alert.EnableSound)
@@ -140,7 +140,7 @@ namespace Quantra.Utilities
                 _logger.Error(ex, "Failed to emit global alert: {AlertName}", alert.Name);
                 
                 // Also log to database for backward compatibility
-                DatabaseMonolith.Log("Error", "Failed to emit global alert", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to emit global alert", ex.ToString());
             }
         }
 
@@ -168,7 +168,7 @@ namespace Quantra.Utilities
             catch (Exception emitEx)
             {
                 _logger.Error(emitEx, "Failed to emit global error: {ErrorMessage}", message);
-                DatabaseMonolith.Log("Error", message, emitEx.ToString());
+                //DatabaseMonolith.Log("Error", message, emitEx.ToString());
             }
         }
     }

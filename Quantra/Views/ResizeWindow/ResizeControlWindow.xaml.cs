@@ -158,7 +158,7 @@ namespace Quantra
                     "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 
                 // Log the error
-                DatabaseMonolith.Log("Error", "ResizeControlWindow_Loaded failed", ex.ToString());
+                //DatabaseMonolith.Log("Error", "ResizeControlWindow_Loaded failed", ex.ToString());
                 
                 // Set default values
                 SetDefaultValues();
@@ -350,7 +350,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "UpdateControlValues failed", ex.ToString());
+                //DatabaseMonolith.Log("Error", "UpdateControlValues failed", ex.ToString());
             }
         }
 
@@ -712,7 +712,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "UpdateSelectionIndicator failed", ex.ToString());
+                //DatabaseMonolith.Log("Error", "UpdateSelectionIndicator failed", ex.ToString());
             }
         }
 
@@ -900,7 +900,7 @@ namespace Quantra
                     tabItem.Content = grid;
 
                     // Log grid creation
-                    DatabaseMonolith.Log("Info", $"Created grid for tab '{tabName}' with default dimensions 4x4");
+                    //DatabaseMonolith.Log("Info", $"Created grid for tab '{tabName}' with default dimensions 4x4");
                 }
             }
         }

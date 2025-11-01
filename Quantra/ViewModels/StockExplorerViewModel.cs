@@ -178,7 +178,7 @@ namespace Quantra.ViewModels
                         // Log error but don't block UI thread
                         await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            DatabaseMonolith.Log("Error", $"Failed to load symbol data for {symbol} in background", ex.ToString());
+                            //DatabaseMonolith.Log("Error", $"Failed to load symbol data for {symbol} in background", ex.ToString());
                         });
                     }
                 }));
@@ -198,11 +198,11 @@ namespace Quantra.ViewModels
                 var data = await _stockDataCacheService.GetStockData(symbol, CurrentTimeRange ?? "1day", "1d", forceRefresh: false);
                 // Update chart data for StockPriceChart on UI thread
                 await LoadChartDataAsync(data);
-                DatabaseMonolith.Log("Debug", $"Loaded and cached data for {symbol}: {data?.Count ?? 0} records");
+                //DatabaseMonolith.Log("Debug", $"Loaded and cached data for {symbol}: {data?.Count ?? 0} records");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading/caching data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading/caching data for {symbol}", ex.ToString());
             }
             finally
             {
@@ -395,11 +395,11 @@ namespace Quantra.ViewModels
                 // Update chart data on UI thread
                 await LoadChartDataAsync(data);
                 
-                DatabaseMonolith.Log("Info", $"Loaded chart data for {symbol} with time range {timeRange}: {data?.Count ?? 0} records");
+                //DatabaseMonolith.Log("Info", $"Loaded chart data for {symbol} with time range {timeRange}: {data?.Count ?? 0} records");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error loading chart data for {symbol} with time range {timeRange}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error loading chart data for {symbol} with time range {timeRange}", ex.ToString());
                 throw;
             }
         }
@@ -608,13 +608,13 @@ namespace Quantra.ViewModels
                                   $"BUY: {buyCount}, SELL: {sellCount}, HOLD: {holdCount}, ERRORS: {errorCount}. " +
                                   $"Average confidence: {avgConfidence:P1}";
 
-                DatabaseMonolith.Log("Info", $"Completed predictions for {processedCount} stocks");
+                //DatabaseMonolith.Log("Info", $"Completed predictions for {processedCount} stocks");
             }
             catch (Exception ex)
             {
                 PredictionError = $"Prediction failed: {ex.Message}";
                 PredictionSummary = $"Prediction failed: {ex.Message}";
-                DatabaseMonolith.Log("Error", "Error running predictions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error running predictions", ex.ToString());
             }
             finally
             {
@@ -710,7 +710,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error predicting for {stock.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error predicting for {stock.Symbol}", ex.ToString());
                 
                 // Set error state on UI thread
                 await App.Current.Dispatcher.InvokeAsync(async () =>
@@ -739,7 +739,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"ML prediction failed for {stock.Symbol}, using fallback: {ex.Message}");
+                //DatabaseMonolith.Log("Warning", $"ML prediction failed for {stock.Symbol}, using fallback: {ex.Message}");
                 
                 // Fallback to simple rule-based prediction
                 return GenerateFallbackPrediction(stock);
@@ -796,13 +796,13 @@ namespace Quantra.ViewModels
                 
                 if (frequentSymbols.Count > 0)
                 {
-                    DatabaseMonolith.Log("Info", $"Starting background preload for {frequentSymbols.Count} frequently accessed symbols");
+                    //DatabaseMonolith.Log("Info", $"Starting background preload for {frequentSymbols.Count} frequently accessed symbols");
                     await _stockDataCacheService.PreloadSymbolsAsync(frequentSymbols, CurrentTimeRange ?? "1day");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Background preloading failed", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Background preloading failed", ex.ToString());
             }
         }
 

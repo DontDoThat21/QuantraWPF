@@ -257,7 +257,7 @@ namespace Quantra.ViewModels
                 _notificationService.ShowNotification($"Export failed: {ex.Message}", 
                     ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Error), 
                     ConvertHexToColor("#FF1744"));
-                DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
             }
         }
         
@@ -297,7 +297,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 // Log error
-                DatabaseMonolith.Log("Error", "Failed to load transactions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load transactions", ex.ToString());
                 NotificationText = $"Failed to load transactions: {ex.Message}";
             }
         }
@@ -377,7 +377,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 NotificationText = $"Export failed: {ex.Message}";
-                DatabaseMonolith.Log("Error", "Failed to export transactions", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to export transactions", ex.ToString());
                 throw;
             }
         }

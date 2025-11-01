@@ -253,7 +253,7 @@ namespace Quantra.Controls.Components
                                 }
                                 else
                                 {
-                                    DatabaseMonolith.Log("Warning", $"Invalid trading rule skipped: {rule.Name}", 
+                                    //DatabaseMonolith.Log("Warning", $"Invalid trading rule skipped: {rule.Name}", 
                                         $"Symbol: {rule.Symbol}, OrderType: {rule.OrderType}");
                                 }
                             }
@@ -284,7 +284,7 @@ namespace Quantra.Controls.Components
                 {
                     _ = Dispatcher.InvokeAsync(() => _notificationService.ShowError($"Error loading trading rules: {ex.Message}"));
                 }
-                DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
             }
         }
 
@@ -803,13 +803,13 @@ namespace Quantra.Controls.Components
                     {
                         _ = Dispatcher.InvokeAsync(() => _notificationService.ShowWarning($"Auto-trading disabled: {string.Join(", ", validationErrors)}"));
                     }
-                    DatabaseMonolith.Log("Warning", "Auto-trading validation failed", 
+                    //DatabaseMonolith.Log("Warning", "Auto-trading validation failed", 
                         $"Rule: {SelectedTradingRule?.Name}\nErrors: {string.Join("\n", validationErrors)}");
                 }
                 else
                 {
                     // Log successful validation
-                    DatabaseMonolith.Log("Info", "Auto-trading validation passed", 
+                    //DatabaseMonolith.Log("Info", "Auto-trading validation passed", 
                         $"Rule: {SelectedTradingRule.Name}\nSymbol: {Symbol}");
                 }
             }
@@ -930,11 +930,11 @@ namespace Quantra.Controls.Components
                                         $"Time: {DateTime.Now}\n";
 
                             await _emailService.SendEmailAsync(_settingsProfile.AlertEmail, subject, body);
-                            DatabaseMonolith.Log("Info", $"Trading signal email sent for {Symbol}", subject);
+                            //DatabaseMonolith.Log("Info", $"Trading signal email sent for {Symbol}", subject);
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", "Failed to send trading signal email", ex.ToString());
+                            //DatabaseMonolith.Log("Error", "Failed to send trading signal email", ex.ToString());
                         }
                     }
 
@@ -956,7 +956,7 @@ namespace Quantra.Controls.Components
                 {
                     _ = Dispatcher.InvokeAsync(() => _notificationService.ShowError($"Error in auto-trading: {ex.Message}"));
                 }
-                DatabaseMonolith.Log("Error", "Auto-trading error", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Auto-trading error", ex.ToString());
             }
         }
 
@@ -1000,7 +1000,7 @@ namespace Quantra.Controls.Components
                 // Validate risk-reward ratio (minimum 2:1)
                 if (riskRewardRatio < 2.0)
                 {
-                    DatabaseMonolith.Log("Warning", $"Trade rejected for {prediction.Symbol} - Risk/Reward ratio too low: {riskRewardRatio:F2}");
+                    //DatabaseMonolith.Log("Warning", $"Trade rejected for {prediction.Symbol} - Risk/Reward ratio too low: {riskRewardRatio:F2}");
                     return;
                 }
 
@@ -1072,11 +1072,11 @@ namespace Quantra.Controls.Components
                                     $"Execution Time: {DateTime.Now}\n";
 
                         await _emailService.SendEmailAsync(_settingsProfile.AlertEmail, subject, body);
-                        DatabaseMonolith.Log("Info", $"Trade execution email sent for {prediction.Symbol}", subject);
+                        //DatabaseMonolith.Log("Info", $"Trade execution email sent for {prediction.Symbol}", subject);
                     }
                     catch (Exception ex)
                     {
-                        DatabaseMonolith.Log("Error", "Failed to send trade execution email", ex.ToString());
+                        //DatabaseMonolith.Log("Error", "Failed to send trade execution email", ex.ToString());
                     }
                 }
 
@@ -1098,7 +1098,7 @@ namespace Quantra.Controls.Components
                 Alerting.EmitGlobalAlert(alert);
 
                 // Log successful trade
-                DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}", alert.Notes);
+                //DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}", alert.Notes);
             }
             catch (Exception ex)
             {
@@ -1111,7 +1111,7 @@ namespace Quantra.Controls.Components
                 {
                     _ = Dispatcher.InvokeAsync(() => _notificationService.ShowError($"Error in auto-trading: {ex.Message}"));
                 }
-                DatabaseMonolith.Log("Error", "Auto-trading error", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Auto-trading error", ex.ToString());
             }
         }
 

@@ -35,7 +35,7 @@ namespace Quantra
                 var gridVisualization = FindName("GridVisualization") as Grid;
                 if (gridVisualization == null)
                 {
-                    DatabaseMonolith.Log("Warning", "GridVisualization not found");
+                    //DatabaseMonolith.Log("Warning", "GridVisualization not found");
                     return;
                 }
 
@@ -111,7 +111,7 @@ namespace Quantra
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to update grid visualization: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to update grid visualization: {ex.Message}", ex.ToString());
             }
         }
 
@@ -185,7 +185,7 @@ namespace Quantra
                     if (ColumnSpanTextBox != null)
                         ColumnSpanTextBox.Text = "1";
 
-                    DatabaseMonolith.Log("Info", $"First click at cell ({row + 1},{col + 1})");
+                    //DatabaseMonolith.Log("Info", $"First click at cell ({row + 1},{col + 1})");
                 }
                 else
                 {
@@ -230,7 +230,7 @@ namespace Quantra
                             if (ColumnSpanTextBox != null)
                                 ColumnSpanTextBox.Text = colSpan.ToString();
 
-                            DatabaseMonolith.Log("Info", $"Selected span: ({startRow + 1},{startCol + 1}) to ({endRow + 1},{endCol + 1}) = {rowSpan}x{colSpan}");
+                            //DatabaseMonolith.Log("Info", $"Selected span: ({startRow + 1},{startCol + 1}) to ({endRow + 1},{endCol + 1}) = {rowSpan}x{colSpan}");
                         }
                         else
                         {
@@ -375,7 +375,7 @@ namespace Quantra
                 var controls = DatabaseMonolith.LoadControlsForTab(tabName);
                 
                 // Log the number of controls found for debugging
-                DatabaseMonolith.Log("Debug", $"Found {controls.Count} controls for tab '{tabName}'");
+                //DatabaseMonolith.Log("Debug", $"Found {controls.Count} controls for tab '{tabName}'");
 
                 // Add all occupied cells to our list
                 foreach (var control in controls)
@@ -390,11 +390,11 @@ namespace Quantra
                 }
                 
                 // Log how many cells are now marked as occupied
-                DatabaseMonolith.Log("Debug", $"Marked {occupiedCells.Count} cells as occupied in tab '{tabName}'");
+                //DatabaseMonolith.Log("Debug", $"Marked {occupiedCells.Count} cells as occupied in tab '{tabName}'");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error refreshing occupied cells: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error refreshing occupied cells: {ex.Message}", ex.ToString());
             }
         }
 

@@ -24,12 +24,12 @@ namespace Quantra.Repositories
                     )";
 
                 // Fix: Use fully qualified namespace to ensure correct method resolution
-                Quantra.DatabaseMonolith.ExecuteNonQuery(createTableQuery);
-                Quantra.DatabaseMonolith.Log("Info", "IndicatorSettings table created or verified");
+                DatabaseMonolith.ExecuteNonQuery(createTableQuery);
+                //DatabaseMonolith.Log("Info", "IndicatorSettings table created or verified");
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to create IndicatorSettings table", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create IndicatorSettings table", ex.ToString());
                 throw;
             }
         }
@@ -74,7 +74,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save indicator setting for {setting.IndicatorName}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save indicator setting for {setting.IndicatorName}", ex.ToString());
                 throw;
             }
         }
@@ -123,7 +123,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
                 throw;
             }
         }
@@ -167,7 +167,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
                 throw;
             }
 
@@ -197,7 +197,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to check existence of indicator settings for control {controlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to check existence of indicator settings for control {controlId}", ex.ToString());
                 throw;
             }
         }
@@ -277,7 +277,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
                 throw;
             }
         }
@@ -315,7 +315,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save indicator settings for control {settings.ControlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save indicator settings for control {settings.ControlId}", ex.ToString());
                 throw;
             }
         }
@@ -329,7 +329,7 @@ namespace Quantra.Repositories
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to update indicator settings for control {settings.ControlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to update indicator settings for control {settings.ControlId}", ex.ToString());
                 throw;
             }
         }

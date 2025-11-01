@@ -87,11 +87,11 @@ namespace Quantra.DAL.Services
                     // command = new SQLiteCommand("ALTER TABLE StockDataCache ADD COLUMN NewColumn TEXT", connection);
                     // try { command.ExecuteNonQuery(); } catch { /* Ignore if already exists */ }
                 }
-                DatabaseMonolith.Log("Info", "Stock data cache tables created or verified");
+                //DatabaseMonolith.Log("Info", "Stock data cache tables created or verified");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to create stock data cache table", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create stock data cache table", ex.ToString());
             }
         }
 
@@ -110,7 +110,7 @@ namespace Quantra.DAL.Services
                 throw new ArgumentException("Symbol cannot be null or empty", nameof(symbol));
             }
 
-            DatabaseMonolith.Log("Debug", $"GetStockData called for {symbol} (range={range}, interval={interval}, forceRefresh={forceRefresh})");
+            //DatabaseMonolith.Log("Debug", $"GetStockData called for {symbol} (range={range}, interval={interval}, forceRefresh={forceRefresh})");
 
             // First, check if we have cached data that's still valid
             if (!forceRefresh)
@@ -118,7 +118,7 @@ namespace Quantra.DAL.Services
                 var cachedData = GetCachedData(symbol, range, interval);
                 if (cachedData != null && cachedData.Count > 0)
                 {
-                    DatabaseMonolith.Log("Info", $"Retrieved stock data for {symbol} from cache");
+                    //DatabaseMonolith.Log("Info", $"Retrieved stock data for {symbol} from cache");
                     
                     // Check if we should perform incremental update in background
                     var cacheInfo = GetCacheInfo(symbol, range, interval);
@@ -139,11 +139,11 @@ namespace Quantra.DAL.Services
             if (freshData != null && freshData.Count > 0)
             {
                 CacheStockData(symbol, range, interval, freshData);
-                DatabaseMonolith.Log("Info", $"Fetched and cached fresh stock data for {symbol}");
+                //DatabaseMonolith.Log("Info", $"Fetched and cached fresh stock data for {symbol}");
             }
             else
             {
-                DatabaseMonolith.Log("Warning", $"Failed to fetch stock data for {symbol}");
+                //DatabaseMonolith.Log("Warning", $"Failed to fetch stock data for {symbol}");
             }
             
             return freshData;
@@ -204,7 +204,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
                 return null;
             }
         }
@@ -243,7 +243,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
             }
         }
 
@@ -269,7 +269,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -333,7 +333,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
             }
             
             return null;
@@ -367,7 +367,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                DatabaseMonolith.Log("Debug", $"Performing incremental update for {symbol}");
+                //DatabaseMonolith.Log("Debug", $"Performing incremental update for {symbol}");
                 
                 // For daily data, fetch only last few days to update recent prices
                 string incrementalRange = interval == "1d" ? "5d" : range;
@@ -382,12 +382,12 @@ namespace Quantra.DAL.Services
                     // Update cache with merged data
                     CacheStockData(symbol, range, interval, mergedData);
                     
-                    DatabaseMonolith.Log("Info", $"Incremental update completed for {symbol}. Added {recentData.Count} recent records");
+                    //DatabaseMonolith.Log("Info", $"Incremental update completed for {symbol}. Added {recentData.Count} recent records");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Incremental update failed for {symbol}: {ex.Message}");
+                //DatabaseMonolith.Log("Warning", $"Incremental update failed for {symbol}: {ex.Message}");
             }
         }
 
@@ -438,13 +438,13 @@ namespace Quantra.DAL.Services
                     command.Parameters.AddWithValue("@ExpiryTime", DateTime.Now.AddMinutes(-maxAgeMinutes));
                     
                     var count = command.ExecuteNonQuery();
-                    DatabaseMonolith.Log("Info", $"Cleared {count} expired cache entries");
+                    //DatabaseMonolith.Log("Info", $"Cleared {count} expired cache entries");
                     return count;
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error clearing expired cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error clearing expired cache", ex.ToString());
                 return 0;
             }
         }
@@ -458,7 +458,7 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrEmpty(symbol))
             {
-                DatabaseMonolith.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
+                //DatabaseMonolith.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
                 return 0;
             }
 
@@ -472,13 +472,13 @@ namespace Quantra.DAL.Services
                     command.Parameters.AddWithValue("@Symbol", symbol);
                     
                     var count = command.ExecuteNonQuery();
-                    DatabaseMonolith.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
+                    //DatabaseMonolith.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
                     return count;
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
                 return 0;
             }
         }
@@ -596,7 +596,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error retrieving all cached stocks", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error retrieving all cached stocks", ex.ToString());
             }
             return stocks;
         }
@@ -720,7 +720,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
             }
             return null;
         }
@@ -803,7 +803,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
             }
         }
         
@@ -856,7 +856,7 @@ namespace Quantra.DAL.Services
             if (symbols == null || symbols.Count == 0)
                 return;
 
-            DatabaseMonolith.Log("Info", $"Starting background preload for {symbols.Count} symbols");
+            //DatabaseMonolith.Log("Info", $"Starting background preload for {symbols.Count} symbols");
 
             // Process symbols in small batches to avoid overwhelming the API
             const int batchSize = 3;
@@ -877,11 +877,11 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error in preload batch starting at index {i}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error in preload batch starting at index {i}", ex.ToString());
                 }
             }
 
-            DatabaseMonolith.Log("Info", "Background preload completed");
+            //DatabaseMonolith.Log("Info", "Background preload completed");
         }
 
         /// <summary>
@@ -905,11 +905,11 @@ namespace Quantra.DAL.Services
                 // Fetch data in background (don't force refresh to respect existing cache)
                 await GetStockData(symbol, timeRange, interval, forceRefresh: false);
                 
-                DatabaseMonolith.Log("Debug", $"Preloaded data for {symbol}");
+                //DatabaseMonolith.Log("Debug", $"Preloaded data for {symbol}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to preload {symbol}: {ex.Message}");
+                //DatabaseMonolith.Log("Warning", $"Failed to preload {symbol}: {ex.Message}");
             }
         }
 
@@ -951,7 +951,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
             }
             
             return symbols;
@@ -966,13 +966,13 @@ namespace Quantra.DAL.Services
                     connection.Open();
                     var command = new SQLiteCommand("DELETE FROM StockDataCache", connection);
                     int count = command.ExecuteNonQuery();
-                    DatabaseMonolith.Log("Info", $"Cleared {count} cache entries");
+                    //DatabaseMonolith.Log("Info", $"Cleared {count} cache entries");
                     return await Task.FromResult(true);
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to clear cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to clear cache", ex.ToString());
                 return await Task.FromResult(false);
             }
         }

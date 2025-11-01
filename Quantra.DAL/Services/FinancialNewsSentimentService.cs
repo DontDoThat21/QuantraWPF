@@ -157,7 +157,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get News API key", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get News API key", ex.ToString());
             }
 
             // Fallback
@@ -214,7 +214,7 @@ namespace Quantra.DAL.Services
                 var response = await _client.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    DatabaseMonolith.Log("Warning", $"News API call failed for {symbol}: {response.StatusCode}");
+                    //DatabaseMonolith.Log("Warning", $"News API call failed for {symbol}: {response.StatusCode}");
                     return articles;
                 }
                 
@@ -307,7 +307,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error fetching news articles for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching news articles for {symbol}", ex.ToString());
             }
             
             return articles;
@@ -392,23 +392,23 @@ namespace Quantra.DAL.Services
                 int timeout = Math.Max(5000, articles.Count * 500); // Base timeout + 500ms per article
                 if (!process.WaitForExit(timeout)) 
                 {
-                    DatabaseMonolith.Log("Warning", "Python sentiment script did not exit within the timeout period. Terminating process.");
+                    //DatabaseMonolith.Log("Warning", "Python sentiment script did not exit within the timeout period. Terminating process.");
                     process.Kill(); // Forcefully terminate the process
                 }
                 
                 if (!string.IsNullOrWhiteSpace(error))
                 {
-                    DatabaseMonolith.Log("Warning", $"Python sentiment script stderr: {error}");
+                    //DatabaseMonolith.Log("Warning", $"Python sentiment script stderr: {error}");
                 }
                 
                 if (double.TryParse(output, out double sentiment))
                     return sentiment;
-                else
-                    DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
+                // else
+                    //DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error running Python sentiment analysis script for news articles", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error running Python sentiment analysis script for news articles", ex.ToString());
             }
             
             return 0.0;
@@ -457,7 +457,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error getting sentiment for {symbol} from {sourceDomain}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error getting sentiment for {symbol} from {sourceDomain}", ex.ToString());
                 }
             }
             
@@ -506,7 +506,7 @@ namespace Quantra.DAL.Services
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error analyzing sentiment for {symbol} from {sourceDomain}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error analyzing sentiment for {symbol} from {sourceDomain}", ex.ToString());
                 }
             }
             

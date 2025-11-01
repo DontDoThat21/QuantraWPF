@@ -49,7 +49,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to emit analyst rating alert for {alert.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to emit analyst rating alert for {alert.Symbol}", ex.ToString());
             }
         }
         
@@ -141,7 +141,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to check rating trends for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to check rating trends for {symbol}", ex.ToString());
             }
         }
         

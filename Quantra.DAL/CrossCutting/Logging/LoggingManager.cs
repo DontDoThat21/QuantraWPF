@@ -415,7 +415,7 @@ namespace Quantra.CrossCutting.Logging
                     }
 
                     // Use the existing logging infrastructure
-                    DatabaseMonolith.Log(level, message, details);
+                    //DatabaseMonolith.Log(level, message, details);
                 }
                 catch (Exception ex)
                 {

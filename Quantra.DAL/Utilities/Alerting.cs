@@ -24,7 +24,7 @@ namespace Quantra.Utilities
             try
             {
                 // Log to DB first so alerts are persisted even without UI present
-                Quantra.DatabaseMonolith.Log(alert.Category.ToString(), alert.Name, alert.Notes);
+                //DatabaseMonolith.Log(alert.Category.ToString(), alert.Name, alert.Notes);
             }
             catch
             {
@@ -53,7 +53,7 @@ namespace Quantra.Utilities
             try
             {
                 // Log as Error; DatabaseMonolith will emit an alert to any registered listeners/UI.
-                Quantra.DatabaseMonolith.Log("Error", message, ex?.ToString());
+                //DatabaseMonolith.Log("Error", message, ex?.ToString());
             }
             catch
             {

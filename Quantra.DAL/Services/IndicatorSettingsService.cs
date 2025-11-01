@@ -18,7 +18,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to initialize IndicatorSettingsService", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to initialize IndicatorSettingsService", ex.ToString());
             }
         }
 
@@ -32,7 +32,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to save indicator setting: {indicatorName}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to save indicator setting: {indicatorName}", ex.ToString());
             }
         }
 
@@ -52,7 +52,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save multiple indicator settings", ex.ToString());
             }
         }
 
@@ -78,7 +78,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to retrieve indicator settings for control {controlId}", ex.ToString());
             }
 
             return indicatorDictionary;

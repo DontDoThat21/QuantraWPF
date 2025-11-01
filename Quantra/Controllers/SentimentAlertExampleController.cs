@@ -87,7 +87,7 @@ namespace Quantra.Controllers
             catch (Exception ex)
             {
                 // Log error
-                DatabaseMonolith.Log("Error", "Failed to monitor sentiment", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to monitor sentiment", ex.ToString());
             }
         }
     }

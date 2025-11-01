@@ -41,7 +41,7 @@ namespace Quantra.DAL.Services
                 // Validate parameters
                 if (chunks <= 0 || quantity <= 0 || string.IsNullOrEmpty(symbol))
                 {
-                    DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
+                    //DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
                     return false;
                 }
                 
@@ -98,15 +98,15 @@ namespace Quantra.DAL.Services
                 string intervalType = randomizeIntervals ? "randomized" : "fixed";
                 string priceVariance = priceVariancePercent > 0 ? $" with price variance of ±{priceVariancePercent:F1}%" : "";
                 
-                DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
-                    $"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
-                    $"Group ID: {splitOrderGroupId}");
+                //DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
+                    //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
+                    //$"Group ID: {splitOrderGroupId}");
                 
                 return true;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to split large order for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to split large order for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -140,12 +140,12 @@ namespace Quantra.DAL.Services
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", $"Cancelled {cancelledCount} remaining chunks from split order group {splitOrderGroupId}");
+                //DatabaseMonolith.Log("Info", $"Cancelled {cancelledCount} remaining chunks from split order group {splitOrderGroupId}");
                 return cancelledCount;
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to cancel split order group {splitOrderGroupId}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to cancel split order group {splitOrderGroupId}", ex.ToString());
                 return 0;
             }
         }
@@ -191,14 +191,14 @@ namespace Quantra.DAL.Services
                             
                             if (success)
                             {
-                                DatabaseMonolith.Log("Info", $"Executed scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
+                                //DatabaseMonolith.Log("Info", $"Executed scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
                                 
                                 // Remove the executed order
                                 _scheduledOrders[symbol].Remove(order);
                             }
                             else
                             {
-                                DatabaseMonolith.Log("Warning", $"Failed to execute scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
+                                //DatabaseMonolith.Log("Warning", $"Failed to execute scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
                                 
                                 // Reschedule for 1 minute later
                                 order.ExecutionTime = now.AddMinutes(1);
@@ -206,7 +206,7 @@ namespace Quantra.DAL.Services
                         }
                         catch (Exception ex)
                         {
-                            DatabaseMonolith.Log("Error", $"Error executing scheduled order for {order.Symbol}", ex.ToString());
+                            //DatabaseMonolith.Log("Error", $"Error executing scheduled order for {order.Symbol}", ex.ToString());
                             
                             // Reschedule for 5 minutes later on error
                             order.ExecutionTime = now.AddMinutes(5);
@@ -222,7 +222,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in scheduled order monitoring", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in scheduled order monitoring", ex.ToString());
             }
         }
 
@@ -248,7 +248,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to add scheduled order for {order?.Symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to add scheduled order for {order?.Symbol}", ex.ToString());
                 return false;
             }
         }
@@ -283,7 +283,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to remove scheduled order {orderId} for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to remove scheduled order {orderId} for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -443,7 +443,7 @@ namespace Quantra.DAL.Services
                     if (!success)
                     {
                         allSuccessful = false;
-                        DatabaseMonolith.Log("Warning", $"Failed to place multi-leg order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
+                        //DatabaseMonolith.Log("Warning", $"Failed to place multi-leg order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
                     }
                 }
 
@@ -451,7 +451,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to place multi-leg order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to place multi-leg order", ex.ToString());
                 return false;
             }
         }

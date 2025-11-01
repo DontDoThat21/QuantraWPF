@@ -93,7 +93,7 @@ namespace Quantra.Models
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to read symbol cache: {ex.Message}");
+                //DatabaseMonolith.Log("Error", $"Failed to read symbol cache: {ex.Message}");
             }
             
             // If cache loading failed, return the common symbols
@@ -117,7 +117,7 @@ namespace Quantra.Models
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to write symbol cache: {ex.Message}");
+                //DatabaseMonolith.Log("Error", $"Failed to write symbol cache: {ex.Message}");
             }
         }
         

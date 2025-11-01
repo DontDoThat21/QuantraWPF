@@ -103,7 +103,7 @@ namespace Quantra.Utilities
                         catch (Exception ex)
                         {
                             // Log but don't let one bad update break the batch
-                            DatabaseMonolith.Log("Warning", $"Error executing batched UI update: {ex.Message}");
+                            //DatabaseMonolith.Log("Warning", $"Error executing batched UI update: {ex.Message}");
                         }
                     }
                 }, priorityGroup.Key);

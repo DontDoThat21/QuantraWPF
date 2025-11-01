@@ -264,7 +264,7 @@ namespace Quantra.Modules
                 }
                 catch (Exception ex)
                 {
-                    DatabaseMonolith.Log("Warning", $"Error analyzing sector correlation for {sector}", ex.ToString());
+                    //DatabaseMonolith.Log("Warning", $"Error analyzing sector correlation for {sector}", ex.ToString());
                 }
             }
             

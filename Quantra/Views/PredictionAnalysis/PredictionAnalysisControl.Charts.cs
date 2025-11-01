@@ -43,7 +43,7 @@ namespace Quantra.Controls
         {
             try
             {
-                DatabaseMonolith.Log("Info", "Initializing chart data collections");
+                //DatabaseMonolith.Log("Info", "Initializing chart data collections");
                 
                 // Initialize all chart data collections
                 PriceValues = new ChartValues<double>();
@@ -57,11 +57,11 @@ namespace Quantra.Controls
                 
                 // Set flag indicating charts are initialized
                 chartsInitialized = true;
-                DatabaseMonolith.Log("Info", "Chart data collections initialized successfully");
+                //DatabaseMonolith.Log("Info", "Chart data collections initialized successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to initialize chart data collections", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to initialize chart data collections", ex.ToString());
                 chartsInitialized = false;
             }
         }
@@ -72,7 +72,7 @@ namespace Quantra.Controls
             {
                 if (!chartsInitialized)
                 {
-                    DatabaseMonolith.Log("Warning", "Cannot update chart data - charts not initialized");
+                    //DatabaseMonolith.Log("Warning", "Cannot update chart data - charts not initialized");
                     return;
                 }
                 
@@ -152,11 +152,11 @@ namespace Quantra.Controls
                     }
                 }
                 
-                DatabaseMonolith.Log("Info", "Placeholder chart data updated successfully");
+                //DatabaseMonolith.Log("Info", "Placeholder chart data updated successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error updating placeholder chart data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error updating placeholder chart data", ex.ToString());
             }
         }
 
@@ -264,7 +264,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to update pattern chart data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to update pattern chart data", ex.ToString());
             }
         }
 

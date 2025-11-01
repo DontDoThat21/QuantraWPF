@@ -31,7 +31,7 @@ namespace Quantra.ViewModels
             {
                 if (SetProperty(ref _selectedSettingsTabIndex, value))
                 {
-                    DatabaseMonolith.Log("Info", $"ViewModel SelectedSettingsTabIndex changed to: {value}");
+                    //DatabaseMonolith.Log("Info", $"ViewModel SelectedSettingsTabIndex changed to: {value}");
                 }
             }
         }
@@ -222,11 +222,11 @@ namespace Quantra.ViewModels
                 IsDirty = false;
                 
                 // Log successful save
-                DatabaseMonolith.Log("Info", "Configuration saved successfully");
+                //DatabaseMonolith.Log("Info", "Configuration saved successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to save configuration", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save configuration", ex.ToString());
             }
         }
         
@@ -256,7 +256,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to revert configuration changes", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to revert configuration changes", ex.ToString());
             }
         }
         
@@ -287,7 +287,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to reset configuration section", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to reset configuration section", ex.ToString());
             }
         }
         
@@ -301,12 +301,12 @@ namespace Quantra.ViewModels
                 string backupPath = _configManager.BackupConfiguration();
                 if (!string.IsNullOrEmpty(backupPath))
                 {
-                    DatabaseMonolith.Log("Info", $"Configuration backed up to: {backupPath}");
+                    //DatabaseMonolith.Log("Info", $"Configuration backed up to: {backupPath}");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to backup configuration", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to backup configuration", ex.ToString());
             }
         }
         
@@ -325,12 +325,12 @@ namespace Quantra.ViewModels
                     
                     IsDirty = false;
                     
-                    DatabaseMonolith.Log("Info", "Configuration restored from backup");
+                    //DatabaseMonolith.Log("Info", "Configuration restored from backup");
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to restore configuration from backup", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to restore configuration from backup", ex.ToString());
             }
         }
     }

@@ -46,7 +46,7 @@ namespace Quantra.Tests.Views
             // Assert
             Assert.IsNotNull(profile, "Default settings profile should not be null");
             Assert.IsTrue(profile.EnableVixMonitoring, "VIX monitoring should be enabled by default");
-            DatabaseMonolith.Log("Info", $"Test: VIX monitoring enabled = {profile.EnableVixMonitoring}");
+            //DatabaseMonolith.Log("Info", $"Test: VIX monitoring enabled = {profile.EnableVixMonitoring}");
         }
 
         [TestMethod]

@@ -732,7 +732,7 @@ namespace Quantra.Controls.Components
                 NoDashboardText.Text = "Error generating dashboard.";
                 NoDashboardText.Visibility = Visibility.Visible;
                 PerformanceInsightsText.Text = "Error: " + ex.Message;
-                Quantra.DatabaseMonolith.Log("Error", "Failed to generate ML performance dashboard", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to generate ML performance dashboard", ex.ToString());
             }
             finally
             {
@@ -770,7 +770,7 @@ namespace Quantra.Controls.Components
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to generate performance dashboard", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to generate performance dashboard", ex.ToString());
                 return null;
             }
         }
@@ -983,7 +983,7 @@ namespace Quantra.Controls.Components
             }
             catch (Exception ex)
             {
-                Quantra.DatabaseMonolith.Log("Error", "Failed to generate model dashboard image", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to generate model dashboard image", ex.ToString());
                 return false;
             }
         }

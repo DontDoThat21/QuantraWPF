@@ -260,7 +260,7 @@ namespace Quantra.ViewModels
                 ApplyFilter();
                 
                 // Log the error
-                DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
                 
                 // Show error notification
                 SetNotification($"Error placing order: {ex.Message}", 
@@ -288,7 +288,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 // Log error and show notification to user
-                DatabaseMonolith.Log("Error", "Unexpected error in ExecuteConfirmApiDialog", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Unexpected error in ExecuteConfirmApiDialog", ex.ToString());
                 SetNotification($"Unexpected error: {ex.Message}", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -319,7 +319,7 @@ namespace Quantra.ViewModels
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to refresh price", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to refresh price", ex.ToString());
                 SetNotification($"Error refreshing price: {ex.Message}", 
                                PackIconKind.AlertCircle, Colors.Red);
             }
@@ -435,7 +435,7 @@ namespace Quantra.ViewModels
             {
                 if (prediction == null)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
+                    //DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
                     SetNotification("Invalid prediction data", PackIconKind.AlertCircle, Colors.Red);
                     return;
                 }
@@ -480,11 +480,11 @@ namespace Quantra.ViewModels
                     prediction.PredictedAction == "BUY" ? PackIconKind.TrendingUp : PackIconKind.TrendingDown, 
                     notificationColor);
 
-                DatabaseMonolith.Log("Info", $"Created trading rule from prediction for {prediction.Symbol} with {prediction.PredictedAction} signal");
+                //DatabaseMonolith.Log("Info", $"Created trading rule from prediction for {prediction.Symbol} with {prediction.PredictedAction} signal");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error creating rule from prediction", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error creating rule from prediction", ex.ToString());
                 SetNotification("Failed to create trading rule", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -501,7 +501,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 // Log error and show notification to user
-                DatabaseMonolith.Log("Error", "Unexpected error in PlaceOrderSafely", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Unexpected error in PlaceOrderSafely", ex.ToString());
                 SetNotification($"Unexpected error: {ex.Message}", PackIconKind.AlertCircle, Colors.Red);
             }
         }

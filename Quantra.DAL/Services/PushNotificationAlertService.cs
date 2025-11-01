@@ -47,8 +47,8 @@ namespace Quantra.DAL.Services
             try
             {
                 // Log the push notification attempt
-                DatabaseMonolith.Log("Info", $"Sending push notification for alert {alert.Id} to user {settings.PushNotificationUserId}", 
-                    $"Alert: {alert.Name}, Category: {alert.Category}");
+                //DatabaseMonolith.Log("Info", $"Sending push notification for alert {alert.Id} to user {settings.PushNotificationUserId}", 
+                //    $"Alert: {alert.Name}, Category: {alert.Category}");
                 
                 // Send the notification asynchronously but don't wait for it
                 _ = _pushService.Value.SendAlertNotificationAsync(alert, settings.PushNotificationUserId);
@@ -56,7 +56,7 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 // Log any errors but don't rethrow - push notifications shouldn't break the main flow
-                DatabaseMonolith.Log("Error", $"Failed to send push notification for alert {alert.Id}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to send push notification for alert {alert.Id}", ex.ToString());
             }
         }
     }

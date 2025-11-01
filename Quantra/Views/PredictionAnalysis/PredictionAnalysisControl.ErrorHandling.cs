@@ -55,7 +55,7 @@ namespace Quantra.Controls
                 string file = method.DeclaringType?.Name ?? "UnknownFile";
                 string methodName = method.Name;
                 string details = $"File: {file}, Method: {methodName}, Exception: {ex}";
-                DatabaseMonolith.Log("Error", "Failed to display chart error UI", details);
+                //DatabaseMonolith.Log("Error", "Failed to display chart error UI", details);
             }
         }
         
@@ -69,7 +69,7 @@ namespace Quantra.Controls
                 string file = method.DeclaringType?.Name ?? "UnknownFile";
                 string methodName = method.Name;
                 string details = $"File: {file}, Method: {methodName}, Error: {errorMessage}";
-                DatabaseMonolith.Log("Error", "Initialization error (debugger attached)", details);
+                //DatabaseMonolith.Log("Error", "Initialization error (debugger attached)", details);
                 throw new Exception(errorMessage);
             }
             // Create a minimal UI with just an error message

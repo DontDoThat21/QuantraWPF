@@ -44,11 +44,11 @@ namespace Quantra.Controls
                 // Load initial data
                 LoadHeatmapData();
 
-                DatabaseMonolith.Log("Info", "SectorAnalysisHeatmapControl initialized successfully");
+                //DatabaseMonolith.Log("Info", "SectorAnalysisHeatmapControl initialized successfully");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error initializing SectorAnalysisHeatmapControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error initializing SectorAnalysisHeatmapControl", ex.ToString());
                 DisplayInitializationError("Failed to initialize control: " + ex.Message);
             }
         }
@@ -87,7 +87,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error displaying initialization error", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error displaying initialization error", ex.ToString());
             }
         }
 
@@ -107,7 +107,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in TimeframeComboBox_SelectionChanged", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in TimeframeComboBox_SelectionChanged", ex.ToString());
                 StatusText.Text = "Error changing timeframe";
             }
         }
@@ -130,7 +130,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error refreshing heatmap data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error refreshing heatmap data", ex.ToString());
                 StatusText.Text = "Error refreshing data";
                 _isUpdating = false;
             }
@@ -147,7 +147,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in auto-refresh timer", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in auto-refresh timer", ex.ToString());
             }
         }
 
@@ -176,7 +176,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading heatmap data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading heatmap data", ex.ToString());
                 StatusText.Text = "Error loading sector data";
                 _isUpdating = false;
             }
@@ -206,7 +206,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading heatmap data", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading heatmap data", ex.ToString());
                 StatusText.Text = "Error loading sector data";
                 _isUpdating = false;
             }
@@ -295,7 +295,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error updating heatmap", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error updating heatmap", ex.ToString());
                 DisplayInitializationError("Failed to update heatmap: " + ex.Message);
             }
         }
@@ -444,7 +444,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error creating placeholder heatmap", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error creating placeholder heatmap", ex.ToString());
             }
         }
 
@@ -461,7 +461,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error in ForceLayoutUpdate", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error in ForceLayoutUpdate", ex.ToString());
             }
         }
 

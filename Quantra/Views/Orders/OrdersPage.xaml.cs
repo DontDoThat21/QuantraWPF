@@ -423,7 +423,7 @@ namespace Quantra.Views.Orders
                 
                 OrderHistory.Insert(0, orderCopy);
                 ApplyFilter();
-                DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
                 ShowNotification($"Error placing order: {ex.Message}", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -470,7 +470,7 @@ namespace Quantra.Views.Orders
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to refresh price", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to refresh price", ex.ToString());
                 ShowNotification($"Error refreshing price: {ex.Message}", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -601,7 +601,7 @@ namespace Quantra.Views.Orders
             {
                 if (prediction == null)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
+                    //DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
                     ShowNotification("Invalid prediction data", PackIconKind.AlertCircle, Colors.Red);
                     return;
                 }
@@ -649,11 +649,11 @@ namespace Quantra.Views.Orders
                     prediction.PredictedAction == "BUY" ? PackIconKind.TrendingUp : PackIconKind.TrendingDown, 
                     notificationColor);
 
-                DatabaseMonolith.Log("Info", $"Created trading rule from prediction for {prediction.Symbol} with {prediction.PredictedAction} signal");
+                //DatabaseMonolith.Log("Info", $"Created trading rule from prediction for {prediction.Symbol} with {prediction.PredictedAction} signal");
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error creating rule from prediction", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error creating rule from prediction", ex.ToString());
                 ShowNotification("Failed to create trading rule", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -665,7 +665,7 @@ namespace Quantra.Views.Orders
             {
                 if (prediction == null)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
+                    //DatabaseMonolith.Log("Error", "Cannot create rule from null prediction");
                     ShowNotification("Invalid prediction data", PackIconKind.AlertCircle, Colors.Red);
                     return;
                 }
@@ -678,7 +678,7 @@ namespace Quantra.Views.Orders
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error showing rule from prediction dialog", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error showing rule from prediction dialog", ex.ToString());
                 ShowNotification("Failed to open trading rule dialog", PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -696,7 +696,7 @@ namespace Quantra.Views.Orders
             {
                 if (prediction == null)
                 {
-                    DatabaseMonolith.Log("Error", "Cannot edit trading rule for null prediction");
+                    //DatabaseMonolith.Log("Error", "Cannot edit trading rule for null prediction");
                     ShowNotification("Invalid prediction data", PackIconKind.AlertCircle, Colors.Red);
                     return;
                 }
@@ -879,7 +879,7 @@ namespace Quantra.Views.Orders
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error editing trading rule", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error editing trading rule", ex.ToString());
                 ShowNotification("Failed to open trading rule editor", PackIconKind.AlertCircle, Colors.Red);
             }
         }

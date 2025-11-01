@@ -70,7 +70,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error executing trade: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error executing trade: {ex.Message}", ex.ToString());
                 _notificationService.ShowError($"Error executing trade: {ex.Message}");
                 return false;
             }

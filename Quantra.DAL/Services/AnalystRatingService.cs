@@ -60,12 +60,12 @@ namespace Quantra.DAL.Services
                     return key;
                 
                 // Since FinancialApiKey was removed, return fallback
-                DatabaseMonolith.Log("Info", "FinancialApiKey not configured, using fallback for synthetic data generation");
+                //DatabaseMonolith.Log("Info", "FinancialApiKey not configured, using fallback for synthetic data generation");
                 return "YOUR_API_KEY";
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Failed to get Financial API key", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to get Financial API key", ex.ToString());
                 return "YOUR_API_KEY"; // Fallback
             }
         }
@@ -102,7 +102,7 @@ namespace Quantra.DAL.Services
                 var response = await _client.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
                 {
-                    DatabaseMonolith.Log("Warning", $"Analyst ratings API call failed for {symbol}: {response.StatusCode}");
+                    //DatabaseMonolith.Log("Warning", $"Analyst ratings API call failed for {symbol}: {response.StatusCode}");
                     return ratings;
                 }
                 
@@ -116,7 +116,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error fetching analyst ratings for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error fetching analyst ratings for {symbol}", ex.ToString());
             }
             
             return ratings.OrderByDescending(r => r.RatingDate).Take(count).ToList();
@@ -238,7 +238,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error analyzing consensus history for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error analyzing consensus history for {symbol}", ex.ToString());
                 return await GetAggregatedRatingsAsync(symbol); // Return current aggregate on error
             }
         }
@@ -298,7 +298,7 @@ namespace Quantra.DAL.Services
                 
                 if (string.IsNullOrEmpty(aiApiKey) || aiApiKey == "YOUR_API_KEY")
                 {
-                    DatabaseMonolith.Log("Warning", $"No AI API key configured for enhanced analyst sentiment analysis of {symbol}. Using traditional rating sentiment.");
+                    //DatabaseMonolith.Log("Warning", $"No AI API key configured for enhanced analyst sentiment analysis of {symbol}. Using traditional rating sentiment.");
                     return ratingSentiment;
                 }
                 
@@ -313,7 +313,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error getting AI analyst sentiment for {symbol}, falling back to rating sentiment", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error getting AI analyst sentiment for {symbol}, falling back to rating sentiment", ex.ToString());
                 // Fall back to traditional rating sentiment
                 return await GetRatingSentimentAsync(symbol);
             }
@@ -347,7 +347,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Failed to refresh analyst ratings for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Failed to refresh analyst ratings for {symbol}", ex.ToString());
                 return false;
             }
         }
@@ -690,7 +690,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error checking consensus change for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error checking consensus change for {symbol}", ex.ToString());
             }
         }
         
@@ -795,7 +795,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                                 {
                                     // Ensure the sentiment is within valid range
                                     sentiment = Math.Max(-1.0, Math.Min(1.0, sentiment));
-                                    DatabaseMonolith.Log("Info", $"AI analyst sentiment for {symbol}: {sentiment:F2}");
+                                    //DatabaseMonolith.Log("Info", $"AI analyst sentiment for {symbol}: {sentiment:F2}");
                                     return sentiment;
                                 }
                             }
@@ -803,13 +803,13 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                     }
                     else
                     {
-                        DatabaseMonolith.Log("Warning", $"AI API call failed for {symbol}: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
+                        //DatabaseMonolith.Log("Warning", $"AI API call failed for {symbol}: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error calling AI service for analyst sentiment of {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error calling AI service for analyst sentiment of {symbol}", ex.ToString());
             }
             
             return 0; // Return 0 if AI call fails

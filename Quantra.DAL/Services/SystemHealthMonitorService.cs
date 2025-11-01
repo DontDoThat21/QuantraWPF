@@ -420,7 +420,7 @@ namespace Quantra.DAL.Services
                 _logger.Error(ex, "Failed to emit system health alert");
                 
                 // Also log to database for backward compatibility
-                DatabaseMonolith.Log("Error", "Failed to emit system health alert", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to emit system health alert", ex.ToString());
             }
         }
         

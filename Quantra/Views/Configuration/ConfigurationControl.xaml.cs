@@ -41,7 +41,7 @@ namespace Quantra.Controls
             InitializeComponent();
             
             // Debug: Check if TabControl was created properly
-            DatabaseMonolith.Log("Info", "ConfigurationControl constructor called");
+            //DatabaseMonolith.Log("Info", "ConfigurationControl constructor called");
             
             // Set up the view model using dependency injection
             var configManager = App.ServiceProvider.GetService<IConfigurationManager>();
@@ -50,7 +50,7 @@ namespace Quantra.Controls
             if (configManager != null && configBridge != null)
             {
                 DataContext = new ConfigurationViewModel(configManager, configBridge);
-                DatabaseMonolith.Log("Info", "ConfigurationViewModel created successfully via DI");
+                //DatabaseMonolith.Log("Info", "ConfigurationViewModel created successfully via DI");
             }
             else
             {
@@ -58,14 +58,14 @@ namespace Quantra.Controls
                 InitializeLegacyConfiguration();
                 // Ensure bindings still work in legacy mode
                 DataContext = this;
-                DatabaseMonolith.Log("Info", "Using legacy configuration mode");
+                //DatabaseMonolith.Log("Info", "Using legacy configuration mode");
             }
             
             // Debug: Log initial tab count and selection
             Loaded += (s, e) => 
             {
-                DatabaseMonolith.Log("Info", $"ConfigurationControl loaded with {ConfigurationTabControl.Items.Count} tabs");
-                DatabaseMonolith.Log("Info", $"Initial selected index: {ConfigurationTabControl.SelectedIndex}");
+                //DatabaseMonolith.Log("Info", $"ConfigurationControl loaded with {ConfigurationTabControl.Items.Count} tabs");
+                //DatabaseMonolith.Log("Info", $"Initial selected index: {ConfigurationTabControl.SelectedIndex}");
             };
         }
         
@@ -86,7 +86,7 @@ namespace Quantra.Controls
             try
             {
                 // Try to load settings from database or settings file
-                var settings = Quantra.DatabaseMonolith.GetUserSettings();
+                var settings = DatabaseMonolith.GetUserSettings();
 
                 // Apply loaded settings to UI controls
                 // Since settings is a tuple, we can directly access its properties
@@ -133,13 +133,13 @@ namespace Quantra.Controls
                 if (settings.KellyFractionMultiplier > 0)
                     KellyFractionTextBox.Text = settings.KellyFractionMultiplier.ToString("F1");
 
-                Quantra.DatabaseMonolith.Log("Info", "Configuration settings loaded successfully");
+                //DatabaseMonolith.Log("Info", "Configuration settings loaded successfully");
             }
             catch (Exception ex)
             {
                 // If loading fails, use default values
                 SetDefaultValues();
-                Quantra.DatabaseMonolith.Log("Error", "Failed to load configuration settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to load configuration settings", ex.ToString());
             }
         }
 
@@ -202,7 +202,7 @@ namespace Quantra.Controls
                 string tabHeader = selectedTab.Header?.ToString() ?? "";
                 
                 // Log the tab selection for debugging
-                DatabaseMonolith.Log("Info", $"ConfigurationControl: Tab selected - {tabHeader}");
+                //DatabaseMonolith.Log("Info", $"ConfigurationControl: Tab selected - {tabHeader}");
                 
                 // Update the property when tab changes manually (backup for binding issues)
                 SelectedSettingsTabIndex = tabControl.SelectedIndex;
@@ -211,11 +211,11 @@ namespace Quantra.Controls
                 if (DataContext is ConfigurationViewModel viewModel)
                 {
                     viewModel.SelectedSettingsTabIndex = tabControl.SelectedIndex;
-                    DatabaseMonolith.Log("Info", $"Updated ViewModel SelectedSettingsTabIndex to: {tabControl.SelectedIndex}");
+                    //DatabaseMonolith.Log("Info", $"Updated ViewModel SelectedSettingsTabIndex to: {tabControl.SelectedIndex}");
                 }
                 else
                 {
-                    DatabaseMonolith.Log("Info", "DataContext is not ConfigurationViewModel, using legacy mode");
+                    //DatabaseMonolith.Log("Info", "DataContext is not ConfigurationViewModel, using legacy mode");
                 }
 
                 // Handle specific tab selections that might need special handling
@@ -223,31 +223,31 @@ namespace Quantra.Controls
                 {
                     case "General":
                         // Handle general settings tab selection
-                        DatabaseMonolith.Log("Info", "General settings tab selected");
+                        //DatabaseMonolith.Log("Info", "General settings tab selected");
                         break;
 
                     case "API Configuration":
                         // Handle API configuration tab selection
-                        DatabaseMonolith.Log("Info", "API configuration tab selected");
+                        //DatabaseMonolith.Log("Info", "API configuration tab selected");
                         break;
 
                     case "Trading Settings":
                         // Handle trading settings tab selection
-                        DatabaseMonolith.Log("Info", "Trading settings tab selected");
+                        //DatabaseMonolith.Log("Info", "Trading settings tab selected");
                         break;
 
                     case "Position Sizing":
                         // Handle position sizing tab selection
-                        DatabaseMonolith.Log("Info", "Position sizing tab selected");
+                        //DatabaseMonolith.Log("Info", "Position sizing tab selected");
                         break;
 
                     case "Advanced":
                         // Handle advanced settings tab selection
-                        DatabaseMonolith.Log("Info", "Advanced settings tab selected");
+                        //DatabaseMonolith.Log("Info", "Advanced settings tab selected");
                         break;
 
                     default:
-                        DatabaseMonolith.Log("Info", $"Unknown tab selected: {tabHeader}");
+                        //DatabaseMonolith.Log("Info", $"Unknown tab selected: {tabHeader}");
                         break;
                 }
 
@@ -256,7 +256,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error handling tab selection change in ConfigurationControl: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error handling tab selection change in ConfigurationControl: {ex.Message}", ex.ToString());
             }
         }
 
@@ -268,7 +268,7 @@ namespace Quantra.Controls
                 
                 // For this example, we'll save the EnableApiModalChecks setting
                 bool enableApiModalChecks = EnableApiModalChecksCheckBox.IsChecked ?? false;
-                Quantra.DatabaseMonolith.SaveUserSettings(WebullPinBox.Password, enableApiModalChecks);
+                DatabaseMonolith.SaveUserSettings(WebullPinBox.Password, enableApiModalChecks);
                 
                 // In a real implementation, we would save all settings here
                 
@@ -286,42 +286,42 @@ namespace Quantra.Controls
                     // Save credentials securely (in a real app)
                     
                     // Save credentials securely
-                    Quantra.DatabaseMonolith.RememberAccount(username, password, pin);
+                    DatabaseMonolith.RememberAccount(username, password, pin);
                 }
                 
                 // Save position sizing settings
                 if (double.TryParse(AccountSizeTextBox.Text, out double accountSize))
-                    Quantra.DatabaseMonolith.SaveSetting("AccountSize", accountSize.ToString());
+                    DatabaseMonolith.SaveSetting("AccountSize", accountSize.ToString());
                 
                 if (double.TryParse(RiskPercentageTextBox.Text, out double riskPct))
-                    Quantra.DatabaseMonolith.SaveSetting("BaseRiskPercentage", (riskPct / 100.0).ToString());
+                    DatabaseMonolith.SaveSetting("BaseRiskPercentage", (riskPct / 100.0).ToString());
                 
                 if (PositionSizingMethodComboBox.SelectedItem is ComboBoxItem selectedMethod)
-                    Quantra.DatabaseMonolith.SaveSetting("PositionSizingMethod", selectedMethod.Content.ToString());
+                    DatabaseMonolith.SaveSetting("PositionSizingMethod", selectedMethod.Content.ToString());
                 
                 if (double.TryParse(MaxPositionSizeTextBox.Text, out double maxPosSize))
-                    Quantra.DatabaseMonolith.SaveSetting("MaxPositionSizePercent", (maxPosSize / 100.0).ToString());
+                    DatabaseMonolith.SaveSetting("MaxPositionSizePercent", (maxPosSize / 100.0).ToString());
                 
                 if (double.TryParse(FixedTradeAmountTextBox.Text, out double fixedAmt))
-                    Quantra.DatabaseMonolith.SaveSetting("FixedTradeAmount", fixedAmt.ToString());
+                    DatabaseMonolith.SaveSetting("FixedTradeAmount", fixedAmt.ToString());
                 
                 if (double.TryParse(ATRMultipleTextBox.Text, out double atrMult))
-                    Quantra.DatabaseMonolith.SaveSetting("ATRMultiple", atrMult.ToString());
+                    DatabaseMonolith.SaveSetting("ATRMultiple", atrMult.ToString());
                 
                 bool useKelly = UseKellyCriterionCheckBox.IsChecked ?? false;
-                Quantra.DatabaseMonolith.SaveSetting("UseKellyCriterion", useKelly.ToString());
+                DatabaseMonolith.SaveSetting("UseKellyCriterion", useKelly.ToString());
                 
                 if (double.TryParse(WinRateTextBox.Text, out double winRate))
-                    Quantra.DatabaseMonolith.SaveSetting("HistoricalWinRate", (winRate / 100.0).ToString());
+                    DatabaseMonolith.SaveSetting("HistoricalWinRate", (winRate / 100.0).ToString());
                 
                 if (double.TryParse(RewardRiskRatioTextBox.Text, out double rrRatio))
-                    Quantra.DatabaseMonolith.SaveSetting("HistoricalRewardRiskRatio", rrRatio.ToString());
+                    DatabaseMonolith.SaveSetting("HistoricalRewardRiskRatio", rrRatio.ToString());
                 
                 if (double.TryParse(KellyFractionTextBox.Text, out double kellyFrac))
-                    Quantra.DatabaseMonolith.SaveSetting("KellyFractionMultiplier", kellyFrac.ToString());
+                    DatabaseMonolith.SaveSetting("KellyFractionMultiplier", kellyFrac.ToString());
                     
                 // Log success
-                Quantra.DatabaseMonolith.Log("Info", "Configuration settings saved successfully");
+                //DatabaseMonolith.Log("Info", "Configuration settings saved successfully");
                 
                 // Show success message to user
                 MessageBox.Show("Settings have been saved successfully.", "Settings Saved", 
@@ -330,7 +330,7 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 // Log and show error
-                Quantra.DatabaseMonolith.Log("Error", "Failed to save configuration settings", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to save configuration settings", ex.ToString());
                 MessageBox.Show($"Error saving settings: {ex.Message}", "Error",
                                 MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -348,7 +348,7 @@ namespace Quantra.Controls
             if (result == MessageBoxResult.Yes)
             {
                 SetDefaultValues();
-                Quantra.DatabaseMonolith.Log("Info", "Configuration settings reset to defaults");
+                //DatabaseMonolith.Log("Info", "Configuration settings reset to defaults");
                 MessageBox.Show("All settings have been reset to their default values.", 
                                "Settings Reset", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -381,20 +381,20 @@ namespace Quantra.Controls
                 {
                     MessageBox.Show("Connection test successful!", "Success", 
                                    MessageBoxButton.OK, MessageBoxImage.Information);
-                    Quantra.DatabaseMonolith.Log("Info", "API connection test successful");
+                    //DatabaseMonolith.Log("Info", "API connection test successful");
                 }
                 else
                 {
                     MessageBox.Show("Connection test failed. Please check your credentials and try again.", 
                                    "Connection Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                    Quantra.DatabaseMonolith.Log("Error", "API connection test failed");
+                    //DatabaseMonolith.Log("Error", "API connection test failed");
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error testing connection: {ex.Message}", "Error",
                                MessageBoxButton.OK, MessageBoxImage.Error);
-                Quantra.DatabaseMonolith.Log("Error", "Error during API connection test", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error during API connection test", ex.ToString());
             }
             finally
             {
@@ -412,13 +412,13 @@ namespace Quantra.Controls
                 
                 MessageBox.Show("Cache cleared successfully!", "Success", 
                                MessageBoxButton.OK, MessageBoxImage.Information);
-                Quantra.DatabaseMonolith.Log("Info", "Cache cleared successfully");
+                //DatabaseMonolith.Log("Info", "Cache cleared successfully");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error clearing cache: {ex.Message}", "Error",
                               MessageBoxButton.OK, MessageBoxImage.Error);
-                Quantra.DatabaseMonolith.Log("Error", "Error clearing cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error clearing cache", ex.ToString());
             }
         }
 
@@ -435,13 +435,13 @@ namespace Quantra.Controls
                 
                 MessageBox.Show("Logs exported successfully!", "Success", 
                               MessageBoxButton.OK, MessageBoxImage.Information);
-                Quantra.DatabaseMonolith.Log("Info", "Logs exported successfully");
+                //DatabaseMonolith.Log("Info", "Logs exported successfully");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error exporting logs: {ex.Message}", "Error",
                              MessageBoxButton.OK, MessageBoxImage.Error);
-                Quantra.DatabaseMonolith.Log("Error", "Error exporting logs", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error exporting logs", ex.ToString());
             }
         }
     }

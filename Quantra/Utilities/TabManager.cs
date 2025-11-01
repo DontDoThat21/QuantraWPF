@@ -62,7 +62,7 @@ namespace Quantra.Utilities
                     var tabs = connection.Query<(string TabName, int TabOrder)>(
                         "SELECT TabName, TabOrder FROM UserAppSettings ORDER BY TabOrder").ToList();
 
-                    DatabaseMonolith.Log("Info", $"Found {tabs.Count} tabs in database");
+                    //DatabaseMonolith.Log("Info", $"Found {tabs.Count} tabs in database");
 
                     // Clear existing tabs except for the '+' tab
                     var plusTab = _tabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == "+");
@@ -81,7 +81,7 @@ namespace Quantra.Utilities
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error loading custom tabs", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error loading custom tabs", ex.ToString());
                 MessageBox.Show($"Error loading tabs: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -113,7 +113,7 @@ namespace Quantra.Utilities
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to parse grid border color", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to parse grid border color", ex.ToString());
             }
 
             // Use default grid dimensions from settings
@@ -191,7 +191,7 @@ namespace Quantra.Utilities
                                             Grid.GetColumnSpan(draggedBorder));
 
                                         // Log the move
-                                        DatabaseMonolith.Log("Info", $"Moved control to cell ({newRow},{newCol}) in tab '{tabName}'");
+                                        //DatabaseMonolith.Log("Info", $"Moved control to cell ({newRow},{newCol}) in tab '{tabName}'");
                                     }
 
                                     e.Handled = true;
@@ -240,7 +240,7 @@ namespace Quantra.Utilities
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", $"Failed to select new tab '{tabName}' after adding", ex.ToString());
+                //DatabaseMonolith.Log("Warning", $"Failed to select new tab '{tabName}' after adding", ex.ToString());
             }
 
             // NEW: If AddControlWindow is open, refresh and select this new tab there as well
@@ -254,7 +254,7 @@ namespace Quantra.Utilities
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Warning", "Failed to refresh AddControlWindow after adding new tab", ex.ToString());
+                //DatabaseMonolith.Log("Warning", "Failed to refresh AddControlWindow after adding new tab", ex.ToString());
             }
         }
 
@@ -297,13 +297,13 @@ namespace Quantra.Utilities
                             GridColumns = columns
                         });
 
-                        DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
+                        //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error saving tab '{tabName}'", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error saving tab '{tabName}'", ex.ToString());
             }
         }
 
@@ -344,13 +344,13 @@ namespace Quantra.Utilities
                             GridColumns = columns
                         });
 
-                        DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
+                        //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error saving tab '{tabName}'", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error saving tab '{tabName}'", ex.ToString());
             }
         }
 
@@ -427,7 +427,7 @@ namespace Quantra.Utilities
                 SaveCustomTabWithGrid(newTabName, gridRows, gridColumns);
 
                 // Log the creation
-                DatabaseMonolith.Log("Info", $"Created new tab: {newTabName} with grid dimensions {gridRows}x{gridColumns}");
+                //DatabaseMonolith.Log("Info", $"Created new tab: {newTabName} with grid dimensions {gridRows}x{gridColumns}");
 
                 // Show success message
                 _mainWindow.AppendAlert($"Created new tab: {newTabName}", "positive");
@@ -562,19 +562,19 @@ namespace Quantra.Utilities
                                     if (control is Controls.PredictionAnalysisControl predictionControl)
                                     {
                                         predictionControl.ForceLayoutUpdate();
-                                        DatabaseMonolith.Log("Info", $"Force updated PredictionAnalysisControl layout in tab '{tabName}'");
+                                        //DatabaseMonolith.Log("Info", $"Force updated PredictionAnalysisControl layout in tab '{tabName}'");
                                     }
                                 }
                             }
                         }
                         
-                        DatabaseMonolith.Log("Info", $"Refreshed controls in tab '{tabName}'");
+                        //DatabaseMonolith.Log("Info", $"Refreshed controls in tab '{tabName}'");
                     }
                 }
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error refreshing tab controls: {ex.Message}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error refreshing tab controls: {ex.Message}", ex.ToString());
             }
         }
 

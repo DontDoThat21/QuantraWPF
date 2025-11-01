@@ -52,7 +52,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error creating prediction cache table", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error creating prediction cache table", ex.ToString());
             }
         }
 
@@ -113,7 +113,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
             }
 
             return null;
@@ -148,7 +148,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
             }
         }
 
@@ -200,7 +200,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                DatabaseMonolith.Log("Error", "Error clearing expired cache", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Error clearing expired cache", ex.ToString());
             }
         }
     }
