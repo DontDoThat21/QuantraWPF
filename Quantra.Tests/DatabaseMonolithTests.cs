@@ -31,7 +31,7 @@ namespace Quantra.Tests
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     
@@ -61,7 +61,7 @@ namespace Quantra.Tests
         public void DeleteStockSymbol_ValidSymbol_ReturnsTrue()
         {
             // Arrange - Add a test symbol to the database first
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 
@@ -101,7 +101,7 @@ namespace Quantra.Tests
             Assert.IsTrue(result, "DeleteStockSymbol should return true for valid symbol");
             
             // Verify the symbol was deleted from both tables
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 
@@ -151,7 +151,7 @@ namespace Quantra.Tests
         public void DeleteStockSymbol_OnlyInStockSymbols_ReturnsTrue()
         {
             // Arrange - Add symbol only to StockSymbols table (not cache)
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 
@@ -176,7 +176,7 @@ namespace Quantra.Tests
             Assert.IsTrue(result, "DeleteStockSymbol should return true even if symbol is only in StockSymbols table");
             
             // Verify deletion
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 var checkQuery = "SELECT COUNT(*) FROM StockSymbols WHERE Symbol = @Symbol";

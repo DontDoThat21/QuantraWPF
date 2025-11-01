@@ -71,7 +71,7 @@ public class IndicatorSettingsConfiguration : IEntityTypeConfiguration<Indicator
 ```csharp
 public static void SaveIndicatorSetting(IndicatorSettingsModel setting)
 {
- using (var connection = DatabaseMonolith.GetConnection())
+ using (var connection = ConnectionHelper.GetConnection())
     {
         connection.Open();
         using (var transaction = connection.BeginTransaction())

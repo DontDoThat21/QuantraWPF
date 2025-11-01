@@ -409,7 +409,7 @@ namespace Quantra.Controls
 
         private void SaveTradingRule(TradingRule rule)
         {
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 string query = @"

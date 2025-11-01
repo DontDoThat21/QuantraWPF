@@ -56,7 +56,7 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     var tabs = connection.Query<(string TabName, int TabOrder)>(
@@ -266,7 +266,7 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
 
@@ -317,7 +317,7 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
 
@@ -365,7 +365,7 @@ namespace Quantra.Utilities
             _tabControl.Items.Remove(tabItem);
 
             // Remove the tab from the database
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 var deleteQuery = "DELETE FROM UserAppSettings WHERE TabName = @TabName";
@@ -389,7 +389,7 @@ namespace Quantra.Utilities
                 tabItem.Header = newTabName;
 
                 // Update the tab name in the database
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     var updateQuery = "UPDATE UserAppSettings SET TabName = @NewTabName WHERE TabName = @OldTabName";
@@ -716,7 +716,7 @@ namespace Quantra.Utilities
                     tabControl.Items.Insert(newIndex, tabItem);
 
                     // Update the tab order in the database
-                    using (var connection = DatabaseMonolith.GetConnection())
+                    using (var connection = ConnectionHelper.GetConnection())
                     {
                         connection.Open();
                         for (int i = 0; i < _tabControl.Items.Count - 1; i++)

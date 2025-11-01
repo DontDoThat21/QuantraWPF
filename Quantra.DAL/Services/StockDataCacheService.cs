@@ -759,126 +759,6 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
             }
 
             //DatabaseMonolith.Log("Info", "Background preload completed");
-                    command.Parameters.AddWithValue("@LastUpdated", quoteData.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss"));
-                    command.Parameters.AddWithValue("@Timestamp", quoteData.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"));
-                    command.Parameters.AddWithValue("@CacheTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-
-                    // Add prediction fields (nullable)
-                    command.Parameters.AddWithValue("@PredictedPrice", (object)quoteData.PredictedPrice ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@PredictedAction", (object)quoteData.PredictedAction ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@PredictionConfidence", (object)quoteData.PredictionConfidence ?? DBNull.Value);
-                    command.Parameters.AddWithValue("@PredictionTimestamp", quoteData.PredictionTimestamp?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@PredictionModelVersion", (object)quoteData.PredictionModelVersion ?? DBNull.Value);
-
-                    command.ExecuteNonQuery();
-
-                    // Also cache as historical data for backwards compatibility
-                    var priceList = new List<HistoricalPrice>
-                    {
-                        new HistoricalPrice
-                        {
-                            Date = quoteData.Timestamp,
-                            Close = quoteData.Price
-                        }
-                    };
-                    var jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(priceList);
-                    var compressedData = Quantra.Utilities.CompressionHelper.CompressString(jsonData);
-
-                    command = new SQLiteCommand(
-                        @"INSERT OR REPLACE INTO StockDataCache 
-                          (Symbol, TimeRange, Interval, Data, CacheTime) 
-                          VALUES (@Symbol, @Range, @Interval, @Data, @CacheTime)", connection);
-
-                    command.Parameters.AddWithValue("@Symbol", quoteData.Symbol);
-                    command.Parameters.AddWithValue("@Range", "1mo");
-                    command.Parameters.AddWithValue("@Interval", "1d");
-                    command.Parameters.AddWithValue("@Data", compressedData);
-                    command.Parameters.AddWithValue("@CacheTime", quoteData.Timestamp);
-
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
-            }
-        }
-        
-        // IStockDataCacheService implementation
-        
-        public async Task<List<HistoricalPrice>> GetStockDataAsync(string symbol, string timeframe = "1mo", string interval = "1d", bool forceRefresh = false)
-        {
-            return await GetStockData(symbol, timeframe, interval, forceRefresh);
-        }
-        
-        public async Task<QuoteData> GetQuoteDataAsync(string symbol, bool forceRefresh = false)
-        {
-            if (forceRefresh || !HasCachedData(symbol))
-            {
-                // This would typically call an API to get fresh data
-                // For now just return cached data if available or null
-                var cachedData = GetCachedStock(symbol);
-                return await Task.FromResult(cachedData);
-            }
-            
-            return await Task.FromResult(GetCachedStock(symbol));
-        }
-        
-        public async Task<Dictionary<string, List<double>>> GetIndicatorDataAsync(
-            string symbol, 
-            string indicatorType, 
-            string timeframe = "1mo", 
-            string interval = "1d", 
-            bool forceRefresh = false)
-        {
-            // This is a placeholder implementation
-            // In a real implementation, we would calculate the indicator or retrieve it from cache
-            return await Task.FromResult(new Dictionary<string, List<double>>());
-        }
-        
-        public async Task<bool> ClearCacheForSymbolAsync(string symbol)
-        {
-            int deletedCount = DeleteCachedDataForSymbol(symbol);
-            return await Task.FromResult(deletedCount > 0);
-        }
-        
-        /// <summary>
-        /// Performs background preloading for frequently accessed symbols
-        /// </summary>
-        /// <param name="symbols">List of symbols to preload</param>
-        /// <param name="timeRange">Time range for data</param>
-        /// <param name="interval">Data interval</param>
-        public async Task PreloadSymbolsAsync(List<string> symbols, string timeRange = "1mo", string interval = "1d")
-        {
-            if (symbols == null || symbols.Count == 0)
-                return;
-
-            //DatabaseMonolith.Log("Info", $"Starting background preload for {symbols.Count} symbols");
-
-            // Process symbols in small batches to avoid overwhelming the API
-            const int batchSize = 3;
-            for (int i = 0; i < symbols.Count; i += batchSize)
-            {
-                var batch = symbols.Skip(i).Take(batchSize);
-                var tasks = batch.Select(symbol => PreloadSingleSymbolAsync(symbol, timeRange, interval));
-                
-                try
-                {
-                    await Task.WhenAll(tasks);
-                    
-                    // Small delay between batches to be respectful to API limits
-                    if (i + batchSize < symbols.Count)
-                    {
-                        await Task.Delay(2000); // 2 second delay between batches
-                    }
-                }
-                catch (Exception ex)
-                {
-                    //DatabaseMonolith.Log("Warning", $"Error in preload batch starting at index {i}", ex.ToString());
-                }
-            }
-
-            //DatabaseMonolith.Log("Info", "Background preload completed");
         }
 
         /// <summary>
@@ -958,27 +838,29 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
         {
 try
  {
-         // Use Entity Framework Core with SQL Server
-     var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-      optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+        // Use Entity Framework Core with SQL Server
+      var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-           using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-       {
-          // Get all cache entries
-        var allEntries = dbContext.StockDataCache.ToList();
-       var count = allEntries.Count;
-         
- // Remove all entries
-  dbContext.StockDataCache.RemoveRange(allEntries);
-        dbContext.SaveChanges();
+         using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+        {
+        // Get all cache entries
+       var allEntries = dbContext.StockDataCache.ToList();
+        var count = allEntries.Count;
+          
+  // Remove all entries
+   dbContext.StockDataCache.RemoveRange(allEntries);
+     dbContext.SaveChanges();
 
-           LoggingService.Log("Info", $"Cleared {count} cache entries");
-     return await Task.FromResult(true);
-      }
-            }
-    catch (Exception ex)
+            LoggingService.Log("Info", $"Cleared {count} cache entries");
+      return await Task.FromResult(true);
+     }
+             }
+     catch (Exception ex)
 {
-    LoggingService.Log("Error", "Failed to clear cache", ex.ToString());
-     return await Task.FromResult(false);
-        }
+     LoggingService.Log("Error", "Failed to clear cache", ex.ToString());
+      return await Task.FromResult(false);
+}
+}
+    }
 }

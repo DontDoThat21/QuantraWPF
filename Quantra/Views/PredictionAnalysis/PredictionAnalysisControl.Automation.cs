@@ -262,7 +262,7 @@ namespace Quantra.Controls
             var result = new List<Quantra.Models.PredictionModel>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     // Get the most recent prediction for each symbol
@@ -595,7 +595,7 @@ namespace Quantra.Controls
                 }
 
                 // First ensure the symbol exists in the symbols table
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     using (var transaction = connection.BeginTransaction())
@@ -705,7 +705,7 @@ namespace Quantra.Controls
             List<string> symbols = new List<string>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     using (var command = new SQLiteCommand("SELECT Symbol FROM StockSymbols", connection))
@@ -731,7 +731,7 @@ namespace Quantra.Controls
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     using (var transaction = connection.BeginTransaction())

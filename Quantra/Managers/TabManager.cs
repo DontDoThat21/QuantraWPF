@@ -35,7 +35,7 @@ namespace Quantra.Managers
         public TabManager(TabControl tabControl)
         {
             _mainTabControl = tabControl ?? throw new ArgumentNullException(nameof(tabControl));
-            var connection = DatabaseMonolith.GetConnection();
+            var connection = ConnectionHelper.GetConnection();
             _tabRepository = new TabRepository(connection);
         }
 

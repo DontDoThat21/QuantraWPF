@@ -37,7 +37,7 @@ namespace Quantra.DAL.Services
         {
             var transactions = new List<TransactionModel>();
             
-            using (var connection = DatabaseMonolith.GetConnection())
+            using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
                 
@@ -146,7 +146,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     
@@ -209,7 +209,7 @@ namespace Quantra.DAL.Services
             {
                 var transactions = new List<TransactionModel>();
                 
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     
@@ -276,7 +276,7 @@ namespace Quantra.DAL.Services
             {
                 var transactions = new List<TransactionModel>();
                 
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     
@@ -342,7 +342,7 @@ namespace Quantra.DAL.Services
             {
                 try
                 {
-                    using (var connection = DatabaseMonolith.GetConnection())
+                    using (var connection = ConnectionHelper.GetConnection())
                     {
                         connection.Open();
                         
@@ -391,7 +391,7 @@ namespace Quantra.DAL.Services
             {
                 try
                 {
-                    using (var connection = DatabaseMonolith.GetConnection())
+                    using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     

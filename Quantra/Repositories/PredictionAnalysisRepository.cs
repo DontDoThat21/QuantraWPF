@@ -20,7 +20,7 @@ namespace Quantra.Repositories
             var result = new List<PredictionAnalysisResult>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     string sql = @"
@@ -86,7 +86,7 @@ namespace Quantra.Repositories
             var symbols = new List<string>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     using (var command = new SQLiteCommand("SELECT DISTINCT Symbol FROM StockPredictions", connection))
@@ -139,7 +139,7 @@ namespace Quantra.Repositories
             var prices = new List<HistoricalPrice>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     string sql = @"SELECT Date, Open, High, Low, Close, Volume, AdjClose FROM HistoricalPrices WHERE Symbol = @Symbol ORDER BY Date ASC";

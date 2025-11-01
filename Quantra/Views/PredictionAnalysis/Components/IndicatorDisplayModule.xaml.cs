@@ -216,7 +216,7 @@ namespace Quantra.Controls.Components
                 }
 
                 // Use ExecuteQuery to get trading rules
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     string query = @"

@@ -41,7 +41,7 @@ namespace Quantra
 
         private void InitializeTabManagement()
         {
-            var connection = DatabaseMonolith.GetConnection();
+            var connection = ConnectionHelper.GetConnection();
             _tabRepository = new TabRepository(connection);
             
             // Initialize TabManager but avoid the complex PreviewMouseMove hookup

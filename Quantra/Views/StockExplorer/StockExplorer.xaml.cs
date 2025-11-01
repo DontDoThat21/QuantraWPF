@@ -4501,7 +4501,7 @@ namespace Quantra.Controls
             List<string> symbols = new List<string>();
             try
             {
-                using (var connection = DatabaseMonolith.GetConnection())
+                using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
                     using (var command = new SQLiteCommand("SELECT Symbol FROM StockSymbols", connection))
