@@ -18,7 +18,6 @@ namespace Quantra.Controls
     public partial class PredictionAnalysisControl : UserControl
     {
         private WebullTradingBot tradingBot;
-        private List<PredictionModel> predictions;
         private List<PatternModel> detectedPatterns;
         private PatternModel selectedPattern;
         private Dictionary<string, double> sectorPerformance;
@@ -77,7 +76,6 @@ namespace Quantra.Controls
             InitializeChartData(); // Call the implementation from Charts.cs;
             
             // Initialize model collections
-            predictions = new List<PredictionModel>();
             detectedPatterns = new List<PatternModel>();
             sectorPerformance = new Dictionary<string, double>();
             

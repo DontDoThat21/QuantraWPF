@@ -18,81 +18,72 @@ using System.Collections.ObjectModel;
 using Quantra.Repositories;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl, INotifyPropertyChanged
     {
-        private readonly PredictionAnalysisViewModel _viewModel;
-        private readonly NotificationService _notificationService;
+     private readonly PredictionAnalysisViewModel _viewModel;
+      private readonly NotificationService _notificationService;
         private readonly StockDataCacheService _stockDataCacheService;
-        private readonly TechnicalIndicatorService _indicatorService;
+private readonly TechnicalIndicatorService _indicatorService;
         private readonly EmailService _emailService;
+        private readonly ISettingsService _settingsService;
         private readonly IndicatorDisplayModule _indicatorModule;
-        private readonly PredictionChartModuleType _chartModule;
-        private string _pacId; // Unique identifier for this PAC instance
-        private ComboBox _strategyProfileComboBox;
+     private readonly PredictionChartModuleType _chartModule;
+      private string _pacId; // Unique identifier for this PAC instance
+     private ComboBox _strategyProfileComboBox;
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
-        // Indicators dictionary (not duplicated in other files)
+ // Indicators dictionary (not duplicated in other files)
         private Dictionary<string, double> indicators;
         // Confidence value (not duplicated in other files)
-        private double confidence;
+    private double confidence;
 
-        public PredictionAnalysisControl(
-            PredictionAnalysisViewModel viewModel,
-            NotificationService notificationService,
-            TechnicalIndicatorService indicatorService,
-            PredictionAnalysisRepository analysisRepository,
-            StockDataCacheService stockDataCacheService,
-            TradingService tradingService,
-            SettingsService settingsService,
-            AlphaVantageService alphaVantageService,
-            EmailService emailService)
-        {
+     public PredictionAnalysisControl(
+     PredictionAnalysisViewModel viewModel,
+       NotificationService notificationService,
+    TechnicalIndicatorService indicatorService,
+        PredictionAnalysisRepository analysisRepository,
+   StockDataCacheService stockDataCacheService,
+       TradingService tradingService,
+        ISettingsService settingsService,
+        AlphaVantageService alphaVantageService,
+       EmailService emailService)
+     {
             InitializeComponent();
 
-            //var repo = analysisRepository ?? new PredictionAnalysisRepository();
-            //var indicatorSvc = indicatorService ?? new TechnicalIndicatorService();
-            //var emailSvc = emailService ?? new EmailService();
-            //var audioSvc = new AudioService(DatabaseMonolith.GetUserSettings());
-            //var smsSvc = new SmsService();
-            //var settingsSvc = settingsService ?? new SettingsService();
-            //var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc, settingsSvc);
-            //var stockDataCacheSvc = stockDataCacheService ?? new StockDataCacheService();
-            //var tradingSvc = tradingService ?? new TradingService(emailSvc, notificationSvc, smsSvc);
-            //var alphaSvc = alphaVantageService ?? new AlphaVantageService();
-
             _viewModel = viewModel;
-            _notificationService = notificationService;
+        _notificationService = notificationService;
             _stockDataCacheService = stockDataCacheService;
-            _indicatorService = indicatorService;
-            _emailService = emailService;
+   _indicatorService = indicatorService;
+        _emailService = emailService;
+    _settingsService = settingsService;
         
+  _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
+          _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, stockDataCacheService);
 
-            _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
-            _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, stockDataCacheService);
+         DataContext = _viewModel;
 
-            DataContext = _viewModel;
-
-            // Ensure the PredictionDataGrid is bound to the Predictions collection
+    // Ensure the PredictionDataGrid is bound to the Predictions collection
             if (PredictionDataGrid != null)
-            {
-                PredictionDataGrid.ItemsSource = Predictions;
-            }
+   {
+      PredictionDataGrid.ItemsSource = Predictions;
+      }
 
-            // Attach modules to containers if they exist
-            var indicatorContainer = this.FindName("indicatorContainer") as Panel;
-            if (indicatorContainer != null)
-                indicatorContainer.Children.Add(_indicatorModule);
+       // Attach modules to containers if they exist
+      var indicatorContainer = this.FindName("indicatorContainer") as Panel;
+      if (indicatorContainer != null)
+indicatorContainer.Children.Add(_indicatorModule);
 
-            var chartContainer = this.FindName("chartContainer") as Panel;
-            if (chartContainer != null)
-                chartContainer.Children.Add(_chartModule);
+       var chartContainer = this.FindName("chartContainer") as Panel;
+if (chartContainer != null)
+     chartContainer.Children.Add(_chartModule);
 
-            // Register for Loaded event - use OnPredictionAnalysisControlLoaded to avoid duplicate
-            Loaded += OnPredictionAnalysisControlLoaded;
-        }
+        // Register for Loaded event - use OnPredictionAnalysisControlLoaded to avoid duplicate
+    Loaded += OnPredictionAnalysisControlLoaded;
+  }
 
         // Initialize strategy profile selection in this separate method
         private void InitializeStrategyProfileSelection()

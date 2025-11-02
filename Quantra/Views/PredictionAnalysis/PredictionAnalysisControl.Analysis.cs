@@ -17,7 +17,6 @@ namespace Quantra.Controls
         private readonly ISocialMediaSentimentService _financialNewsSentimentService;
         private readonly IEarningsTranscriptService _earningsTranscriptService;
         private readonly IAnalystRatingService _analystRatingService;
-        private readonly ISettingsService _settingsService;
         private readonly IInsiderTradingService _insiderTradingService;
         private readonly UserSettings _userSettings;
         
@@ -708,4 +707,4 @@ namespace Quantra.Controls
             return ("HOLD", confidence, currentPrice);
         }
     }
-}
+}}

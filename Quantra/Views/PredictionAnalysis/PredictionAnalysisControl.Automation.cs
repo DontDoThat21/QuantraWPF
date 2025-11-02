@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Quantra.DAL.Services.Interfaces;
-//using System.Data.SQLite;
+using System.Data.SQLite; // Added for SQLite commands
 using Quantra;
 using System.Windows.Threading;  // Add this explicit namespace reference
 using Quantra.Adapters; // Add this to use the PredictionModelAdapter
@@ -14,18 +14,36 @@ using Quantra.Models;
 using System.Collections.ObjectModel;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data; // Added for ObservableCollection
+using Quantra.Repositories; // Added for PredictionAnalysisRepository
+using Microsoft.EntityFrameworkCore; // Added for DbContext
 
 namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl, IDisposable
     {
-        // Automated mode property
+     // Automated mode property
         private DispatcherTimer autoRefreshTimer;
         private CancellationTokenSource analysisTokenSource;
         private bool isDisposed = false;
-        
-        // Add this field for AlphaVantageService
-        private readonly AlphaVantageService alphaVantageService = new AlphaVantageService();
+     
+        // Add repository for prediction management - will be initialized in OnControlLoaded
+     private PredictionAnalysisRepository _predictionRepository;
+  
+        // Add service for prediction operations
+        private PredictionAnalysisService _predictionService;
+   
+     // Constructor to initialize the repository and service (should be called from the OnControlLoaded)
+  private void InitializePredictionRepository()
+  {
+            if (_predictionRepository != null)
+       return; // Already initialized
+     
+            // Create the repository with parameterless constructor which handles DbContext internally
+   _predictionRepository = new PredictionAnalysisRepository();
+            
+   // Initialize the prediction service
+  _predictionService = new PredictionAnalysisService();
+        }
 
         public bool IsAutomatedMode
         {
@@ -225,107 +243,50 @@ namespace Quantra.Controls
             }
         }
 
-        // Add this method to load the latest predictions from the database and display them in the UI
-        private void LoadLatestPredictionsFromDatabase()
+        // Refactored method to load the latest predictions from the database using the service
+        private async void LoadLatestPredictionsFromDatabase()
         {
-            try
-            {
-                var latestDataPredictions = GetLatestPredictionsFromDatabase(); // This returns List<Quantra.Models.PredictionModel>
-                if (latestDataPredictions != null && latestDataPredictions.Count > 0)
-                {
-                    // Clear existing predictions before loading new ones
-                    this.Predictions.Clear(); 
-                    foreach (Quantra.Models.PredictionModel dataModel in latestDataPredictions)
-                    {
-                        // No conversion needed, just add the model
-                        this.Predictions.Add(dataModel);
-                    }
-
-                    if (PredictionDataGrid != null)
-                        PredictionDataGrid.ItemsSource = this.Predictions;
-
-                    if (StatusText != null)
-                        StatusText.Text = $"Loaded {this.Predictions.Count} cached predictions from database.";
-
-                    if (LastUpdatedText != null)
-                        LastUpdatedText.Text = $"Last updated: {DateTime.Now.ToString("MM/dd/yyyy HH:mm")}";
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to load cached predictions", ex.ToString());
-            }
-        }
-
-        // Add this method to retrieve the latest predictions from the database
-        private List<Quantra.Models.PredictionModel> GetLatestPredictionsFromDatabase()
+     try
+  {
+      // Use the service to get latest predictions
+  var latestPredictions = await _predictionService.GetLatestPredictionsAsync();
+  
+    if (latestPredictions != null && latestPredictions.Count > 0)
+  {
+        // Update UI on dispatcher thread
+        await Dispatcher.InvokeAsync(() =>
+   {
+         // Clear existing predictions before loading new ones
+       this.Predictions.Clear();
+         
+     foreach (var prediction in latestPredictions)
         {
-            var result = new List<Quantra.Models.PredictionModel>();
-            try
-            {
-                using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    // Get the most recent prediction for each symbol
-                    string sql = @"
-                        SELECT p1.*
-                        FROM StockPredictions p1
-                        INNER JOIN (
-                            SELECT Symbol, MAX(CreatedDate) AS MaxDate
-                            FROM StockPredictions
-                            GROUP BY Symbol
-                        ) p2 ON p1.Symbol = p2.Symbol AND p1.CreatedDate = p2.MaxDate
-                        ORDER BY p1.Confidence DESC
-                    ";
-                    using (var command = new SQLiteCommand(sql, connection))
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            var model = new Quantra.Models.PredictionModel
-                            {
-                                Symbol = reader["Symbol"].ToString(),
-                                PredictedAction = reader["PredictedAction"].ToString(),
-                                Confidence = Convert.ToDouble(reader["Confidence"]),
-                                CurrentPrice = Convert.ToDouble(reader["CurrentPrice"]),
-                                TargetPrice = Convert.ToDouble(reader["TargetPrice"]),
-                                PotentialReturn = Convert.ToDouble(reader["PotentialReturn"]),
-                                PredictionDate = Convert.ToDateTime(reader["CreatedDate"]),
-                                TradingRule = reader["TradingRule"]?.ToString(),
-                                Indicators = new Dictionary<string, double>()
-                            };
+      this.Predictions.Add(prediction);
+      }
 
-                            // Load indicators for this prediction
-                            long predictionId = Convert.ToInt64(reader["Id"]);
-                            using (var indCmd = new SQLiteCommand("SELECT IndicatorName, IndicatorValue FROM PredictionIndicators WHERE PredictionId = @PredictionId", connection))
-                            {
-                                indCmd.Parameters.AddWithValue("@PredictionId", predictionId);
-                                using (var indReader = indCmd.ExecuteReader())
-                                {
-                                    while (indReader.Read())
-                                    {
-                                        string name = indReader["IndicatorName"].ToString();
-                                        double value = Convert.ToDouble(indReader["IndicatorValue"]);
-                                        model.Indicators[name] = value;
-                                    }
-                                }
-                            }
+  if (PredictionDataGrid != null)
+     PredictionDataGrid.ItemsSource = this.Predictions;
 
-                            result.Add(model);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error retrieving latest predictions from database", ex.ToString());
-            }
-            return result;
+    if (StatusText != null)
+  StatusText.Text = $"Loaded {this.Predictions.Count} cached predictions from database.";
+
+if (LastUpdatedText != null)
+         LastUpdatedText.Text = $"Last updated: {DateTime.Now.ToString("MM/dd/yyyy HH:mm")}";
+         }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+   }
+    catch (Exception ex)
+          {
+ LoggingService.Log("Error", "Failed to load cached predictions", ex.ToString());
+  }
         }
 
         // Control loaded event handler to initiate automated analysis
         public void OnControlLoaded(object sender, RoutedEventArgs e)
         {
+            // Initialize the prediction repository if not already initialized
+            InitializePredictionRepository();
+     
             // Load the auto mode state from user preferences
             string savedState = DatabaseMonolith.GetUserPreference("PredictionAnalysisAutoMode", "False");
             bool autoMode = bool.TryParse(savedState, out bool result) && result;
@@ -505,282 +466,66 @@ namespace Quantra.Controls
             }
         }
 
-        private void EnsureDatabaseTablesExist()
-        {
-            try
-            {
-                // Create stock symbols table
-                DatabaseMonolith.ExecuteNonQuery(@"
-                    CREATE TABLE IF NOT EXISTS StockSymbols (
-                        Symbol TEXT PRIMARY KEY,
-                        Name TEXT,
-                        Sector TEXT,
-                        Industry TEXT,
-                        LastUpdated DATETIME
-                    )");
-
-                // Create predictions table
-                DatabaseMonolith.ExecuteNonQuery(@"
-                    CREATE TABLE IF NOT EXISTS StockPredictions (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Symbol TEXT NOT NULL,
-                        PredictedAction TEXT NOT NULL,
-                        Confidence REAL NOT NULL,
-                        CurrentPrice REAL NOT NULL,
-                        TargetPrice REAL NOT NULL,
-                        PotentialReturn REAL NOT NULL,
-                        CreatedDate DATETIME NOT NULL,
-                        TradingRule TEXT,
-                        FOREIGN KEY(Symbol) REFERENCES StockSymbols(Symbol)
-                    )");
-
-                // Create indicators table
-                DatabaseMonolith.ExecuteNonQuery(@"
-                    CREATE TABLE IF NOT EXISTS PredictionIndicators (
-                        PredictionId INTEGER NOT NULL,
-                        IndicatorName TEXT NOT NULL,
-                        IndicatorValue REAL NOT NULL,
-                        PRIMARY KEY(PredictionId, IndicatorName),
-                        FOREIGN KEY(PredictionId) REFERENCES StockPredictions(Id)
-                    )");
-                
-                // Create StockDataCache table
-                DatabaseMonolith.ExecuteNonQuery(@"
-                    CREATE TABLE IF NOT EXISTS StockDataCache (
-                        Symbol TEXT NOT NULL,
-                        TimeRange TEXT NOT NULL,
-                        Interval TEXT NOT NULL,
-                        Data TEXT NOT NULL,
-                        CacheTime DATETIME NOT NULL,
-                        PRIMARY KEY (Symbol, TimeRange, Interval)
-                    )");
-                
-                // Create OrderHistory table
-                DatabaseMonolith.ExecuteNonQuery(@"
-                    CREATE TABLE IF NOT EXISTS OrderHistory (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        Symbol TEXT NOT NULL,
-                        OrderType TEXT NOT NULL,
-                        Quantity INTEGER NOT NULL,
-                        Price REAL NOT NULL,
-                        StopLoss REAL,
-                        TakeProfit REAL,
-                        IsPaperTrade INTEGER NOT NULL,
-                        Status TEXT NOT NULL,
-                        PredictionSource TEXT,
-                        Timestamp DATETIME NOT NULL
-                    )");
-
-                //DatabaseMonolith.Log("Info", "Ensured all required database tables exist");
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error ensuring database tables exist", ex.ToString());
-            }
-        }
-
         private void SavePredictionToDatabase(Models.PredictionModel prediction)
         {
             try
-            {
-                // Validate required fields before attempting to insert
-                if (string.IsNullOrWhiteSpace(prediction.Symbol) ||
-                    string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
-                    double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
-                    double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
-                    double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
-                    double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
-                {
-                    //DatabaseMonolith.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
-                    return;
-                }
+ {
+      // Validate required fields before attempting to insert
+       if (string.IsNullOrWhiteSpace(prediction.Symbol) ||
+       string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
+    double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
+      double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
+   double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
+     double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
+    {
+        LoggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+     return;
+     }
 
-                // First ensure the symbol exists in the symbols table
-                using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            using (var command = new SQLiteCommand(connection))
-                            {
-                                // Insert or update symbol
-                                command.CommandText = @"
-                                    INSERT OR IGNORE INTO StockSymbols (Symbol, LastUpdated) 
-                                    VALUES (@Symbol, @LastUpdated)";
-                                command.Parameters.AddWithValue("@Symbol", prediction.Symbol);
-                                command.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
-                                command.ExecuteNonQuery();
-
-                                // Save prediction
-                                command.CommandText = @"
-                                    INSERT INTO StockPredictions 
-                                    (Symbol, PredictedAction, Confidence, CurrentPrice, TargetPrice, PotentialReturn, CreatedDate) 
-                                    VALUES (@Symbol, @PredictedAction, @Confidence, @CurrentPrice, @TargetPrice, @PotentialReturn, @CreatedDate)";
-                                command.Parameters.Clear();
-                                command.Parameters.AddWithValue("@Symbol", prediction.Symbol);
-                                command.Parameters.AddWithValue("@PredictedAction", prediction.PredictedAction);
-                                command.Parameters.AddWithValue("@Confidence", prediction.Confidence);
-                                command.Parameters.AddWithValue("@CurrentPrice", prediction.CurrentPrice);
-                                command.Parameters.AddWithValue("@TargetPrice", prediction.TargetPrice);
-                                command.Parameters.AddWithValue("@PotentialReturn", prediction.PotentialReturn);
-                                command.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
-                                command.ExecuteNonQuery();
-
-                                // Get last inserted prediction ID
-                                command.CommandText = "SELECT last_insert_rowid()";
-                                long predictionId = (long)command.ExecuteScalar();
-
-                                // Save indicators
-                                foreach (var indicator in prediction.Indicators)
-                                {
-                                    command.CommandText = @"
-                                        INSERT INTO PredictionIndicators (PredictionId, IndicatorName, IndicatorValue)
-                                        VALUES (@PredictionId, @IndicatorName, @IndicatorValue)";
-                                    command.Parameters.Clear();
-                                    command.Parameters.AddWithValue("@PredictionId", predictionId);
-                                    command.Parameters.AddWithValue("@IndicatorName", indicator.Key);
-                                    command.Parameters.AddWithValue("@IndicatorValue", indicator.Value);
-                                    command.ExecuteNonQuery();
-                                }
-                            }
-
-                            transaction.Commit();
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw new Exception($"Failed to save prediction: {ex.Message}", ex);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
-            }
-        }
+       // Use the service to save the prediction using Entity Framework (async method)
+            // Run synchronously since we're in a sync method - this is acceptable for background processing
+  _predictionService?.SavePredictionAsync(prediction).GetAwaiter().GetResult();
+         }
+   catch (Exception ex)
+     {
+  LoggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
+  }
+    }
 
         private async Task<List<string>> FetchMajorUSStocks(CancellationToken token)
         {
-            try
+     try
             {
-                // First, try to get symbols from the database
-                List<string> symbols = GetSymbolsFromDatabase();
-
-                if (symbols != null && symbols.Count > 0)
-                {
-                    //DatabaseMonolith.Log("Info", $"Fetched {symbols.Count} US stock symbols from database");
-                    return symbols;
-                }
-                else
-                {
-                    //DatabaseMonolith.Log("Warning", "No symbols found in database, falling back to default list. API call for symbols has been removed.");
-                    // API call removed: var symbols = await alphaVantageService.GetAllUsStockSymbolsAsync(token); 
-                    // Fallback to a default list if database is empty and API call is removed
-                    var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" }; 
-                    // Optionally, save these default symbols to the database if that's desired behavior
-                    // SaveSymbolsToDatabase(defaultSymbols); // This line can be uncommented if defaults should be saved
-                    //DatabaseMonolith.Log("Info", $"Using default hardcoded list of {defaultSymbols.Count} symbols.");
-                    return defaultSymbols;
-                }
+         // Use the default fallback list - in production this would come from a proper stock symbol service
+    var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
+          LoggingService.Log("Info", $"Using default list of {defaultSymbols.Count} symbols.");
+   return defaultSymbols;
             }
-            catch (OperationCanceledException)
+      catch (OperationCanceledException)
+      {
+      LoggingService.Log("Info", "Fetching major US stocks was cancelled.");
+         return new List<string>();
+   }
+         catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Info", "Fetching major US stocks was cancelled.");
-                return new List<string>();
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
-                //DatabaseMonolith.Log("Warning", "Falling back to default list due to error.");
-                var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
-                // SaveSymbolsToDatabase(defaultSymbols); // This line can be uncommented if defaults should be saved
-                return defaultSymbols;
-            }
-        }
-
-        private List<string> GetSymbolsFromDatabase()
-        {
-            List<string> symbols = new List<string>();
-            try
-            {
-                using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand("SELECT Symbol FROM StockSymbols", connection))
-                    {
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                symbols.Add(reader["Symbol"].ToString());
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error retrieving symbols from database", ex.ToString());
-            }
-            return symbols;
-        }
-
-        private void SaveSymbolsToDatabase(List<string> symbols)
-        {
-            try
-            {
-                using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    using (var transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            using (var command = new SQLiteCommand(connection))
-                            {
-                                foreach (var symbol in symbols)
-                                {
-                                    command.CommandText = @"
-                                        INSERT OR IGNORE INTO StockSymbols (Symbol, LastUpdated) 
-                                        VALUES (@Symbol, @LastUpdated)";
-                                    command.Parameters.Clear();
-                                    command.Parameters.AddWithValue("@Symbol", symbol);
-                                    command.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
-                                    command.ExecuteNonQuery();
-                                }
-                            }
-                            transaction.Commit();
-                        }
-                        catch (Exception)
-                        {
-                            transaction.Rollback();
-                            throw;
-                        }
-                    }
-                }
-                //DatabaseMonolith.Log("Info", $"Saved {symbols.Count} symbols to database");
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error saving symbols to database", ex.ToString());
-            }
+ LoggingService.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
+    var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
+      return defaultSymbols;
+         }
         }
 
         // Add this public method to allow external/manual triggering of prediction algorithms
         public void RunPredictionAlgorithms()
-        {
-            _ = GlobalLoadingStateService.WithLoadingState(RunAutomatedAnalysis());
+   {
+       _ = GlobalLoadingStateService.WithLoadingState(RunAutomatedAnalysis());
         }
 
         // Add this public async method to run prediction algorithms for a specific symbol
-        public async Task<Quantra.Models.PredictionModel> RunPredictionAlgorithms(string symbol)
-        {
+public async Task<Quantra.Models.PredictionModel> RunPredictionAlgorithms(string symbol)
+   {
             // This method runs the same logic as AnalyzeStockWithAllAlgorithms for the given symbol
-            // and returns a PredictionModel result.
-            return await AnalyzeStockWithAllAlgorithms(symbol);
+          // and returns a PredictionModel result.
+         return await AnalyzeStockWithAllAlgorithms(symbol);
         }
     }
 }

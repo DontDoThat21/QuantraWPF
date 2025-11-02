@@ -83,7 +83,7 @@ namespace Quantra.Controls
             try
             {
                 // Get all predictions with trading rules
-                var tradablePredictions = predictions?
+                var tradablePredictions = Predictions?
                     .Where(p => !string.IsNullOrWhiteSpace(p.TradingRule))
                     .ToList() ?? new List<PredictionModel>();
                 

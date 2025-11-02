@@ -232,12 +232,12 @@ namespace Quantra.Controls
 
             try
             {
-                // Use the predictions collection as the data source
-                if (predictions == null)
+                // Use the Predictions ObservableCollection as the data source
+                if (Predictions == null)
                     return;
 
                 // Find the prediction for the selected symbol
-                var prediction = predictions.FirstOrDefault(p =>
+                var prediction = Predictions.FirstOrDefault(p =>
                     p.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase));
                 if (prediction == null)
                 {
@@ -246,27 +246,20 @@ namespace Quantra.Controls
                     return;
                 }
 
-                // Get the current items in the grid
-                var currentList = (PredictionDataGrid.ItemsSource as IList<Quantra.Models.PredictionModel>)?.ToList() ?? new List<Quantra.Models.PredictionModel>();
-
                 // Check if the symbol is already in the grid
-                var existing = currentList.FirstOrDefault(p =>
+                var existing = Predictions.FirstOrDefault(p =>
                     p.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase));
                 if (existing != null)
                 {
-                    // Update the existing row
-                    var idx = currentList.IndexOf(existing);
-                    currentList[idx] = prediction;
+                    // Update the existing item in the ObservableCollection
+                    var idx = Predictions.IndexOf(existing);
+                    Predictions[idx] = prediction;
                 }
                 else
                 {
-                    // Add the new symbol to the grid
-                    currentList.Add(prediction);
+                    // Add the new symbol to the collection
+                    Predictions.Add(prediction);
                 }
-
-                // Refresh the grid
-                PredictionDataGrid.ItemsSource = null;
-                PredictionDataGrid.ItemsSource = currentList;
             }
             catch (Exception ex)
             {
@@ -278,19 +271,13 @@ namespace Quantra.Controls
         private void SelectAllSymbols()
         {
             // Example logic: set the displayed symbols to all available symbols.
-            // Replace 'DisplayedSymbols' and 'SymbolService.GetAllSymbols()' with your actual implementation.
             try
             {
-                // If you have a property or field for the displayed symbols, update it here.
-                // DisplayedSymbols = SymbolService.GetAllSymbols();
-
                 // If you need to update a UI element, do so here.
-                // For example, if PredictionDataGrid displays symbols:
                 if (PredictionDataGrid != null)
                 {
-                    // Assuming you have a method or service to get all predictions/symbols.
-                    var allSymbols = predictions ?? new List<Quantra.Models.PredictionModel>();
-                    PredictionDataGrid.ItemsSource = allSymbols;
+                    // Use the Predictions ObservableCollection
+                    PredictionDataGrid.ItemsSource = Predictions;
                 }
 
                 // Optionally update status text or other UI elements.
