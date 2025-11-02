@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Quantra.DAL.Services;
 
 namespace Quantra.DAL.Services
 {
@@ -24,7 +25,7 @@ namespace Quantra.DAL.Services
         private const int PremiumApiCallsPerMinute = 600; // Premium tier rate limit (can be adjusted based on plan)
         private const string StockCacheKey = "stock_symbols_cache";
 
-        // Current rate limit - will be determined based on API key type one day
+      // Current rate limit - will be determined based on API key type one day
         private int _maxApiCallsPerMinute;
 
         public static int ApiCallLimit => Instance?._maxApiCallsPerMinute ?? StandardApiCallsPerMinute;
@@ -32,21 +33,25 @@ namespace Quantra.DAL.Services
         // Property to check if using premium API
         public bool IsPremiumKey => IsPremiumApiKey(_apiKey);
 
-        // Singleton pattern for easy access
-        private static AlphaVantageService Instance { get; set; }
+  // Singleton pattern for easy access
+      private static AlphaVantageService Instance { get; set; }
+        
+      // Cache for fundamental data with timestamps
+        private readonly Dictionary<string, (double Value, DateTime Timestamp)> _fundamentalDataCache = new Dictionary<string, (double, DateTime)>();
+   private readonly object _cacheLock = new object();
 
         public AlphaVantageService(IUserSettingsService userSettingsService)
         {
-            _userSettingsService = userSettingsService;
-            _client = new HttpClient
-            {
-                BaseAddress = new Uri("https://www.alphavantage.co/")
-            };
+ _userSettingsService = userSettingsService;
+    _client = new HttpClient
+         {
+      BaseAddress = new Uri("https://www.alphavantage.co/")
+ };
             _apiKey = GetApiKey();
-            _apiSemaphore = new SemaphoreSlim(1, 1);
-            _maxApiCallsPerMinute = StandardApiCallsPerMinute;
+       _apiSemaphore = new SemaphoreSlim(1, 1);
+          _maxApiCallsPerMinute = StandardApiCallsPerMinute;
 
-            Instance = this;
+ Instance = this;
         }
         
         /// <summary>
@@ -263,29 +268,38 @@ namespace Quantra.DAL.Services
         }
 
         public async Task<double> GetRSI(string symbol, string interval = "1min")
-        {
-            // Calculate RSI internally using historical data from database first
+      {
+            // Check cache first
+            var cached = GetCachedFundamentalData(symbol, $"RSI_{interval}", 1); // 1 hour cache for RSI
+       if (cached.HasValue)
+     return cached.Value;
+
+ // Calculate RSI internally using historical data from database first
             try
-            {
-                var historicalData = await GetCachedHistoricalDataFirst(symbol, interval);
-                if (historicalData.Count < 3)
-                    return 50; // Need at least 3 data points for any meaningful RSI calculation
-                
-                var closingPrices = historicalData.Select(h => h.Close).ToList();
-                
+ {
+var historicalData = await GetCachedHistoricalDataFirst(symbol, interval);
+           if (historicalData.Count < 3)
+      return 50; // Need at least 3 data points for any meaningful RSI calculation
+     
+    var closingPrices = historicalData.Select(h => h.Close).ToList();
+   
                 // Use adaptive period based on available data
-                // Standard RSI uses 14 periods, but we can calculate with fewer if needed
-                int rsiPeriod = Math.Min(14, closingPrices.Count - 1);
-                var rsiValues = CalculateRSIInternal(closingPrices, rsiPeriod);
-                
-                var latestRsi = rsiValues.LastOrDefault(r => !double.IsNaN(r));
-                return double.IsNaN(latestRsi) ? 50 : latestRsi;
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
+     // Standard RSI uses 14 periods, but we can calculate with fewer if needed
+      int rsiPeriod = Math.Min(14, closingPrices.Count - 1);
+        var rsiValues = CalculateRSIInternal(closingPrices, rsiPeriod);
+     
+      var latestRsi = rsiValues.LastOrDefault(r => !double.IsNaN(r));
+      var result = double.IsNaN(latestRsi) ? 50 : latestRsi;
+
+    // Cache the result
+     CacheFundamentalData(symbol, $"RSI_{interval}", result);
+            return result;
+  }
+     catch (Exception ex)
+  {
+    //DatabaseMonolith.Log("Error", $"Failed to calculate RSI for {symbol}", ex.ToString());
                 return 50; // Neutral default
-            }
+      }
         }
 
         public async Task<double> GetLatestADX(string symbol, string interval = "1min")
@@ -1294,31 +1308,35 @@ namespace Quantra.DAL.Services
         /// </summary>
         public async Task<double?> GetPERatioAsync(string symbol)
         {
-            if (string.IsNullOrWhiteSpace(symbol))
-                return null;
+  if (string.IsNullOrWhiteSpace(symbol))
+   return null;
 
-            // TODO: Implement caching via UserSettingsService if needed
+            // Check cache first
+     var cached = GetCachedFundamentalData(symbol, "PE_RATIO", 4); // 4 hour cache for P/E ratio
+    if (cached.HasValue)
+       return cached.Value;
 
-            // Fetch from API
+   // Fetch from API
             await WaitForApiLimit();
             var endpoint = $"query?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
-            await LogApiCall("OVERVIEW", symbol);
+      await LogApiCall("OVERVIEW", symbol);
 
-            var response = await _client.GetAsync(endpoint);
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var data = JObject.Parse(content);
+ var response = await _client.GetAsync(endpoint);
+      if (response.IsSuccessStatusCode)
+      {
+        var content = await response.Content.ReadAsStringAsync();
+     var data = JObject.Parse(content);
                 if (data["PERatio"] != null && double.TryParse(data["PERatio"].ToString(), out double peRatio))
-                {
-                    // TODO: Cache the result
-                    return peRatio;
-                }
-            }
+      {
+      // Cache the result
+            CacheFundamentalData(symbol, "PE_RATIO", peRatio);
+    return peRatio;
+             }
+}
 
-            return null;
-        }
-        
+  return null;
+}
+
         #region Private Calculation Methods
         
         private static List<double> CalculateADXInternal(List<double> highs, List<double> lows, List<double> closes, int period = 14)
@@ -1776,5 +1794,324 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets historical indicator data calculated from cached historical price data
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+ /// <param name="indicatorType">Type of indicator to calculate (RSI, MACD, ADX, ROC, BB_Width, etc.)</param>
+        /// <returns>List of historical indicator values</returns>
+public async Task<List<double>> GetHistoricalIndicatorData(string symbol, string indicatorType)
+        {
+       try
+            {
+         // Get real historical price data from database cache first
+         var historicalData = await GetCachedHistoricalPrices(symbol, "daily");
+                
+      if (historicalData.Count < 10)
+            {
+          LoggingService.Log("Warning", $"Insufficient historical data for {symbol} ({historicalData.Count} points), returning empty list");
+       return new List<double>();
+          }
+
+List<double> result = new List<double>();
+
+       // Calculate real indicator values based on historical price data
+         switch (indicatorType.ToUpperInvariant())
+        {
+ case "RSI":
+             var closingPrices = historicalData.Select(h => h.Close).ToList();
+    var rsiValues = CalculateRSIInternal(closingPrices, Math.Min(14, closingPrices.Count - 1));
+       result = rsiValues.Where(v => !double.IsNaN(v)).ToList();
+        break;
+
+            case "MACD":
+    var prices = historicalData.Select(h => h.Close).ToList();
+  var (macdLine, signalLine, histogram) = CalculateMACD(prices, 12, 26, 9);
+      
+         // Return both MACD line and signal line values
+  result.AddRange(macdLine.Where(v => !double.IsNaN(v)));
+        result.AddRange(signalLine.Where(v => !double.IsNaN(v)));
+       break;
+
+                    case "VOLUME":
+             result = historicalData.Select(h => (double)h.Volume).ToList();
+         break;
+
+            case "ADX":
+     var highs = historicalData.Select(h => h.High).ToList();
+    var lows = historicalData.Select(h => h.Low).ToList();
+             var closes = historicalData.Select(h => h.Close).ToList();
+        var adxValues = CalculateADXInternal(highs, lows, closes, Math.Min(14, closes.Count / 2));
+            result = adxValues.Where(v => !double.IsNaN(v)).ToList();
+        break;
+
+   case "ROC":
+    var rocPrices = historicalData.Select(h => h.Close).ToList();
+       var rocValues = CalculateROC(rocPrices, Math.Min(10, rocPrices.Count / 2));
+         result = rocValues.Where(v => !double.IsNaN(v)).ToList();
+          break;
+
+  case "BB_WIDTH":
+     // Bollinger Bands Width calculation
+           var bbPrices = historicalData.Select(h => h.Close).ToList();
+            var (upper, middle, lower) = CalculateBollingerBands(bbPrices, Math.Min(20, bbPrices.Count / 2), 2.0);
+        
+                for (int i = 0; i < upper.Count && i < lower.Count; i++)
+             {
+      if (!double.IsNaN(upper[i]) && !double.IsNaN(lower[i]) && middle[i] != 0)
+   {
+        double width = (upper[i] - lower[i]) / middle[i] * 100; // Width as percentage
+          result.Add(width);
+             }
+               }
+       break;
+
+      default:
+       LoggingService.Log("Warning", $"Unknown indicator type: {indicatorType}. Returning empty list");
+     return new List<double>();
+          }
+
+      LoggingService.Log("Info", $"Calculated {result.Count} real {indicatorType} values for {symbol} from {historicalData.Count} historical data points");
+       return result;
+    }
+            catch (Exception ex)
+     {
+     LoggingService.LogErrorWithContext(ex, $"Error calculating real historical data for {indicatorType} on {symbol}");
+             return new List<double>(); // Return empty list on error
+            }
+   }
+        
+        /// <summary>
+      /// Helper method to calculate Bollinger Bands for internal use
+     /// </summary>
+        private (List<double> upper, List<double> middle, List<double> lower) CalculateBollingerBands(List<double> prices, int period, double stdDevMultiplier)
+  {
+            var result = (Upper: new List<double>(), Middle: new List<double>(), Lower: new List<double>());
+            
+      // Calculate Simple Moving Average (SMA)
+       var sma = CalculateSMAInternal(prices, period);
+            result.Middle = sma;
+      
+            // Calculate standard deviation for each window
+ for (int i = 0; i < prices.Count; i++)
+            {
+       if (i < period - 1)
+       {
+  // Not enough data for full window
+      result.Upper.Add(double.NaN);
+         result.Lower.Add(double.NaN);
+     continue;
+     }
+         
+       // Get window of prices for calculating std dev
+           var window = prices.Skip(i - period + 1).Take(period).ToList();
+        var mean = sma[i];
+              var stdDev = Math.Sqrt(window.Average(v => Math.Pow(v - mean, 2)));
+ 
+            // Calculate upper and lower bands
+      result.Upper.Add(mean + stdDevMultiplier * stdDev);
+    result.Lower.Add(mean - stdDevMultiplier * stdDev);
+            }
+       
+  return result;
+    }
+        
+        /// <summary>
+   /// Helper method to calculate MACD for internal use
+        /// </summary>
+        private (List<double> MacdLine, List<double> SignalLine, List<double> Histogram) CalculateMACD(List<double> prices, int fastPeriod, int slowPeriod, int signalPeriod)
+      {
+      var result = (MacdLine: new List<double>(), SignalLine: new List<double>(), Histogram: new List<double>());
+          
+          // Calculate EMAs
+var fastEMA = CalculateEMAInternal(prices, fastPeriod);
+   var slowEMA = CalculateEMAInternal(prices, slowPeriod);
+            
+            // Calculate MACD line
+         var macdLine = new List<double>();
+          for (int i = 0; i < prices.Count; i++)
+   {
+              if (i < slowPeriod - 1)
+            {
+  // Not enough data for slow EMA
+      macdLine.Add(double.NaN);
+          }
+  else
+     {
+         // MACD = Fast EMA - Slow EMA
+      macdLine.Add(fastEMA[i] - slowEMA[i]);
+       }
+       }
+            
+      // Calculate signal line (EMA of MACD line)
+          var signalLine = CalculateEMAInternal(macdLine, signalPeriod);
+   
+         // Calculate histogram (MACD - Signal)
+      var histogram = new List<double>();
+            for (int i = 0; i < macdLine.Count; i++)
+    {
+       if (i < slowPeriod + signalPeriod - 2)
+    {
+     // Not enough data for signal line
+     histogram.Add(double.NaN);
+     }
+                else
+          {
+       // Histogram = MACD - Signal
+     histogram.Add(macdLine[i] - signalLine[i]);
+    }
+    }
+         
+   result.MacdLine = macdLine;
+         result.SignalLine = signalLine;
+            result.Histogram = histogram;
+   
+  return result;
+        }
+     
+        /// <summary>
+      /// Helper method to calculate Rate of Change for internal use
+        /// </summary>
+        private List<double> CalculateROC(List<double> prices, int period = 10)
+        {
+ var result = new List<double>();
+   
+   for (int i = 0; i < prices.Count; i++)
+    {
+         if (i < period)
+      {
+          // Not enough data for ROC calculation
+   result.Add(double.NaN);
+        }
+            else
+     {
+         // ROC = ((current - previous) / previous) * 100
+   double current = prices[i];
+         double previous = prices[i - period];
+         
+     if (previous == 0)
+   {
+   result.Add(0);
+  }
+       else
+        {
+   double roc = (current - previous) / previous * 100;
+            result.Add(roc);
+              }
+           }
+            }
+  
+        return result;
+  }
+    
+        /// <summary>
+        /// Gets cached fundamental data for a symbol if available and not expired
+      /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="dataType">Type of fundamental data (e.g., "PE_RATIO", "RSI", "VWAP", "MACD")</param>
+        /// <param name="maxCacheAgeHours">Maximum age of cached data in hours (default 2 hours)</param>
+     /// <returns>Cached value if available and valid, null otherwise</returns>
+     public double? GetCachedFundamentalData(string symbol, string dataType, double maxCacheAgeHours = 2.0)
+     {
+            if (string.IsNullOrEmpty(symbol) || string.IsNullOrEmpty(dataType))
+      return null;
+
+         var cacheKey = $"{symbol}_{dataType}";
+            
+            lock (_cacheLock)
+            {
+              if (_fundamentalDataCache.TryGetValue(cacheKey, out var cachedData))
+         {
+         var cacheAge = DateTime.Now - cachedData.Timestamp;
+  
+     if (cacheAge.TotalHours <= maxCacheAgeHours)
+           {
+    LoggingService.Log("Info", $"Retrieved cached {dataType} for {symbol} (age: {cacheAge.TotalMinutes:F1} minutes)");
+    return cachedData.Value;
+               }
+      else
+   {
+          // Cache expired, remove it
+      _fundamentalDataCache.Remove(cacheKey);
+         LoggingService.Log("Info", $"Cache expired for {dataType} on {symbol} (age: {cacheAge.TotalHours:F1} hours)");
+     }
+           }
+  }
+            
+      return null;
+        }
+
+    /// <summary>
+        /// Stores fundamental data in cache with current timestamp
+        /// </summary>
+      /// <param name="symbol">Stock symbol</param>
+        /// <param name="dataType">Type of fundamental data</param>
+        /// <param name="value">Value to cache</param>
+        private void CacheFundamentalData(string symbol, string dataType, double value)
+        {
+    if (string.IsNullOrEmpty(symbol) || string.IsNullOrEmpty(dataType))
+     return;
+
+            var cacheKey = $"{symbol}_{dataType}";
+        
+    lock (_cacheLock)
+         {
+                _fundamentalDataCache[cacheKey] = (value, DateTime.Now);
+                LoggingService.Log("Info", $"Cached {dataType} for {symbol}: {value}");
+            }
+        }
+
+        /// <summary>
+        /// Clears all cached fundamental data for a specific symbol
+        /// </summary>
+        /// <param name="symbol">Stock symbol to clear cache for</param>
+    public void ClearCachedFundamentalData(string symbol)
+        {
+            if (string.IsNullOrEmpty(symbol))
+   return;
+
+            lock (_cacheLock)
+          {
+  var keysToRemove = _fundamentalDataCache.Keys
+  .Where(k => k.StartsWith($"{symbol}_"))
+          .ToList();
+          
+  foreach (var key in keysToRemove)
+    {
+             _fundamentalDataCache.Remove(key);
+    }
+         
+       if (keysToRemove.Count > 0)
+             {
+     LoggingService.Log("Info", $"Cleared {keysToRemove.Count} cached fundamental data entries for {symbol}");
+ }
+  }
+    }
+
+   /// <summary>
+        /// Clears all expired fundamental data from cache
+        /// </summary>
+   /// <param name="maxAgeHours">Maximum age in hours</param>
+ public void ClearExpiredFundamentalData(double maxAgeHours = 24.0)
+     {
+        lock (_cacheLock)
+  {
+    var expiredKeys = _fundamentalDataCache
+    .Where(kvp => (DateTime.Now - kvp.Value.Timestamp).TotalHours > maxAgeHours)
+  .Select(kvp => kvp.Key)
+   .ToList();
+
+       foreach (var key in expiredKeys)
+       {
+ _fundamentalDataCache.Remove(key);
+         }
+      
+   if (expiredKeys.Count > 0)
+   {
+            LoggingService.Log("Info", $"Cleared {expiredKeys.Count} expired fundamental data cache entries");
+}
+    }
+ }
     }
 }

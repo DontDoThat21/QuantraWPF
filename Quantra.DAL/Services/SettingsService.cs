@@ -22,11 +22,11 @@ namespace Quantra.DAL.Services
 
         // Parameterless constructor for backward compatibility
     public SettingsService()
-        {
+   {
  var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-   optionsBuilder.UseSqlite("Data Source=Quantra.db");
+   optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
           _context = new QuantraDbContext(optionsBuilder.Options);
-        }
+   }
 
     // Ensure the settings profiles table exists
     public void EnsureSettingsProfilesTable()

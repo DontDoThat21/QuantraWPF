@@ -28,9 +28,11 @@ namespace Quantra.DAL.Services
         private Dictionary<string, double> takeProfitTargets = new Dictionary<string, double>();
         private Dictionary<string, (double price, DateTime timestamp)> marketPriceCache = new Dictionary<string, (double, DateTime)>();
         private WebSocket marketDataSocket;
-        private TechnicalIndicatorService technicalIndicatorService;
-        private HistoricalDataService historicalDataService;
-        private readonly AlphaVantageService alphaVantageService;
+
+        private TechnicalIndicatorService _technicalIndicatorService;
+        private HistoricalDataService _historicalDataService;
+        private readonly AlphaVantageService _alphaVantageService;
+
         private Task _monitoringTask;
         
         // Trading hour and market session related fields
@@ -62,14 +64,20 @@ namespace Quantra.DAL.Services
         private DateTime _lastRebalanceCheckTime = DateTime.Now;
 
         // Remove IConfiguration from constructor
-        public WebullTradingBot()
+        public WebullTradingBot(UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService)
         {
+            _historicalDataService = historicalDataService;
+            _alphaVantageService = alphaVantageService;
+            _technicalIndicatorService = technicalIndicatorService;
+
             LoadSymbols();
             // Initialize the services without configuration
-            technicalIndicatorService = new TechnicalIndicatorService();
-            historicalDataService = new HistoricalDataService();
-            alphaVantageService = new AlphaVantageService();
             
+
+
             // Initialize rebalancing profiles
             InitializeRebalancingProfiles();
             
@@ -305,8 +313,7 @@ namespace Quantra.DAL.Services
         public virtual async Task<double> GetMarketPrice(string symbol)
         {
             // Use Alpha Vantage for market price
-            var alphaVantageService = new AlphaVantageService();
-            var price = await alphaVantageService.GetQuoteData(symbol);
+            var price = await _alphaVantageService.GetQuoteData(symbol);
             return price;
         }
 
@@ -314,7 +321,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                return await alphaVantageService.GetMostVolatileStocksAsync();
+                return await _alphaVantageService.GetMostVolatileStocksAsync();
             }
             catch (Exception ex)
             {
@@ -382,19 +389,19 @@ namespace Quantra.DAL.Services
                 foreach (var timeframe in timeframes)
                 {
                     double price = await GetMarketPrice(stock);
-                    var (macd, signal) = await technicalIndicatorService.GetMACD(stock, timeframe);
-                    double vwap = await technicalIndicatorService.GetVWAP(stock, timeframe);
-                    double adx = await technicalIndicatorService.GetADX(stock, timeframe);
-                    double rsi = await technicalIndicatorService.GetRSI(stock, timeframe);
-                    double roc = await technicalIndicatorService.GetROC(stock, timeframe);
-                    var (high, low) = await technicalIndicatorService.GetHighsLows(stock, timeframe);
-                    double ultimateOscillator = await technicalIndicatorService.GetUltimateOscillator(stock, timeframe);
-                    var (bullPower, bearPower) = await technicalIndicatorService.GetBullBearPower(stock, timeframe);
-                    double cci = await technicalIndicatorService.GetCCI(stock, timeframe);
-                    double atr = await technicalIndicatorService.GetATR(stock, timeframe);
-                    double williamsR = await technicalIndicatorService.GetWilliamsR(stock, timeframe);
-                    double stochrsi = await technicalIndicatorService.GetSTOCHRSI(stock, timeframe);
-                    var (stochK, stochD) = await technicalIndicatorService.GetSTOCH(stock, timeframe);
+                    var (macd, signal) = await _technicalIndicatorService.GetMACD(stock, timeframe);
+                    double vwap = await _technicalIndicatorService.GetVWAP(stock, timeframe);
+                    double adx = await _technicalIndicatorService.GetADX(stock, timeframe);
+                    double rsi = await _technicalIndicatorService.GetRSI(stock, timeframe);
+                    double roc = await _technicalIndicatorService.GetROC(stock, timeframe);
+                    var (high, low) = await _technicalIndicatorService.GetHighsLows(stock, timeframe);
+                    double ultimateOscillator = await _technicalIndicatorService.GetUltimateOscillator(stock, timeframe);
+                    var (bullPower, bearPower) = await _technicalIndicatorService.GetBullBearPower(stock, timeframe);
+                    double cci = await _technicalIndicatorService.GetCCI(stock, timeframe);
+                    double atr = await _technicalIndicatorService.GetATR(stock, timeframe);
+                    double williamsR = await _technicalIndicatorService.GetWilliamsR(stock, timeframe);
+                    double stochrsi = await _technicalIndicatorService.GetSTOCHRSI(stock, timeframe);
+                    var (stochK, stochD) = await _technicalIndicatorService.GetSTOCH(stock, timeframe);
 
                     if (macd > signal && price > vwap && adx > 25 && rsi < 30 && roc > 0 && high > low && ultimateOscillator > 50 && bullPower > bearPower && cci > 100 && atr > 1 && williamsR < -80 && stochrsi < 0.2 && stochK > stochD)
                     {
@@ -673,7 +680,7 @@ namespace Quantra.DAL.Services
                 try
                 {
                     // Try to get ATR from technical indicator service
-                    atr = technicalIndicatorService.GetATR(parameters.Symbol, "1d").Result;
+                    atr = _technicalIndicatorService.GetATR(parameters.Symbol, "1d").Result;
                 }
                 catch (Exception ex)
                 {
@@ -1546,7 +1553,7 @@ namespace Quantra.DAL.Services
                 try
                 {
                     // Calculate 5-day vs 50-day moving average for trend
-                    var historicalPrices = await historicalDataService.GetHistoricalPrices(spySymbol, "3mo", "1d");
+                    var historicalPrices = await _historicalDataService.GetHistoricalPrices(spySymbol, "3mo", "1d");
                     if (historicalPrices != null && historicalPrices.Count >= 50)
                     {
                         double sma5 = historicalPrices.Take(5).Average(p => p.Close);
@@ -4043,7 +4050,7 @@ namespace Quantra.DAL.Services
 
         private bool IsHighLiquidity(string stock)
         {
-            return GetMarketPrice(stock).Result > 5 && technicalIndicatorService.GetVWAP(stock, "1min").Result > 1;
+            return GetMarketPrice(stock).Result > 5 && _technicalIndicatorService.GetVWAP(stock, "1min").Result > 1;
         }
 
         private bool HasRecentNewsCatalyst(string stock)
@@ -4102,7 +4109,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Use CEF-based Yahoo Finance data retrieval
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 if (quote != null)
                 {
                     return quote;
@@ -4149,9 +4156,9 @@ namespace Quantra.DAL.Services
                 }
                 
                 // Use the HistoricalDataService to get the data
-                var historicalPrices = await historicalDataService.GetHistoricalPrices(symbol, range, interval);
+                var historicalPrices = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 // Await the conversion to StockData, since ConvertToStockData is async and returns Task<StockData>
-                return await historicalDataService.ConvertToStockData(historicalPrices, symbol, range, interval);
+                return await _historicalDataService.ConvertToStockData(historicalPrices, symbol, range, interval);
             }
             catch (Exception ex)
             {
@@ -4241,7 +4248,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 if (quote != null)
                 {
                     return quote;
@@ -4279,7 +4286,7 @@ namespace Quantra.DAL.Services
                         break;
                 }
 
-                var prices = await alphaVantageService.GetHistoricalClosingPricesAsync(symbol, dataPoints);
+                var prices = await _alphaVantageService.GetHistoricalClosingPricesAsync(symbol, dataPoints);
 
                 if (prices == null || prices.Count == 0)
                     throw new Exception($"No historical data available for {symbol}");
@@ -4589,7 +4596,7 @@ namespace Quantra.DAL.Services
 
         public TechnicalIndicatorService GetTechnicalIndicatorService()
         {
-            return technicalIndicatorService;
+            return _technicalIndicatorService;
         }
 
         // Add this new public method to the WebullTradingBot class to make PlaceLimitOrder accessible from the OrdersPage
@@ -4696,7 +4703,7 @@ namespace Quantra.DAL.Services
                 }
 
                 // Fetch historical closing prices using CEF/Yahoo Finance
-                var closingPrices = await alphaVantageService.GetHistoricalClosingPricesAsync(symbol, dataPoints);
+                var closingPrices = await _alphaVantageService.GetHistoricalClosingPricesAsync(symbol, dataPoints);
 
                 if (closingPrices == null || closingPrices.Count < period + 1)
                 {

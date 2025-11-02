@@ -12,7 +12,8 @@ using System.Windows.Threading;  // Add this explicit namespace reference
 using Quantra.Adapters; // Add this to use the PredictionModelAdapter
 using Quantra.Models;
 using System.Collections.ObjectModel;
-using Quantra.DAL.Services; // Added for ObservableCollection
+using Quantra.DAL.Services;
+using Quantra.DAL.Data; // Added for ObservableCollection
 
 namespace Quantra.Controls
 {
@@ -382,7 +383,7 @@ namespace Quantra.Controls
                 this.Predictions.Clear(); 
                 if (PredictionDataGrid != null) PredictionDataGrid.ItemsSource = this.Predictions;
 
-                EnsureDatabaseTablesExist();
+                //EnsureDatabaseTablesExist();
                 List<string> majorStocks = await FetchMajorUSStocks(token);
 
                 token.ThrowIfCancellationRequested();

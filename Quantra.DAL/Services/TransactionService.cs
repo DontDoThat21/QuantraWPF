@@ -1,25 +1,38 @@
 using Quantra.Models;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SQLite;
-using Dapper; // Add Dapper namespace import
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.DAL.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.DAL.Services
 {
     public class TransactionService : ITransactionService
     {
+        private readonly QuantraDbContext _context;
+
+        public TransactionService(QuantraDbContext context)
+        {
+            _context = context;
+        }
+
+        // Parameterless constructor for backward compatibility
+        public TransactionService()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            _context = new QuantraDbContext(optionsBuilder.Options);
+        }
+
         public List<TransactionModel> GetTransactions()
         {
             return ResilienceHelper.Retry(() =>
             {
                 try
                 {
-                    // Use DatabaseMonolith to get orders from the OrderHistory table
+                    // Use Entity Framework to get orders from the OrderHistory table
                     return GetOrdersFromDatabase();
                 }
                 catch (Exception ex)
@@ -29,91 +42,41 @@ namespace Quantra.DAL.Services
                 
                 // Return empty list in case of error
                 return new List<TransactionModel>();
-            }
+                }
             }, RetryOptions.ForUserFacingOperation());
         }
 
         private List<TransactionModel> GetOrdersFromDatabase()
         {
-            var transactions = new List<TransactionModel>();
-            
-            using (var connection = ConnectionHelper.GetConnection())
+            // Ensure database is created
+            _context.Database.EnsureCreated();
+
+            // Query OrderHistory using Entity Framework
+            var orderEntities = _context.OrderHistory
+                .AsNoTracking()
+                .OrderByDescending(o => o.Timestamp)
+                .ToList();
+
+            // Map entities to TransactionModel
+            var transactions = orderEntities.Select(order => new TransactionModel
             {
-                connection.Open();
-                
-                // Check if the OrderHistory table exists
-                var tableExists = connection.ExecuteScalar<int>(
-                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='OrderHistory'");
-                
-                if (tableExists == 0)
-                {
-                    // Create the OrderHistory table if it doesn't exist
-                    CreateOrderHistoryTable();
-                    return transactions; // Return empty list as the table was just created
-                }
-                
-                // Query to get all orders from the OrderHistory table
-                string query = @"
-                    SELECT 
-                        Symbol, 
-                        OrderType as TransactionType, 
-                        Quantity, 
-                        Price as ExecutionPrice,
-                        (Price * Quantity) as TotalValue,
-                        Timestamp as ExecutionTime,
-                        IsPaperTrade,
-                        StopLoss,
-                        TakeProfit,
-                        PredictionSource as Notes,
-                        0.0 as Fees, -- Default for now, could be updated later
-                        0.0 as RealizedPnL, -- Default for now, could be calculated
-                        0.0 as RealizedPnLPercentage, -- Default for now
-                        Status
-                    FROM OrderHistory
-                    ORDER BY Timestamp DESC";
-                
-                using (var command = new SQLiteCommand(query, connection))
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var transaction = new TransactionModel
-                        {
-                            Symbol = reader["Symbol"].ToString(),
-                            TransactionType = reader["TransactionType"].ToString(),
-                            Quantity = Convert.ToInt32(reader["Quantity"]),
-                            ExecutionPrice = Convert.ToDouble(reader["ExecutionPrice"]),
-                            TotalValue = Convert.ToDouble(reader["TotalValue"]),
-                            ExecutionTime = Convert.ToDateTime(reader["ExecutionTime"]),
-                            IsPaperTrade = Convert.ToBoolean(reader["IsPaperTrade"]),
-                            Fees = Convert.ToDouble(reader["Fees"]),
-                            RealizedPnL = Convert.ToDouble(reader["RealizedPnL"]),
-                            RealizedPnLPercentage = Convert.ToDouble(reader["RealizedPnLPercentage"]),
-                            Notes = reader["Notes"].ToString(),
-                            OrderSource = string.IsNullOrEmpty(reader["Notes"].ToString()) ? "Manual" : "Automated"
-                        };
-                        transactions.Add(transaction);
-                    }
-                }
-            }
-            
+                Symbol = order.Symbol,
+                TransactionType = order.OrderType,
+                Quantity = order.Quantity,
+                ExecutionPrice = order.Price,
+                TotalValue = order.Price * order.Quantity,
+                ExecutionTime = order.Timestamp,
+                IsPaperTrade = order.IsPaperTrade,
+                Fees = 0.0, // Default for now, could be updated later
+                RealizedPnL = 0.0, // Default for now, could be calculated
+                RealizedPnLPercentage = 0.0, // Default for now
+                Notes = order.PredictionSource ?? string.Empty,
+                OrderSource = string.IsNullOrEmpty(order.PredictionSource) ? "Manual" : "Automated",
+                Status = order.Status
+            }).ToList();
+
             //DatabaseMonolith.Log("Info", $"Retrieved {transactions.Count} transactions from database");
             return transactions;
-        }
-
-        private void CreateOrderHistoryTable()
-        {
-            // Entity Framework will create the OrderHistory table automatically
-            // This method ensures the database is initialized with all required tables
-            var options = new DbContextOptionsBuilder<QuantraDbContext>()
-                .UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;")
-                .Options;
-
-            using (var dbContext = new QuantraDbContext(options))
-            {
-                dbContext.Initialize();
-            }
-            //DatabaseMonolith.Log("Info", "Ensured OrderHistory table exists via Entity Framework");
         }
 
         // Sample data method preserved for reference or testing
@@ -140,61 +103,32 @@ namespace Quantra.DAL.Services
             return transactions;
         }
 
-        // In a real app, methods below would be implemented to interact with the database
-
         public TransactionModel GetTransaction(int id)
         {
             try
             {
-                using (var connection = ConnectionHelper.GetConnection())
+                var entity = _context.OrderHistory
+                    .AsNoTracking()
+                    .FirstOrDefault(o => o.Id == id);
+
+                if (entity == null)
+                    return null;
+
+                return new TransactionModel
                 {
-                    connection.Open();
-                    
-                    string query = @"
-                        SELECT 
-                            Symbol, 
-                            OrderType as TransactionType, 
-                            Quantity, 
-                            Price as ExecutionPrice,
-                            (Price * Quantity) as TotalValue,
-                            Timestamp as ExecutionTime,
-                            IsPaperTrade,
-                            StopLoss,
-                            TakeProfit,
-                            PredictionSource as Notes,
-                            0.0 as Fees,
-                            0.0 as RealizedPnL,
-                            0.0 as RealizedPnLPercentage,
-                            Status
-                        FROM OrderHistory
-                        WHERE Id = @Id";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Id", id);
-                        using (var reader = command.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                return new TransactionModel
-                                {
-                                    Symbol = reader["Symbol"].ToString(),
-                                    TransactionType = reader["TransactionType"].ToString(),
-                                    Quantity = Convert.ToInt32(reader["Quantity"]),
-                                    ExecutionPrice = Convert.ToDouble(reader["ExecutionPrice"]),
-                                    TotalValue = Convert.ToDouble(reader["TotalValue"]),
-                                    ExecutionTime = Convert.ToDateTime(reader["ExecutionTime"]),
-                                    IsPaperTrade = Convert.ToBoolean(reader["IsPaperTrade"]),
-                                    Fees = Convert.ToDouble(reader["Fees"]),
-                                    RealizedPnL = Convert.ToDouble(reader["RealizedPnL"]),
-                                    RealizedPnLPercentage = Convert.ToDouble(reader["RealizedPnLPercentage"]),
-                                    Notes = reader["Notes"].ToString()
-                                };
-                            }
-                        }
-                    }
-                }
-                return null;
+                    Symbol = entity.Symbol,
+                    TransactionType = entity.OrderType,
+                    Quantity = entity.Quantity,
+                    ExecutionPrice = entity.Price,
+                    TotalValue = entity.Price * entity.Quantity,
+                    ExecutionTime = entity.Timestamp,
+                    IsPaperTrade = entity.IsPaperTrade,
+                    Fees = 0.0,
+                    RealizedPnL = 0.0,
+                    RealizedPnLPercentage = 0.0,
+                    Notes = entity.PredictionSource ?? string.Empty,
+                    Status = entity.Status
+                };
             }
             catch (Exception ex)
             {
@@ -207,61 +141,27 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var transactions = new List<TransactionModel>();
-                
-                using (var connection = ConnectionHelper.GetConnection())
+                var entities = _context.OrderHistory
+                    .AsNoTracking()
+                    .Where(o => o.Timestamp >= startDate && o.Timestamp <= endDate)
+                    .OrderByDescending(o => o.Timestamp)
+                    .ToList();
+
+                return entities.Select(entity => new TransactionModel
                 {
-                    connection.Open();
-                    
-                    string query = @"
-                        SELECT 
-                            Symbol, 
-                            OrderType as TransactionType, 
-                            Quantity, 
-                            Price as ExecutionPrice,
-                            (Price * Quantity) as TotalValue,
-                            Timestamp as ExecutionTime,
-                            IsPaperTrade,
-                            StopLoss,
-                            TakeProfit,
-                            PredictionSource as Notes,
-                            0.0 as Fees,
-                            0.0 as RealizedPnL,
-                            0.0 as RealizedPnLPercentage,
-                            Status
-                        FROM OrderHistory
-                        WHERE Timestamp BETWEEN @StartDate AND @EndDate
-                        ORDER BY Timestamp DESC";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@StartDate", startDate.ToString("yyyy-MM-dd HH:mm:ss"));
-                        command.Parameters.AddWithValue("@EndDate", endDate.ToString("yyyy-MM-dd HH:mm:ss"));
-                        
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                transactions.Add(new TransactionModel
-                                {
-                                    Symbol = reader["Symbol"].ToString(),
-                                    TransactionType = reader["TransactionType"].ToString(),
-                                    Quantity = Convert.ToInt32(reader["Quantity"]),
-                                    ExecutionPrice = Convert.ToDouble(reader["ExecutionPrice"]),
-                                    TotalValue = Convert.ToDouble(reader["TotalValue"]),
-                                    ExecutionTime = Convert.ToDateTime(reader["ExecutionTime"]),
-                                    IsPaperTrade = Convert.ToBoolean(reader["IsPaperTrade"]),
-                                    Fees = Convert.ToDouble(reader["Fees"]),
-                                    RealizedPnL = Convert.ToDouble(reader["RealizedPnL"]),
-                                    RealizedPnLPercentage = Convert.ToDouble(reader["RealizedPnLPercentage"]),
-                                    Notes = reader["Notes"].ToString()
-                                });
-                            }
-                        }
-                    }
-                }
-                
-                return transactions;
+                    Symbol = entity.Symbol,
+                    TransactionType = entity.OrderType,
+                    Quantity = entity.Quantity,
+                    ExecutionPrice = entity.Price,
+                    TotalValue = entity.Price * entity.Quantity,
+                    ExecutionTime = entity.Timestamp,
+                    IsPaperTrade = entity.IsPaperTrade,
+                    Fees = 0.0,
+                    RealizedPnL = 0.0,
+                    RealizedPnLPercentage = 0.0,
+                    Notes = entity.PredictionSource ?? string.Empty,
+                    Status = entity.Status
+                }).ToList();
             }
             catch (Exception ex)
             {
@@ -274,60 +174,27 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var transactions = new List<TransactionModel>();
-                
-                using (var connection = ConnectionHelper.GetConnection())
+                var entities = _context.OrderHistory
+                    .AsNoTracking()
+                    .Where(o => o.Symbol == symbol)
+                    .OrderByDescending(o => o.Timestamp)
+                    .ToList();
+
+                return entities.Select(entity => new TransactionModel
                 {
-                    connection.Open();
-                    
-                    string query = @"
-                        SELECT 
-                            Symbol, 
-                            OrderType as TransactionType, 
-                            Quantity, 
-                            Price as ExecutionPrice,
-                            (Price * Quantity) as TotalValue,
-                            Timestamp as ExecutionTime,
-                            IsPaperTrade,
-                            StopLoss,
-                            TakeProfit,
-                            PredictionSource as Notes,
-                            0.0 as Fees,
-                            0.0 as RealizedPnL,
-                            0.0 as RealizedPnLPercentage,
-                            Status
-                        FROM OrderHistory
-                        WHERE Symbol = @Symbol
-                        ORDER BY Timestamp DESC";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", symbol);
-                        
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                transactions.Add(new TransactionModel
-                                {
-                                    Symbol = reader["Symbol"].ToString(),
-                                    TransactionType = reader["TransactionType"].ToString(),
-                                    Quantity = Convert.ToInt32(reader["Quantity"]),
-                                    ExecutionPrice = Convert.ToDouble(reader["ExecutionPrice"]),
-                                    TotalValue = Convert.ToDouble(reader["TotalValue"]),
-                                    ExecutionTime = Convert.ToDateTime(reader["ExecutionTime"]),
-                                    IsPaperTrade = Convert.ToBoolean(reader["IsPaperTrade"]),
-                                    Fees = Convert.ToDouble(reader["Fees"]),
-                                    RealizedPnL = Convert.ToDouble(reader["RealizedPnL"]),
-                                    RealizedPnLPercentage = Convert.ToDouble(reader["RealizedPnLPercentage"]),
-                                    Notes = reader["Notes"].ToString()
-                                });
-                            }
-                        }
-                    }
-                }
-                
-                return transactions;
+                    Symbol = entity.Symbol,
+                    TransactionType = entity.OrderType,
+                    Quantity = entity.Quantity,
+                    ExecutionPrice = entity.Price,
+                    TotalValue = entity.Price * entity.Quantity,
+                    ExecutionTime = entity.Timestamp,
+                    IsPaperTrade = entity.IsPaperTrade,
+                    Fees = 0.0,
+                    RealizedPnL = 0.0,
+                    RealizedPnLPercentage = 0.0,
+                    Notes = entity.PredictionSource ?? string.Empty,
+                    Status = entity.Status
+                }).ToList();
             }
             catch (Exception ex)
             {
@@ -342,46 +209,30 @@ namespace Quantra.DAL.Services
             {
                 try
                 {
-                    using (var connection = ConnectionHelper.GetConnection())
+                    var entity = new Data.Entities.OrderHistoryEntity
                     {
-                        connection.Open();
-                        
-                        string query = @"
-                            INSERT INTO OrderHistory (
-                                Symbol, OrderType, Quantity, Price, 
-                                StopLoss, TakeProfit, IsPaperTrade, 
-                                Status, PredictionSource, Timestamp
-                            )
-                        VALUES (
-                            @Symbol, @OrderType, @Quantity, @Price,
-                            @StopLoss, @TakeProfit, @IsPaperTrade,
-                            @Status, @PredictionSource, @Timestamp
-                        )";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
-                    {
-                        command.Parameters.AddWithValue("@Symbol", transaction.Symbol);
-                        command.Parameters.AddWithValue("@OrderType", transaction.TransactionType);
-                        command.Parameters.AddWithValue("@Quantity", transaction.Quantity);
-                        command.Parameters.AddWithValue("@Price", transaction.ExecutionPrice);
-                        command.Parameters.AddWithValue("@StopLoss", 0.0); // Default value, can be updated
-                        command.Parameters.AddWithValue("@TakeProfit", 0.0); // Default value, can be updated
-                        command.Parameters.AddWithValue("@IsPaperTrade", transaction.IsPaperTrade ? 1 : 0);
-                        command.Parameters.AddWithValue("@Status", "Executed");
-                        command.Parameters.AddWithValue("@PredictionSource", transaction.Notes ?? string.Empty);
-                        command.Parameters.AddWithValue("@Timestamp", transaction.ExecutionTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                        
-                        command.ExecuteNonQuery();
-                    }
+                        Symbol = transaction.Symbol,
+                        OrderType = transaction.TransactionType,
+                        Quantity = transaction.Quantity,
+                        Price = transaction.ExecutionPrice,
+                        StopLoss = null, // Default value, can be updated
+                        TakeProfit = null, // Default value, can be updated
+                        IsPaperTrade = transaction.IsPaperTrade,
+                        Status = "Executed",
+                        PredictionSource = transaction.Notes ?? string.Empty,
+                        Timestamp = transaction.ExecutionTime
+                    };
+
+                    _context.OrderHistory.Add(entity);
+                    _context.SaveChanges();
+
+                    //DatabaseMonolith.Log("Info", $"Saved transaction for {transaction.Symbol} ({transaction.TransactionType})");
                 }
-                
-                //DatabaseMonolith.Log("Info", $"Saved transaction for {transaction.Symbol} ({transaction.TransactionType})");
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to save transaction", ex.ToString());
-                throw;
-            }
+                catch (Exception ex)
+                {
+                    //DatabaseMonolith.Log("Error", "Failed to save transaction", ex.ToString());
+                    throw;
+                }
             }, RetryOptions.ForCriticalOperation());
         }
 
@@ -391,26 +242,20 @@ namespace Quantra.DAL.Services
             {
                 try
                 {
-                    using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    
-                    string query = "DELETE FROM OrderHistory WHERE Id = @Id";
-                    
-                    using (var command = new SQLiteCommand(query, connection))
+                    var entity = _context.OrderHistory.Find(id);
+                    if (entity != null)
                     {
-                        command.Parameters.AddWithValue("@Id", id);
-                        command.ExecuteNonQuery();
+                        _context.OrderHistory.Remove(entity);
+                        _context.SaveChanges();
                     }
+
+                    //DatabaseMonolith.Log("Info", $"Deleted transaction with ID {id}");
                 }
-                
-                //DatabaseMonolith.Log("Info", $"Deleted transaction with ID {id}");
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to delete transaction with ID {id}", ex.ToString());
-                throw;
-            }
+                catch (Exception ex)
+                {
+                    //DatabaseMonolith.Log("Error", $"Failed to delete transaction with ID {id}", ex.ToString());
+                    throw;
+                }
             }, RetryOptions.ForCriticalOperation());
         }
     }

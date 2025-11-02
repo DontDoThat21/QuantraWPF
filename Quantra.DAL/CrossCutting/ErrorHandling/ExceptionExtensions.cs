@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-//using System.Data.SQLite;
+using Microsoft.Data.SqlClient;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,19 +21,33 @@ namespace Quantra.CrossCutting.ErrorHandling
             typeof(SocketException),
             typeof(WebException),
             typeof(HttpRequestException),
-            typeof(IOException)//,
-            //typeof(SQLiteException)
+            typeof(IOException),
+            typeof(SqlException)
         };
 
-        // Error codes that typically indicate transient issues for SQLite
-        private static readonly int[] _transientSqliteErrorCodes = new[]
+        // Error codes that typically indicate transient issues for SQL Server
+        private static readonly int[] _transientSqlServerErrorNumbers = new[]
         {
-            5,   // SQLite_BUSY
-            6,   // SQLite_LOCKED
-            261, // SQLite_BUSY_RECOVERY
-            262, // SQLite_LOCKED_SHAREDCACHE
-            517, // SQLite_BUSY_SNAPSHOT
-            1555 // SQLite_BUSY_TIMEOUT
+            -2,    // Timeout expired
+            -1,    // Connection broken
+            2,     // Network error
+            64,    // Connection failed during login
+            233,   // Connection initialization error
+            1205,  // Deadlock victim
+            4060,  // Cannot open database
+            4221,  // Login timeout expired
+            10053, // Transport-level error
+            10054, // Connection forcibly closed by remote host
+            10060, // Network or instance-specific error
+            10061, // No connection could be made
+            40143, // Connection could not be initialized
+            40197, // Service has encountered an error
+            40501, // Service is currently busy
+            40540, // Service has encountered an error
+            40613, // Database unavailable
+            49918, // Cannot process request
+            49919, // Cannot process create or update request
+            49920  // Cannot process request
         };
 
         /// <summary>
@@ -48,11 +62,11 @@ namespace Quantra.CrossCutting.ErrorHandling
             var exceptionType = exception.GetType();
             if (_transientExceptionTypes.Contains(exceptionType))
             {
-                // For SQLite exceptions, check the error code
-                if (exceptionType == typeof(SQLiteException))
+                // For SQL Server exceptions, check the error number
+                if (exceptionType == typeof(SqlException))
                 {
-                    var sqliteEx = (SQLiteException)exception;
-                    return _transientSqliteErrorCodes.Contains(sqliteEx.ErrorCode);
+                    var sqlEx = (SqlException)exception;
+                    return _transientSqlServerErrorNumbers.Contains(sqlEx.Number);
                 }
                 
                 return true;

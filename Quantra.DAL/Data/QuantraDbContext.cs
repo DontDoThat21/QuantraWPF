@@ -11,7 +11,7 @@ namespace Quantra.DAL.Data
     /// </summary>
     /// <remarks>
     /// This DbContext replaces the monolithic DatabaseMonolith pattern with a proper ORM approach.
-    /// Uses SQLite with WAL mode for better concurrency and performance.
+    /// Uses SQL Server LocalDB for better performance and compatibility.
     /// 
     /// Key features:
     /// - Automatic change tracking
@@ -65,14 +65,14 @@ namespace Quantra.DAL.Data
         if (!optionsBuilder.IsConfigured)
         {
       // Default configuration if not provided via DI
-optionsBuilder.UseSqlite("Data Source=Quantra.db",
-  sqliteOptions =>
-            {
-      sqliteOptions.CommandTimeout(30);
-    });
+          optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString,
+      sqlServerOptions =>
+      {
+      sqlServerOptions.CommandTimeout(30);
+         });
   }
 
-          base.OnConfiguring(optionsBuilder);
+      base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -107,11 +107,8 @@ optionsBuilder.UseSqlite("Data Source=Quantra.db",
         public void Initialize()
         {
         Database.EnsureCreated();
-            
-         // For SQLite, configure WAL mode
-            Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
-Database.ExecuteSqlRaw("PRAGMA synchronous=NORMAL;");
- Database.ExecuteSqlRaw("PRAGMA busy_timeout=30000;");
+  
+         // For SQL Server, no special PRAGMA settings needed
         }
     }
 }

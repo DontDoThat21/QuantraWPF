@@ -47,9 +47,15 @@ namespace Quantra
   public string AlphaVantageApiKey { get; internal set; }
 
      public DatabaseMonolith(SettingsService settingsService)
-        {
-          _settingsService = settingsService;
-          Initialize();
+   {
+        _settingsService = settingsService;
+ 
+   // Initialize DbContext
+          var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+          optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+ _dbContext = new QuantraDbContext(optionsBuilder.Options);
+       
+     Initialize();
         }
 
         /// <summary>
@@ -174,52 +180,133 @@ catch (Exception ex)
             }
       }
 
-        /// <summary>
-        /// Gets user settings from database. Returns default settings if none exist.
-        /// TODO: Implement proper persistence using UserPreferences or a dedicated settings table
+      /// <summary>
+        /// Adds an order to the order history table using Entity Framework Core
         /// </summary>
-        public static UserSettings GetUserSettings()
+        /// <param name="order">The order to add to history</param>
+     public void AddOrderToHistory(OrderModel order)
         {
-            // For now, return default UserSettings to allow compilation
+    if (order == null)
+          {
+          Log("Error", "Cannot add null order to history");
+        return;
+        }
+
+   try
+        {
+       // Map OrderModel to OrderHistoryEntity
+    var entity = new OrderHistoryEntity
+    {
+Symbol = order.Symbol,
+       OrderType = order.OrderType,
+    Quantity = order.Quantity,
+    Price = order.Price,
+    StopLoss = order.StopLoss > 0 ? order.StopLoss : null,
+ TakeProfit = order.TakeProfit > 0 ? order.TakeProfit : null,
+      IsPaperTrade = order.IsPaperTrade,
+          Status = order.Status,
+     PredictionSource = order.PredictionSource ?? string.Empty,
+       Timestamp = order.Timestamp
+       };
+
+_dbContext.OrderHistory.Add(entity);
+      _dbContext.SaveChanges();
+
+   Log("Info", $"Order added to history: {order.Symbol} {order.OrderType} {order.Quantity} @ {order.Price:C2}");
+  }
+            catch (Exception ex)
+        {
+     Log("Error", $"Failed to add order to history: {order.Symbol}", ex.ToString());
+          }
+   }
+
+        /// <summary>
+        /// Saves a trade record to the database using Entity Framework Core
+        /// </summary>
+        /// <param name="trade">The trade record to save</param>
+      public void SaveTradeRecord(TradeRecord trade)
+        {
+      if (trade == null)
+    {
+     Log("Error", "Cannot save null TradeRecord");
+         return;
+    }
+
+   try
+{
+           // Map TradeRecord to TradeRecordEntity
+        var entity = new TradeRecordEntity
+        {
+     Symbol = trade.Symbol?.ToUpper(),
+         Action = trade.Action,
+  Price = trade.Price,
+          TargetPrice = trade.TargetPrice,
+       Confidence = trade.Confidence,
+         ExecutionTime = trade.ExecutionTime,
+  Status = trade.Status ?? "Executed",
+         Notes = trade.Notes
+          };
+
+           _dbContext.TradeRecords.Add(entity);
+  _dbContext.SaveChanges();
+
+     // Update the model with the generated ID
+   trade.Id = entity.Id;
+
+           Log("Info", $"TradeRecord saved: {trade.Symbol} {trade.Action} @ {trade.Price:C}");
+       }
+            catch (Exception ex)
+            {
+                Log("Error", $"Failed to save TradeRecord for {trade?.Symbol}", ex.ToString());
+}
+        }
+
+  /// <summary>
+        /// Gets user settings from database. Returns default settings if none exist.
+ /// TODO: Implement proper persistence using UserPreferences or a dedicated settings table
+   /// </summary>
+  public static UserSettings GetUserSettings()
+        {
+          // For now, return default UserSettings to allow compilation
             // TODO: Load from database using _dbContext or UserPreferences table
             return new UserSettings();
         }
 
         /// <summary>
-        /// Saves user settings to database
-        /// TODO: Implement proper persistence using UserPreferences or a dedicated settings table
+/// Saves user settings to database
+  /// TODO: Implement proper persistence using UserPreferences or a dedicated settings table
         /// </summary>
-        public static void SaveUserSettings(UserSettings settings)
+      public static void SaveUserSettings(UserSettings settings)
         {
             // TODO: Persist to database using _dbContext or UserPreferences table
-            LoggingService.Log("Info", "SaveUserSettings called - persistence not yet implemented");
+   LoggingService.Log("Info", "SaveUserSettings called - persistence not yet implemented");
         }
 
         /// <summary>
         /// Gets user preference by key
-        /// </summary>
+ /// </summary>
         public static string GetUserPreference(string key, string defaultValue = null)
-        {
+  {
             // TODO: Implement using _dbContext.UserPreferences
-            return defaultValue;
+        return defaultValue;
         }
 
         /// <summary>
-        /// Saves user preference
-        /// </summary>
+      /// Saves user preference
+/// </summary>
         public static void SaveUserPreference(string key, string value)
         {
-            // TODO: Implement using _dbContext.UserPreferences
-            LoggingService.Log("Info", $"SaveUserPreference called for key: {key}");
-        }
+       // TODO: Implement using _dbContext.UserPreferences
+     LoggingService.Log("Info", $"SaveUserPreference called for key: {key}");
+     }
 
         /// <summary>
         /// Gets remembered accounts
-        /// </summary>
+ /// </summary>
         public static Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
-        {
-            // TODO: Implement using _dbContext.UserCredentials
-            return new Dictionary<string, (string, string, string)>();
+      {
+      // TODO: Implement using _dbContext.UserCredentials
+  return new Dictionary<string, (string, string, string)>();
         }
 
         /// <summary>
@@ -227,10 +314,10 @@ catch (Exception ex)
         /// </summary>
         public static void RememberAccount(string username, string password, string pin)
         {
-            // TODO: Implement using _dbContext.UserCredentials
-            LoggingService.Log("Info", $"RememberAccount called for username: {username}");
+     // TODO: Implement using _dbContext.UserCredentials
+          LoggingService.Log("Info", $"RememberAccount called for username: {username}");
         }
 
         // ...existing code...
-    }
+  }
 }

@@ -18,7 +18,7 @@ namespace Quantra.DAL.Services
     {
         private static readonly HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(25) };
         private readonly HistoricalDataService _historicalDataService;
-        private readonly IAlphaVantageService _alphaVantageService;
+        private readonly AlphaVantageService _alphaVantageService;
         private readonly string _apiKey;
         private readonly Dictionary<string, Func<string, string, Task<double>>> _indicators;
         
@@ -33,9 +33,9 @@ namespace Quantra.DAL.Services
         private readonly IMonitoringManager _monitoringManager;
         private bool _disposed = false;
 
-        public TechnicalIndicatorService(IAlphaVantageService alphaVantageService)
+        public TechnicalIndicatorService(AlphaVantageService alphaVantageService, UserSettingsService userSettingsService)
         {
-            _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
+            _alphaVantageService = alphaVantageService;
 
             // Read API key from JSON file
             var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "alphaVantageSettings.json");
@@ -51,7 +51,7 @@ namespace Quantra.DAL.Services
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("AlphaVantageApiKey is empty in settings file.");
 
-            _historicalDataService = new HistoricalDataService();
+            _historicalDataService = new HistoricalDataService(userSettingsService);
 
             _indicators = new Dictionary<string, Func<string, string, Task<double>>>
             {
@@ -1320,7 +1320,7 @@ namespace Quantra.DAL.Services
                 if (indicatorType == "RSI" || indicatorType == "MACD" || indicatorType == "ADX" || 
                     indicatorType == "ROC" || indicatorType == "BB_Width")
                 {
-                    return await DatabaseMonolith.GetHistoricalIndicatorData(symbol, indicatorType);
+                    return await _alphaVantageService.GetHistoricalIndicatorData(symbol, indicatorType);
                 }
 
                 // For indicators not directly available from DatabaseMonolith, 
@@ -1329,7 +1329,7 @@ namespace Quantra.DAL.Services
                 {
                     case "STOCHRSI":
                         // For StochRSI, get RSI values first then calculate StochRSI
-                        var rsiValues = await DatabaseMonolith.GetHistoricalIndicatorData(symbol, "RSI");
+                        var rsiValues = await _alphaVantageService.GetHistoricalIndicatorData(symbol, "RSI");
                         return CalculateStochRSIFromRSI(rsiValues);
                         
                     case "VWAP":

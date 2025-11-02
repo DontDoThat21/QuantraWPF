@@ -30,9 +30,9 @@ namespace Quantra.DAL.Services
     {
         private readonly HistoricalDataService _historicalDataService;
 
-        public StockDataCacheService()
+        public StockDataCacheService(UserSettingsService userSettingsService)
         {
-            _historicalDataService = new HistoricalDataService();
+            _historicalDataService = new HistoricalDataService(userSettingsService);
             EnsureCacheTableExists();
         }
 

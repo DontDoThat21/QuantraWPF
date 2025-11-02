@@ -21,9 +21,9 @@ namespace Quantra.DAL.Services
         /// Constructor
         /// </summary>
         /// <param name="historicalDataService">Historical data service for loading price data</param>
-        public CustomBenchmarkService(HistoricalDataService historicalDataService = null)
+        public CustomBenchmarkService(HistoricalDataService historicalDataService)
         {
-            _historicalDataService = historicalDataService ?? new HistoricalDataService();
+            _historicalDataService = historicalDataService;
             
             // Define path for storing custom benchmarks
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

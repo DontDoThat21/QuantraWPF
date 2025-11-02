@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-//using System.Data.SQLite;
+using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -15,6 +15,8 @@ using System.Text.Json;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Utilities;
 using Quantra.Models;
+using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.DAL.Services
 {
@@ -138,7 +140,7 @@ namespace Quantra.DAL.Services
                 // Use resilience patterns for the database check
                 await ResilienceHelper.RetryAsync(async () => 
                 {
-                    using var connection = new SQLiteConnection(DatabaseMonolith.ConnectionString);
+                    using var connection = ConnectionHelper.GetConnection();
                     await connection.OpenAsync();
 
                     // Quick query to check connection is working
@@ -288,7 +290,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Check if stock symbol cache is valid
-                if (!DatabaseMonolith.IsSymbolCacheValid())
+                if (!StockSymbolCacheService.IsSymbolCacheValid())
                 {
                     Performance.RecordFailure("SymbolCacheValidity");
                     

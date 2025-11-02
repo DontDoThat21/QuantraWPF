@@ -37,11 +37,13 @@ namespace Quantra.Views.Backtesting
         private readonly CustomBenchmarkService _customBenchmarkService;
         private ObservableCollection<CustomBenchmark> _customBenchmarks;
         
-        public BacktestResultsControl()
+        public BacktestResultsControl(HistoricalDataService historicalDataService,
+            CustomBenchmarkService customBenchmarkService
+            )
         {
             InitializeComponent();
-            _historicalDataService = new HistoricalDataService();
-            _customBenchmarkService = new CustomBenchmarkService(_historicalDataService);
+            _historicalDataService = historicalDataService;
+            _customBenchmarkService = customBenchmarkService;
             _customBenchmarks = new ObservableCollection<CustomBenchmark>();
             
             // Initialize UI elements if needed

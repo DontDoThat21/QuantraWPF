@@ -14,9 +14,15 @@ namespace Quantra.DAL.Services
         private readonly WebullTradingBot _tradingBot;
 
         // Accept configuration in constructor
-        public OrderService()
+        public OrderService(UserSettingsService userSettingsService,
+                HistoricalDataService historicalDataService,
+                AlphaVantageService alphaVantageService,
+                TechnicalIndicatorService technicalIndicatorService)
         {
-            _tradingBot = new WebullTradingBot();
+            _tradingBot = new WebullTradingBot(userSettingsService,
+                historicalDataService,
+                alphaVantageService,
+                technicalIndicatorService);
         }
 
         public async Task<bool> PlaceLimitOrder(string symbol, int quantity, string orderType, double price)

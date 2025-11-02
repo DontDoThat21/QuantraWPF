@@ -14,26 +14,26 @@ namespace Quantra.DAL.Data
         /// Adds Quantra database services to the service collection
         /// </summary>
         /// <param name="services">The service collection</param>
-        /// <param name="connectionString">Optional connection string (defaults to Quantra.db)</param>
+        /// <param name="connectionString">Optional connection string (defaults to SQL Server LocalDB)</param>
         /// <returns>The service collection for chaining</returns>
         public static IServiceCollection AddQuantraDatabase(
          this IServiceCollection services,
        string connectionString = null)
         {
-    connectionString ??= "Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;";
+    connectionString ??= ConnectionHelper.ConnectionString;
 
   // Register DbContext
             services.AddDbContext<QuantraDbContext>(options =>
             {
-options.UseSqlite(connectionString, sqliteOptions =>
-                {
-  sqliteOptions.CommandTimeout(30);
-                });
+  options.UseSqlServer(connectionString, sqlServerOptions =>
+           {
+  sqlServerOptions.CommandTimeout(30);
+          });
 
   // Enable sensitive data logging in development
 #if DEBUG
       options.EnableSensitiveDataLogging();
-          options.EnableDetailedErrors();
+        options.EnableDetailedErrors();
 #endif
           });
 

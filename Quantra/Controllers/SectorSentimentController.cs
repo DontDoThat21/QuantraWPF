@@ -113,10 +113,10 @@ namespace Quantra.Controllers
                 // This data could be displayed in a separate view or dialog
                 // For now, we'll just log some of the key findings
                 //DatabaseMonolith.Log("Info", 
-                    $"Sector {sector} correlation analysis: " +
-                    $"Overall Correlation: {correlation.OverallCorrelation:F2}, " +
-                    $"Lead/Lag: {correlation.LeadLagRelationship:F1} days, " +
-                    $"Sentiment Shifts: {correlation.SentimentShiftEvents.Count}");
+                    //$"Sector {sector} correlation analysis: " +
+                    //$"Overall Correlation: {correlation.OverallCorrelation:F2}, " +
+                    //$"Lead/Lag: {correlation.LeadLagRelationship:F1} days, " +
+                    //$"Sentiment Shifts: {correlation.SentimentShiftEvents.Count}");
             }
             catch (Exception ex)
             {

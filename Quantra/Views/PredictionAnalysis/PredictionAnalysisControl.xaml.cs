@@ -17,16 +17,17 @@ using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 using Quantra.Repositories;
 using Quantra.DAL.Services;
+using Quantra.DAL.Data;
 
 namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl, INotifyPropertyChanged
     {
         private readonly PredictionAnalysisViewModel _viewModel;
-        private readonly INotificationService _notificationService;
-        private readonly IStockDataCacheService _stockDataCacheService;
-        private readonly ITechnicalIndicatorService _indicatorService;
-        private readonly IEmailService _emailService;
+        private readonly NotificationService _notificationService;
+        private readonly StockDataCacheService _stockDataCacheService;
+        private readonly TechnicalIndicatorService _indicatorService;
+        private readonly EmailService _emailService;
         private readonly IndicatorDisplayModule _indicatorModule;
         private readonly PredictionChartModuleType _chartModule;
         private string _pacId; // Unique identifier for this PAC instance
@@ -40,33 +41,33 @@ namespace Quantra.Controls
 
         public PredictionAnalysisControl(
             PredictionAnalysisViewModel viewModel,
-            INotificationService notificationService,
-            ITechnicalIndicatorService indicatorService,
+            NotificationService notificationService,
+            TechnicalIndicatorService indicatorService,
             PredictionAnalysisRepository analysisRepository,
             StockDataCacheService stockDataCacheService,
-            ITradingService tradingService,
-            ISettingsService settingsService,
-            IAlphaVantageService alphaVantageService,
-            IEmailService emailService)
+            TradingService tradingService,
+            SettingsService settingsService,
+            AlphaVantageService alphaVantageService,
+            EmailService emailService)
         {
             InitializeComponent();
 
-            var repo = analysisRepository ?? new PredictionAnalysisRepository();
-            var indicatorSvc = indicatorService ?? new TechnicalIndicatorService();
-            var emailSvc = emailService ?? new EmailService();
-            var audioSvc = new AudioService(DatabaseMonolith.GetUserSettings());
-            var smsSvc = new SmsService();
-            var settingsSvc = settingsService ?? new SettingsService();
-            var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc, settingsSvc);
-            var stockDataCacheSvc = stockDataCacheService ?? new StockDataCacheService();
-            var tradingSvc = tradingService ?? new TradingService(emailSvc, notificationSvc, smsSvc);
-            var alphaSvc = alphaVantageService ?? new AlphaVantageService();
+            //var repo = analysisRepository ?? new PredictionAnalysisRepository();
+            //var indicatorSvc = indicatorService ?? new TechnicalIndicatorService();
+            //var emailSvc = emailService ?? new EmailService();
+            //var audioSvc = new AudioService(DatabaseMonolith.GetUserSettings());
+            //var smsSvc = new SmsService();
+            //var settingsSvc = settingsService ?? new SettingsService();
+            //var notificationSvc = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(), audioSvc, settingsSvc);
+            //var stockDataCacheSvc = stockDataCacheService ?? new StockDataCacheService();
+            //var tradingSvc = tradingService ?? new TradingService(emailSvc, notificationSvc, smsSvc);
+            //var alphaSvc = alphaVantageService ?? new AlphaVantageService();
 
-            _viewModel = viewModel ?? new PredictionAnalysisViewModel(indicatorSvc, repo, tradingSvc, settingsSvc, alphaSvc, emailSvc);
-            _notificationService = notificationSvc;
-            _stockDataCacheService = stockDataCacheSvc;
-            _indicatorService = indicatorSvc;
-            _emailService = emailSvc;
+            _viewModel = viewModel;
+            _notificationService = notificationService;
+            _stockDataCacheService = stockDataCacheService;
+            _indicatorService = indicatorService;
+            _emailService = emailService;
         
 
             _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);

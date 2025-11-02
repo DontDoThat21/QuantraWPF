@@ -97,7 +97,7 @@ namespace Quantra.ViewModels
 
         private readonly StockDataCacheService _cacheService;
         private readonly AlphaVantageService _alphaVantageService;
-        private readonly StockDataCacheService _stockDataCacheService = new StockDataCacheService();
+        private readonly StockDataCacheService _stockDataCacheService;
         private readonly RealTimeInferenceService _inferenceService;
         private readonly PredictionCacheService _predictionCacheService;
 

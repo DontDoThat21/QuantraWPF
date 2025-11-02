@@ -22,6 +22,7 @@ using Quantra.Enums;
 using Quantra.Views.Shared;
 using Quantra.Utilities;
 using Quantra.DAL.Services;
+using Quantra.DAL.Data;
 
 namespace Quantra.Controls 
 {
@@ -41,6 +42,7 @@ namespace Quantra.Controls
         private readonly OpenAISentimentService _openAISentimentService;
         private readonly FinancialNewsSentimentService _newsSentimentService;
         private readonly AnalystRatingService _analystRatingService;
+        private readonly AlphaVantageService _alphaVantageService;
         private readonly SectorSentimentAnalysisService _sectorSentimentService;
         private readonly TwitterSentimentService _twitterSentimentService;
         
@@ -474,15 +476,15 @@ namespace Quantra.Controls
             };
         }
 
-        public StockExplorer()
+        public StockExplorer(StockDataCacheService stockDataCacheService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
             
             InitializeComponent();
             _viewModel = new StockExplorerViewModel();
-            _cacheService = new StockDataCacheService();
-            
+            _cacheService = stockDataCacheService;
+
             // Initialize sentiment analysis services with null checks
             try
             {
@@ -1121,7 +1123,6 @@ namespace Quantra.Controls
 
                     case SymbolSelectionMode.TopVolumeRsiDiscrepancies:
                         // Get stocks with high volume and RSI discrepancies
-                        var alphaVantageService = new AlphaVantageService();
                         stockList = await GetTopVolumeRsiDiscrepancies();
                         break;
 
@@ -1824,8 +1825,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var alphaVantageService = new AlphaVantageService();
-                        return await alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
+                        return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
                     }
                     catch (System.OperationCanceledException)
                     {
@@ -1837,8 +1837,7 @@ namespace Quantra.Controls
                         //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
                         
                         cancellationToken.ThrowIfCancellationRequested();
-                        var cacheService = new StockDataCacheService();
-                        return await cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
+                        return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
                     }
                 }, cancellationToken).ConfigureAwait(false);
                 
@@ -1875,8 +1874,7 @@ namespace Quantra.Controls
                             try
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                var cacheService = new StockDataCacheService();
-                                await cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                                await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
                             }
                             catch (System.OperationCanceledException)
                             {
@@ -1955,16 +1953,14 @@ namespace Quantra.Controls
                 {
                     try
                     {
-                        var alphaVantageService = new AlphaVantageService();
-                        return await alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
+                        return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
                     }
                     catch (Exception apiEx)
                     {
                         // If API fails, try to use any available cached data from the database
                         //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
                         
-                        var cacheService = new StockDataCacheService();
-                        return await cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
+                        return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
                 
@@ -1987,8 +1983,7 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var cacheService = new StockDataCacheService();
-                                await cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                                await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
                             }
                             catch (Exception cacheEx)
                             {
@@ -2042,8 +2037,7 @@ namespace Quantra.Controls
                 var quoteData = await Task.Run(async () =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var alphaVantageService = new AlphaVantageService();
-                    return await alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
+                    return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
                 }, cancellationToken).ConfigureAwait(false);
                 
                 if (quoteData != null)
@@ -2077,8 +2071,7 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var cacheService = new StockDataCacheService();
-                                await cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                                await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
                             }
                             catch (Exception cacheEx)
                             {
@@ -2389,7 +2382,6 @@ namespace Quantra.Controls
                     GlobalLoadingStateService.SetLoadingState(true);
                 });
                 
-                var alphaVantageService = new AlphaVantageService();
                 
                 // Instead of clearing and rebuilding, update individual indicator properties
                 // This eliminates the flashing UI by maintaining consistent elements
@@ -2402,7 +2394,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var rsi = await alphaVantageService.GetRSI(symbol).ConfigureAwait(false);
+                        var rsi = await _alphaVantageService.GetRSI(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             RsiValue = FormatIndicatorValue("RSI", rsi);
@@ -2428,7 +2420,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var peRatio = await alphaVantageService.GetPERatioAsync(symbol).ConfigureAwait(false);
+                        var peRatio = await _alphaVantageService.GetPERatioAsync(symbol).ConfigureAwait(false);
                         if (peRatio.HasValue)
                         {
                             await Dispatcher.InvokeAsync(() => {
@@ -2464,7 +2456,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var macdData = await alphaVantageService.GetMACD(symbol).ConfigureAwait(false);
+                        var macdData = await _alphaVantageService.GetMACD(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() =>
                         {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
@@ -2497,7 +2489,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var vwap = await alphaVantageService.GetVWAP(symbol).ConfigureAwait(false);
+                        var vwap = await _alphaVantageService.GetVWAP(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             VwapValue = FormatIndicatorValue("VWAP", vwap);
@@ -2523,7 +2515,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var adx = await alphaVantageService.GetLatestADX(symbol).ConfigureAwait(false);
+                        var adx = await _alphaVantageService.GetLatestADX(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             AdxValue = FormatIndicatorValue("ADX", adx);
@@ -2548,7 +2540,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var cci = await alphaVantageService.GetCCI(symbol).ConfigureAwait(false);
+                        var cci = await _alphaVantageService.GetCCI(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             CciValue = FormatIndicatorValue("CCI", cci);
@@ -2574,7 +2566,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var atr = await alphaVantageService.GetATR(symbol).ConfigureAwait(false);
+                        var atr = await _alphaVantageService.GetATR(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             AtrValue = FormatIndicatorValue("ATR", atr);
@@ -2599,7 +2591,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var mfi = await alphaVantageService.GetMFI(symbol).ConfigureAwait(false);
+                        var mfi = await _alphaVantageService.GetMFI(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() => {
                             SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                             MfiValue = FormatIndicatorValue("MFI", mfi);
@@ -2624,7 +2616,7 @@ namespace Quantra.Controls
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        var stoch = await alphaVantageService.GetSTOCH(symbol).ConfigureAwait(false);
+                        var stoch = await _alphaVantageService.GetSTOCH(symbol).ConfigureAwait(false);
                         await Dispatcher.InvokeAsync(() =>
                         {
                             StochKValue = FormatIndicatorValue("Stoch K", stoch.StochK);
@@ -2796,7 +2788,6 @@ namespace Quantra.Controls
         private async Task<List<(string Symbol, double Volume, double Price, double ChangePercent)>> IdentifyHighVolumeStocks(List<string> stockUniverse)
         {
             var highVolumeStocks = new List<(string Symbol, double Volume, double Price, double ChangePercent)>();
-            var alphaVantageService = new AlphaVantageService();
             var batchSize = 20; // Process in smaller batches to avoid API rate limits
             var processedCount = 0;
             
@@ -2813,7 +2804,7 @@ namespace Quantra.Controls
                     {
                         try
                         {
-                            var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                            var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                             if (quote != null)
                             {
                                 // Include all stocks with reasonable volume (no additional filters for pure high volume mode)
@@ -2864,7 +2855,6 @@ namespace Quantra.Controls
         private async Task<List<QuoteData>> ConvertToQuoteDataList(List<(string Symbol, double Volume, double Price, double ChangePercent)> volumeStocks)
         {
             var result = new List<QuoteData>();
-            var alphaVantageService = new AlphaVantageService();
             var batchSize = 15; // Smaller batches for indicator calls
             var processedCount = 0;
             
@@ -2895,7 +2885,7 @@ namespace Quantra.Controls
                             // Try to get RSI data
                             try
                             {
-                                var rsi = await alphaVantageService.GetRSI(symbol);
+                                var rsi = await _alphaVantageService.GetRSI(symbol);
                                 extendedQuote.RSI = rsi;
                             }
                             catch
@@ -2906,7 +2896,7 @@ namespace Quantra.Controls
                             // Try to get P/E ratio data
                             try
                             {
-                                var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                 extendedQuote.PERatio = peRatio ?? 0;
                             }
                             catch
@@ -2917,7 +2907,7 @@ namespace Quantra.Controls
                             // Try to get VWAP data
                             try
                             {
-                                var vwap = await alphaVantageService.GetVWAP(symbol);
+                                var vwap = await _alphaVantageService.GetVWAP(symbol);
                                 extendedQuote.VWAP = vwap;
                             }
                             catch
@@ -2958,7 +2948,6 @@ namespace Quantra.Controls
         private async Task<List<(string Symbol, double Volume, double Price, double ChangePercent)>> IdentifyVolumeLeaders(List<string> stockUniverse)
         {
             var volumeLeaders = new List<(string Symbol, double Volume, double Price, double ChangePercent)>();
-            var alphaVantageService = new AlphaVantageService();
             var batchSize = 20; // Process in smaller batches to avoid API rate limits
             var processedCount = 0;
             
@@ -2975,7 +2964,7 @@ namespace Quantra.Controls
                     {
                         try
                         {
-                            var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                            var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                             if (quote != null)
                             {
                                 // Criteria for catalytic stocks: High volume AND significant price movement
@@ -3027,7 +3016,6 @@ namespace Quantra.Controls
         private async Task<List<QuoteData>> BatchProcessRsiDiscrepancies(List<(string Symbol, double Volume, double Price, double ChangePercent)> volumeLeaders)
         {
             var rsiDiscrepancies = new List<QuoteData>();
-            var alphaVantageService = new AlphaVantageService();
             var batchSize = 15; // Smaller batches for RSI calls which are more expensive
             var processedCount = 0;
             
@@ -3044,7 +3032,7 @@ namespace Quantra.Controls
                     {
                         try
                         {
-                            var rsi = await alphaVantageService.GetRSI(leader.Symbol);
+                            var rsi = await _alphaVantageService.GetRSI(leader.Symbol);
                             
                             // Enhanced RSI discrepancy criteria
                             var isRsiDiscrepancy = false;
@@ -3079,7 +3067,7 @@ namespace Quantra.Controls
                             if (isRsiDiscrepancy)
                             {
                                 // Get additional quote data for complete analysis
-                                var quote = await alphaVantageService.GetQuoteDataAsync(leader.Symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(leader.Symbol);
                                 if (quote != null)
                                 {
                                     var extendedQuote = new QuoteData
@@ -3101,7 +3089,7 @@ namespace Quantra.Controls
                                     // Try to get P/E ratio for fundamental analysis
                                     try
                                     {
-                                        var peRatio = await alphaVantageService.GetPERatioAsync(leader.Symbol);
+                                        var peRatio = await _alphaVantageService.GetPERatioAsync(leader.Symbol);
                                         extendedQuote.PERatio = peRatio ?? 0;
                                     }
                                     catch
@@ -3112,7 +3100,7 @@ namespace Quantra.Controls
                                     // Try to get VWAP data
                                     try
                                     {
-                                        var vwap = await alphaVantageService.GetVWAP(leader.Symbol);
+                                        var vwap = await _alphaVantageService.GetVWAP(leader.Symbol);
                                         extendedQuote.VWAP = vwap;
                                     }
                                     catch
@@ -3195,8 +3183,8 @@ namespace Quantra.Controls
                     scoredStocks.Add(stock);
                     
                     //DatabaseMonolith.Log("Debug", $"Catalytic score calculated for {stock.Symbol}: {catalyticScore:F1} " +
-                                               $"(Vol: {volumeScore:F1}, RSI: {rsiDiscrepancyScore:F1}, Price: {priceMovementScore:F1}, " +
-                                               $"Volatility: {volatilityScore:F1}, Bonus: {extremeBonus:F1})");
+                                               //$"(Vol: {volumeScore:F1}, RSI: {rsiDiscrepancyScore:F1}, Price: {priceMovementScore:F1}, " +
+                                               //$"Volatility: {volatilityScore:F1}, Bonus: {extremeBonus:F1})");
                 }
                 catch (Exception ex)
                 {
@@ -3208,7 +3196,7 @@ namespace Quantra.Controls
             var rankedResults = scoredStocks.OrderByDescending(x => x.PredictionConfidence).ToList();
             
             //DatabaseMonolith.Log("Info", $"Catalytic scoring complete. Top stock: {rankedResults.FirstOrDefault()?.Symbol} " +
-                                       $"(Score: {rankedResults.FirstOrDefault()?.PredictionConfidence:F1})");
+                                       //$"(Score: {rankedResults.FirstOrDefault()?.PredictionConfidence:F1})");
             
             return rankedResults;
         }
@@ -3219,11 +3207,9 @@ namespace Quantra.Controls
             try
             {
                 //DatabaseMonolith.Log("Info", "Starting dynamic Top P/E stock analysis...");
-                var alphaVantageService = new AlphaVantageService();
-                var cacheService = new StockDataCacheService();
 
                 // Get comprehensive list of symbols, prioritizing popular/liquid stocks first
-                var allSymbols = await alphaVantageService.GetAllStockSymbols();
+                var allSymbols = await _alphaVantageService.GetAllStockSymbols();
                 
                 // Prioritize symbols: start with popular stocks, then S&P 500, then others
                 var prioritizedSymbols = new List<string>();
@@ -3270,7 +3256,7 @@ namespace Quantra.Controls
                         try
                         {
                             // Check if we have recent cached P/E data first
-                            var cachedPE = DatabaseMonolith.GetCachedFundamentalData(symbol, "PE_RATIO", 4); // 4 hour cache
+                            var cachedPE = _alphaVantageService.GetCachedFundamentalData(symbol, "PE_RATIO", 4); // 4 hour cache
                             
                             double? peRatio = null;
                             if (cachedPE.HasValue)
@@ -3280,7 +3266,7 @@ namespace Quantra.Controls
                             else
                             {
                                 // Fetch P/E ratio from API
-                                peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                             }
 
                             if (peRatio.HasValue && peRatio.Value > 0)
@@ -3289,7 +3275,7 @@ namespace Quantra.Controls
                                 QuoteData quote = null;
                                 
                                 // Check if we have recent cached quote data
-                                var cachedStock = cacheService.GetCachedStock(symbol);
+                                var cachedStock = _cacheService.GetCachedStock(symbol);
                                 
                                 if (cachedStock != null && (DateTime.Now - cachedStock.LastUpdated).TotalHours < 2)
                                 {
@@ -3298,7 +3284,7 @@ namespace Quantra.Controls
                                 else
                                 {
                                     // Fetch from API if not in cache or cache is stale
-                                    quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                    quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 }
 
                                 if (quote != null)
@@ -3318,7 +3304,7 @@ namespace Quantra.Controls
                                     // Optionally add RSI if available in cache (to avoid additional API calls)
                                     try
                                     {
-                                        var cachedRSI = DatabaseMonolith.GetCachedFundamentalData(symbol, "RSI", 2); // 2 hour cache for RSI
+                                        var cachedRSI = _alphaVantageService.GetCachedFundamentalData(symbol, "RSI", 2); // 2 hour cache for RSI
                                         if (cachedRSI.HasValue)
                                         {
                                             stockData.RSI = cachedRSI.Value;
@@ -3332,7 +3318,7 @@ namespace Quantra.Controls
                                     // Try to get VWAP data
                                     try
                                     {
-                                        var vwap = await alphaVantageService.GetVWAP(symbol);
+                                        var vwap = await _alphaVantageService.GetVWAP(symbol);
                                         stockData.VWAP = vwap;
                                     }
                                     catch
@@ -3372,7 +3358,7 @@ namespace Quantra.Controls
                     .ToList();
 
                 //DatabaseMonolith.Log("Info", $"Dynamic P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
-                                           $"Top stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
+                                           //$"Top stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
 
                 return result;
             }
@@ -3426,11 +3412,9 @@ namespace Quantra.Controls
             try
             {
                 //DatabaseMonolith.Log("Info", "Starting dynamic Low P/E stock analysis...");
-                var alphaVantageService = new AlphaVantageService();
-                var cacheService = new StockDataCacheService();
 
                 // Get comprehensive list of symbols, prioritizing popular/liquid stocks first
-                var allSymbols = await alphaVantageService.GetAllStockSymbols();
+                var allSymbols = await _alphaVantageService.GetAllStockSymbols();
                 
                 // Prioritize symbols: start with popular stocks, then S&P 500, then others
                 var prioritizedSymbols = new List<string>();
@@ -3477,7 +3461,7 @@ namespace Quantra.Controls
                         try
                         {
                             // Check if we have recent cached P/E data first
-                            var cachedPE = DatabaseMonolith.GetCachedFundamentalData(symbol, "PE_RATIO", 4); // 4 hour cache
+                            var cachedPE = _alphaVantageService.GetCachedFundamentalData(symbol, "PE_RATIO", 4); // 4 hour cache
                             
                             double? peRatio = null;
                             if (cachedPE.HasValue)
@@ -3487,7 +3471,7 @@ namespace Quantra.Controls
                             else
                             {
                                 // Fetch P/E ratio from API
-                                peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                             }
 
                             if (peRatio.HasValue && peRatio.Value > 0)
@@ -3496,7 +3480,7 @@ namespace Quantra.Controls
                                 QuoteData quote = null;
                                 
                                 // Check if we have recent cached quote data
-                                var cachedStock = cacheService.GetCachedStock(symbol);
+                                var cachedStock = _cacheService.GetCachedStock(symbol);
                                 
                                 if (cachedStock != null && (DateTime.Now - cachedStock.LastUpdated).TotalHours < 2)
                                 {
@@ -3505,7 +3489,7 @@ namespace Quantra.Controls
                                 else
                                 {
                                     // Fetch from API if not in cache or cache is stale
-                                    quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                    quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 }
 
                                 if (quote != null)
@@ -3525,7 +3509,7 @@ namespace Quantra.Controls
                                     // Optionally add RSI if available in cache (to avoid additional API calls)
                                     try
                                     {
-                                        var cachedRSI = DatabaseMonolith.GetCachedFundamentalData(symbol, "RSI", 2); // 2 hour cache for RSI
+                                        var cachedRSI = _alphaVantageService.GetCachedFundamentalData(symbol, "RSI", 2); // 2 hour cache for RSI
                                         if (cachedRSI.HasValue)
                                         {
                                             stockData.RSI = cachedRSI.Value;
@@ -3539,7 +3523,7 @@ namespace Quantra.Controls
                                     // Try to get VWAP data
                                     try
                                     {
-                                        var vwap = await alphaVantageService.GetVWAP(symbol);
+                                        var vwap = await _alphaVantageService.GetVWAP(symbol);
                                         stockData.VWAP = vwap;
                                     }
                                     catch
@@ -3579,7 +3563,7 @@ namespace Quantra.Controls
                     .ToList();
 
                 //DatabaseMonolith.Log("Info", $"Dynamic Low P/E analysis complete. Found {result.Count} stocks with valid P/E ratios. " +
-                                           $"Lowest P/E stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
+                                           //$"Lowest P/E stock: {result.FirstOrDefault()?.Symbol} (P/E: {result.FirstOrDefault()?.PERatio:F2})");
 
                 return result;
             }
@@ -3599,7 +3583,6 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI oversold scan: {symbols.Count} symbols");
 
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 20; // Process in smaller batches to avoid API rate limits
                 var processedCount = 0;
                 var oversoldThreshold = 35; // More flexible threshold for better results
@@ -3617,8 +3600,8 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
-                                var rsi = await alphaVantageService.GetRSI(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
+                                var rsi = await _alphaVantageService.GetRSI(symbol);
                                 
                                 if (quote != null && rsi < oversoldThreshold) // Oversold condition
                                 {
@@ -3636,7 +3619,7 @@ namespace Quantra.Controls
 
                                     try
                                     {
-                                        var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                        var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                         extendedQuote.PERatio = peRatio ?? 0;
                                     }
                                     catch
@@ -3647,7 +3630,7 @@ namespace Quantra.Controls
                                     // Try to get VWAP data
                                     try
                                     {
-                                        var vwap = await alphaVantageService.GetVWAP(symbol);
+                                        var vwap = await _alphaVantageService.GetVWAP(symbol);
                                         extendedQuote.VWAP = vwap;
                                     }
                                     catch
@@ -3704,7 +3687,6 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for RSI overbought scan: {symbols.Count} symbols");
 
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 20; // Process in smaller batches to avoid API rate limits
                 var processedCount = 0;
                 var overboughtThreshold = 65; // More flexible threshold for better results
@@ -3722,8 +3704,8 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
-                                var rsi = await alphaVantageService.GetRSI(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
+                                var rsi = await _alphaVantageService.GetRSI(symbol);
                                 
                                 if (quote != null && rsi > overboughtThreshold) // Overbought condition
                                 {
@@ -3741,7 +3723,7 @@ namespace Quantra.Controls
 
                                     try
                                     {
-                                        var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                        var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                         extendedQuote.PERatio = peRatio ?? 0;
                                     }
                                     catch
@@ -3752,7 +3734,7 @@ namespace Quantra.Controls
                                     // Try to get VWAP data
                                     try
                                     {
-                                        var vwap = await alphaVantageService.GetVWAP(symbol);
+                                        var vwap = await _alphaVantageService.GetVWAP(symbol);
                                         extendedQuote.VWAP = vwap;
                                     }
                                     catch
@@ -3809,7 +3791,6 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Theta scan: {symbols.Count} symbols");
 
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 15; // Smaller batches due to additional calculations
                 var processedCount = 0;
                 var volatilityThreshold = 0.25; // High implied volatility threshold
@@ -3827,11 +3808,11 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 if (quote != null)
                                 {
                                     // Calculate volatility from price history as a proxy for theta opportunities
-                                    var priceHistory = await GetRecentPriceHistory(symbol, alphaVantageService);
+                                    var priceHistory = await GetRecentPriceHistory(symbol);
                                     var volatility = CalculateVolatility(priceHistory);
                                     
                                     // High theta opportunities: high volatility stocks suitable for covered calls, cash-secured puts
@@ -3853,7 +3834,7 @@ namespace Quantra.Controls
                                         
                                         try
                                         {
-                                            var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                            var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
@@ -3864,7 +3845,7 @@ namespace Quantra.Controls
                                         // Try to get VWAP data
                                         try
                                         {
-                                            var vwap = await alphaVantageService.GetVWAP(symbol);
+                                            var vwap = await _alphaVantageService.GetVWAP(symbol);
                                             extendedQuote.VWAP = vwap;
                                         }
                                         catch
@@ -3922,7 +3903,6 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Beta scan: {symbols.Count} symbols");
 
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 15; // Smaller batches due to beta calculations
                 var processedCount = 0;
                 var betaThreshold = 1.2; // High beta threshold for momentum trading
@@ -3940,11 +3920,11 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 if (quote != null)
                                 {
                                     // Calculate beta using correlation with market movements
-                                    var beta = await CalculateBeta(symbol, alphaVantageService);
+                                    var beta = await CalculateBeta(symbol);
                                     
                                     // High beta stocks: strong correlation with market movements
                                     if (beta > betaThreshold && quote.Volume > 500000) // High beta + high volume for liquidity
@@ -3965,7 +3945,7 @@ namespace Quantra.Controls
                                         
                                         try
                                         {
-                                            var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                            var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
@@ -3976,7 +3956,7 @@ namespace Quantra.Controls
                                         // Try to get VWAP data
                                         try
                                         {
-                                            var vwap = await alphaVantageService.GetVWAP(symbol);
+                                            var vwap = await _alphaVantageService.GetVWAP(symbol);
                                             extendedQuote.VWAP = vwap;
                                         }
                                         catch
@@ -4034,7 +4014,6 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Alpha scan: {symbols.Count} symbols");
 
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 12; // Smaller batches due to complex alpha calculations
                 var processedCount = 0;
                 var alphaThreshold = 0.05; // 5% excess return threshold
@@ -4052,11 +4031,11 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 if (quote != null)
                                 {
                                     // Calculate alpha by comparing stock returns vs market returns
-                                    var alpha = await CalculateAlpha(symbol, alphaVantageService);
+                                    var alpha = await CalculateAlpha(symbol);
                                     
                                     // High alpha stocks: consistently outperforming the market
                                     if (alpha > alphaThreshold && quote.Volume > 250000) // Good alpha + sufficient volume
@@ -4077,7 +4056,7 @@ namespace Quantra.Controls
                                         
                                         try
                                         {
-                                            var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                            var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
@@ -4088,7 +4067,7 @@ namespace Quantra.Controls
                                         // Try to get VWAP data
                                         try
                                         {
-                                            var vwap = await alphaVantageService.GetVWAP(symbol);
+                                            var vwap = await _alphaVantageService.GetVWAP(symbol);
                                             extendedQuote.VWAP = vwap;
                                         }
                                         catch
@@ -4147,7 +4126,6 @@ namespace Quantra.Controls
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Cup and Handle scan: {symbols.Count} symbols");
 
                 var patternService = new PricePatternRecognitionService(_cacheService);
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 8; // Smaller batches due to complex pattern analysis
                 var processedCount = 0;
                 var minConfidence = 70.0; // Minimum confidence for cup and handle patterns
@@ -4165,7 +4143,7 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 if (quote != null && quote.Volume > 100000) // Ensure sufficient liquidity
                                 {
                                     // Detect cup and handle patterns for this symbol
@@ -4197,7 +4175,7 @@ namespace Quantra.Controls
                                         
                                         try
                                         {
-                                            var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                            var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
@@ -4208,7 +4186,7 @@ namespace Quantra.Controls
                                         // Try to get VWAP data
                                         try
                                         {
-                                            var vwap = await alphaVantageService.GetVWAP(symbol);
+                                            var vwap = await _alphaVantageService.GetVWAP(symbol);
                                             extendedQuote.VWAP = vwap;
                                         }
                                         catch
@@ -4267,7 +4245,6 @@ namespace Quantra.Controls
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for Bearish Cup and Handle scan: {symbols.Count} symbols");
 
                 var patternService = new PricePatternRecognitionService(_cacheService);
-                var alphaVantageService = new AlphaVantageService();
                 var batchSize = 8; // Smaller batches due to complex pattern analysis
                 var processedCount = 0;
                 var minConfidence = 70.0; // Minimum confidence for bearish cup and handle patterns
@@ -4285,7 +4262,7 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                                 if (quote != null && quote.Volume > 100000) // Ensure sufficient liquidity
                                 {
                                     // Detect bearish cup and handle patterns for this symbol
@@ -4317,7 +4294,7 @@ namespace Quantra.Controls
                                         
                                         try
                                         {
-                                            var peRatio = await alphaVantageService.GetPERatioAsync(symbol);
+                                            var peRatio = await _alphaVantageService.GetPERatioAsync(symbol);
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
@@ -4328,7 +4305,7 @@ namespace Quantra.Controls
                                         // Try to get VWAP data
                                         try
                                         {
-                                            var vwap = await alphaVantageService.GetVWAP(symbol);
+                                            var vwap = await _alphaVantageService.GetVWAP(symbol);
                                             extendedQuote.VWAP = vwap;
                                         }
                                         catch
@@ -4379,13 +4356,13 @@ namespace Quantra.Controls
         /// <summary>
         /// Helper method to get recent price history for volatility calculation
         /// </summary>
-        private async Task<List<double>> GetRecentPriceHistory(string symbol, AlphaVantageService alphaVantageService)
+        private async Task<List<double>> GetRecentPriceHistory(string symbol)
         {
             var prices = new List<double>();
             try
             {
                 // Simple implementation using daily high/low/close for basic volatility
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 if (quote != null)
                 {
                     // Add some price points for basic volatility calculation
@@ -4440,11 +4417,11 @@ namespace Quantra.Controls
         /// <summary>
         /// Calculate beta by comparing stock movement to market movement
         /// </summary>
-        private async Task<double> CalculateBeta(string symbol, AlphaVantageService alphaVantageService)
+        private async Task<double> CalculateBeta(string symbol)
         {
             try
             {
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 if (quote == null) return 1.0;
                 
                 // Simplified beta calculation based on daily change percentage
@@ -4468,11 +4445,11 @@ namespace Quantra.Controls
         /// <summary>
         /// Calculate alpha by comparing stock performance to expected market performance
         /// </summary>
-        private async Task<double> CalculateAlpha(string symbol, AlphaVantageService alphaVantageService)
+        private async Task<double> CalculateAlpha(string symbol)
         {
             try
             {
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 if (quote == null) return 0.0;
                 
                 // Simplified alpha calculation - in production would use historical returns vs benchmark
