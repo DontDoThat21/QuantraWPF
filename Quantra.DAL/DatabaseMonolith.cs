@@ -11,6 +11,7 @@ using Quantra.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Quantra.DAL.Data;
 using Quantra.DAL.Data.Entities;
+using System.Linq;
 
 namespace Quantra
 {
@@ -423,5 +424,149 @@ var service = new UserSettingsService(dbContext);
  }
 
         #endregion
+
+        /// <summary>
+        /// Loads grid configuration (rows and columns) for a specific tab
+        /// </summary>
+        /// <param name="tabName">The name of the tab</param>
+        /// <returns>A tuple containing the number of rows and columns</returns>
+        [Obsolete("Use a dedicated TabConfigurationService via dependency injection")]
+     public static (int Rows, int Columns) LoadGridConfig(string tabName)
+      {
+     try
+            {
+// Create a temporary DbContext for backward compatibility
+    var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+
+      // Query the UserAppSettings table for the tab
+  var tabConfig = dbContext.UserAppSettings
+       .AsNoTracking()
+        .FirstOrDefault(t => t.TabName == tabName);
+
+        if (tabConfig != null)
+  {
+    // Return the grid dimensions, ensuring minimum of 4x4
+ int rows = Math.Max(4, tabConfig.GridRows);
+        int columns = Math.Max(4, tabConfig.GridColumns);
+         return (rows, columns);
+       }
+
+         // If no config found, return default 4x4
+         LoggingService.Log("Warning", $"No grid configuration found for tab '{tabName}', using default 4x4");
+           return (4, 4);
+            }
+            catch (Exception ex)
+ {
+        LoggingService.Log("Error", $"Failed to load grid configuration for tab '{tabName}'", ex.ToString());
+  // Return default on error
+         return (4, 4);
+    }
+    }
+
+        /// <summary>
+        /// Loads controls configuration for a specific tab
+        /// </summary>
+/// <param name="tabName">The name of the tab</param>
+    /// <returns>The controls configuration string, or empty string if not found</returns>
+        [Obsolete("Use a dedicated TabConfigurationService via dependency injection")]
+    public static string LoadControlsConfig(string tabName)
+  {
+         try
+     {
+         // Create a temporary DbContext for backward compatibility
+         var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+      optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+          using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+
+ // Query the UserAppSettings table for the tab
+     var tabConfig = dbContext.UserAppSettings
+        .AsNoTracking()
+  .FirstOrDefault(t => t.TabName == tabName);
+
+    if (tabConfig != null && !string.IsNullOrWhiteSpace(tabConfig.ControlsConfig))
+ {
+        return tabConfig.ControlsConfig;
+                }
+
+    // Return empty string if no config found
+       return string.Empty;
+    }
+    catch (Exception ex)
+        {
+        LoggingService.Log("Error", $"Failed to load controls configuration for tab '{tabName}'", ex.ToString());
+        return string.Empty;
+    }
+        }
+
+        /// <summary>
+        /// Loads controls for a specific tab as a list of ControlModel objects
+        /// </summary>
+  /// <param name="tabName">The name of the tab</param>
+        /// <returns>List of ControlModel objects</returns>
+      [Obsolete("Use a dedicated TabConfigurationService via dependency injection")]
+        public static List<ControlModel> LoadControlsForTab(string tabName)
+   {
+  try
+  {
+        // Load the controls configuration string
+             var controlsConfig = LoadControlsConfig(tabName);
+      
+     // Return empty list if no configuration found
+     if (string.IsNullOrWhiteSpace(controlsConfig))
+      {
+        return new List<ControlModel>();
+        }
+
+    // Parse the controls configuration string
+              // Format: "ControlType,Row,Column,RowSpan,ColSpan;ControlType,Row,Column,RowSpan,ColSpan;..."
+    var controlsList = new List<ControlModel>();
+      
+        // Split by semicolons or newlines
+       var controlEntries = controlsConfig
+      .Replace("\r\n", ";")
+     .Replace("\n", ";")
+         .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+     foreach (var entry in controlEntries)
+     {
+     try
+    {
+var parts = entry.Split(',');
+         
+    if (parts.Length >= 3)
+         {
+    string type = parts[0].Trim();
+    int row = int.Parse(parts[1]);
+ int column = int.Parse(parts[2]);
+    int rowSpan = parts.Length >= 4 ? int.Parse(parts[3]) : 1;
+ int colSpan = parts.Length >= 5 ? int.Parse(parts[4]) : 1;
+
+      controlsList.Add(new ControlModel
+  {
+         Type = type,
+       Row = row,
+  Column = column,
+      RowSpan = rowSpan,
+           ColSpan = colSpan
+        });
+        }
+        }
+          catch (Exception ex)
+   {
+     LoggingService.Log("Warning", $"Failed to parse control entry: {entry}", ex.ToString());
+            }
   }
+
+     return controlsList;
+      }
+        catch (Exception ex)
+      {
+ LoggingService.Log("Error", $"Failed to load controls for tab '{tabName}'", ex.ToString());
+       return new List<ControlModel>();
+     }
+}
+
+    }
 }

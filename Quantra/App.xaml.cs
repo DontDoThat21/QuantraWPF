@@ -66,18 +66,6 @@ namespace Quantra
 
                 // Set configuration for DatabaseMonolith
                 DatabaseMonolith.SetConfiguration(Configuration);
-
-                // --- Clear old error logs on startup ---
-                using (_logger.BeginTimedOperation("DeleteOldErrors"))
-                {
-                    DatabaseMonolith.DeleteOldErrors();
-                }
-
-                // Ensure IndicatorSettings table exists
-                using (_logger.BeginTimedOperation("InitializeIndicatorSettings"))
-                {
-                    IndicatorSettingsService.InitializeService();
-                }
             }
             catch (Exception ex)
             {

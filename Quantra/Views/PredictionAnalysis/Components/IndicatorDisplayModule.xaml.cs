@@ -18,6 +18,7 @@ using Quantra.Controls;  // Added for AlertsControl
 using Quantra.CrossCutting.Monitoring;
 using Quantra.DAL.Services;
 using Quantra.Utilities;
+using Quantra.DAL.Data;
 
 namespace Quantra.Controls.Components
 {

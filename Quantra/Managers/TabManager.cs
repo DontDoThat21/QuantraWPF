@@ -1,5 +1,6 @@
 using Dapper;
 using Quantra.Controls;
+using Quantra.DAL.Data;
 using Quantra.Repositories;
 using System;
 using System.Collections.Generic;

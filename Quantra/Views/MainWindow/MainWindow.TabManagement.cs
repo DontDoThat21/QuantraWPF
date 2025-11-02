@@ -1,5 +1,6 @@
 using Dapper;
 using Quantra.Controls;
+using Quantra.DAL.Data;
 using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Repositories;

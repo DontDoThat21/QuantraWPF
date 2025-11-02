@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 //using System.Data.SQLite;
 using System.Linq;
+using Quantra.DAL.Data;
 using Quantra.Models;
 
 namespace Quantra.Repositories
