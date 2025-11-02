@@ -43,8 +43,7 @@ namespace Quantra.Controls
                 double currentPrice = 0.0;
                 try 
                 {
-                    var alphaVantageService = new AlphaVantageService();
-                    var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                    var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                     currentPrice = quote?.Price ?? 0.0;
                 } 
                 catch (Exception ex)
@@ -707,4 +706,4 @@ namespace Quantra.Controls
             return ("HOLD", confidence, currentPrice);
         }
     }
-}}
+}

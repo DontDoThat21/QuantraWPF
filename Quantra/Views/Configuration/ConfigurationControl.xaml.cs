@@ -265,11 +265,11 @@ namespace Quantra.Controls
             try
             {
                 // Save all settings to the database or settings file
-                
+        
                 // For this example, we'll save the EnableApiModalChecks setting
                 bool enableApiModalChecks = EnableApiModalChecksCheckBox.IsChecked ?? false;
                 DatabaseMonolith.SaveUserSettings(WebullPinBox.Password, enableApiModalChecks);
-                
+   
                 // In a real implementation, we would save all settings here
                 
                 // Save API keys
@@ -319,7 +319,7 @@ namespace Quantra.Controls
                 
                 if (double.TryParse(KellyFractionTextBox.Text, out double kellyFrac))
                     DatabaseMonolith.SaveSetting("KellyFractionMultiplier", kellyFrac.ToString());
-                    
+   
                 // Log success
                 //DatabaseMonolith.Log("Info", "Configuration settings saved successfully");
                 

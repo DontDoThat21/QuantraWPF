@@ -172,8 +172,7 @@ namespace Quantra.Controls
                     UseBreadthThrust = BreadthThrustCheckBox?.IsChecked ?? false
                 };
 
-                var service = new IndicatorSettingsService();
-                service.SaveOrUpdateSettingsForControl(settings);
+                _indicatorSettingsService.SaveOrUpdateSettingsForControl(settings);
                 //DatabaseMonolith.Log("Info", $"Indicator settings saved for control {settings.ControlId}");
             }
             catch (Exception ex)

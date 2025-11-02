@@ -1,23 +1,30 @@
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Quantra.DAL.Services.Interfaces;
+using Quantra.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Quantra.Models;
-using Quantra.DAL.Data;
 
 namespace Quantra.DAL.Services
 {
-    public static class QuoteDataService
+    public class QuoteDataService
     {
-        private static readonly AlphaVantageService _alphaVantageService = new AlphaVantageService(new UserSettingsService());
+        private AlphaVantageService _alphaVantageService;
 
-        public static async Task<QuoteData> GetLatestQuoteData(string symbol)
+        public QuoteDataService(AlphaVantageService alphaVantageService) 
+        {
+            _alphaVantageService = alphaVantageService;
+        }
+
+
+        public async Task<QuoteData> GetLatestQuoteData(string symbol)
         {
             return await _alphaVantageService.GetQuoteDataAsync(symbol);
         }
 
-        public static async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)
+        public async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)
         {
             var quoteDataList = new List<QuoteData>();
  
@@ -90,7 +97,7 @@ namespace Quantra.DAL.Services
             return quoteDataList;
         }
 
-        public static async Task<(QuoteData, DateTime?)> GetLatestQuoteDataWithTimestamp(string symbol)
+        public async Task<(QuoteData, DateTime?)> GetLatestQuoteDataWithTimestamp(string symbol)
         {
             QuoteData quoteData = null;
             DateTime? timestamp = null;

@@ -26,10 +26,11 @@ namespace Quantra.Controls
     {
      private readonly PredictionAnalysisViewModel _viewModel;
       private readonly NotificationService _notificationService;
-        private readonly StockDataCacheService _stockDataCacheService;
+ private readonly StockDataCacheService _stockDataCacheService;
 private readonly TechnicalIndicatorService _indicatorService;
-        private readonly EmailService _emailService;
+    private readonly EmailService _emailService;
         private readonly ISettingsService _settingsService;
+        private readonly IndicatorSettingsService _indicatorSettingsService;
         private readonly IndicatorDisplayModule _indicatorModule;
      private readonly PredictionChartModuleType _chartModule;
       private string _pacId; // Unique identifier for this PAC instance
@@ -37,30 +38,32 @@ private readonly TechnicalIndicatorService _indicatorService;
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
  // Indicators dictionary (not duplicated in other files)
-        private Dictionary<string, double> indicators;
-        // Confidence value (not duplicated in other files)
+     private Dictionary<string, double> indicators;
+   // Confidence value (not duplicated in other files)
     private double confidence;
 
      public PredictionAnalysisControl(
-     PredictionAnalysisViewModel viewModel,
-       NotificationService notificationService,
+   PredictionAnalysisViewModel viewModel,
+   NotificationService notificationService,
     TechnicalIndicatorService indicatorService,
         PredictionAnalysisRepository analysisRepository,
    StockDataCacheService stockDataCacheService,
        TradingService tradingService,
         ISettingsService settingsService,
         AlphaVantageService alphaVantageService,
-       EmailService emailService)
+       EmailService emailService,
+IndicatorSettingsService indicatorSettingsService)
      {
-            InitializeComponent();
+  InitializeComponent();
 
-            _viewModel = viewModel;
-        _notificationService = notificationService;
-            _stockDataCacheService = stockDataCacheService;
+         _viewModel = viewModel;
+_notificationService = notificationService;
+     _stockDataCacheService = stockDataCacheService;
    _indicatorService = indicatorService;
         _emailService = emailService;
     _settingsService = settingsService;
-        
+        _indicatorSettingsService = indicatorSettingsService ?? throw new ArgumentNullException(nameof(indicatorSettingsService));
+     
   _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
           _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, stockDataCacheService);
 
@@ -69,7 +72,7 @@ private readonly TechnicalIndicatorService _indicatorService;
     // Ensure the PredictionDataGrid is bound to the Predictions collection
             if (PredictionDataGrid != null)
    {
-      PredictionDataGrid.ItemsSource = Predictions;
+ PredictionDataGrid.ItemsSource = Predictions;
       }
 
        // Attach modules to containers if they exist

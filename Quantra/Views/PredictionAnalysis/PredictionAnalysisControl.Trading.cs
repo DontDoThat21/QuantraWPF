@@ -8,30 +8,48 @@ using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using System.Windows.Controls;
 using Quantra.DAL.Services;
-
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+  public partial class PredictionAnalysisControl : UserControl
     {
         private WebullTradingBot _tradingBot;
-        private StockDataCacheService _stockDataCache;
-        private Dictionary<string, DateTime> _lastTradeTime = new Dictionary<string, DateTime>();
+   private StockDataCacheService _stockDataCache;
+   private OrderHistoryService _orderHistoryService;
+      private Dictionary<string, DateTime> _lastTradeTime = new Dictionary<string, DateTime>();
         private bool _isAutoTradingEnabled = false;
 
-        /// <summary>
-        /// Initializes trading components for the PredictionAnalysisControl
-        /// </summary>
+  /// <summary>
+/// Initializes trading components for the PredictionAnalysisControl
+  /// </summary>
         private void InitializeTradingComponents()
-        {
-            _tradingBot = new WebullTradingBot();
-            _stockDataCache = new StockDataCacheService();
-            
-            // Default to paper trading mode
-            _tradingBot.SetTradingMode(Quantra.Enums.TradingMode.Paper);
-            
-            //DatabaseMonolith.Log("Info", "Trading components initialized in PredictionAnalysisControl");
-        }
+  {
+      // Initialize services with their required dependencies
+    var userSettingsService = new UserSettingsService(
+new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+   .UseSqlServer(ConnectionHelper.ConnectionString)
+    .Options));
+      
+    var alphaVantageService = new AlphaVantageService(userSettingsService);
+        var historicalDataService = new HistoricalDataService(userSettingsService);
+        var technicalIndicatorService = new TechnicalIndicatorService(alphaVantageService, userSettingsService);
+    
+ _tradingBot = new WebullTradingBot(
+  userSettingsService,
+      historicalDataService,
+            alphaVantageService,
+   technicalIndicatorService);
+      
+         _stockDataCache = new StockDataCacheService(userSettingsService);
+  _orderHistoryService = new OrderHistoryService();
+     
+          // Default to paper trading mode
+ _tradingBot.SetTradingMode(Quantra.Enums.TradingMode.Paper);
+       
+     //LoggingService.Log("Info", "Trading components initialized in PredictionAnalysisControl");
+  }
 
         /// <summary>
         /// Handles enabling auto trading mode after auto mode is enabled
@@ -221,103 +239,102 @@ namespace Quantra.Controls
             try
             {
                 // Ensure trading components are initialized before executing a trade
-                if (_tradingBot == null)
-                {
-                    //DatabaseMonolith.Log("Error", "Trading bot is not initialized. Cannot execute trade.");
-                    return;
-                }
+   if (_tradingBot == null || _orderHistoryService == null)
+     {
+   InitializeTradingComponents();
+            }
 
-                // Calculate standard position size (simple implementation)
-                int quantity = CalculatePositionSize(prediction);
-                
-                // Calculate price - use current price for market orders
-                double price = prediction.CurrentPrice;
-                
-                // Calculate stop loss and take profit levels
+     // Calculate standard position size (simple implementation)
+             int quantity = CalculatePositionSize(prediction);
+     
+             // Calculate price - use current price for market orders
+     double price = prediction.CurrentPrice;
+            
+           // Calculate stop loss and take profit levels
                 double stopLoss = CalculateStopLoss(prediction);
                 double takeProfit = CalculateTakeProfit(prediction);
-                
-                // Determine if we should use a trailing stop for this prediction
-                bool useTrailingStop = ShouldUseTrailingStop(prediction);
-                
-                //DatabaseMonolith.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
-                
-                // Create order model
+          
+        // Determine if we should use a trailing stop for this prediction
+         bool useTrailingStop = ShouldUseTrailingStop(prediction);
+     
+         //LoggingService.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
+        
+         // Create order model
                 var order = new OrderModel
-                {
-                    Symbol = prediction.Symbol,
-                    OrderType = prediction.PredictedAction,
-                    Quantity = quantity,
-                    Price = price,
-                    StopLoss = stopLoss,
-                    TakeProfit = takeProfit,
-                    IsPaperTrade = true,  // Always use paper trade mode for automated trades
-                    PredictionSource = $"Auto: {prediction.Symbol} ({prediction.Confidence:P0})",
-                    Status = "New",
-                    Timestamp = DateTime.Now
-                };
+      {
+      Symbol = prediction.Symbol,
+                  OrderType = prediction.PredictedAction,
+          Quantity = quantity,
+        Price = price,
+         StopLoss = stopLoss,
+            TakeProfit = takeProfit,
+          IsPaperTrade = true,  // Always use paper trade mode for automated trades
+    PredictionSource = $"Auto: {prediction.Symbol} ({prediction.Confidence:P0})",
+      Status = "New",
+           Timestamp = DateTime.Now
+             };
 
-                // Execute the trade via the trading bot
-                if (useTrailingStop)
-                {
-                    // For trailing stops, we first place the regular order
-                    await _tradingBot.PlaceLimitOrder(
-                        order.Symbol,
-                        order.Quantity,
-                        order.OrderType,
-                        order.Price
-                    );
-                    
-                    // Then set up the trailing stop
-                    double trailingDistance = CalculateTrailingStopDistance(prediction);
-                    
-                    // For BUY orders, we use SELL for trailing stop
-                    // For SELL orders, we use BUY for trailing stop
-                    string trailingStopOrderType = order.OrderType == "BUY" ? "SELL" : "BUY";
-                    
-                    bool trailingStopSet = _tradingBot.SetTrailingStop(
-                        order.Symbol,
-                        order.Price,
-                        trailingDistance,
-                        trailingStopOrderType
-                    );
-                    
-                    if (trailingStopSet)
-                    {
-                        //DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
-                    }
-                    else
-                    {
-                        //DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
-                    }
+         // Execute the trade via the trading bot
+     if (useTrailingStop)
+       {
+              // For trailing stops, we first place the regular order
+   await _tradingBot.PlaceLimitOrder(
+   order.Symbol,
+      order.Quantity,
+      order.OrderType,
+          order.Price
+   );
+     
+    // Then set up the trailing stop
+         double trailingDistance = CalculateTrailingStopDistance(prediction);
+      
+            // For BUY orders, we use SELL for trailing stop
+       // For SELL orders, we use BUY for trailing stop
+    string trailingStopOrderType = order.OrderType == "BUY" ? "SELL" : "BUY";
+         
+          bool trailingStopSet = _tradingBot.SetTrailingStop(
+      order.Symbol,
+               order.Price,
+ trailingDistance,
+trailingStopOrderType
+          );
+          
+   if (trailingStopSet)
+       {
+  //LoggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+   }
+    else
+      {
+      //LoggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+       }
+       }
+          else
+     {
+     // Use standard bracket order with fixed stop loss and take profit
+  await _tradingBot.PlaceBracketOrder(
+        order.Symbol,
+       order.Quantity,
+       order.OrderType,
+     order.Price,
+           order.StopLoss,
+   order.TakeProfit
+   );
                 }
-                else
-                {
-                    // Use standard bracket order with fixed stop loss and take profit
-                    await _tradingBot.PlaceBracketOrder(
-                        order.Symbol,
-                        order.Quantity,
-                        order.OrderType,
-                        order.Price,
-                        order.StopLoss,
-                        order.TakeProfit
-                    );
-                }
-                
-                // Update order status
-                order.Status = "Executed";
-                
-                // Save to order history
-                DatabaseMonolith.AddOrderToHistory(order);
-                
-                // Update UI to show the trade was executed
-                UpdateUIAfterTrade(prediction);
-            }
+          
+              // Update order status
+       order.Status = "Executed";
+      
+         // Save to order history using the service
+          await _orderHistoryService.AddOrderToHistoryAsync(order);
+      
+          // Update UI to show the trade was executed
+        UpdateUIAfterTrade(prediction);
+        }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
-            }
+       //LoggingService.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
         }
+      }
 
         /// <summary>
         /// Updates the UI after a trade is executed
@@ -622,104 +639,104 @@ namespace Quantra.Controls
         /// <summary>
         /// Executes trades based on a list of predictions using WebullTradingBot for market data and trading.
         /// </summary>
-        /// <param name="predictions">List of predictions to act on</param>
+  /// <param name="predictions">List of predictions to act on</param>
         private async Task ExecuteTradesFromPredictionsAsync(List<PredictionModel> predictions)
-        {
-            // Ensure trading components are initialized before executing trades
-            if (_tradingBot == null)
-                InitializeTradingComponents();
+    {
+       // Ensure trading components are initialized before executing trades
+            if (_tradingBot == null || _orderHistoryService == null)
+    InitializeTradingComponents();
 
             foreach (var prediction in predictions)
-            {
+         {
                 try
-                {
-                    // Only trade if not traded recently and confidence is high
-                    if (!HasTradedRecently(prediction.Symbol) && prediction.Confidence >= 0.8)
-                    {
-                        int quantity = CalculatePositionSize(prediction);
-                        double stopLoss = CalculateStopLoss(prediction);
-                        double takeProfit = CalculateTakeProfit(prediction);
-                        
-                        // Determine if we should use a trailing stop for this prediction
-                        bool useTrailingStop = ShouldUseTrailingStop(prediction);
+      {
+        // Only trade if not traded recently and confidence is high
+            if (!HasTradedRecently(prediction.Symbol) && prediction.Confidence >= 0.8)
+     {
+    int quantity = CalculatePositionSize(prediction);
+    double stopLoss = CalculateStopLoss(prediction);
+double takeProfit = CalculateTakeProfit(prediction);
+            
+         // Determine if we should use a trailing stop for this prediction
+          bool useTrailingStop = ShouldUseTrailingStop(prediction);
 
-                        // Create order record
-                        var order = new OrderModel
-                        {
-                            Symbol = prediction.Symbol,
-                            OrderType = prediction.PredictedAction,
-                            Quantity = quantity,
-                            Price = prediction.CurrentPrice,
-                            StopLoss = stopLoss,
-                            TakeProfit = takeProfit,
-                            IsPaperTrade = true,
-                            PredictionSource = $"Auto: {prediction.Symbol} ({prediction.Confidence:P0})",
-                            Status = "Executed",
-                            Timestamp = DateTime.Now
-                        };
+           // Create order record
+     var order = new OrderModel
+            {
+         Symbol = prediction.Symbol,
+     OrderType = prediction.PredictedAction,
+   Quantity = quantity,
+      Price = prediction.CurrentPrice,
+     StopLoss = stopLoss,
+     TakeProfit = takeProfit,
+         IsPaperTrade = true,
+       PredictionSource = $"Auto: {prediction.Symbol} ({prediction.Confidence:P0})",
+        Status = "Executed",
+          Timestamp = DateTime.Now
+     };
 
-                        if (useTrailingStop)
-                        {
-                            // For trailing stops, first place the regular order
-                            await _tradingBot.PlaceLimitOrder(
-                                order.Symbol,
-                                order.Quantity,
-                                order.OrderType,
-                                order.Price
-                            );
-                            
-                            // Then set up the trailing stop
-                            double trailingDistance = CalculateTrailingStopDistance(prediction);
-                            
-                            // For BUY orders, we use SELL for trailing stop
-                            // For SELL orders, we use BUY for trailing stop
-                            string trailingStopOrderType = order.OrderType == "BUY" ? "SELL" : "BUY";
-                            
-                            bool trailingStopSet = _tradingBot.SetTrailingStop(
-                                order.Symbol,
-                                order.Price,
-                                trailingDistance,
-                                trailingStopOrderType
-                            );
-                            
-                            if (trailingStopSet)
-                            {
-                                //DatabaseMonolith.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
-                            }
-                            else
-                            {
-                                //DatabaseMonolith.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
-                            }
-                        }
-                        else
-                        {
-                            // Use standard bracket order with fixed stop loss and take profit
-                            await _tradingBot.PlaceBracketOrder(
-                                order.Symbol,
-                                order.Quantity,
-                                order.OrderType,
-                                order.Price,
-                                order.StopLoss,
-                                order.TakeProfit
-                            );
-                        }
+    if (useTrailingStop)
+       {
+         // For trailing stops, first place the regular order
+       await _tradingBot.PlaceLimitOrder(
+        order.Symbol,
+       order.Quantity,
+    order.OrderType,
+       order.Price
+          );
+             
+    // Then set up the trailing stop
+       double trailingDistance = CalculateTrailingStopDistance(prediction);
+       
+            // For BUY orders, we use SELL for trailing stop
+    // For SELL orders, we use BUY for trailing stop
+     string trailingStopOrderType = order.OrderType == "BUY" ? "SELL" : "BUY";
+      
+   bool trailingStopSet = _tradingBot.SetTrailingStop(
+     order.Symbol,
+       order.Price,
+   trailingDistance,
+                   trailingStopOrderType
+    );
+  
+                  if (trailingStopSet)
+        {
+  //LoggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+           }
+         else
+       {
+    //LoggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+            }
+    }
+  else
+            {
+         // Use standard bracket order with fixed stop loss and take profit
+           await _tradingBot.PlaceBracketOrder(
+    order.Symbol,
+         order.Quantity,
+    order.OrderType,
+   order.Price,
+              order.StopLoss,
+    order.TakeProfit
+      );
+         }
 
-                        // Log and update last trade time
-                        _lastTradeTime[prediction.Symbol] = DateTime.Now;
-                        //DatabaseMonolith.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
-                        
-                        // Save order history
-                        DatabaseMonolith.AddOrderToHistory(order);
+              // Log and update last trade time
+                 _lastTradeTime[prediction.Symbol] = DateTime.Now;
+              //LoggingService.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
+    
+  // Save order history using the service
+              await _orderHistoryService.AddOrderToHistoryAsync(order);
 
-                        // Update UI after trade
-                        UpdateUIAfterTrade(prediction);
-                    }
+         // Update UI after trade
+    UpdateUIAfterTrade(prediction);
+     }
                 }
                 catch (Exception ex)
-                {
-                    //DatabaseMonolith.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
-                }
-            }
+      {
+          //LoggingService.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
+       }
         }
+}
     }
 }

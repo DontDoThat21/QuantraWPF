@@ -36,14 +36,17 @@ namespace Quantra.Views.Backtesting
         private readonly HistoricalDataService _historicalDataService;
         private readonly CustomBenchmarkService _customBenchmarkService;
         private ObservableCollection<CustomBenchmark> _customBenchmarks;
+        private UserSettingsService _userSettingsService;
         
         public BacktestResultsControl(HistoricalDataService historicalDataService,
-            CustomBenchmarkService customBenchmarkService
+            CustomBenchmarkService customBenchmarkService,
+            UserSettingsService userSettingsService
             )
         {
             InitializeComponent();
             _historicalDataService = historicalDataService;
             _customBenchmarkService = customBenchmarkService;
+            _userSettingsService = userSettingsService;
             _customBenchmarks = new ObservableCollection<CustomBenchmark>();
             
             // Initialize UI elements if needed
@@ -249,7 +252,7 @@ namespace Quantra.Views.Backtesting
         private List<(string symbol, string name)> GetSelectedBenchmarks()
         {
             var benchmarks = new List<(string symbol, string name)>();
-            var (activeBenchmarkType, activeBenchmarkId) = UserSettingsService.GetActiveBenchmark();
+            var (activeBenchmarkType, activeBenchmarkId) = _userSettingsService.GetActiveBenchmark();
             
             // Add active benchmark first (this will be the primary baseline)
             bool activeBenchmarkAdded = false;
@@ -1555,7 +1558,7 @@ namespace Quantra.Views.Backtesting
                 
                 if (benchmarkType != null)
                 {
-                    UserSettingsService.SetActiveBenchmark(benchmarkType);
+                    _userSettingsService.SetActiveBenchmark(benchmarkType);
                     UpdateActiveBenchmarkDisplay();
                 }
             }
@@ -1644,7 +1647,7 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void ApplyActiveBenchmarkSelection()
         {
-            var (benchmarkType, benchmarkId) = UserSettingsService.GetActiveBenchmark();
+            var (benchmarkType, benchmarkId) = _userSettingsService.GetActiveBenchmark();
             
             // Clear all selections first
             SPYCheckBox.IsChecked = false;
@@ -1689,7 +1692,7 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void UpdateActiveBenchmarkDisplay()
         {
-            var (benchmarkType, benchmarkId) = UserSettingsService.GetActiveBenchmark();
+            var (benchmarkType, benchmarkId) = _userSettingsService.GetActiveBenchmark();
             
             switch (benchmarkType)
             {
@@ -1735,7 +1738,7 @@ namespace Quantra.Views.Backtesting
             var selectedBenchmark = CustomBenchmarkComboBox.SelectedItem as CustomBenchmark;
             if (selectedBenchmark != null)
             {
-                UserSettingsService.SetActiveCustomBenchmark(selectedBenchmark.Id);
+                _userSettingsService.SetActiveCustomBenchmark(selectedBenchmark.Id);
                 UpdateActiveBenchmarkDisplay();
             }
             

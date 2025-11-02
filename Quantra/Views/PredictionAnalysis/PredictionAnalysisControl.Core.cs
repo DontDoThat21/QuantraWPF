@@ -17,6 +17,7 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl
     {
+        private AlphaVantageService _alphaVantageService;
         private WebullTradingBot tradingBot;
         private List<PatternModel> detectedPatterns;
         private PatternModel selectedPattern;
@@ -35,9 +36,12 @@ namespace Quantra.Controls
         public Func<double, string> DateFormatter { get; set; }
 
         // Additional constructor with configuration
-        public PredictionAnalysisControl(IConfiguration configuration)
+        public PredictionAnalysisControl(IConfiguration configuration,
+            AlphaVantageService alphaVantageService,
+            WebullTradingBot webullTradingBot)
         {
-            tradingBot = new WebullTradingBot();
+            tradingBot = webullTradingBot;
+            _alphaVantageService = alphaVantageService;
             // Initialize other configuration-specific items if needed
             InitializeControl();
         }
@@ -144,9 +148,8 @@ namespace Quantra.Controls
             try
             {
                 // Use Alpha Vantage service to get current price using the correct method
-                var alphaVantageService = new AlphaVantageService();
                 // Use GetQuoteDataAsync instead of GetQuoteAsync which doesn't exist
-                var quote = await alphaVantageService.GetQuoteDataAsync(symbol);
+                var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                 return quote?.Price ?? 0.0;
             }
             catch (Exception ex)
