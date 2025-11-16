@@ -13,8 +13,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using Quantra.Views.PredictionAnalysis.Components;
-//using System.Data.SQLite;
-using Quantra.Controls;  // Added for AlertsControl
+using Quantra.Controls;
 using Quantra.CrossCutting.Monitoring;
 using Quantra.DAL.Services;
 using Quantra.Utilities;
@@ -40,6 +39,11 @@ namespace Quantra.Controls.Components
         private readonly IEmailService _emailService;
         private readonly DatabaseSettingsProfile _settingsProfile;
         private readonly IMonitoringManager _monitoringManager;
+        private readonly ITradingRuleService _tradingRuleService;
+        private readonly UserSettingsService _userSettingsService;
+        private readonly HistoricalDataService _historicalDataService;
+        private readonly AlphaVantageService _alphaVantageService;
+        private readonly OrderHistoryService _orderHistoryService;
         private bool _disposed;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -175,10 +179,15 @@ namespace Quantra.Controls.Components
         }
 
         public IndicatorDisplayModule(
-            ISettingsService settingsService,
-            ITechnicalIndicatorService indicatorService,
-            INotificationService notificationService,
-            IEmailService emailService)
+            SettingsService settingsService,
+            TechnicalIndicatorService indicatorService,
+            NotificationService notificationService,
+            EmailService emailService,
+            TradingRuleService tradingRuleService,
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            OrderHistoryService orderHistoryService)
         {
             InitializeComponent();
             DataContext = this;
@@ -186,9 +195,14 @@ namespace Quantra.Controls.Components
             _indicatorService = indicatorService;
             _notificationService = notificationService;
             _emailService = emailService;
+            _tradingRuleService = tradingRuleService;
+            _userSettingsService = userSettingsService;
+            _historicalDataService = historicalDataService;
+            _alphaVantageService = alphaVantageService;
+            _orderHistoryService = orderHistoryService;
             _settingsProfile = settingsService.GetDefaultSettingsProfile();
             _monitoringManager = MonitoringManager.Instance;
-            _tradingBot = new WebullTradingBot();
+            _tradingBot = new WebullTradingBot(_userSettingsService, _historicalDataService, _alphaVantageService, indicatorService as TechnicalIndicatorService);
             _cancellationTokenSource = new CancellationTokenSource();
             _lastTradeTime = new Dictionary<string, DateTime>();
             
@@ -198,7 +212,7 @@ namespace Quantra.Controls.Components
             LoadTradingRules();
         }
 
-        public void LoadTradingRules()
+        public async void LoadTradingRules()
         {
             try
             {
@@ -216,63 +230,34 @@ namespace Quantra.Controls.Components
                     return;
                 }
 
-                // Use ExecuteQuery to get trading rules
-                using (var connection = ConnectionHelper.GetConnection())
+                // Use the service to get active trading rules for this symbol
+                var rules = await _tradingRuleService.GetActiveTradingRulesAsync(Symbol);
+
+                // Filter out invalid rules
+                var validRules = rules.Where(IsValidTradingRule).ToList();
+
+                // Log skipped invalid rules
+                var invalidCount = rules.Count - validRules.Count;
+                if (invalidCount > 0)
                 {
-                    connection.Open();
-                    string query = @"
-                        SELECT * FROM TradingRules 
-                        WHERE Symbol = @Symbol AND IsActive = 1 
-                        ORDER BY Name";
-
-                    var rules = new List<TradingRule>();
-                    using (var cmd = new SQLiteCommand(query, connection))
+                    // Log warning about skipped invalid rules
+                    foreach (var rule in rules.Except(validRules))
                     {
-                        cmd.Parameters.AddWithValue("@Symbol", Symbol);
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var rule = new TradingRule
-                                {
-                                    Id = reader.GetInt32(0),
-                                    Name = reader.GetString(1),
-                                    Symbol = reader.GetString(2),
-                                    OrderType = reader.GetString(3),
-                                    MinConfidence = reader.GetDouble(4),
-                                    EntryPrice = reader.GetDouble(5),
-                                    ExitPrice = reader.GetDouble(6),
-                                    StopLoss = reader.GetDouble(7),
-                                    Quantity = reader.GetInt32(8),
-                                    IsActive = true,
-                                    CreatedDate = reader.GetDateTime(9)
-                                };
-
-                                if (IsValidTradingRule(rule))
-                                {
-                                    rules.Add(rule);
-                                }
-                                else
-                                {
-                                    //DatabaseMonolith.Log("Warning", $"Invalid trading rule skipped: {rule.Name}", 
-                                        //$"Symbol: {rule.Symbol}, OrderType: {rule.OrderType}");
-                                }
-                            }
-                        }
+                        // Could log details about why the rule is invalid
                     }
-
-                    // Ensure UI updates happen on UI thread
-                    if (Dispatcher.CheckAccess())
-                    {
-                        UpdateTradingRulesUI(rules);
-                    }
-                    else
-                    {
-                        _ = Dispatcher.InvokeAsync(() => UpdateTradingRulesUI(rules));
-                    }
-
-                    ValidateAutoTrading();
                 }
+
+                // Ensure UI updates happen on UI thread
+                if (Dispatcher.CheckAccess())
+                {
+                    UpdateTradingRulesUI(validRules);
+                }
+                else
+                {
+                    _ = Dispatcher.InvokeAsync(() => UpdateTradingRulesUI(validRules));
+                }
+
+                ValidateAutoTrading();
             }
             catch (Exception ex)
             {
@@ -285,7 +270,6 @@ namespace Quantra.Controls.Components
                 {
                     _ = Dispatcher.InvokeAsync(() => _notificationService.ShowError($"Error loading trading rules: {ex.Message}"));
                 }
-                //DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
             }
         }
 
@@ -1031,7 +1015,7 @@ namespace Quantra.Controls.Components
                     Timestamp = DateTime.Now
                 };
 
-                DatabaseMonolith.AddOrderToHistory(order);
+                await _orderHistoryService.AddOrderToHistoryAsync(order);
 
                 // Show detailed notification on UI thread
                 if (Dispatcher.CheckAccess())

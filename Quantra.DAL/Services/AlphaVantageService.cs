@@ -19,6 +19,7 @@ namespace Quantra.DAL.Services
         private readonly string _apiKey;
         private readonly SemaphoreSlim _apiSemaphore;
         private readonly IUserSettingsService _userSettingsService;
+        private readonly LoggingService _loggingService;
 
         // Standard API rate limits
         private const int StandardApiCallsPerMinute = 75;
@@ -40,18 +41,19 @@ namespace Quantra.DAL.Services
         private readonly Dictionary<string, (double Value, DateTime Timestamp)> _fundamentalDataCache = new Dictionary<string, (double, DateTime)>();
    private readonly object _cacheLock = new object();
 
-        public AlphaVantageService(IUserSettingsService userSettingsService)
+        public AlphaVantageService(IUserSettingsService userSettingsService, LoggingService loggingService)
         {
- _userSettingsService = userSettingsService;
-    _client = new HttpClient
-         {
-      BaseAddress = new Uri("https://www.alphavantage.co/")
- };
+            _userSettingsService = userSettingsService;
+            _loggingService = loggingService;
+            _client = new HttpClient
+            {
+                BaseAddress = new Uri("https://www.alphavantage.co/")
+            };
             _apiKey = GetApiKey();
-       _apiSemaphore = new SemaphoreSlim(1, 1);
-          _maxApiCallsPerMinute = StandardApiCallsPerMinute;
-
- Instance = this;
+            _apiSemaphore = new SemaphoreSlim(1, 1);
+            _maxApiCallsPerMinute = StandardApiCallsPerMinute;
+            
+            Instance = this;
         }
         
         /// <summary>
@@ -259,11 +261,11 @@ namespace Quantra.DAL.Services
                 // Store in UserPreferences table with timestamp
                 string symbolsJson = JsonConvert.SerializeObject(symbols);
                 _userSettingsService.SaveUserPreference(StockCacheKey, symbolsJson);
-                LoggingService.Log("Info", $"Cached {symbols.Count} symbols to database");
+                _loggingService.Log("Info", $"Cached {symbols.Count} symbols to database");
             }
             catch (Exception ex)
             {
-                LoggingService.LogErrorWithContext(ex, "Failed to cache symbols");
+                _loggingService.LogErrorWithContext(ex, "Failed to cache symbols");
             }
         }
 
@@ -952,7 +954,7 @@ var historicalData = await GetCachedHistoricalDataFirst(symbol, interval);
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
+                _loggingService.Log("Error", $"Failed to get cached historical prices for {symbol}", ex.ToString());
             }
 
             return new List<HistoricalPrice>();
@@ -1810,7 +1812,7 @@ public async Task<List<double>> GetHistoricalIndicatorData(string symbol, string
                 
       if (historicalData.Count < 10)
             {
-          LoggingService.Log("Warning", $"Insufficient historical data for {symbol} ({historicalData.Count} points), returning empty list");
+          _loggingService.Log("Warning", $"Insufficient historical data for {symbol} ({historicalData.Count} points), returning empty list");
        return new List<double>();
           }
 
@@ -1868,16 +1870,16 @@ List<double> result = new List<double>();
        break;
 
       default:
-       LoggingService.Log("Warning", $"Unknown indicator type: {indicatorType}. Returning empty list");
+       _loggingService.Log("Warning", $"Unknown indicator type: {indicatorType}. Returning empty list");
      return new List<double>();
           }
 
-      LoggingService.Log("Info", $"Calculated {result.Count} real {indicatorType} values for {symbol} from {historicalData.Count} historical data points");
+      _loggingService.Log("Info", $"Calculated {result.Count} real {indicatorType} values for {symbol} from {historicalData.Count} historical data points");
        return result;
     }
             catch (Exception ex)
      {
-     LoggingService.LogErrorWithContext(ex, $"Error calculating real historical data for {indicatorType} on {symbol}");
+     _loggingService.LogErrorWithContext(ex, $"Error calculating real historical data for {indicatorType} on {symbol}");
              return new List<double>(); // Return empty list on error
             }
    }
@@ -2027,14 +2029,14 @@ var fastEMA = CalculateEMAInternal(prices, fastPeriod);
   
      if (cacheAge.TotalHours <= maxCacheAgeHours)
            {
-    LoggingService.Log("Info", $"Retrieved cached {dataType} for {symbol} (age: {cacheAge.TotalMinutes:F1} minutes)");
+    _loggingService.Log("Info", $"Retrieved cached {dataType} for {symbol} (age: {cacheAge.TotalMinutes:F1} minutes)");
     return cachedData.Value;
                }
       else
    {
           // Cache expired, remove it
       _fundamentalDataCache.Remove(cacheKey);
-         LoggingService.Log("Info", $"Cache expired for {dataType} on {symbol} (age: {cacheAge.TotalHours:F1} hours)");
+         _loggingService.Log("Info", $"Cache expired for {dataType} on {symbol} (age: {cacheAge.TotalHours:F1} hours)");
      }
            }
   }
@@ -2058,7 +2060,7 @@ var fastEMA = CalculateEMAInternal(prices, fastPeriod);
     lock (_cacheLock)
          {
                 _fundamentalDataCache[cacheKey] = (value, DateTime.Now);
-                LoggingService.Log("Info", $"Cached {dataType} for {symbol}: {value}");
+                _loggingService.Log("Info", $"Cached {dataType} for {symbol}: {value}");
             }
         }
 
@@ -2084,7 +2086,7 @@ var fastEMA = CalculateEMAInternal(prices, fastPeriod);
          
        if (keysToRemove.Count > 0)
              {
-     LoggingService.Log("Info", $"Cleared {keysToRemove.Count} cached fundamental data entries for {symbol}");
+     _loggingService.Log("Info", $"Cleared {keysToRemove.Count} cached fundamental data entries for {symbol}");
  }
   }
     }
@@ -2109,7 +2111,7 @@ var fastEMA = CalculateEMAInternal(prices, fastPeriod);
       
    if (expiredKeys.Count > 0)
    {
-            LoggingService.Log("Info", $"Cleared {expiredKeys.Count} expired fundamental data cache entries");
+            _loggingService.Log("Info", $"Cleared {expiredKeys.Count} expired fundamental data cache entries");
 }
     }
  }

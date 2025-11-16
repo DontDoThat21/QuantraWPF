@@ -1,9 +1,11 @@
 using Quantra.Models;
+using Quantra.DAL.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,15 +17,19 @@ namespace Quantra.Controls
     /// </summary>
     public partial class TradingRulesControl : UserControl, INotifyPropertyChanged
     {
+        private readonly ITradingRuleService _tradingRuleService;
         private ObservableCollection<TradingRule> tradingRules;
         private TradingRule currentRule;
         private bool isEditMode;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public TradingRulesControl()
+        // Constructor with dependency injection
+        public TradingRulesControl(ITradingRuleService tradingRuleService)
         {
             InitializeComponent();
+            
+            _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
             
             // Initialize collections
             tradingRules = new ObservableCollection<TradingRule>();
@@ -35,15 +41,29 @@ namespace Quantra.Controls
             RulesDataGrid.ItemsSource = tradingRules;
             
             // Load rules from database
-            LoadRulesFromDatabase();
+            LoadRulesFromDatabaseAsync();
         }
 
-        private void LoadRulesFromDatabase()
+        // Parameterless constructor for XAML designer support
+        public TradingRulesControl() : this(null)
         {
+            // This will only be called by the XAML designer
+            // At runtime, DI should provide the service
+            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+            {
+                return;
+            }
+        }
+
+        private async void LoadRulesFromDatabaseAsync()
+        {
+            if (_tradingRuleService == null)
+                return;
+
             try
             {
                 tradingRules.Clear();
-                var rules = DatabaseMonolith.GetTradingRules();
+                var rules = await _tradingRuleService.GetTradingRulesAsync();
                 
                 foreach (var rule in rules)
                 {
@@ -69,14 +89,11 @@ namespace Quantra.Controls
 
                     tradingRules.Add(rule);
                 }
-
-                //DatabaseMonolith.Log("Info", $"Loaded {rules.Count} trading rules from database");
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error loading trading rules: {ex.Message}", "Error", 
                                MessageBoxButton.OK, MessageBoxImage.Error);
-                //DatabaseMonolith.Log("Error", "Failed to load trading rules from database", ex.ToString());
             }
         }
 
@@ -115,7 +132,7 @@ namespace Quantra.Controls
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             // Refresh from database and reset search filter
-            LoadRulesFromDatabase();
+            LoadRulesFromDatabaseAsync();
             SearchBox.Text = "";
             RulesDataGrid.ItemsSource = tradingRules;
         }
@@ -154,7 +171,7 @@ namespace Quantra.Controls
             RuleEditorPopup.IsOpen = true;
         }
 
-        private void DeleteRule_Click(object sender, RoutedEventArgs e)
+        private async void DeleteRule_Click(object sender, RoutedEventArgs e)
         {
             Button button = sender as Button;
             TradingRule rule = button.DataContext as TradingRule;
@@ -167,24 +184,29 @@ namespace Quantra.Controls
             {
                 try
                 {
-                    // Remove from database first
-                    DatabaseMonolith.DeleteRule(rule.Id);
+                    // Remove from database first using the service
+                    bool deleted = await _tradingRuleService.DeleteTradingRuleAsync(rule.Id);
                     
-                    // Then remove from the UI collection
-                    tradingRules.Remove(rule);
-                    
-                    //DatabaseMonolith.Log("Info", $"Trading rule '{rule.Name}' deleted");
+                    if (deleted)
+                    {
+                        // Then remove from the UI collection
+                        tradingRules.Remove(rule);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Rule '{rule.Name}' not found in database.", "Warning",
+                                       MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Error deleting rule: {ex.Message}", "Error",
                                    MessageBoxButton.OK, MessageBoxImage.Error);
-                    //DatabaseMonolith.Log("Error", "Error deleting trading rule", ex.ToString());
                 }
             }
         }
 
-        private void SaveRuleButton_Click(object sender, RoutedEventArgs e)
+        private async void SaveRuleButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
@@ -251,22 +273,21 @@ namespace Quantra.Controls
                                        $"Potential profit: ${Math.Abs(exitPrice - entryPrice) * quantity:F2}. " +
                                        $"Max loss: ${Math.Abs(stopLoss - entryPrice) * quantity:F2}";
 
-                // Save to database and update collection
+                // Save to database using the service
                 if (!isEditMode)
                 {
+                    await _tradingRuleService.SaveTradingRuleAsync(currentRule);
                     tradingRules.Add(currentRule);
-
-                    // Let DatabaseMonolith handle ID creation
-                    DatabaseMonolith.SaveTradingRule(currentRule);
-                    //DatabaseMonolith.Log("Info", $"New trading rule '{currentRule.Name}' created");
                 }
                 else
                 {
-                    // The rule is already in the collection, just trigger UI refresh and update database
+                    await _tradingRuleService.SaveTradingRuleAsync(currentRule);
+                    // Trigger UI refresh by reassigning
                     int index = tradingRules.IndexOf(currentRule);
-                    tradingRules[index] = tradingRules[index]; // This triggers UI refresh
-                    DatabaseMonolith.SaveTradingRule(currentRule);
-                    //DatabaseMonolith.Log("Info", $"Trading rule '{currentRule.Name}' updated");
+                    if (index >= 0)
+                    {
+                        tradingRules[index] = tradingRules[index];
+                    }
                 }
 
                 // Close the popup
@@ -276,7 +297,6 @@ namespace Quantra.Controls
             {
                 MessageBox.Show($"Error saving rule: {ex.Message}", "Error", 
                                MessageBoxButton.OK, MessageBoxImage.Error);
-                //DatabaseMonolith.Log("Error", "Error saving trading rule", ex.ToString());
             }
         }
 

@@ -23,6 +23,7 @@ namespace Quantra.DAL.Services
         private readonly string _apiKey;
         private readonly UserSettings _userSettings;
         private readonly IAlertPublisher _alertPublisher;
+        private readonly LoggingService _loggingService;
         
         // Cache for ratings to reduce API calls
         private readonly ConcurrentDictionary<string, (List<AnalystRating> Ratings, DateTime Timestamp)> _ratingsCache = 
@@ -39,12 +40,14 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Constructs a new AnalystRatingService
         /// </summary>
-        public AnalystRatingService(UserSettings userSettings = null, IAlertPublisher alertPublisher = null)
+        public AnalystRatingService(UserSettings userSettings, IAlertPublisher alertPublisher, LoggingService loggingService)
         {
             _client = new HttpClient();
             _apiKey = GetApiKey();
             _userSettings = userSettings ?? new UserSettings();
             _alertPublisher = alertPublisher; // can be null in tests
+            _loggingService = loggingService;
+
         }
         
         /// <summary>
@@ -941,7 +944,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
         {
             // TODO: Implement database persistence for analyst ratings
             // For now, this is a no-op to allow compilation
-            LoggingService.Log("Info", $"SaveAnalystRatings called for {symbol} with {ratings?.Count ?? 0} ratings");
+            _loggingService.Log("Info", $"SaveAnalystRatings called for {symbol} with {ratings?.Count ?? 0} ratings");
         }
 
         /// <summary>
@@ -951,7 +954,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
         {
             // TODO: Implement database persistence for consensus history
             // For now, this is a no-op to allow compilation
-            LoggingService.Log("Info", $"SaveConsensusHistory called for {aggregate?.Symbol}");
+            _loggingService.Log("Info", $"SaveConsensusHistory called for {aggregate?.Symbol}");
         }
 
         /// <summary>
@@ -961,7 +964,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
         {
             // TODO: Implement database retrieval for consensus history
             // For now, return empty list to allow compilation
-            LoggingService.Log("Info", $"GetConsensusHistory called for {symbol} for {days} days");
+            _loggingService.Log("Info", $"GetConsensusHistory called for {symbol} for {days} days");
             return new List<AnalystRatingAggregate>();
         }
     }

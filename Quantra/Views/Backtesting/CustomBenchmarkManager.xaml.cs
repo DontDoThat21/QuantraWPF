@@ -15,6 +15,7 @@ namespace Quantra.Views.Backtesting
     public partial class CustomBenchmarkManager : Window
     {
         private readonly CustomBenchmarkService _benchmarkService;
+        private readonly UserSettingsService _userSettingsService;
         private List<CustomBenchmark> _benchmarks;
         private CustomBenchmark _selectedBenchmark;
         
@@ -26,10 +27,11 @@ namespace Quantra.Views.Backtesting
         /// <summary>
         /// Constructor
         /// </summary>
-        public CustomBenchmarkManager()
+        public CustomBenchmarkManager(CustomBenchmarkService customBenchmarkService,
+            UserSettingsService userSettingsService)
         {
             InitializeComponent();
-            _benchmarkService = new CustomBenchmarkService();
+            _benchmarkService = customBenchmarkService;
             
             // Load benchmarks
             LoadBenchmarks();
@@ -206,7 +208,7 @@ namespace Quantra.Views.Backtesting
             if (_selectedBenchmark != null)
             {
                 // Set this as the active custom benchmark in user settings
-                UserSettingsService.SetActiveCustomBenchmark(_selectedBenchmark.Id);
+                _userSettingsService.SetActiveCustomBenchmark(_selectedBenchmark.Id);
                 
                 DialogResult = true;
                 Close();

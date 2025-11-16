@@ -19,11 +19,11 @@ namespace Quantra.Controls
         private SpreadsExplorerViewModel _viewModel;
         private AlphaVantageService _alphaVantageService;
 
-        public SpreadsExplorer()
+        public SpreadsExplorer(UserSettingsService userSettingsService)
         {
             InitializeComponent();
-            
-            _alphaVantageService = new AlphaVantageService();
+
+            _alphaVantageService = new AlphaVantageService(userSettingsService);
             _viewModel = new SpreadsExplorerViewModel();
             
             DataContext = _viewModel;

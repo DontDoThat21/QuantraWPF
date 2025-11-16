@@ -130,11 +130,25 @@ namespace Quantra.ViewModels
         public event Action RequestCloseWindow;
         public event Func<string, MessageBoxResult> ShowConfirmationDialog;
 
+        UserSettingsService _userSettingsService;
+        HistoricalDataService _historicalDataService;
+        AlphaVantageService _alphaVantageService;
+        TechnicalIndicatorService _technicalIndicatorService;
+
         // Constructor with dependencies
-        public OrdersViewModel(IOrderService orderService)
+        public OrdersViewModel(IOrderService orderService,
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService
+            )
         {
             _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
-            
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+            _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
+            _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
+            _technicalIndicatorService = technicalIndicatorService ?? throw new ArgumentNullException(nameof(technicalIndicatorService));
+
             // Initialize order and collections
             Order = _orderService.CreateDefaultOrder();
             OrderHistory = _orderService.LoadOrderHistory();
@@ -155,7 +169,8 @@ namespace Quantra.ViewModels
         }
 
         // Default constructor for XAML designer support
-        public OrdersViewModel() : this(new OrderService()) { }
+        // todo: do i really need this
+        //public OrdersViewModel() : this(new OrderService(_userSettingsService, _historicalDataService, _alphaVantageService, _technicalIndicatorService)) { }
 
         #region Command Methods
 

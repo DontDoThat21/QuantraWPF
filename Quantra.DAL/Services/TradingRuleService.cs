@@ -145,6 +145,11 @@ namespace Quantra.DAL.Services
                     existingEntity.IsActive = rule.IsActive;
                     existingEntity.Conditions = SerializeConditions(rule.Conditions);
                     existingEntity.LastModified = DateTime.Now;
+                    existingEntity.MinConfidence = rule.MinConfidence;
+                    existingEntity.EntryPrice = rule.EntryPrice;
+                    existingEntity.ExitPrice = rule.ExitPrice;
+                    existingEntity.StopLoss = rule.StopLoss;
+                    existingEntity.Quantity = rule.Quantity;
 
                     _context.TradingRules.Update(existingEntity);
                     await _context.SaveChangesAsync();
@@ -206,7 +211,12 @@ namespace Quantra.DAL.Services
                 IsActive = entity.IsActive,
                 Conditions = DeserializeConditions(entity.Conditions),
                 CreatedDate = entity.CreatedDate,
-                LastModified = entity.LastModified
+                LastModified = entity.LastModified,
+                MinConfidence = entity.MinConfidence,
+                EntryPrice = entity.EntryPrice,
+                ExitPrice = entity.ExitPrice,
+                StopLoss = entity.StopLoss,
+                Quantity = entity.Quantity
             };
         }
 
@@ -227,7 +237,12 @@ namespace Quantra.DAL.Services
                 IsActive = model.IsActive,
                 Conditions = SerializeConditions(model.Conditions),
                 CreatedDate = model.CreatedDate,
-                LastModified = model.LastModified
+                LastModified = model.LastModified,
+                MinConfidence = model.MinConfidence,
+                EntryPrice = model.EntryPrice,
+                ExitPrice = model.ExitPrice,
+                StopLoss = model.StopLoss,
+                Quantity = model.Quantity
             };
         }
 

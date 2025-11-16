@@ -971,7 +971,7 @@ namespace Quantra
             try
             {
                 // Create a new instance of our custom SectorAnalysisHeatmapControl
-                var sectorHeatmapControl = new SectorAnalysisHeatmapControl();
+                var sectorHeatmapControl = new SectorAnalysisHeatmapControl(_sectorMomentumService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 sectorHeatmapControl.Width = double.NaN; // Auto width

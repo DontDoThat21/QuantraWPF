@@ -25,12 +25,12 @@ namespace Quantra.Controls
         private DispatcherTimer _autoRefreshTimer;
         private bool _disposed = false;
 
-        public SectorAnalysisHeatmapControl()
+        public SectorAnalysisHeatmapControl(SectorMomentumService sectorService)
         {
             try
             {
                 InitializeComponent();
-                _sectorService = new SectorMomentumService();
+                _sectorService = sectorService;
                 DataContext = this;
 
                 // Initialize the refresh timer (refresh every 5 minutes)

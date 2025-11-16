@@ -32,7 +32,7 @@ namespace Quantra
         public event Action<string> SymbolChanged;
 
         #region Core Properties and Fields
-        private WebullTradingBot tradingBot = new WebullTradingBot();
+        private WebullTradingBot tradingBot;// = new WebullTradingBot();
         private DispatcherTimer tradeUpdateTimer;
         public ObservableCollection<TradingSymbol> ActiveSymbols { get; set; }
         public ObservableCollection<StockItem> TradingRules { get; set; }
@@ -70,10 +70,17 @@ namespace Quantra
         public Utilities.TabManager TabManager { get; private set; }
         #endregion
 
-        public MainWindow()
+        public MainWindow(UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService
+            )
         {
             InitializeComponent();
-            tradingBot = new WebullTradingBot();
+            tradingBot = new WebullTradingBot(userSettingsService,
+                historicalDataService,
+                alphaVantageService,
+                technicalIndicatorService);
             ActiveSymbols = [];
             TradingRules = [];
 
@@ -90,8 +97,12 @@ namespace Quantra
             // Initialize tab management
             InitializeTabManagement();
 
-            // Ensure the UserAppSettings table exists
-            DatabaseMonolith.EnsureUserAppSettingsTable();
+            // Ensure database tables exist using the new service
+            var dbInitService = App.ServiceProvider.GetService<IDatabaseInitializationService>();
+            if (dbInitService != null)
+            {
+                dbInitService.EnsureUserAppSettingsTable();
+            }
 
             // Load all tabs from database
             TabManager.LoadCustomTabs();
@@ -142,7 +153,7 @@ namespace Quantra
             SaveCardPositions();
 
             // Save window state for next startup
-            UserSettingsService.SaveWindowState(this.WindowState);
+            _userSettingsService.SaveWindowState(this.WindowState);
 
             // Ensure the LoginWindow is shown when MainWindow is closed
             if (Application.Current.Windows.OfType<LoginWindow>().FirstOrDefault() == null)

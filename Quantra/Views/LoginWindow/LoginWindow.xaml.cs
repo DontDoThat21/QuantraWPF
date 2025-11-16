@@ -15,7 +15,16 @@ namespace Quantra
     {
         private Dictionary<string, (string Username, string Password, string Pin)> rememberedAccounts;
 
-        public LoginWindow()
+        UserSettingsService _userSettingsService;
+        HistoricalDataService _historicalDataService;
+        AlphaVantageService _alphaVantageService;
+        TechnicalIndicatorService _technicalIndicatorService;
+
+        public LoginWindow(UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService
+            )
         {
             InitializeComponent();
             //DatabaseMonolith.EnsureDatabaseAndTables();
@@ -50,7 +59,7 @@ namespace Quantra
             // Example: If you need to pass the API key to a service, use the new method
             string alphaVantageApiKey = AlphaVantageService.GetApiKey();
 
-            var tradingBot = new WebullTradingBot(/* pass what is needed, remove configuration */);
+            var tradingBot = new WebullTradingBot(_userSettingsService, _historicalDataService, _alphaVantageService, _technicalIndicatorService);
             bool isAuthenticated = false;
 
             if (!string.IsNullOrEmpty(pin) && rememberedAccounts.Values.Any(a => a.Pin == pin))
@@ -73,7 +82,7 @@ namespace Quantra
                 var mainWindow = new MainWindow();
                 
                 // Restore window state if enabled
-                var savedWindowState = UserSettingsService.GetSavedWindowState();
+                var savedWindowState = _userSettingsService.GetSavedWindowState();
                 if (savedWindowState.HasValue)
                 {
                     mainWindow.WindowState = savedWindowState.Value;

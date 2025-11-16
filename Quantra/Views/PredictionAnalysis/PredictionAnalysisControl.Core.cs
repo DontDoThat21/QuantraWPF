@@ -17,7 +17,7 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl
     {
-        private AlphaVantageService _alphaVantageService;
+        // Remove duplicate _alphaVantageService field - already declared in xaml.cs
         private WebullTradingBot tradingBot;
         private List<PatternModel> detectedPatterns;
         private PatternModel selectedPattern;
@@ -41,7 +41,6 @@ namespace Quantra.Controls
             WebullTradingBot webullTradingBot)
         {
             tradingBot = webullTradingBot;
-            _alphaVantageService = alphaVantageService;
             // Initialize other configuration-specific items if needed
             InitializeControl();
         }

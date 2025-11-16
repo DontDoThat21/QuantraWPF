@@ -16,5 +16,9 @@ namespace Quantra.DAL.Services
         void SetActiveCustomBenchmark(string customBenchmarkId);
         void SaveWindowState(System.Windows.WindowState windowState);
         System.Windows.WindowState? GetSavedWindowState();
+        
+        // DataGrid configuration methods
+        void SaveDataGridConfig(string tabName, string controlName, DataGridSettings settings);
+        DataGridSettings LoadDataGridConfig(string tabName, string controlName);
     }
 }

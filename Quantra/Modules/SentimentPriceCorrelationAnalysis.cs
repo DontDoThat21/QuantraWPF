@@ -21,6 +21,7 @@ namespace Quantra.Modules
         private readonly IInsiderTradingService _insiderTradingService;
         private readonly SectorSentimentAnalysisService _sectorSentimentService;
         private readonly PredictionAnalysisRepository _predictionAnalysisRepository;
+        private readonly SectorMomentumService _sectorMomentumService;
         private readonly UserSettings _userSettings;
 
         public SentimentPriceCorrelationAnalysis(UserSettings userSettings = null)
@@ -31,6 +32,7 @@ namespace Quantra.Modules
             _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
             _sectorSentimentService = new SectorSentimentAnalysisService(userSettings);
             _predictionAnalysisRepository = new PredictionAnalysisRepository();
+            _predictionAnalysisRepository = new SectorMomentumService(userSettings);
             _userSettings = userSettings ?? new UserSettings();
         }
 
@@ -174,11 +176,10 @@ namespace Quantra.Modules
         {
             // Get sector sentiment trend
             var sectorSentimentTrend = await _sectorSentimentService.GetSectorSentimentTrendAsync(sector, lookbackDays);
-            
+
             // Get sector performance data (using SectorMomentumService to get mock performance)
-            var sectorMomentumService = new SectorMomentumService();
             var timeframe = lookbackDays <= 7 ? "1w" : lookbackDays <= 30 ? "1m" : "3m";
-            var momentumData = sectorMomentumService.GetSectorMomentumData(timeframe);
+            var momentumData = _sectorMomentumService.GetSectorMomentumData(timeframe);
             
             // If sector not found, return empty result
             if (!momentumData.ContainsKey(sector))

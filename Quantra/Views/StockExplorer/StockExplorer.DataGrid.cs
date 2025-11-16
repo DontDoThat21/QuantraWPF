@@ -13,7 +13,8 @@ using Quantra.Views.Shared; // Added for ConfirmationModal
 using Quantra.ViewModels; // Added for StockExplorerViewModel
 using Quantra; // Added for QuoteData class
 using System.Windows.Threading;
-using Quantra.DAL.Services; // Added for DispatcherTimer
+using Quantra.DAL.Services; // Added for DispatcherTimer and StockSymbolCacheService
+using Microsoft.Extensions.DependencyInjection; // Added for dependency injection
 
 namespace Quantra.Controls
 {
@@ -22,10 +23,14 @@ namespace Quantra.Controls
         // DataGrid and stock grid-related fields, properties, and methods
         private DispatcherTimer _saveTimer;
         private bool _isLoadingSettings = false;
+        private IUserSettingsService _userSettingsService;
 
         // Initialize DataGrid settings
         private void InitializeDataGridSettings()
         {
+            // Get UserSettingsService from App's service provider
+            _userSettingsService = App.ServiceProvider.GetRequiredService<IUserSettingsService>();
+            
             // Initialize save timer for delayed saving
             _saveTimer = new DispatcherTimer
             {
@@ -58,7 +63,7 @@ namespace Quantra.Controls
                 if (string.IsNullOrEmpty(tabName))
                     return;
 
-                var settings = DatabaseMonolith.LoadDataGridConfig(tabName, "StockDataGrid");
+                var settings = _userSettingsService.LoadDataGridConfig(tabName, "StockDataGrid");
                 
                 // Apply DataGrid size if saved
                 if (!double.IsNaN(settings.DataGridWidth) && settings.DataGridWidth > 0)
@@ -88,7 +93,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Warning", "Failed to load DataGrid settings", ex.ToString());
+                //_loggingService.Log("Warning", "Failed to load DataGrid settings", ex.ToString());
             }
             finally
             {
@@ -123,11 +128,11 @@ namespace Quantra.Controls
                     }
                 }
 
-                DatabaseMonolith.SaveDataGridConfig(tabName, "StockDataGrid", settings);
+                _userSettingsService.SaveDataGridConfig(tabName, "StockDataGrid", settings);
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Warning", "Failed to save DataGrid settings", ex.ToString());
+                //_loggingService.Log("Warning", "Failed to save DataGrid settings", ex.ToString());
             }
         }
 
@@ -284,8 +289,8 @@ namespace Quantra.Controls
 
             if (confirmed)
             {
-                var cacheService = new StockDataCacheService();
-                int deletedEntries = cacheService.DeleteCachedDataForSymbol(symbol);
+                // Use the existing _cacheService instance
+                int deletedEntries = _cacheService.DeleteCachedDataForSymbol(symbol);
                 (Application.Current.MainWindow as MainWindow)?.AppendAlert($"Deleted {deletedEntries} cache entries for {symbol}.", "positive");
                 //DatabaseMonolith.Log("Info", $"User deleted cache for symbol: {symbol}. Entries removed: {deletedEntries}.");
                 
@@ -310,8 +315,8 @@ namespace Quantra.Controls
 
             if (confirmed)
             {
-                // Delete from database
-                bool success = DatabaseMonolith.DeleteStockSymbol(symbol);
+                // Delete from database using Entity Framework Core service
+                bool success = StockSymbolCacheService.DeleteStockSymbol(symbol);
                 
                 if (success)
                 {

@@ -454,8 +454,8 @@ namespace Quantra.Utilities
         /// <param name="tabName">Name of the tab to load controls for</param>
         public void LoadTabControls(string tabName)
         {
-            var controlsConfig = LoadControlsConfig(tabName);
-            var gridConfig = LoadGridConfig(tabName);
+            var controlsConfig = DatabaseMonolith.LoadControlsConfig(tabName);
+            var gridConfig = DatabaseMonolith.LoadGridConfig(tabName);
 
             // Always ensure we have at least 4x4 grid dimensions
             int rows = Math.Max(4, gridConfig.Rows);

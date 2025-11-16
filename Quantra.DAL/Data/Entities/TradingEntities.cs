@@ -108,5 +108,21 @@ public string Symbol { get; set; }
 
         [Required]
   public DateTime LastModified { get; set; }
+        
+        // Additional properties for advanced trading rules
+        [Required]
+        public double MinConfidence { get; set; }
+        
+        [Required]
+        public double EntryPrice { get; set; }
+        
+        [Required]
+        public double ExitPrice { get; set; }
+        
+        [Required]
+        public double StopLoss { get; set; }
+        
+        [Required]
+        public int Quantity { get; set; }
     }
 }

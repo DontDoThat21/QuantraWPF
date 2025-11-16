@@ -91,7 +91,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                LoggingService.LogError($"Error retrieving latest quote data for multiple symbols", ex);
+                _loggingService.LogError($"Error retrieving latest quote data for multiple symbols", ex);
             }
 
             return quoteDataList;
@@ -163,7 +163,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                LoggingService.LogError($"Error retrieving latest quote data with timestamp for {symbol}", ex);
+                _loggingService.LogError($"Error retrieving latest quote data with timestamp for {symbol}", ex);
             }
 
             return (quoteData, timestamp);

@@ -42,12 +42,10 @@ set => _connectionString = value;
        try
             {
           var connection = new SqlConnection(ConnectionString);
-   LoggingService.LogDebug($"SQL Server connection created for database: {connection.Database}");
     return connection;
             }
     catch (Exception ex)
             {
-  LoggingService.LogError("Failed to create SQL Server connection", ex);
          throw new InvalidOperationException("Failed to create database connection. See inner exception for details.", ex);
  }
         }
@@ -64,13 +62,11 @@ set => _connectionString = value;
   {
        connection = GetConnection();
               connection.Open();
-                LoggingService.LogDebug($"SQL Server connection opened successfully to: {connection.Database}");
       return connection;
   }
             catch (Exception ex)
             {
        connection?.Dispose();
-                LoggingService.LogError("Failed to open SQL Server connection", ex);
                 throw new InvalidOperationException("Failed to open database connection. Ensure LocalDB is installed and running.", ex);
             }
     }
@@ -85,13 +81,11 @@ try
  {
     using (var connection = GetOpenConnection())
    {
-   LoggingService.LogInformation("SQL Server connection test successful");
     return true;
        }
  }
     catch (Exception ex)
             {
-          LoggingService.LogError("SQL Server connection test failed", ex);
             return false;
      }
       }
@@ -107,7 +101,6 @@ public static bool EnsureDatabaseExists()
     // First try to connect to the database
           using (var connection = GetOpenConnection())
          {
-   LoggingService.LogInformation("QuantraRelational database already exists");
     return true;
          }
             }
@@ -135,14 +128,12 @@ public static bool EnsureDatabaseExists()
            CREATE DATABASE [QuantraRelational]
            END";
    command.ExecuteNonQuery();
-       LoggingService.LogInformation("QuantraRelational database created successfully");
     }
                     }
             return true;
     }
      catch (Exception ex)
    {
-  LoggingService.LogError("Failed to create QuantraRelational database", ex);
          return false;
    }
             }

@@ -277,7 +277,7 @@ if (LastUpdatedText != null)
    }
     catch (Exception ex)
           {
- LoggingService.Log("Error", "Failed to load cached predictions", ex.ToString());
+ //_loggingService.Log("Error", "Failed to load cached predictions", ex.ToString());
   }
         }
 
@@ -478,7 +478,7 @@ if (LastUpdatedText != null)
    double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
      double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
     {
-        LoggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+        //_loggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
      return;
      }
 
@@ -488,7 +488,7 @@ if (LastUpdatedText != null)
          }
    catch (Exception ex)
      {
-  LoggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
+  //_loggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
   }
     }
 
@@ -498,17 +498,17 @@ if (LastUpdatedText != null)
             {
          // Use the default fallback list - in production this would come from a proper stock symbol service
     var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
-          LoggingService.Log("Info", $"Using default list of {defaultSymbols.Count} symbols.");
+          //_loggingService.Log("Info", $"Using default list of {defaultSymbols.Count} symbols.");
    return defaultSymbols;
             }
       catch (OperationCanceledException)
       {
-      LoggingService.Log("Info", "Fetching major US stocks was cancelled.");
+      //_loggingService.Log("Info", "Fetching major US stocks was cancelled.");
          return new List<string>();
    }
          catch (Exception ex)
             {
- LoggingService.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
+ //_loggingService.Log("Error", "Failed to fetch US stock symbols", ex.ToString());
     var defaultSymbols = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
       return defaultSymbols;
          }

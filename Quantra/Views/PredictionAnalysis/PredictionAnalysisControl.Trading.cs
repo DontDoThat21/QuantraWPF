@@ -17,7 +17,6 @@ namespace Quantra.Controls
     {
         private WebullTradingBot _tradingBot;
    private StockDataCacheService _stockDataCache;
-   private OrderHistoryService _orderHistoryService;
       private Dictionary<string, DateTime> _lastTradeTime = new Dictionary<string, DateTime>();
         private bool _isAutoTradingEnabled = false;
 
@@ -43,12 +42,12 @@ new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
    technicalIndicatorService);
       
          _stockDataCache = new StockDataCacheService(userSettingsService);
-  _orderHistoryService = new OrderHistoryService();
+  // _orderHistoryService is already initialized in constructor, no need to reassign
      
           // Default to paper trading mode
  _tradingBot.SetTradingMode(Quantra.Enums.TradingMode.Paper);
        
-     //LoggingService.Log("Info", "Trading components initialized in PredictionAnalysisControl");
+     //_loggingService.Log("Info", "Trading components initialized in PredictionAnalysisControl");
   }
 
         /// <summary>
@@ -257,7 +256,7 @@ new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
         // Determine if we should use a trailing stop for this prediction
          bool useTrailingStop = ShouldUseTrailingStop(prediction);
      
-         //LoggingService.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
+         //_loggingService.Log("Info", $"Executing automated {prediction.PredictedAction} trade for {prediction.Symbol}: {quantity} shares at {price:C2}");
         
          // Create order model
                 var order = new OrderModel
@@ -301,11 +300,11 @@ trailingStopOrderType
           
    if (trailingStopSet)
        {
-  //LoggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+  //_loggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
    }
     else
       {
-      //LoggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+      //_loggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
        }
        }
           else
@@ -332,7 +331,7 @@ trailingStopOrderType
         }
             catch (Exception ex)
             {
-       //LoggingService.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
+       //_loggingService.Log("Error", $"Error executing automated trade for {prediction.Symbol}", ex.ToString());
         }
       }
 
@@ -701,11 +700,11 @@ double takeProfit = CalculateTakeProfit(prediction);
   
                   if (trailingStopSet)
         {
-  //LoggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
+  //_loggingService.Log("Info", $"Trailing stop set for {order.Symbol} with {trailingDistance:P2} trailing distance");
            }
          else
        {
-    //LoggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
+    //_loggingService.Log("Warning", $"Failed to set trailing stop for {order.Symbol}");
             }
     }
   else
@@ -723,7 +722,7 @@ double takeProfit = CalculateTakeProfit(prediction);
 
               // Log and update last trade time
                  _lastTradeTime[prediction.Symbol] = DateTime.Now;
-              //LoggingService.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
+              //_loggingService.Log("Info", $"Trade executed for {prediction.Symbol}: {prediction.PredictedAction} {quantity} @ {prediction.CurrentPrice}");
     
   // Save order history using the service
               await _orderHistoryService.AddOrderToHistoryAsync(order);
@@ -734,7 +733,7 @@ double takeProfit = CalculateTakeProfit(prediction);
                 }
                 catch (Exception ex)
       {
-          //LoggingService.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
+          //_loggingService.Log("Error", $"Error executing trade for {prediction.Symbol}", ex.ToString());
        }
         }
 }

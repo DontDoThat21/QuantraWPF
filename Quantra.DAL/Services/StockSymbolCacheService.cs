@@ -14,24 +14,31 @@ namespace Quantra.DAL.Services
     /// <summary>
     /// Service for managing stock symbol caching using Entity Framework Core
     /// </summary>
-    public static class StockSymbolCacheService
+    public class StockSymbolCacheService
     {
-        private static DbContextOptions<QuantraDbContext> CreateOptions()
+        private static LoggingService _loggingService;
+
+        public StockSymbolCacheService(LoggingService loggingService)
+        {
+            _loggingService = loggingService;
+        }
+
+        private DbContextOptions<QuantraDbContext> CreateOptions()
         {
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-   optionsBuilder.UseSqlServer(Data.ConnectionHelper.ConnectionString);
-    return optionsBuilder.Options;
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            return optionsBuilder.Options;
         }
 
         /// <summary>
         /// Caches stock symbols in the database
         /// </summary>
         /// <param name="symbols">List of stock symbols to cache</param>
-  public static void CacheStockSymbols(List<StockSymbol> symbols)
+  public void CacheStockSymbols(List<StockSymbol> symbols)
         {
   if (symbols == null || !symbols.Any())
             {
-          LoggingService.Log("Warning", "Attempted to cache empty symbol list");
+          _loggingService.Log("Warning", "Attempted to cache empty symbol list");
  return;
           }
 
@@ -68,12 +75,12 @@ namespace Quantra.DAL.Services
   }
 
            context.SaveChanges();
-     LoggingService.Log("Info", $"Successfully cached {symbols.Count} stock symbols");
+     _loggingService.Log("Info", $"Successfully cached {symbols.Count} stock symbols");
          }
        }
        catch (Exception ex)
             {
-     LoggingService.LogErrorWithContext(ex, "Failed to cache stock symbols");
+     _loggingService.LogErrorWithContext(ex, "Failed to cache stock symbols");
       throw;
             }
     }
@@ -82,7 +89,7 @@ namespace Quantra.DAL.Services
         /// Retrieves all cached stock symbols from the database.
       /// </summary>
         /// <returns>ObservableCollection of StockSymbol objects</returns>
-      public static ObservableCollection<StockSymbol> GetAllCachedStockSymbols()
+      public ObservableCollection<StockSymbol> GetAllCachedStockSymbols()
         {
           var symbols = new ObservableCollection<StockSymbol>();
             
@@ -107,12 +114,12 @@ namespace Quantra.DAL.Services
             });
        }
 
-    LoggingService.Log("Info", $"Retrieved {symbols.Count} cached stock symbols");
+    _loggingService.Log("Info", $"Retrieved {symbols.Count} cached stock symbols");
     }
       }
             catch (Exception ex)
           {
-      LoggingService.LogErrorWithContext(ex, "Failed to retrieve stock symbols");
+      _loggingService.LogErrorWithContext(ex, "Failed to retrieve stock symbols");
             }
 
 return symbols;
@@ -123,11 +130,11 @@ return symbols;
         /// </summary>
         /// <param name="symbol">The stock symbol to retrieve</param>
         /// <returns>StockSymbol object or null if not found</returns>
-        public static StockSymbol GetStockSymbol(string symbol)
+        public StockSymbol GetStockSymbol(string symbol)
         {
  if (string.IsNullOrWhiteSpace(symbol))
           {
-          LoggingService.Log("Warning", "Attempted to retrieve empty symbol");
+          _loggingService.Log("Warning", "Attempted to retrieve empty symbol");
           return null;
     }
 
@@ -154,10 +161,79 @@ var entity = context.StockSymbols
             }
         catch (Exception ex)
             {
-    LoggingService.LogErrorWithContext(ex, $"Failed to retrieve stock symbol {symbol}");
+    _loggingService.LogErrorWithContext(ex, $"Failed to retrieve stock symbol {symbol}");
         }
 
      return null;
+        }
+
+        /// <summary>
+        /// Deletes a stock symbol and all associated cached data from the database.
+        /// </summary>
+        /// <param name="symbol">The stock symbol to delete</param>
+        /// <returns>True if deletion was successful, false otherwise</returns>
+        public static bool DeleteStockSymbol(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                _loggingService.Log("Warning", "DeleteStockSymbol called with null or empty symbol");
+                return false;
+            }
+
+            try
+            {
+                using (var context = new QuantraDbContext(CreateOptions()))
+                {
+                    using (var transaction = context.Database.BeginTransaction())
+                    {
+                        try
+                        {
+                            var symbolToDelete = symbol.Trim().ToUpper();
+
+                            // Delete from StockDataCache table first (due to potential foreign key constraints)
+                            var cacheEntries = context.StockDataCache
+                                .Where(c => c.Symbol == symbolToDelete)
+                                .ToList();
+                            
+                            if (cacheEntries.Any())
+                            {
+                                context.StockDataCache.RemoveRange(cacheEntries);
+                                _loggingService.Log("Info", $"Deleted {cacheEntries.Count} cache entries for symbol {symbolToDelete}");
+                            }
+
+                            // Delete from StockSymbols table
+                            var symbolEntity = context.StockSymbols
+                                .FirstOrDefault(s => s.Symbol == symbolToDelete);
+
+                            if (symbolEntity != null)
+                            {
+                                context.StockSymbols.Remove(symbolEntity);
+                                context.SaveChanges();
+                                transaction.Commit();
+                                
+                                _loggingService.Log("Info", $"Successfully deleted stock symbol {symbolToDelete} from database");
+                                return true;
+                            }
+                            else
+                            {
+                                transaction.Rollback();
+                                _loggingService.Log("Warning", $"Stock symbol {symbolToDelete} was not found in database");
+                                return false;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Failed to delete stock symbol {symbol}");
+                return false;
+            }
         }
 
         /// <summary>
@@ -165,7 +241,7 @@ var entity = context.StockSymbols
         /// </summary>
         /// <param name="maxAgeDays">Maximum age of the cache in days (default: 7)</param>
         /// <returns>True if cache is valid, false otherwise</returns>
-        public static bool IsSymbolCacheValid(int maxAgeDays = 7)
+        public bool IsSymbolCacheValid(int maxAgeDays = 7)
         {
      try
             {
@@ -191,7 +267,7 @@ var entity = context.StockSymbols
 }
        catch (Exception ex)
         {
-      LoggingService.LogErrorWithContext(ex, "Failed to validate symbol cache");
+      _loggingService.LogErrorWithContext(ex, "Failed to validate symbol cache");
         return false;
             }
         }
@@ -200,7 +276,7 @@ var entity = context.StockSymbols
       /// Forces a refresh of the symbol cache by updating the LastUpdated timestamp.
         /// </summary>
         /// <returns>Number of symbols refreshed</returns>
-     public static int RefreshSymbolCache()
+     public int RefreshSymbolCache()
    {
             try
         {
@@ -216,13 +292,13 @@ var entity = context.StockSymbols
 
           context.SaveChanges();
             var count = allSymbols.Count;
-         LoggingService.Log("Info", $"Refreshed timestamps for {count} stock symbols");
+         _loggingService.Log("Info", $"Refreshed timestamps for {count} stock symbols");
               return count;
     }
             }
             catch (Exception ex)
             {
-        LoggingService.LogErrorWithContext(ex, "Failed to refresh symbol cache");
+        _loggingService.LogErrorWithContext(ex, "Failed to refresh symbol cache");
   return 0;
  }
         }
@@ -232,7 +308,7 @@ var entity = context.StockSymbols
         /// </summary>
         /// <param name="searchTerm">Search term to match against symbol or name</param>
         /// <returns>List of matching StockSymbol objects</returns>
- public static List<StockSymbol> SearchSymbols(string searchTerm)
+ public List<StockSymbol> SearchSymbols(string searchTerm)
         {
  var results = new List<StockSymbol>();
        
@@ -264,15 +340,44 @@ var entity = context.StockSymbols
   });
    }
 
-   LoggingService.Log("Info", $"Found {results.Count} matching stock symbols for search term '{searchTerm}'");
+   _loggingService.Log("Info", $"Found {results.Count} matching stock symbols for search term '{searchTerm}'");
       }
           }
    catch (Exception ex)
             {
-      LoggingService.LogErrorWithContext(ex, $"Failed to search for stock symbols with term '{searchTerm}'");
+      _loggingService.LogErrorWithContext(ex, $"Failed to search for stock symbols with term '{searchTerm}'");
        }
 
       return results;
+        }
+
+        /// <summary>
+        /// Retrieves all stock symbols as a simple list of strings from the database.
+        /// </summary>
+        /// <returns>List of stock symbol strings</returns>
+        public static List<string> GetAllSymbolsAsList()
+        {
+            var symbols = new List<string>();
+
+            try
+            {
+                using (var context = new QuantraDbContext(CreateOptions()))
+                {
+                    symbols = context.StockSymbols
+                        .AsNoTracking()
+                        .OrderBy(s => s.Symbol)
+                        .Select(s => s.Symbol)
+                        .ToList();
+
+                    _loggingService.Log("Info", $"Retrieved {symbols.Count} stock symbols as list");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Failed to retrieve stock symbols as list");
+            }
+
+            return symbols;
         }
     }
 }

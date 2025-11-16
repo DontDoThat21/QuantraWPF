@@ -24,48 +24,75 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl, INotifyPropertyChanged
     {
-     private readonly PredictionAnalysisViewModel _viewModel;
-      private readonly NotificationService _notificationService;
- private readonly StockDataCacheService _stockDataCacheService;
-private readonly TechnicalIndicatorService _indicatorService;
-    private readonly EmailService _emailService;
-        private readonly ISettingsService _settingsService;
+        private readonly PredictionAnalysisViewModel _viewModel;
+        private readonly NotificationService _notificationService;
+        private readonly StockDataCacheService _stockDataCacheService;
+        private readonly TechnicalIndicatorService _indicatorService;
+        private readonly EmailService _emailService;
+        private readonly TradingService _tradingService;
+        private readonly SettingsService _settingsService;
+        private readonly PredictionAnalysisRepository _analysisRepository;
+        private readonly AlphaVantageService _alphaVantageService;
+        private readonly HistoricalDataService _historicalDataService;
         private readonly IndicatorSettingsService _indicatorSettingsService;
+        private readonly TradingRuleService _tradingRuleService;
+        private readonly UserSettingsService _userSettingsService;
+        private readonly OrderHistoryService _orderHistoryService;
         private readonly IndicatorDisplayModule _indicatorModule;
-     private readonly PredictionChartModuleType _chartModule;
-      private string _pacId; // Unique identifier for this PAC instance
-     private ComboBox _strategyProfileComboBox;
+        private readonly PredictionChartModuleType _chartModule;
+        private string _pacId; // Unique identifier for this PAC instance
+        private ComboBox _strategyProfileComboBox;
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
- // Indicators dictionary (not duplicated in other files)
-     private Dictionary<string, double> indicators;
-   // Confidence value (not duplicated in other files)
-    private double confidence;
+        // Indicators dictionary (not duplicated in other files)
+        private Dictionary<string, double> indicators;
+        // Confidence value (not duplicated in other files)
+        private double confidence;
 
      public PredictionAnalysisControl(
-   PredictionAnalysisViewModel viewModel,
-   NotificationService notificationService,
-    TechnicalIndicatorService indicatorService,
+        PredictionAnalysisViewModel viewModel,
+        NotificationService notificationService,
+        TechnicalIndicatorService indicatorService,
         PredictionAnalysisRepository analysisRepository,
-   StockDataCacheService stockDataCacheService,
-       TradingService tradingService,
-        ISettingsService settingsService,
+        StockDataCacheService stockDataCacheService,
+        TradingService tradingService,
+        HistoricalDataService historicalDataService,
+        SettingsService settingsService,
         AlphaVantageService alphaVantageService,
-       EmailService emailService,
-IndicatorSettingsService indicatorSettingsService)
+        EmailService emailService,
+        IndicatorSettingsService indicatorSettingsService,
+        TradingRuleService tradingRuleService,
+        UserSettingsService userSettingsService,
+        OrderHistoryService orderHistoryService)
      {
   InitializeComponent();
 
-         _viewModel = viewModel;
-_notificationService = notificationService;
-     _stockDataCacheService = stockDataCacheService;
-   _indicatorService = indicatorService;
-        _emailService = emailService;
+    _viewModel = viewModel;
+    _notificationService = notificationService;
+    _stockDataCacheService = stockDataCacheService;
+    _indicatorService = indicatorService;
+    _emailService = emailService;
+    _tradingService = tradingService;
+    _analysisRepository = analysisRepository;
     _settingsService = settingsService;
-        _indicatorSettingsService = indicatorSettingsService ?? throw new ArgumentNullException(nameof(indicatorSettingsService));
-     
-  _indicatorModule = new IndicatorDisplayModule(_settingsService, _indicatorService, _notificationService, _emailService);
-          _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, stockDataCacheService);
+    _historicalDataService = historicalDataService;
+    _alphaVantageService = alphaVantageService;
+    _indicatorSettingsService = indicatorSettingsService ?? throw new ArgumentNullException(nameof(indicatorSettingsService));
+    _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
+    _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+    _orderHistoryService = orderHistoryService ?? throw new ArgumentNullException(nameof(orderHistoryService));
+
+    _indicatorModule = new IndicatorDisplayModule(
+        _settingsService, 
+        _indicatorService, 
+        _notificationService, 
+        _emailService, 
+        _tradingRuleService, 
+        _userSettingsService, 
+        _historicalDataService, 
+        _alphaVantageService, 
+        _orderHistoryService);
+    _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, _stockDataCacheService);
 
          DataContext = _viewModel;
 

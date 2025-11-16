@@ -15,10 +15,12 @@ namespace Quantra.DAL.Services
     public class PredictionAnalysisService
   {
         private readonly QuantraDbContext _context;
+        private LoggingService _loggingService;
 
         public PredictionAnalysisService(QuantraDbContext context)
         {
   _context = context ?? throw new ArgumentNullException(nameof(context));
+            _loggingService = new LoggingService();
         }
 
         // Parameterless constructor for backward compatibility
@@ -96,7 +98,7 @@ string sqlConn = Environment.GetEnvironmentVariable("QUANTRA_RELATIONAL_CONNECTI
   }
         catch (Exception ex)
         {
-       LoggingService.Log("Error", "Failed to retrieve latest predictions from database", ex.ToString());
+       _loggingService.Log("Error", "Failed to retrieve latest predictions from database", ex.ToString());
         return new List<PredictionModel>();
 }
         }
@@ -161,7 +163,7 @@ public async Task<List<PredictionModel>> GetPredictionsForSymbolAsync(string sym
             }
             catch (Exception ex)
             {
-        LoggingService.Log("Error", $"Failed to retrieve predictions for {symbol}", ex.ToString());
+        _loggingService.Log("Error", $"Failed to retrieve predictions for {symbol}", ex.ToString());
    return new List<PredictionModel>();
             }
         }
@@ -221,7 +223,7 @@ public async Task<List<PredictionModel>> GetPredictionsForSymbolAsync(string sym
             }
             catch (Exception ex)
             {
-         LoggingService.Log("Error", $"Failed to retrieve predictions by action {action}", ex.ToString());
+         _loggingService.Log("Error", $"Failed to retrieve predictions by action {action}", ex.ToString());
             return new List<PredictionModel>();
             }
      }
@@ -299,7 +301,7 @@ Confidence = prediction.Confidence,
         }
     catch (Exception ex)
        {
-LoggingService.Log("Error", $"Failed to save prediction for {prediction.Symbol}", ex.ToString());
+_loggingService.Log("Error", $"Failed to save prediction for {prediction.Symbol}", ex.ToString());
          throw;
       }
       }
@@ -330,7 +332,7 @@ LoggingService.Log("Error", $"Failed to save prediction for {prediction.Symbol}"
    
      await _context.SaveChangesAsync();
           
-     LoggingService.Log("Info", $"Deleted {oldPredictions.Count} old predictions");
+     _loggingService.Log("Info", $"Deleted {oldPredictions.Count} old predictions");
      return oldPredictions.Count;
     }
 
@@ -338,7 +340,7 @@ LoggingService.Log("Error", $"Failed to save prediction for {prediction.Symbol}"
             }
        catch (Exception ex)
             {
- LoggingService.Log("Error", "Failed to delete old predictions", ex.ToString());
+ _loggingService.Log("Error", "Failed to delete old predictions", ex.ToString());
          return 0;
  }
         }

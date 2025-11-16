@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 using System.Linq;
 using System.Windows.Data;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace Quantra.ViewModels
         private readonly IAlphaVantageService _alphaVantageService;
         private readonly ISettingsService _settingsService;
         private readonly IEmailService _emailService;
+        private readonly ITradingRuleService _tradingRuleService;
         private double _currentPrice;
         private string _symbol;
         private object _selectedStrategyProfile;
@@ -142,7 +144,8 @@ namespace Quantra.ViewModels
             ITradingService tradingService,
             ISettingsService settingsService,
             IAlphaVantageService alphaVantageService,
-            IEmailService emailService)
+            IEmailService emailService,
+            ITradingRuleService tradingRuleService)
         {
             _indicatorService = indicatorService ?? throw new ArgumentNullException(nameof(indicatorService));
             _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
@@ -150,6 +153,7 @@ namespace Quantra.ViewModels
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
             AnalyzeCommand = new RelayCommand(async _ => await AnalyzeAsync(), _ => true);
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => true);
 
@@ -258,7 +262,7 @@ namespace Quantra.ViewModels
         public async Task OnLoaded()
         {
             LoadCachedPredictions();
-            LoadTradingRules();
+            await LoadTradingRulesAsync();
             await RefreshAsync();
         }
 
@@ -276,19 +280,19 @@ namespace Quantra.ViewModels
             StatusText = $"Filtered: {view.Cast<object>().Count()} predictions.";
         }
 
-        private void LoadTradingRules()
+        private async Task LoadTradingRulesAsync()
         {
             try
             {
                 List<TradingRule> rules;
                 if (Symbol != null)
                 {
-                    rules = DatabaseMonolith.GetTradingRules(Symbol);
+                    rules = await _tradingRuleService.GetActiveTradingRulesAsync(Symbol);
                     StatusText = $"Loaded {rules.Count} trading rules for {Symbol}";
                 }
                 else
                 {
-                    rules = DatabaseMonolith.GetTradingRules();
+                    rules = await _tradingRuleService.GetTradingRulesAsync();
                     StatusText = $"Loaded {rules.Count} trading rules";
                 }
 
@@ -301,16 +305,22 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 StatusText = $"Error loading trading rules: {ex.Message}";
-                //DatabaseMonolith.Log("Error", "Failed to load trading rules", ex.ToString());
+                // Log error if needed
             }
         }
 
-        public void SaveTradingRule(TradingRule rule)
+        public async Task SaveTradingRuleAsync(TradingRule rule)
         {
             try
             {
-                DatabaseMonolith.SaveTradingRule(rule);
-                TradingRules.Add(rule);
+                await _tradingRuleService.SaveTradingRuleAsync(rule);
+                
+                // Only add to collection if it's a new rule
+                if (!TradingRules.Contains(rule))
+                {
+                    TradingRules.Add(rule);
+                }
+                
                 StatusText = $"Trading rule saved for {rule.Symbol}";
             }
             catch (Exception ex)

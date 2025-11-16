@@ -31,6 +31,9 @@ namespace Quantra
 
         // Add AlphaVantageService field
         private AlphaVantageService _alphaVantageService;
+        private UserSettingsService _userSettingsService;
+        private HistoricalDataService _historicalDataService;
+        private TechnicalIndicatorService _technicalIndicatorService;
 
         private bool _isFullscreen = false;
         private WindowState _previousWindowState;
@@ -271,7 +274,10 @@ namespace Quantra
             monitoringClearTimer.Start();
         }
 
-        public SharedTitleBar()
+        public SharedTitleBar(AlphaVantageService alphaVantageService,
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            TechnicalIndicatorService technicalIndicatorService)
         {
             InitializeComponent();
             this.DataContext = this;
@@ -290,13 +296,17 @@ namespace Quantra
             _orderService = App.ServiceProvider.GetService<IOrderService>();
 
             // Instantiate AlphaVantageService
-            _alphaVantageService = new AlphaVantageService();
+            _alphaVantageService = alphaVantageService;
+            _userSettingsService = userSettingsService;
+            _historicalDataService = historicalDataService;
+            _technicalIndicatorService = technicalIndicatorService;
 
-            // Ensure database and settings are properly initialized before starting VIX monitoring
+            // Ensure settings are properly initialized before starting VIX monitoring
             try
             {
                 // Ensure database is initialized first
-                DatabaseMonolith.Initialize();
+                //DatabaseMonolith.Initialize();
+                // todo: remove db monolith and this call
 
                 // Then ensure settings profiles exist
                 _settingsService.EnsureSettingsProfiles();
@@ -623,7 +633,7 @@ namespace Quantra
             var currentWindow = Window.GetWindow(this);
             if (currentWindow is MainWindow)
             {
-                var loginWindow = new LoginWindow();
+                var loginWindow = new LoginWindow(_userSettingsService, _historicalDataService, _alphaVantageService, _technicalIndicatorService);
                 loginWindow.Show();
             }
             currentWindow.Close();

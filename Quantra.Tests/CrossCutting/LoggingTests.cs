@@ -86,8 +86,8 @@ namespace Quantra.Tests.CrossCutting
             try
             {
                 // Test legacy logging works
-                Quantra.Services.LoggingService.Log("Info", "Legacy log test");
-                Quantra.Services.LoggingService.LogErrorWithContext(
+                Quantra.Services._loggingService.Log("Info", "Legacy log test");
+                Quantra.Services._loggingService.LogErrorWithContext(
                     new InvalidOperationException("Test exception"), "Legacy error logging test");
                 
                 // Log should succeed without exceptions

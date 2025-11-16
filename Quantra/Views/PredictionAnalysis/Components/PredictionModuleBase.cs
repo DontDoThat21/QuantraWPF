@@ -54,7 +54,7 @@ namespace Quantra.Views.PredictionAnalysis.Components
             ITechnicalIndicatorService indicatorService = null,
             INotificationService notificationService = null)
         {
-            IndicatorService = indicatorService ?? new TechnicalIndicatorService();
+            IndicatorService = indicatorService;
             NotificationService = notificationService ?? new NotificationService(DatabaseMonolith.GetUserSettings(),
                 new AudioService(DatabaseMonolith.GetUserSettings()), new SettingsService());
         }

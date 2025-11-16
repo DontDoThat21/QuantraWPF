@@ -29,10 +29,12 @@ namespace Quantra.DAL.Services
     public class StockDataCacheService : IStockDataCacheService
     {
         private readonly HistoricalDataService _historicalDataService;
+        private readonly LoggingService _loggingService;
 
         public StockDataCacheService(UserSettingsService userSettingsService)
         {
             _historicalDataService = new HistoricalDataService(userSettingsService);
+            _loggingService = new LoggingService();
             EnsureCacheTableExists();
         }
 
@@ -53,12 +55,12 @@ namespace Quantra.DAL.Services
                     // This will create all tables defined in the DbContext including StockDataCache
                     dbContext.Database.EnsureCreated();
 
-                    LoggingService.Log("Info", "Stock data cache tables created or verified using EF Core with SQL Server");
+                    _loggingService.Log("Info", "Stock data cache tables created or verified using EF Core with SQL Server");
                 }
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", "Failed to ensure stock data cache table exists", ex.ToString());
+                _loggingService.Log("Error", "Failed to ensure stock data cache table exists", ex.ToString());
             }
         }
 
@@ -169,7 +171,7 @@ namespace Quantra.DAL.Services
        }
             catch (Exception ex)
        {
-           LoggingService.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
+           _loggingService.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
          return null;
     }
         }
@@ -222,7 +224,7 @@ namespace Quantra.DAL.Services
    }
  catch (Exception ex)
     {
-        LoggingService.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
+        _loggingService.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
             }
         }
 
@@ -252,7 +254,7 @@ namespace Quantra.DAL.Services
           }
             catch (Exception ex)
             {
-      LoggingService.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
+      _loggingService.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
           return false;
        }
         }
@@ -310,7 +312,7 @@ namespace Quantra.DAL.Services
        }
 catch (Exception ex)
          {
-   LoggingService.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
+   _loggingService.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
             }
 
        return null;
@@ -426,13 +428,13 @@ catch (Exception ex)
          dbContext.StockDataCache.RemoveRange(expiredEntries);
           dbContext.SaveChanges();
     
-          LoggingService.Log("Info", $"Cleared {count} expired cache entries");
+          _loggingService.Log("Info", $"Cleared {count} expired cache entries");
       return count;
           }
         }
             catch (Exception ex)
             {
-       LoggingService.Log("Error", "Error clearing expired cache", ex.ToString());
+       _loggingService.Log("Error", "Error clearing expired cache", ex.ToString());
             return 0;
             }
         }
@@ -446,7 +448,7 @@ catch (Exception ex)
       {
       if (string.IsNullOrEmpty(symbol))
   {
-       LoggingService.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
+       _loggingService.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
      return 0;
             }
 
@@ -469,13 +471,13 @@ catch (Exception ex)
         dbContext.StockDataCache.RemoveRange(entriesToDelete);
      dbContext.SaveChanges();
 
-        LoggingService.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
+        _loggingService.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
     return count;
      }
  }
  catch (Exception ex)
      {
-       LoggingService.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
+       _loggingService.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
 return 0;
     }
         }
@@ -556,7 +558,7 @@ return 0;
      }
             catch (Exception ex)
      {
-      LoggingService.Log("Error", "Error retrieving all cached stocks", ex.ToString());
+      _loggingService.Log("Error", "Error retrieving all cached stocks", ex.ToString());
         }
             return stocks;
         }
@@ -635,7 +637,7 @@ return 0;
             }
             catch (Exception ex)
      {
-      LoggingService.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
+      _loggingService.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
    }
             return null;
         }
@@ -680,7 +682,7 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
      }
       catch (Exception ex)
           {
-                LoggingService.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
+                _loggingService.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
     }
     }
 
@@ -828,7 +830,7 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
       }
        catch (Exception ex)
  {
-     LoggingService.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
+     _loggingService.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
        }
           
  return symbols;
@@ -852,13 +854,13 @@ try
    dbContext.StockDataCache.RemoveRange(allEntries);
      dbContext.SaveChanges();
 
-            LoggingService.Log("Info", $"Cleared {count} cache entries");
+            _loggingService.Log("Info", $"Cleared {count} cache entries");
       return await Task.FromResult(true);
      }
              }
      catch (Exception ex)
 {
-     LoggingService.Log("Error", "Failed to clear cache", ex.ToString());
+     _loggingService.Log("Error", "Failed to clear cache", ex.ToString());
       return await Task.FromResult(false);
 }
 }

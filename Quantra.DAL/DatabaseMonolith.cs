@@ -29,33 +29,79 @@ namespace Quantra
   public class DatabaseMonolith
   {
      private bool initialized = false;
-  private IConfiguration _configuration;
    private SettingsService _settingsService;
         private QuantraDbContext _dbContext;
         private UserSettingsService _userSettingsService;
+        private LoggingService _loggingService;
+        private static IConfiguration _configuration;
+        private static string AlphaVantageApiKey;
 
-   // Store API keys for backward compatibility
-        public string AlphaVantageApiKey { get; internal set; }
-
-   public DatabaseMonolith(SettingsService settingsService)
+   public DatabaseMonolith(SettingsService settingsService, LoggingService loggingService)
  {
     _settingsService = settingsService;
  
       // Initialize DbContext
         var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+        optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
         _dbContext = new QuantraDbContext(optionsBuilder.Options);
-     
-        // Initialize UserSettingsService
-  _userSettingsService = new UserSettingsService(_dbContext);
+        _loggingService = loggingService;
+
+            // Initialize UserSettingsService
+            _userSettingsService = new UserSettingsService(_dbContext, loggingService);
        
    Initialize();
+        }
+
+        /// <summary>
+        /// Sets the application configuration for database operations.
+        /// </summary>
+        /// <param name="configuration">IConfiguration instance containing app settings</param>
+        /// <remarks>
+        /// This method configures the database layer with application settings and handles
+        /// migration from legacy configuration files (alphaVantageSettings.json) to the
+        /// new configuration system. API keys and other sensitive settings are loaded
+        /// and stored securely.
+        /// 
+        /// Should be called during application startup before other database operations.
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// var config = new ConfigurationBuilder()
+        ///     .AddJsonFile("appsettings.json")
+        ///     .Build();
+        /// DatabaseMonolith.SetConfiguration(config);
+        /// </code>
+        /// </example>
+        public void SetConfiguration(IConfiguration configuration)
+        {
+            _configuration = configuration;
+            
+            // Copy any settings from alphaVantageSettings.json to main config if they exist
+            if (File.Exists("alphaVantageSettings.json"))
+            {
+                try
+                {
+                    var alphaVantageSettings = JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                        File.ReadAllText("alphaVantageSettings.json"));
+                    
+                    if (alphaVantageSettings.TryGetValue("AlphaVantageApiKey", out var apiKey) && !string.IsNullOrWhiteSpace(apiKey))
+                    {
+                        // This is just temporary until we fully migrate to the new config system
+                        // We'll store this in memory only for now
+                        AlphaVantageApiKey = apiKey;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService.LogError("Error loading Alpha Vantage settings", ex);
+                }
+            }
         }
 
       /// <summary>
         /// Logs a message to the database with optional details and automatic error alerting.
    /// </summary>
-  [Obsolete("Use LoggingService.Log instead")]
+  [Obsolete("Use _loggingService.Log instead")]
         public void Log(string level, string message, string details = null)
       {
    try
@@ -108,44 +154,7 @@ catch (Exception ex)
             }
   }
 
-   /// <summary>
-        /// Sets the application configuration for database operations.
-      /// </summary>
-  /// <param name="configuration">IConfiguration instance containing app settings</param>
- /// <remarks>
-   /// This method configures the database layer with application settings and handles
-        /// migration from legacy configuration files (alphaVantageSettings.json) to the
-    /// new configuration system. API keys and other sensitive settings are loaded
-        /// and stored securely.
-    /// 
-  /// Should be called during application startup before other database operations.
-        /// </remarks>
-        public void SetConfiguration(IConfiguration configuration)
-    {
- _configuration = configuration;
-        
-        // Copy any settings from alphaVantageSettings.json to main config if they exist
-if (File.Exists("alphaVantageSettings.json"))
-       {
-      try
- {
-        var alphaVantageSettings = JsonConvert.DeserializeObject<Dictionary<string, string>>(
- File.ReadAllText("alphaVantageSettings.json"));
-        
-    if (alphaVantageSettings.TryGetValue("AlphaVantageApiKey", out var apiKey) && !string.IsNullOrWhiteSpace(apiKey))
-     {
-    // Store in memory for backward compatibility
-     AlphaVantageApiKey = apiKey;
-}
-        }
-      catch (Exception ex)
- {
-  Log("Error", "Error loading Alpha Vantage settings", ex.ToString());
-}
-      }
-        }
-
-  /// <summary>
+        /// <summary>
    /// Initializes the database, creating tables if they don't exist.
     /// </summary>
         public void Initialize()
@@ -252,10 +261,31 @@ Symbol = trade.Symbol?.ToUpper(),
     #region Static Facade Methods (Backward Compatibility)
 
         /// <summary>
+        /// Ensures all required database tables exist using Entity Framework Core
+        /// </summary>
+        [Obsolete("Use DatabaseInitializationService.EnsureUserAppSettingsTable via dependency injection")]
+        public void EnsureUserAppSettingsTable()
+        {
+            try
+            {
+                // Create a temporary DbContext and service for backward compatibility
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new DatabaseInitializationService(dbContext);
+                service.EnsureUserAppSettingsTable();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Failed to ensure UserAppSettings table", ex.ToString());
+            }
+        }
+
+        /// <summary>
         /// Gets user settings from database. Returns default settings if none exist.
    /// </summary>
       [Obsolete("Use UserSettingsService.GetUserSettings via dependency injection")]
-  public static UserSettings GetUserSettings()
+  public UserSettings GetUserSettings()
         {
   try
             {
@@ -263,12 +293,12 @@ Symbol = trade.Symbol?.ToUpper(),
      var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
         optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
       using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-  var service = new UserSettingsService(dbContext);
+  var service = new UserSettingsService(dbContext, _loggingService);
  return service.GetUserSettings();
  }
           catch (Exception ex)
  {
-     LoggingService.Log("Error", "Failed to get user settings, returning defaults", ex.ToString());
+     _loggingService.Log("Error", "Failed to get user settings, returning defaults", ex.ToString());
    return new UserSettings();
  }
       }
@@ -290,7 +320,7 @@ Symbol = trade.Symbol?.ToUpper(),
    }
         catch (Exception ex)
        {
-    LoggingService.Log("Error", "Failed to save user settings", ex.ToString());
+    _loggingService.Log("Error", "Failed to save user settings", ex.ToString());
    }
     }
 
@@ -300,17 +330,17 @@ Symbol = trade.Symbol?.ToUpper(),
       /// <param name="pin">User pin</param>
         /// <param name="enableApiModalChecks">Enable API modal checks</param>
         [Obsolete("Use UserSettingsService.SaveUserSettings via dependency injection")]
-public static void SaveUserSettings(string pin, bool enableApiModalChecks)
-  {
-         try
-         {
-     var settings = GetUserSettings();
+        public void SaveUserSettings(string pin, bool enableApiModalChecks)
+        {
+            try
+            {
+                var settings = GetUserSettings();
                 settings.EnableApiModalChecks = enableApiModalChecks;
-            SaveUserSettings(settings);
+                SaveUserSettings(settings);
             }
-    catch (Exception ex)
- {
-    LoggingService.Log("Error", "Failed to save user settings with pin", ex.ToString());
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Failed to save user settings with pin", ex.ToString());
             }
         }
 
@@ -333,7 +363,7 @@ public static void SaveUserSettings(string pin, bool enableApiModalChecks)
        }
          catch (Exception ex)
          {
-    LoggingService.Log("Error", $"Failed to save setting: {key}", ex.ToString());
+    _loggingService.Log("Error", $"Failed to save setting: {key}", ex.ToString());
             }
     }
 
@@ -354,7 +384,7 @@ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
 }
        catch (Exception ex)
     {
-    LoggingService.Log("Error", $"Failed to get user preference: {key}", ex.ToString());
+    _loggingService.Log("Error", $"Failed to get user preference: {key}", ex.ToString());
   return defaultValue;
     }
         }
@@ -376,7 +406,7 @@ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
 }
             catch (Exception ex)
 {
-  LoggingService.Log("Error", $"Failed to save user preference: {key}", ex.ToString());
+  _loggingService.Log("Error", $"Failed to save user preference: {key}", ex.ToString());
       }
  }
 
@@ -397,7 +427,7 @@ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
     }
      catch (Exception ex)
     {
-      LoggingService.Log("Error", "Failed to get remembered accounts", ex.ToString());
+      _loggingService.Log("Error", "Failed to get remembered accounts", ex.ToString());
     return new Dictionary<string, (string, string, string)>();
       }
       }
@@ -419,7 +449,7 @@ var service = new UserSettingsService(dbContext);
     }
  catch (Exception ex)
         {
-     LoggingService.Log("Error", $"Failed to remember account: {username}", ex.ToString());
+     _loggingService.Log("Error", $"Failed to remember account: {username}", ex.ToString());
   }
  }
 
@@ -454,12 +484,12 @@ var service = new UserSettingsService(dbContext);
        }
 
          // If no config found, return default 4x4
-         LoggingService.Log("Warning", $"No grid configuration found for tab '{tabName}', using default 4x4");
+         _loggingService.Log("Warning", $"No grid configuration found for tab '{tabName}', using default 4x4");
            return (4, 4);
             }
             catch (Exception ex)
  {
-        LoggingService.Log("Error", $"Failed to load grid configuration for tab '{tabName}'", ex.ToString());
+        _loggingService.Log("Error", $"Failed to load grid configuration for tab '{tabName}'", ex.ToString());
   // Return default on error
          return (4, 4);
     }
@@ -475,29 +505,152 @@ var service = new UserSettingsService(dbContext);
   {
          try
      {
-         // Create a temporary DbContext for backward compatibility
+         // Create a temporary DbContext and service for backward compatibility
          var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
           using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-
- // Query the UserAppSettings table for the tab
-     var tabConfig = dbContext.UserAppSettings
-        .AsNoTracking()
-  .FirstOrDefault(t => t.TabName == tabName);
-
-    if (tabConfig != null && !string.IsNullOrWhiteSpace(tabConfig.ControlsConfig))
- {
-        return tabConfig.ControlsConfig;
-                }
-
-    // Return empty string if no config found
-       return string.Empty;
+                var service = new TabConfigurationService(dbContext);
+                return service.LoadControlsConfig(tabName);
     }
     catch (Exception ex)
         {
-        LoggingService.Log("Error", $"Failed to load controls configuration for tab '{tabName}'", ex.ToString());
+        _loggingService.Log("Error", $"Failed to load controls configuration for tab '{tabName}'", ex.ToString());
         return string.Empty;
     }
+        }
+        
+        /// <summary>
+        /// Saves controls configuration for a specific tab
+        /// </summary>
+        /// <param name="tabName">The name of the tab</param>
+        /// <param name="controlsConfig">The controls configuration string</param>
+        [Obsolete("Use TabConfigurationService.SaveControlsConfig via dependency injection")]
+        public static void SaveControlsConfig(string tabName, string controlsConfig)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new TabConfigurationService(dbContext);
+                service.SaveControlsConfig(tabName, controlsConfig);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to save controls configuration for tab '{tabName}'", ex.ToString());
+            }
+        }
+        
+        /// <summary>
+        /// Adds a custom control with span configuration to a tab
+        /// </summary>
+        [Obsolete("Use TabConfigurationService.AddCustomControlWithSpans via dependency injection")]
+        public static void AddCustomControlWithSpans(string tabName, string controlType, int row, int column, int rowSpan, int columnSpan)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new TabConfigurationService(dbContext);
+                service.AddCustomControlWithSpans(tabName, controlType, row, column, rowSpan, columnSpan);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to add control with spans to tab '{tabName}'", ex.ToString());
+            }
+        }
+        
+        /// <summary>
+        /// Updates the position of a control in a tab
+        /// </summary>
+        [Obsolete("Use TabConfigurationService.UpdateControlPosition via dependency injection")]
+        public static void UpdateControlPosition(string tabName, int controlIndex, int row, int column, int rowSpan, int columnSpan)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new TabConfigurationService(dbContext);
+                service.UpdateControlPosition(tabName, controlIndex, row, column, rowSpan, columnSpan);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to update control position in tab '{tabName}'", ex.ToString());
+            }
+        }
+        
+        /// <summary>
+        /// Removes a control from a tab
+        /// </summary>
+        [Obsolete("Use TabConfigurationService.RemoveControl via dependency injection")]
+        public static void RemoveControl(string tabName, int controlIndex)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new TabConfigurationService(dbContext);
+                service.RemoveControl(tabName, controlIndex);
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to remove control from tab '{tabName}'", ex.ToString());
+            }
+        }
+        
+        /// <summary>
+        /// Loads card positions (stub for now, not fully implemented)
+        /// </summary>
+        [Obsolete("This feature is not yet implemented")]
+        public static string LoadCardPositions()
+        {
+            // This is a stub for future implementation
+            return string.Empty;
+        }
+        
+        /// <summary>
+        /// Saves card positions (stub for now, not fully implemented)
+        /// </summary>
+        [Obsolete("This feature is not yet implemented")]
+        public static void SaveCardPositions(string cardPositions)
+        {
+            // This is a stub for future implementation
+        }
+        
+        /// <summary>
+        /// Deletes a trading rule by ID
+        /// </summary>
+        /// <param name="ruleId">The ID of the rule to delete</param>
+        [Obsolete("Use TradingRuleService.DeleteTradingRuleAsync via dependency injection")]
+        public static void DeleteRule(int ruleId)
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var service = new TradingRuleService(dbContext);
+                
+                // Call async method synchronously for backward compatibility
+                bool deleted = service.DeleteTradingRuleAsync(ruleId).GetAwaiter().GetResult();
+                
+                if (deleted)
+                {
+                    _loggingService.Log("Info", $"Deleted trading rule with Id {ruleId}");
+                }
+                else
+                {
+                    _loggingService.Log("Warning", $"Trading rule with Id {ruleId} not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Failed to delete trading rule with Id {ruleId}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -555,7 +708,7 @@ var parts = entry.Split(',');
         }
           catch (Exception ex)
    {
-     LoggingService.Log("Warning", $"Failed to parse control entry: {entry}", ex.ToString());
+     _loggingService.Log("Warning", $"Failed to parse control entry: {entry}", ex.ToString());
             }
   }
 
@@ -563,10 +716,9 @@ var parts = entry.Split(',');
       }
         catch (Exception ex)
       {
- LoggingService.Log("Error", $"Failed to load controls for tab '{tabName}'", ex.ToString());
+ _loggingService.Log("Error", $"Failed to load controls for tab '{tabName}'", ex.ToString());
        return new List<ControlModel>();
      }
 }
-
     }
 }

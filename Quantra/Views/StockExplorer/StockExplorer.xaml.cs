@@ -476,13 +476,14 @@ namespace Quantra.Controls
             };
         }
 
-        public StockExplorer(StockDataCacheService stockDataCacheService)
+        public StockExplorer(StockDataCacheService stockDataCacheService,
+                            UserSettingsService userSettingsService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
             
             InitializeComponent();
-            _viewModel = new StockExplorerViewModel();
+            _viewModel = new StockExplorerViewModel(userSettingsService);
             _cacheService = stockDataCacheService;
 
             // Initialize sentiment analysis services with null checks
@@ -1953,14 +1954,14 @@ namespace Quantra.Controls
                 {
                     try
                     {
-                        return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
+                        return await _alphaVantageService.GetQuoteDataAsync(symbol);
                     }
                     catch (Exception apiEx)
                     {
                         // If API fails, try to use any available cached data from the database
                         //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
                         
-                        return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
+                        return await _cacheService.GetCachedStockAsync(symbol);
                     }
                 }).ConfigureAwait(false);
                 
@@ -2098,7 +2099,6 @@ namespace Quantra.Controls
             {
                 // Operation was cancelled - this is expected, don't log as error
                 //DatabaseMonolith.Log("Info", $"Symbol data refresh for {symbol} was cancelled");
-                // Don't re-throw cancellation exceptions in refresh operations
             }
             catch (Exception ex)
             {
@@ -3107,7 +3107,7 @@ namespace Quantra.Controls
                                     {
                                         extendedQuote.VWAP = 0;
                                     }
-                                    
+
                                     lock (rsiDiscrepancies)
                                     {
                                         rsiDiscrepancies.Add(extendedQuote);
@@ -3791,7 +3791,8 @@ namespace Quantra.Controls
                 var symbols = await BuildDynamicStockUniverse();
                 //DatabaseMonolith.Log("Info", $"Using dynamic stock universe for High Theta scan: {symbols.Count} symbols");
 
-                var batchSize = 15; // Smaller batches due to additional calculations
+                var patternService = new PricePatternRecognitionService(_cacheService);
+                var batchSize = 8; // Smaller batches due to additional calculations
                 var processedCount = 0;
                 var volatilityThreshold = 0.25; // High implied volatility threshold
 
@@ -3815,7 +3816,7 @@ namespace Quantra.Controls
                                     var priceHistory = await GetRecentPriceHistory(symbol);
                                     var volatility = CalculateVolatility(priceHistory);
                                     
-                                    // High theta opportunities: high volatility stocks suitable for covered calls, cash-secured puts
+                                    // High theta opportunities: high volatility suitable for covered calls, cash-secured puts
                                     if (volatility > volatilityThreshold && quote.Volume > 100000) // High vol + high volume
                                     {
                                         var extendedQuote = new QuoteData
@@ -3872,7 +3873,7 @@ namespace Quantra.Controls
                     await Task.WhenAll(batchTasks);
                     processedCount += batch.Count;
 
-                    // Add delay between batches to respect API limits
+                    // Add delay between batches to respect API limits  
                     if (i + batchSize < symbols.Count)
                     {
                         await Task.Delay(2500); // Longer delay due to additional calculations
@@ -3983,7 +3984,7 @@ namespace Quantra.Controls
                     await Task.WhenAll(batchTasks);
                     processedCount += batch.Count;
 
-                    // Add delay between batches to respect API limits
+                    // Add delay between batches to respect API limits  
                     if (i + batchSize < symbols.Count)
                     {
                         await Task.Delay(3000); // Longer delay due to beta calculations
@@ -4060,7 +4061,7 @@ namespace Quantra.Controls
                                             extendedQuote.PERatio = peRatio ?? 0;
                                         }
                                         catch
-                                        {    
+                                        {
                                             extendedQuote.PERatio = 0;
                                         }
 
@@ -4475,32 +4476,17 @@ namespace Quantra.Controls
         /// </summary>
         private List<string> GetSymbolsFromDatabase()
         {
-            List<string> symbols = new List<string>();
             try
             {
-                using (var connection = ConnectionHelper.GetConnection())
-                {
-                    connection.Open();
-                    using (var command = new SQLiteCommand("SELECT Symbol FROM StockSymbols", connection))
-                    {
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                symbols.Add(reader["Symbol"].ToString());
-                            }
-                        }
-                    }
-                }
+                return Quantra.DAL.Services.StockSymbolCacheService.GetAllSymbolsAsList();
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Warning", $"Failed to get symbols from database: {ex.Message}");
+                return new List<string>();
             }
-            
-            return symbols;
         }
-
+        
         // Add additional helper methods and event handlers as needed
 
         /// <summary>

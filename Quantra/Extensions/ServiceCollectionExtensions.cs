@@ -10,6 +10,8 @@ using Quantra.Controls;
 using IConfigurationManager = Quantra.Configuration.IConfigurationManager;
 using ConfigurationManager = Quantra.Configuration.ConfigurationManager;
 using Quantra.DAL.Services; // Added for concrete service registrations
+using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Extensions
 {
@@ -25,6 +27,23 @@ namespace Quantra.Extensions
         /// <returns>The service collection with Quantra services added</returns>
         public static IServiceCollection AddQuantraServices(this IServiceCollection services)
         {
+            // Register DbContext
+            services.AddDbContext<QuantraDbContext>(options =>
+            {
+                options.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+                {
+                    sqlServerOptions.CommandTimeout(30);
+                });
+
+#if DEBUG
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+#endif
+            });
+
+            // Register database initialization service
+            services.AddSingleton<IDatabaseInitializationService, DatabaseInitializationService>();
+
             // Register configuration management
             services.AddSingleton<IConfigurationManager>(sp => 
                 new ConfigurationManager(sp.GetRequiredService<IConfiguration>()));

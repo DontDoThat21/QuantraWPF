@@ -88,10 +88,10 @@ The following instance methods in `DatabaseMonolith` should be migrated to dedic
 #### 1. Logging Method
 ```csharp
 // CURRENT: DatabaseMonolith.Log(level, message, details)
-// MIGRATE TO: LoggingService.Log (already exists)
+// MIGRATE TO: _loggingService.Log (already exists)
 ```
 
-**Action:** Search and replace all `databaseMonolith.Log(...)` calls with `LoggingService.Log(...)`
+**Action:** Search and replace all `databaseMonolith.Log(...)` calls with `_loggingService.Log(...)`
 
 #### 2. Order History Method
 ```csharp

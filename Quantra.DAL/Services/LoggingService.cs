@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 //using System.Data.SQLite;
 using System.Runtime.CompilerServices;
 using Quantra.CrossCutting;
@@ -10,9 +11,9 @@ namespace Quantra.DAL.Services
     /// <summary>
     /// Service for centralized logging, providing backward compatibility with existing code.
     /// </summary>
-    public static class LoggingService
+    public class LoggingService
     {
-        static LoggingService()
+        public LoggingService()
         {
             // Make sure cross-cutting concerns are initialized
             CrossCuttingRegistry.Initialize();
@@ -21,11 +22,8 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs a message with the specified level.
         /// </summary>
-        public static void Log(string level, string message, string details = null)
+        public void Log(string level, string message, string details = null)
         {
-            // For backward compatibility, map to both old and new logging systems
-            //DatabaseMonolith.Log(level, message, details);
-            
             // Map to the new logging system
             ILogger logger = Quantra.CrossCutting.Logging.Log.ForContext("Legacy");
             string sanitizedMessage = Security.SanitizeLogMessage(message);
@@ -70,14 +68,11 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs an error with automatic file and method context using reflection/stack trace.
         /// </summary>
-        public static void LogErrorWithContext(Exception ex, string message = null, string details = null, 
+        public void LogErrorWithContext(Exception ex, string message = null, string details = null, 
             [CallerMemberName] string memberName = "", 
             [CallerFilePath] string sourceFilePath = "", 
             [CallerLineNumber] int sourceLineNumber = 0)
         {
-            // For backward compatibility
-            //DatabaseMonolith.LogErrorWithContext(ex, message, details);
-            
             // Use the new logging system with better context handling
             string errorMessage = message ?? ex.Message;
             string sanitizedMessage = Security.SanitizeLogMessage(errorMessage);
@@ -102,7 +97,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs an informational message.
         /// </summary>
-        public static void LogInformation(string message, object[] args = null)
+        public void LogInformation(string message, object[] args = null)
         {
             if (args != null && args.Length > 0)
             {
@@ -117,7 +112,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs a warning message.
         /// </summary>
-        public static void LogWarning(string message, object[] args = null)
+        public void LogWarning(string message, object[] args = null)
         {
             if (args != null && args.Length > 0)
             {
@@ -132,7 +127,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs a debug message.
         /// </summary>
-        public static void LogDebug(string message, object[] args = null)
+        public void LogDebug(string message, object[] args = null)
         {
             if (args != null && args.Length > 0)
             {
@@ -147,7 +142,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs an error message with optional exception details.
         /// </summary>
-        public static void LogError(string message, Exception ex = null)
+        public void LogError(string message, Exception ex = null)
         {
             if (ex != null)
             {

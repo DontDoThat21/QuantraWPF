@@ -221,7 +221,7 @@ try
 }
 catch (Exception ex)
 {
-    LoggingService.Log("Error", "Operation failed", ex.ToString());
+    _loggingService.Log("Error", "Operation failed", ex.ToString());
     throw; // or handle gracefully
 }
 ```

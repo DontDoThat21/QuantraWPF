@@ -17,10 +17,12 @@ namespace Quantra.DAL.Services
     public class PredictionCacheService
     {
         private readonly TimeSpan _cacheValidityPeriod;
+        private readonly LoggingService _loggingService;
 
-        public PredictionCacheService(TimeSpan? cacheValidityPeriod = null)
+        public PredictionCacheService(TimeSpan? cacheValidityPeriod = null, LoggingService loggingService)
         {
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1); // Default 1 hour cache
+            _loggingService = loggingService;
             EnsureCacheTableExists();
         }
 
@@ -41,12 +43,12 @@ namespace Quantra.DAL.Services
                     // This will create all tables defined in the DbContext including PredictionCache
                     dbContext.Database.EnsureCreated();
 
-                    LoggingService.Log("Info", "Prediction cache table created or verified using EF Core");
+                    _loggingService.Log("Info", "Prediction cache table created or verified using EF Core");
                 }
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", "Failed to ensure prediction cache table exists", ex.ToString());
+                _loggingService.Log("Error", "Failed to ensure prediction cache table exists", ex.ToString());
             }
         }
 
@@ -91,7 +93,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
+                _loggingService.Log("Error", $"Error retrieving cached prediction for {symbol}", ex.ToString());
             }
 
             return null;
@@ -146,7 +148,7 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
+                _loggingService.Log("Error", $"Error caching prediction for {symbol}", ex.ToString());
             }
         }
 
@@ -199,13 +201,13 @@ namespace Quantra.DAL.Services
                     {
                         dbContext.PredictionCache.RemoveRange(expiredEntries);
                         dbContext.SaveChanges();
-                        LoggingService.Log("Info", $"Cleared {expiredEntries.Count} expired cache entries");
+                        _loggingService.Log("Info", $"Cleared {expiredEntries.Count} expired cache entries");
                     }
                 }
             }
             catch (Exception ex)
             {
-                LoggingService.Log("Error", "Error clearing expired cache", ex.ToString());
+                _loggingService.Log("Error", "Error clearing expired cache", ex.ToString());
             }
         }
     }
