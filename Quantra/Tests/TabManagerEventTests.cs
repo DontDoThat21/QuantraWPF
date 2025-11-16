@@ -3,6 +3,9 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Windows.Controls;
 using System.Windows;
+using Quantra.DAL.Services;
+using Quantra.DAL.Data;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Quantra.Tests
 {
@@ -14,6 +17,7 @@ namespace Quantra.Tests
         private MainWindow testMainWindow;
         private bool tabAddedEventFired;
         private string addedTabName;
+        private IServiceProvider serviceProvider;
 
         [TestInitialize]
         public void Initialize()
@@ -27,6 +31,20 @@ namespace Quantra.Tests
             {
                 new Application();
             }
+            
+            // Setup service provider with required services for MainWindow
+            var services = new ServiceCollection();
+            
+            // Register required services
+            services.AddSingleton<QuantraDbContext>();
+            services.AddSingleton<LoggingService>();
+            services.AddSingleton<IUserSettingsService, UserSettingsService>();
+            services.AddSingleton<UserSettingsService>();
+            services.AddSingleton<HistoricalDataService>();
+            services.AddSingleton<AlphaVantageService>();
+            services.AddSingleton<TechnicalIndicatorService>();
+            
+            serviceProvider = services.BuildServiceProvider();
         }
 
         [TestMethod]
@@ -41,8 +59,14 @@ namespace Quantra.Tests
                 var plusTab = new TabItem { Header = "+" };
                 testTabControl.Items.Add(plusTab);
                 
-                // Create a mock MainWindow for testing
-                testMainWindow = new MainWindow();
+                // Create services for MainWindow
+                var userSettingsService = serviceProvider.GetRequiredService<UserSettingsService>();
+                var historicalDataService = serviceProvider.GetRequiredService<HistoricalDataService>();
+                var alphaVantageService = serviceProvider.GetRequiredService<AlphaVantageService>();
+                var technicalIndicatorService = serviceProvider.GetRequiredService<TechnicalIndicatorService>();
+                
+                // Create a MainWindow instance for testing
+                testMainWindow = new MainWindow(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService);
                 tabManager = new Utilities.TabManager(testMainWindow, testTabControl);
                 
                 // Subscribe to the TabAdded event to verify it fires
@@ -83,7 +107,13 @@ namespace Quantra.Tests
                 var plusTab = new TabItem { Header = "+" };
                 testTabControl.Items.Add(plusTab);
                 
-                testMainWindow = new MainWindow();
+                // Create services for MainWindow
+                var userSettingsService = serviceProvider.GetRequiredService<UserSettingsService>();
+                var historicalDataService = serviceProvider.GetRequiredService<HistoricalDataService>();
+                var alphaVantageService = serviceProvider.GetRequiredService<AlphaVantageService>();
+                var technicalIndicatorService = serviceProvider.GetRequiredService<TechnicalIndicatorService>();
+                
+                testMainWindow = new MainWindow(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService);
                 bool mainWindowEventFired = false;
                 string mainWindowTabName = null;
                 
@@ -119,6 +149,12 @@ namespace Quantra.Tests
             testTabControl = null;
             tabManager = null;
             testMainWindow = null;
+            
+            // Dispose service provider
+            if (serviceProvider is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
         }
     }
 }

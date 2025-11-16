@@ -12,12 +12,15 @@ namespace Quantra.DAL.Services
         private readonly ISmsService _smsService;
         private readonly ITradeRecordService _tradeRecordService;
         private readonly UserSettings _userSettings;
+        private readonly UserSettingsService _userSettingsService;
 
         public TradingService(
-            IEmailService emailService, 
-            INotificationService notificationService, 
-            ISmsService smsService,
-            ITradeRecordService tradeRecordService)
+            EmailService emailService, 
+            NotificationService notificationService, 
+            SmsService smsService,
+            TradeRecordService tradeRecordService,
+            UserSettingsService userSettingsService
+            )
         {
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
@@ -25,7 +28,7 @@ namespace Quantra.DAL.Services
             _tradeRecordService = tradeRecordService ?? throw new ArgumentNullException(nameof(tradeRecordService));
             
             // Load user settings for notification preferences
-            _userSettings = DatabaseMonolith.GetUserSettings();
+            _userSettings = _userSettingsService.GetUserSettings();
         }
 
         /// <summary>

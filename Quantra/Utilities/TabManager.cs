@@ -100,7 +100,7 @@ namespace Quantra.Utilities
             };
 
             // Get grid settings from database
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
 
             // Parse the color
             SolidColorBrush gridBorderBrush = Brushes.Cyan; // Default

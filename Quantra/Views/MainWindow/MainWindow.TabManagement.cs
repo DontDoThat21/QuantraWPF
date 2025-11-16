@@ -14,7 +14,8 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes; // For AdornerLayer
+using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection; // For accessing App.ServiceProvider
 
 namespace Quantra
 {
@@ -28,14 +29,16 @@ namespace Quantra
         private bool isTabSelectionInProgress = false;
         private TabRepository _tabRepository;
         private PredictionAnalysisViewModel _viewModel;
-        private INotificationService _notificationService;
-        private ITechnicalIndicatorService _indicatorService;
+        private NotificationService _notificationService;
+        private TechnicalIndicatorService _indicatorService;
         private PredictionAnalysisRepository _analysisRepository;
+        private QuantraDbContext _quantraDbContext;
         private StockDataCacheService _stockDataCacheService;
-        private ITradingService _tradingService;
-        private ISettingsService _settingsService;
-        private IAlphaVantageService _alphaVantageService;
-        private IEmailService _emailService;
+        private TradingService _tradingService;
+        private SettingsService _settingsService;
+        private AlphaVantageService _alphaVantageService;
+        private LoggingService _loggingService;
+        private EmailService _emailService;
         #endregion
 
         #region Constructor
@@ -55,7 +58,7 @@ namespace Quantra
                 TabManager.TabAdded += (tabName) => {
                     // Raise the MainWindow's TabAdded event so AddControlWindow can be notified
                     TabAdded?.Invoke(tabName);
-                    //DatabaseMonolith.Log("Info", $"MainWindow raised TabAdded event for tab: {tabName}");
+                    //DatabaseMonolith.Log("Info",($"MainWindow raised TabAdded event for tab: {tabName}"));
                 };
             }
             catch
@@ -549,7 +552,7 @@ namespace Quantra
                     }
 
                     var controlType = parts[0].Trim();
-                    //DatabaseMonolith.Log("Info", $"Deserializing control of type: {controlType}");
+                    //Database.Monolith.Log("Info", $"Deserializing control of type: {controlType}");
 
                     // Improved parsing with error handling for row and column
                     if (!int.TryParse(parts[1], out int row) || !int.TryParse(parts[2], out int column))
@@ -585,7 +588,6 @@ namespace Quantra
                             "Prediction Analysis" => CreatePredictionAnalysisCard(),
                             "Sector Momentum Heatmap" => CreateSectorMomentumHeatmapCard(),
                             "Transactions" => CreateTransactionsCard(),
-                            "Backtesting" => CreateBacktestingCard(),
                             "Backtest Chart" => CreateBacktestingCard(), // Accept alias
                             "Market Chat" => CreateMarketChatCard(),
                             "Spreads Explorer" => CreateSpreadsExplorerCard(),
@@ -625,8 +627,12 @@ namespace Quantra
         {
             try
             {
+                // Get required services from DI container
+                var stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
+                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                
                 // Create a new instance of our custom StockExplorer
-                var symbolChartControl = new StockExplorer();
+                var symbolChartControl = new StockExplorer(stockDataCacheService, userSettingsService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width
@@ -694,16 +700,64 @@ namespace Quantra
         {
             try
             {
-                // Create a new instance of our custom PredictionAnalysisControl with explicit sizing
-                var predictionAnalysisControl = new PredictionAnalysisControl(_viewModel,
-                    _notificationService,
-                    _indicatorService,
+                // Get all required services from the DI container
+                var notificationService = App.ServiceProvider.GetService<INotificationService>() as NotificationService;
+                var indicatorService = App.ServiceProvider.GetService<ITechnicalIndicatorService>() as TechnicalIndicatorService;
+                var stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
+                var alphaVantageService = App.ServiceProvider.GetService<IAlphaVantageService>() as AlphaVantageService;
+                var emailService = App.ServiceProvider.GetService<IEmailService>() as EmailService;
+                var tradingService = App.ServiceProvider.GetService<ITradingService>() as TradingService;
+                var settingsService = App.ServiceProvider.GetService<ISettingsService>() as SettingsService;
+                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                
+                // Get DbContext for services that need it
+                var dbContext = App.ServiceProvider.GetService<QuantraDbContext>();
+                
+                // Get LoggingService from DI container
+                var loggingService = App.ServiceProvider.GetService<LoggingService>();
+                
+                // Initialize services that need DbContext
+                var historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+                var indicatorSettingsService = new IndicatorSettingsService(dbContext);
+                var tradingRuleService = new TradingRuleService(dbContext);
+                var orderHistoryService = new OrderHistoryService(dbContext);
+                
+                // Initialize repositories
+                if (_analysisRepository == null)
+                {
+                    _analysisRepository = new PredictionAnalysisRepository();
+                }
+                
+                // Initialize ViewModel if not already done
+                if (_viewModel == null)
+                {
+                    _viewModel = new PredictionAnalysisViewModel(
+                        indicatorService,
+                        _analysisRepository,
+                        tradingService,
+                        settingsService,
+                        alphaVantageService,
+                        emailService,
+                        tradingRuleService);
+                }
+                
+                // Create a new instance of our custom PredictionAnalysisControl with all required dependencies
+                var predictionAnalysisControl = new PredictionAnalysisControl(
+                    _viewModel,
+                    notificationService,
+                    indicatorService,
                     _analysisRepository,
-                    _stockDataCacheService,
-                    _tradingService,
-                    _settingsService,
-                    _alphaVantageService,
-                    _emailService);
+                    stockDataCacheService,
+                    tradingService,
+                    historicalDataService,
+                    settingsService,
+                    alphaVantageService,
+                    emailService,
+                    indicatorSettingsService,
+                    tradingRuleService,
+                    userSettingsService,
+                    loggingService,
+                    orderHistoryService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width
@@ -915,8 +969,11 @@ namespace Quantra
         {
             try
             {
+                // Get required services from DI container
+                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                
                 // Create a new instance of our custom SpreadsExplorer control
-                var spreadsExplorerControl = new SpreadsExplorer();
+                var spreadsExplorerControl = new SpreadsExplorer(userSettingsService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 spreadsExplorerControl.Width = double.NaN; // Auto width
@@ -970,8 +1027,15 @@ namespace Quantra
         {
             try
             {
+                // Get required services from DI container
+                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                _loggingService = App.ServiceProvider.GetService<LoggingService>();
+
+                // Create SectorMomentumService
+                var sectorMomentumService = new SectorMomentumService(userSettingsService, _loggingService);
+
                 // Create a new instance of our custom SectorAnalysisHeatmapControl
-                var sectorHeatmapControl = new SectorAnalysisHeatmapControl(_sectorMomentumService);
+                var sectorHeatmapControl = new SectorAnalysisHeatmapControl(sectorMomentumService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 sectorHeatmapControl.Width = double.NaN; // Auto width
@@ -1024,7 +1088,19 @@ namespace Quantra
         {
             try
             {
-                var backtestResultsControl = new Views.Backtesting.BacktestResultsControl();
+                // Get required services from DI container
+                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                var loggingService = App.ServiceProvider.GetService<LoggingService>();
+
+                // Create services that need dependencies
+                var historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+                var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
+                
+                var backtestResultsControl = new Views.Backtesting.BacktestResultsControl(
+                    historicalDataService,
+                    customBenchmarkService,
+                    userSettingsService);
+                    
                 backtestResultsControl.Width = double.NaN;
                 backtestResultsControl.Height = double.NaN;
                 backtestResultsControl.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -1417,6 +1493,7 @@ namespace Quantra
                             // Fix: Replace dynamic pattern matching with explicit type checking
                             Point startPosition;
                             
+
                             if (border.Tag is Point point)
                             {
                                 startPosition = point;
@@ -1438,21 +1515,21 @@ namespace Quantra
                                     {
                                         // Fallback to current position
                                         startPosition = currentPosition;
-                                        //DatabaseMonolith.Log("Warning", $"StartPoint property found but not a Point in MakeGridDraggable: {startPointValue?.GetType().ToString() ?? "null"}");
+                                        //Database.Monolith.Log("Warning", $"StartPoint property found but not a Point in MakeGridDraggable: {startPointValue?.GetType().ToString() ?? "null"}");
                                     }
                                 }
                                 else
                                 {
                                     // Fallback to current position
                                     startPosition = currentPosition;
-                                    //DatabaseMonolith.Log("Warning", $"Tag does not have a StartPoint property in MakeGridDraggable. Tag type: {tagType.Name}");
+                                    //Database.Monolith.Log("Warning", $"Tag does not have a StartPoint property in MakeGridDraggable. Tag type: {tagType.Name}");
                                 }
                             }
                             else
                             {
                                 // If we can't extract a valid Point, use current position as fallback
                                 startPosition = currentPosition;
-                                //DatabaseMonolith.Log("Warning", "Tag is null in MakeGridDraggable");
+                                //Database.Monolith.Log("Warning", "Tag is null in MakeGridDraggable");
                             }
 
                             double deltaX = currentPosition.X - startPosition.X;
@@ -1883,7 +1960,7 @@ namespace Quantra
                                             //DatabaseMonolith.Log("Warning", "Could not select tab in Prediction Analysis control during refresh", ex.ToString());
                                         }
                                         
-                                        //DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
+                                        //Database.Monolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
                                     }
                                 }
                             }

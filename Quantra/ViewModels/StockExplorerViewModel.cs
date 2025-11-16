@@ -103,13 +103,13 @@ namespace Quantra.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public StockExplorerViewModel(UserSettingsService userSettingsService)
+        public StockExplorerViewModel(UserSettingsService userSettingsService, LoggingService loggingService)
         {
-            _cacheService = new StockDataCacheService(userSettingsService);
-            _alphaVantageService = new AlphaVantageService(userSettingsService); // Use parameterless constructor
-            _inferenceService = new RealTimeInferenceService();
-            _predictionCacheService = new PredictionCacheService();
-            
+            _cacheService = new StockDataCacheService(userSettingsService, loggingService);
+            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
+            _inferenceService = new RealTimeInferenceService(10);
+            _predictionCacheService = new PredictionCacheService(loggingService);
+
             SymbolSelectedCommand = new RelayCommand<string>(OnSymbolSelected);
             RunPredictionsCommand = new RelayCommand(async _ => await RunPredictionsAsync(), _ => CanRunPredictions);
             

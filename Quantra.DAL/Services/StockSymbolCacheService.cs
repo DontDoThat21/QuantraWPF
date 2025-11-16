@@ -172,7 +172,7 @@ var entity = context.StockSymbols
         /// </summary>
         /// <param name="symbol">The stock symbol to delete</param>
         /// <returns>True if deletion was successful, false otherwise</returns>
-        public static bool DeleteStockSymbol(string symbol)
+        public bool DeleteStockSymbol(string symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol))
             {
@@ -355,7 +355,7 @@ var entity = context.StockSymbols
         /// Retrieves all stock symbols as a simple list of strings from the database.
         /// </summary>
         /// <returns>List of stock symbol strings</returns>
-        public static List<string> GetAllSymbolsAsList()
+        public List<string> GetAllSymbolsAsList()
         {
             var symbols = new List<string>();
 

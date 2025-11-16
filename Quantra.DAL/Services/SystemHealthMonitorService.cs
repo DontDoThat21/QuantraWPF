@@ -29,6 +29,7 @@ namespace Quantra.DAL.Services
         private readonly Timer _monitorTimer;
         private readonly Timer _predictiveAnalysisTimer;
         private readonly RealTimeInferenceService _inferenceService;
+        private readonly StockSymbolCacheService _stockSymbolCacheService;
         private readonly IApiConnectivityService _apiConnectivityService;
         private readonly int _checkIntervalSeconds;
         private readonly int _memoryThresholdMb;
@@ -45,8 +46,9 @@ namespace Quantra.DAL.Services
         private readonly TimeSpan _predictiveAnalysisInterval = TimeSpan.FromMinutes(15);
 
         public SystemHealthMonitorService(
-            RealTimeInferenceService inferenceService = null,
-            IApiConnectivityService apiConnectivityService = null,
+            RealTimeInferenceService inferenceService,
+            IApiConnectivityService apiConnectivityService,
+            StockSymbolCacheService stockSymbolCacheService,
             int checkIntervalSeconds = 60,
             int memoryThresholdMb = 1024,
             int cpuThresholdPercent = 80,
@@ -290,7 +292,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Check if stock symbol cache is valid
-                if (!StockSymbolCacheService.IsSymbolCacheValid())
+                if (_stockSymbolCacheService.IsSymbolCacheValid())
                 {
                     Performance.RecordFailure("SymbolCacheValidity");
                     

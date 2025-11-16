@@ -35,6 +35,10 @@ namespace Quantra.Views.Orders
         private string tradeModeBadgeText;
         private readonly ITransactionService _transactionService;
         private readonly INotificationService _notificationService;
+        private readonly AlphaVantageService _alphaVantageService;
+        private readonly UserSettingsService _userSettingsService;
+        private readonly HistoricalDataService _historicalDataService;
+        private readonly TechnicalIndicatorService _technicalIndicatorService;
         private readonly ITradingService _tradingService;
 
         // Public properties
@@ -126,12 +130,21 @@ namespace Quantra.Views.Orders
             new SolidColorBrush((Color)ColorConverter.ConvertFromString("#50E070")) : 
             new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E05050"));
 
-        public OrdersPage()
+        public OrdersPage(UserSettingsService userSettingsService, HistoricalDataService historicalDataService, AlphaVantageService alphaVantageService, TechnicalIndicatorService technicalIndicatorService)
         {
             InitializeComponent();
-            
+
+            // Initialize services
+            _userSettingsService = userSettingsService;
+            _historicalDataService = historicalDataService;
+            _alphaVantageService = alphaVantageService;
+            _technicalIndicatorService = technicalIndicatorService;
+
             // Initialize data
-            tradingBot = new WebullTradingBot();
+            tradingBot = new WebullTradingBot(_userSettingsService,
+                _historicalDataService,
+                _alphaVantageService,
+                _technicalIndicatorService);
             Order = new OrderModel
             {
                 Symbol = "",
@@ -152,7 +165,7 @@ namespace Quantra.Views.Orders
             this.DataContext = this;
             
             // Load settings
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
             enableApiModalChecks = settings.EnableApiModalChecks;
             
             // Get services from DI container
@@ -161,10 +174,8 @@ namespace Quantra.Views.Orders
             _tradingService = App.ServiceProvider.GetService<ITradingService>();
         }
 
-        // Constructor overload that accepts initial order data
         public OrdersPage(string symbol, string orderType, double price, int quantity = 100, 
-                          string predictionSource = null, double stopLoss = 0, double takeProfit = 0) 
-            : this()
+                          string predictionSource = null, double stopLoss = 0, double takeProfit = 0)
         {
             Order.Symbol = symbol;
             Order.OrderType = orderType;
@@ -522,9 +533,9 @@ namespace Quantra.Views.Orders
             // Check if the user doesn't want to see this dialog again
             if (DontShowAgainCheckBox.IsChecked == true)
             {
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = _userSettingsService.GetUserSettings();
                 settings.EnableApiModalChecks = false;
-                DatabaseMonolith.SaveUserSettings(settings);
+                _userSettingsService.SaveUserSettings(settings);
                 enableApiModalChecks = false;
             }
             

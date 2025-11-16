@@ -79,7 +79,10 @@ namespace Quantra
                     DatabaseMonolith.RememberAccount(username, password, pin);
                 }
 
-                var mainWindow = new MainWindow();
+                var mainWindow = new MainWindow(_userSettingsService,
+                    _historicalDataService,
+                    _alphaVantageService,
+                    _technicalIndicatorService);
                 
                 // Restore window state if enabled
                 var savedWindowState = _userSettingsService.GetSavedWindowState();

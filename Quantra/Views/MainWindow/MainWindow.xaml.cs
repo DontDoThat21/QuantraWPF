@@ -33,6 +33,9 @@ namespace Quantra
 
         #region Core Properties and Fields
         private WebullTradingBot tradingBot;// = new WebullTradingBot();
+        private UserSettingsService _userSettingsService;
+        private HistoricalDataService _historicalDataService;
+        private TechnicalIndicatorService _technicalIndicatorService;
         private DispatcherTimer tradeUpdateTimer;
         public ObservableCollection<TradingSymbol> ActiveSymbols { get; set; }
         public ObservableCollection<StockItem> TradingRules { get; set; }
@@ -84,6 +87,8 @@ namespace Quantra
             ActiveSymbols = [];
             TradingRules = [];
 
+            _userSettingsService = userSettingsService;
+
             UpperBandValues = [];
             MiddleBandValues = [];
             LowerBandValues = [];
@@ -111,7 +116,7 @@ namespace Quantra
             LoadCardPositions();
 
             // Load user settings
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
             EnableApiModalChecks = settings.EnableApiModalChecks;
 
             // Set the last non-'+' tab during initialization
@@ -158,7 +163,7 @@ namespace Quantra
             // Ensure the LoginWindow is shown when MainWindow is closed
             if (Application.Current.Windows.OfType<LoginWindow>().FirstOrDefault() == null)
             {
-                var loginWindow = new LoginWindow();
+                var loginWindow = new LoginWindow(_userSettingsService, _historicalDataService, _alphaVantageService, _technicalIndicatorService);
                 loginWindow.Show();
             }
         }

@@ -19,7 +19,7 @@ namespace Quantra.DAL.Services
         private readonly TimeSpan _cacheValidityPeriod;
         private readonly LoggingService _loggingService;
 
-        public PredictionCacheService(TimeSpan? cacheValidityPeriod = null, LoggingService loggingService)
+        public PredictionCacheService(LoggingService loggingService, TimeSpan? cacheValidityPeriod = null)
         {
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1); // Default 1 hour cache
             _loggingService = loggingService;

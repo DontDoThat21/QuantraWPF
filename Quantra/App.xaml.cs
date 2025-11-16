@@ -17,6 +17,8 @@ using Quantra.CrossCutting.Monitoring;
 using Quantra.Utilities;
 using Quantra.DAL.Services;
 using System.Reflection;
+using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra
 {
@@ -63,9 +65,6 @@ namespace Quantra
                 // Build the final configuration
                 Configuration = builder.Build();
                 _logger.Information("Configuration loaded successfully");
-
-                // Set configuration for DatabaseMonolith
-                DatabaseMonolith.SetConfiguration(Configuration);
             }
             catch (Exception ex)
             {
@@ -86,12 +85,16 @@ namespace Quantra
                     var serviceCollection = new ServiceCollection();
                     serviceCollection.AddSingleton(Configuration);
 
-                    serviceCollection.AddScoped<ISettingsService, SettingsService>();
-
                     ConfigureServices(serviceCollection);
                     ServiceProvider = serviceCollection.BuildServiceProvider();
                     _logger.Information("Services configured successfully");
                 }
+
+                // Initialize DatabaseMonolith with configuration
+                var settingsService = ServiceProvider.GetRequiredService<SettingsService>();
+                var loggingService = new LoggingService();
+                var databaseMonolith = new DatabaseMonolith(settingsService, loggingService);
+                databaseMonolith.SetConfiguration(Configuration);
 
                 // Initialize the system health monitoring service
                 var healthMonitor = ServiceProvider.GetService<SystemHealthMonitorService>();
@@ -136,22 +139,39 @@ namespace Quantra
         {
             try
             {
-                // Register application services
+                // Register DbContext first
+                services.AddDbContext<QuantraDbContext>(options =>
+                {
+                    options.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+                    {
+                        sqlServerOptions.CommandTimeout(30);
+                    });
+
+#if DEBUG
+                    options.EnableSensitiveDataLogging();
+                    options.EnableDetailedErrors();
+#endif
+                });
+
+                // Register LoggingService
+                services.AddSingleton<LoggingService>();
+
+                // Register UserSettingsService
+                services.AddScoped<UserSettingsService>();
+
+                // Register SettingsService
+                services.AddScoped<ISettingsService, SettingsService>();
+
+                // Register application services using the extension method
                 Quantra.Extensions.ServiceCollectionExtensions.AddQuantraServices(services);
                 
                 // Register AlertPublisher so non-UI services can emit alerts via DI
                 services.AddSingleton<IAlertPublisher, AlertPublisher>();
                 
-                // Initialize SystemHealthMonitorService
-                var healthMonitor = ServiceProvider?.GetService<SystemHealthMonitorService>() 
-                    ?? new SystemHealthMonitorService();
-                    
-                // Initialize and register core services in ServiceLocator for components that don't use DI
-                ServiceLocator.RegisterService(healthMonitor);
+                // Initialize SystemHealthMonitorService (will be registered via AddQuantraServices)
                 
-                // Register technical indicator and stock data services
-                ServiceLocator.RegisterService<ITechnicalIndicatorService>(new TechnicalIndicatorService());
-                ServiceLocator.RegisterService<IStockDataCacheService>(new StockDataCacheService());
+                // Register services in ServiceLocator for components that don't use DI
+                // Note: We'll register these after building the ServiceProvider
                 
                 _logger.Debug("Service registration completed");
             }
@@ -169,6 +189,32 @@ namespace Quantra
             // and attach the WindowOpened event to catch new windows
             Application.Current.Activated += Application_Activated;
             _logger.Debug("Application startup event handler registered");
+            
+            // Register services in ServiceLocator after ServiceProvider is built
+            try
+            {
+                var healthMonitor = ServiceProvider.GetService<SystemHealthMonitorService>();
+                if (healthMonitor != null)
+                {
+                    ServiceLocator.RegisterService(healthMonitor);
+                }
+                
+                var technicalIndicatorService = ServiceProvider.GetService<ITechnicalIndicatorService>();
+                if (technicalIndicatorService != null)
+                {
+                    ServiceLocator.RegisterService<ITechnicalIndicatorService>(technicalIndicatorService);
+                }
+                
+                var stockDataCacheService = ServiceProvider.GetService<IStockDataCacheService>();
+                if (stockDataCacheService != null)
+                {
+                    ServiceLocator.RegisterService<IStockDataCacheService>(stockDataCacheService);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to register services in ServiceLocator");
+            }
         }
 
         private void Application_Activated(object sender, System.EventArgs e)

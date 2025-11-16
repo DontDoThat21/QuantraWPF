@@ -33,7 +33,7 @@ namespace Quantra.DAL.Services
         private readonly IMonitoringManager _monitoringManager;
         private bool _disposed = false;
 
-        public TechnicalIndicatorService(AlphaVantageService alphaVantageService, UserSettingsService userSettingsService)
+        public TechnicalIndicatorService(AlphaVantageService alphaVantageService, UserSettingsService userSettingsService, LoggingService loggingService)
         {
             _alphaVantageService = alphaVantageService;
 
@@ -51,7 +51,7 @@ namespace Quantra.DAL.Services
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("AlphaVantageApiKey is empty in settings file.");
 
-            _historicalDataService = new HistoricalDataService(userSettingsService);
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
 
             _indicators = new Dictionary<string, Func<string, string, Task<double>>>
             {

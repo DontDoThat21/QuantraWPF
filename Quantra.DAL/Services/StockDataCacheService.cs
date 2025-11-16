@@ -29,12 +29,14 @@ namespace Quantra.DAL.Services
     public class StockDataCacheService : IStockDataCacheService
     {
         private readonly HistoricalDataService _historicalDataService;
+        private readonly UserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
 
-        public StockDataCacheService(UserSettingsService userSettingsService)
+        public StockDataCacheService(UserSettingsService userSettingsService, LoggingService loggingService)
         {
-            _historicalDataService = new HistoricalDataService(userSettingsService);
-            _loggingService = new LoggingService();
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+            _userSettingsService = userSettingsService;
+            _loggingService = loggingService;
             EnsureCacheTableExists();
         }
 
@@ -130,7 +132,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Get user preference for cache duration (default 15 minutes)
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = _userSettingsService.GetUserSettings();
                 var cacheDurationMinutes = settings.CacheDurationMinutes;
                 var expiryTime = DateTime.Now.AddMinutes(-cacheDurationMinutes);
 
@@ -327,7 +329,7 @@ catch (Exception ex)
         {
             if (cacheInfo == null) return false;
             
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
             var cacheDurationMinutes = settings.CacheDurationMinutes;
             
             // If cache is more than half expired, perform incremental update

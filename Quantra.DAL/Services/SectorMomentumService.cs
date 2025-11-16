@@ -10,6 +10,9 @@ namespace Quantra.DAL.Services
 {
     public class SectorMomentumService
     {
+        private readonly UserSettingsService _userSettingsService;
+        private readonly LoggingService _loggingService;
+
         private static readonly Dictionary<string, DateTime> _lastUpdateTimes = new Dictionary<string, DateTime>();
         private static readonly Dictionary<string, Dictionary<string, List<SectorMomentumModel>>> _cachedData = 
             new Dictionary<string, Dictionary<string, List<SectorMomentumModel>>>();
@@ -34,12 +37,15 @@ namespace Quantra.DAL.Services
             ["Real Estate"] = new[] { "AMT", "PLD", "CCI", "EQIX", "PSA", "DLR", "SPG" }
         };
         
-        public SectorMomentumService(UserSettingsService userSettingsService)
+        public SectorMomentumService(UserSettingsService userSettingsService, LoggingService loggingService)
         {
+            _userSettingsService = userSettingsService;
+            _loggingService = loggingService;
+
             // Initialize the HTTP client if needed
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "Quantra/1.0");
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _alphaVantageService = new AlphaVantageService(userSettingsService);
+            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
         }
         
         public Dictionary<string, List<SectorMomentumModel>> GetSectorMomentumData(string timeframe, bool forceRefresh = false)

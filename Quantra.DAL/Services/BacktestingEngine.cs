@@ -341,9 +341,9 @@ namespace Quantra.DAL.Services
         
         private readonly HistoricalDataService _historicalDataService;
         
-        public BacktestingEngine(UserSettingsService userSettingsService)
+        public BacktestingEngine(UserSettingsService userSettingsService, LoggingService loggingService)
         {
-            _historicalDataService = new HistoricalDataService(userSettingsService);
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
         }
         
         public BacktestingEngine(HistoricalDataService historicalDataService)

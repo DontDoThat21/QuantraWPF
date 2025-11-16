@@ -12,10 +12,12 @@ namespace Quantra.DAL.Services
     public class QuoteDataService
     {
         private AlphaVantageService _alphaVantageService;
+        private LoggingService _loggingService;
 
-        public QuoteDataService(AlphaVantageService alphaVantageService) 
+        public QuoteDataService(AlphaVantageService alphaVantageService, LoggingService loggingService) 
         {
             _alphaVantageService = alphaVantageService;
+            _loggingService = loggingService;
         }
 
 

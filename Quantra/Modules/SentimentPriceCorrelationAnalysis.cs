@@ -23,8 +23,10 @@ namespace Quantra.Modules
         private readonly PredictionAnalysisRepository _predictionAnalysisRepository;
         private readonly SectorMomentumService _sectorMomentumService;
         private readonly UserSettings _userSettings;
+        private readonly UserSettingsService _userSettingsService;
+        private readonly LoggingService _loggingService;
 
-        public SentimentPriceCorrelationAnalysis(UserSettings userSettings = null)
+        public SentimentPriceCorrelationAnalysis(UserSettings userSettings, UserSettingsService userSettingsService, LoggingService loggingService)
         {
             _financialNewsSentimentService = new FinancialNewsSentimentService(userSettings);
             _twitterSentimentService = new TwitterSentimentService();
@@ -32,8 +34,11 @@ namespace Quantra.Modules
             _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
             _sectorSentimentService = new SectorSentimentAnalysisService(userSettings);
             _predictionAnalysisRepository = new PredictionAnalysisRepository();
-            _predictionAnalysisRepository = new SectorMomentumService(userSettings);
+            _loggingService = loggingService;
+            _sectorMomentumService = new SectorMomentumService(userSettingsService, loggingService);
             _userSettings = userSettings ?? new UserSettings();
+            _userSettingsService = userSettingsService;
+            _loggingService = loggingService;
         }
 
         /// <summary>

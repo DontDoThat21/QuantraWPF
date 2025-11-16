@@ -25,13 +25,13 @@ namespace Quantra.Controls
         /// </summary>
         private void InitializeSentimentCorrelationAnalysis()
         {
-            _sentimentCorrelationAnalysis = new SentimentPriceCorrelationAnalysis(_userSettings);
+            _sentimentCorrelationAnalysis = new SentimentPriceCorrelationAnalysis(_userSettings, _userSettingsService, _loggingService);
             
             // Create the sentiment visualization control
             _sentimentVisualizationControl = new SentimentVisualizationControl();
             
             // Create the sentiment dashboard control (new interactive dashboard)
-            _sentimentDashboardControl = new SentimentDashboardControl();
+            _sentimentDashboardControl = new SentimentDashboardControl(_userSettings, _userSettingsService, _loggingService);
             
             // Add them to the UI if sentiment visualization container exists
             var sentimentVisualizationContainer = this.FindName("sentimentVisualizationContainer") as Panel;

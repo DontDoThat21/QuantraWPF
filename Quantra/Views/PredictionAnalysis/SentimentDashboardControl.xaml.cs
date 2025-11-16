@@ -56,7 +56,10 @@ namespace Quantra.Controls
         /// <summary>
         /// Initializes a new instance of the SentimentDashboardControl
         /// </summary>
-        public SentimentDashboardControl()
+        public SentimentDashboardControl(UserSettings userSettings,
+            UserSettingsService userSettingsService,
+            LoggingService loggingService
+            )
         {
             InitializeComponent();
             
@@ -75,7 +78,7 @@ namespace Quantra.Controls
             SentimentShiftChart.Series = SentimentShiftSeries;
             
             // Initialize services
-            _sentimentCorrelationAnalysis = new Quantra.Modules.SentimentPriceCorrelationAnalysis();
+            _sentimentCorrelationAnalysis = new Quantra.Modules.SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
             _analystRatingService = ServiceLocator.Resolve<IAnalystRatingService>();
             _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
             

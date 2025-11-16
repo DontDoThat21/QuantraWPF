@@ -37,6 +37,7 @@ namespace Quantra.Controls
         private readonly IndicatorSettingsService _indicatorSettingsService;
         private readonly TradingRuleService _tradingRuleService;
         private readonly UserSettingsService _userSettingsService;
+        private readonly LoggingService _loggingService;
         private readonly OrderHistoryService _orderHistoryService;
         private readonly IndicatorDisplayModule _indicatorModule;
         private readonly PredictionChartModuleType _chartModule;
@@ -63,6 +64,7 @@ namespace Quantra.Controls
         IndicatorSettingsService indicatorSettingsService,
         TradingRuleService tradingRuleService,
         UserSettingsService userSettingsService,
+        LoggingService loggingService,
         OrderHistoryService orderHistoryService)
      {
   InitializeComponent();
@@ -80,6 +82,7 @@ namespace Quantra.Controls
     _indicatorSettingsService = indicatorSettingsService ?? throw new ArgumentNullException(nameof(indicatorSettingsService));
     _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
     _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+    _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
     _orderHistoryService = orderHistoryService ?? throw new ArgumentNullException(nameof(orderHistoryService));
 
     _indicatorModule = new IndicatorDisplayModule(

@@ -1,6 +1,7 @@
 using Dapper;
 using Quantra.Controls;
 using Quantra.DAL.Data;
+using Quantra.DAL.Services;
 using Quantra.Repositories;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace Quantra.Managers
 
         private readonly TabControl _mainTabControl;
         private readonly TabRepository _tabRepository;
+        private readonly UserSettingsService _userSettingsService;
         private TabItem _lastNonPlusTab;
         // Flag to track recursive tab selection operations
         private bool _isTabSelectionInProgress = false;
@@ -33,11 +35,12 @@ namespace Quantra.Managers
 
         #region Constructor
 
-        public TabManager(TabControl tabControl)
+        public TabManager(TabControl tabControl, UserSettingsService userSettingsService)
         {
             _mainTabControl = tabControl ?? throw new ArgumentNullException(nameof(tabControl));
             var connection = ConnectionHelper.GetConnection();
             _tabRepository = new TabRepository(connection);
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
         }
 
         #endregion
@@ -97,7 +100,7 @@ namespace Quantra.Managers
             };
 
             // Get grid settings from database
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
 
             // Parse the color
             SolidColorBrush gridBorderBrush = Brushes.Cyan; // Default
