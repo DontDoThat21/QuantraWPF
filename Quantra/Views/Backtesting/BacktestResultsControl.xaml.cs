@@ -1584,7 +1584,8 @@ namespace Quantra.Views.Backtesting
         
         private void ManageCustomBenchmarksButton_Click(object sender, RoutedEventArgs e)
         {
-            var manager = new CustomBenchmarkManager();
+            var manager = new CustomBenchmarkManager(_customBenchmarkService,
+            _userSettingsService);
             bool? result = manager.ShowDialog();
             
             if (result == true && manager.SelectedBenchmark != null)

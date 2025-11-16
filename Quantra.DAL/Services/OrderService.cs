@@ -12,6 +12,7 @@ namespace Quantra.DAL.Services
     public class OrderService : IOrderService
     {
         private readonly WebullTradingBot _tradingBot;
+        private readonly UserSettingsService _userSettingsService;
 
         // Accept configuration in constructor
         public OrderService(UserSettingsService userSettingsService,
@@ -23,6 +24,9 @@ namespace Quantra.DAL.Services
                 historicalDataService,
                 alphaVantageService,
                 technicalIndicatorService);
+
+            _userSettingsService = userSettingsService;
+
         }
 
         public async Task<bool> PlaceLimitOrder(string symbol, int quantity, string orderType, double price)
@@ -60,13 +64,13 @@ namespace Quantra.DAL.Services
 
         public bool GetApiModalCheckSetting()
         {
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
             return settings.EnableApiModalChecks;
         }
 
         public void SaveApiModalCheckSetting(bool enableChecks)
         {
-            var settings = DatabaseMonolith.GetUserSettings();
+            var settings = _userSettingsService.GetUserSettings();
             settings.EnableApiModalChecks = enableChecks;
             DatabaseMonolith.SaveUserSettings(settings);
         }

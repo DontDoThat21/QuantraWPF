@@ -272,7 +272,8 @@ Symbol = trade.Symbol?.ToUpper(),
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new DatabaseInitializationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new DatabaseInitializationService(dbContext, loggingService);
                 service.EnsureUserAppSettingsTable();
             }
             catch (Exception ex)
@@ -282,28 +283,6 @@ Symbol = trade.Symbol?.ToUpper(),
         }
 
         /// <summary>
-        /// Gets user settings from database. Returns default settings if none exist.
-   /// </summary>
-      [Obsolete("Use UserSettingsService.GetUserSettings via dependency injection")]
-  public UserSettings GetUserSettings()
-        {
-  try
-            {
-    // Create a temporary DbContext and service for backward compatibility
-     var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-        optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-      using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-  var service = new UserSettingsService(dbContext, _loggingService);
- return service.GetUserSettings();
- }
-          catch (Exception ex)
- {
-     _loggingService.Log("Error", "Failed to get user settings, returning defaults", ex.ToString());
-   return new UserSettings();
- }
-      }
-
-    /// <summary>
         /// Saves user settings to database
  /// </summary>
         [Obsolete("Use UserSettingsService.SaveUserSettings via dependency injection")]
@@ -315,34 +294,15 @@ Symbol = trade.Symbol?.ToUpper(),
        var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
          using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-        var service = new UserSettingsService(dbContext);
+        var loggingService = new LoggingService();
+        var service = new UserSettingsService(dbContext, loggingService);
       service.SaveUserSettings(settings);
    }
         catch (Exception ex)
        {
-    _loggingService.Log("Error", "Failed to save user settings", ex.ToString());
+    Console.WriteLine($"Error: Failed to save user settings - {ex.Message}");
    }
     }
-
-        /// <summary>
-        /// Saves user settings to database with pin and API modal checks
-      /// </summary>
-      /// <param name="pin">User pin</param>
-        /// <param name="enableApiModalChecks">Enable API modal checks</param>
-        [Obsolete("Use UserSettingsService.SaveUserSettings via dependency injection")]
-        public void SaveUserSettings(string pin, bool enableApiModalChecks)
-        {
-            try
-            {
-                var settings = GetUserSettings();
-                settings.EnableApiModalChecks = enableApiModalChecks;
-                SaveUserSettings(settings);
-            }
-            catch (Exception ex)
-            {
-                _loggingService.Log("Error", "Failed to save user settings with pin", ex.ToString());
-            }
-        }
 
         /// <summary>
      /// Saves a setting by key-value pair to the database
@@ -358,12 +318,13 @@ Symbol = trade.Symbol?.ToUpper(),
          var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
        optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
         using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new UserSettingsService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new UserSettingsService(dbContext, loggingService);
          service.SaveUserPreference(key, value);
        }
          catch (Exception ex)
          {
-    _loggingService.Log("Error", $"Failed to save setting: {key}", ex.ToString());
+    Console.WriteLine($"Error: Failed to save setting: {key} - {ex.Message}");
             }
     }
 
@@ -379,12 +340,13 @@ Symbol = trade.Symbol?.ToUpper(),
      var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-    var service = new UserSettingsService(dbContext);
+    var loggingService = new LoggingService();
+    var service = new UserSettingsService(dbContext, loggingService);
         return service.GetUserPreference(key, defaultValue);
 }
        catch (Exception ex)
     {
-    _loggingService.Log("Error", $"Failed to get user preference: {key}", ex.ToString());
+    Console.WriteLine($"Error: Failed to get user preference: {key} - {ex.Message}");
   return defaultValue;
     }
         }
@@ -401,12 +363,13 @@ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
   var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
   optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
         using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-         var service = new UserSettingsService(dbContext);
+         var loggingService = new LoggingService();
+         var service = new UserSettingsService(dbContext, loggingService);
    service.SaveUserPreference(key, value);
 }
             catch (Exception ex)
 {
-  _loggingService.Log("Error", $"Failed to save user preference: {key}", ex.ToString());
+  Console.WriteLine($"Error: Failed to save user preference: {key} - {ex.Message}");
       }
  }
 
@@ -414,20 +377,22 @@ using var dbContext = new QuantraDbContext(optionsBuilder.Options);
         /// Gets remembered accounts
         /// </summary>
     [Obsolete("Use UserSettingsService.GetRememberedAccounts via dependency injection")]
-        public static Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
+        public static Dictionary<string, (string Username, string Password, String Pin)> GetRememberedAccounts()
         {
       try
    {
  // Create a temporary DbContext and service for backward compatibility
-        var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+        var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>
+();
    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
   using var dbContext = new QuantraDbContext(optionsBuilder.Options);
- var service = new UserSettingsService(dbContext);
+ var loggingService = new LoggingService();
+ var service = new UserSettingsService(dbContext, loggingService);
        return service.GetRememberedAccounts();
     }
      catch (Exception ex)
     {
-      _loggingService.Log("Error", "Failed to get remembered accounts", ex.ToString());
+      Console.WriteLine($"Error: Failed to get remembered accounts - {ex.Message}");
     return new Dictionary<string, (string, string, string)>();
       }
       }
@@ -444,12 +409,13 @@ try
   var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
    using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-var service = new UserSettingsService(dbContext);
+var loggingService = new LoggingService();
+var service = new UserSettingsService(dbContext, loggingService);
       service.RememberAccount(username, password, pin);
     }
  catch (Exception ex)
         {
-     _loggingService.Log("Error", $"Failed to remember account: {username}", ex.ToString());
+     Console.WriteLine($"Error: Failed to remember account: {username} - {ex.Message}");
   }
  }
 
@@ -484,12 +450,12 @@ var service = new UserSettingsService(dbContext);
        }
 
          // If no config found, return default 4x4
-         _loggingService.Log("Warning", $"No grid configuration found for tab '{tabName}', using default 4x4");
+         Console.WriteLine($"Warning: No grid configuration found for tab '{tabName}', using default 4x4");
            return (4, 4);
             }
             catch (Exception ex)
  {
-        _loggingService.Log("Error", $"Failed to load grid configuration for tab '{tabName}'", ex.ToString());
+        Console.WriteLine($"Error: Failed to load grid configuration for tab '{tabName}' - {ex.Message}");
   // Return default on error
          return (4, 4);
     }
@@ -509,12 +475,13 @@ var service = new UserSettingsService(dbContext);
          var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
           using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new TabConfigurationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new TabConfigurationService(dbContext, loggingService);
                 return service.LoadControlsConfig(tabName);
     }
     catch (Exception ex)
         {
-        _loggingService.Log("Error", $"Failed to load controls configuration for tab '{tabName}'", ex.ToString());
+        Console.WriteLine($"Error: Failed to load controls configuration for tab '{tabName}' - {ex.Message}");
         return string.Empty;
     }
         }
@@ -532,12 +499,13 @@ var service = new UserSettingsService(dbContext);
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new TabConfigurationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new TabConfigurationService(dbContext, loggingService);
                 service.SaveControlsConfig(tabName, controlsConfig);
             }
             catch (Exception ex)
             {
-                _loggingService.Log("Error", $"Failed to save controls configuration for tab '{tabName}'", ex.ToString());
+                Console.WriteLine($"Error: Failed to save controls configuration for tab '{tabName}' - {ex.Message}");
             }
         }
         
@@ -552,12 +520,13 @@ var service = new UserSettingsService(dbContext);
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new TabConfigurationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new TabConfigurationService(dbContext, loggingService);
                 service.AddCustomControlWithSpans(tabName, controlType, row, column, rowSpan, columnSpan);
             }
             catch (Exception ex)
             {
-                _loggingService.Log("Error", $"Failed to add control with spans to tab '{tabName}'", ex.ToString());
+                Console.WriteLine($"Error: Failed to add control with spans to tab '{tabName}' - {ex.Message}");
             }
         }
         
@@ -572,12 +541,13 @@ var service = new UserSettingsService(dbContext);
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new TabConfigurationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new TabConfigurationService(dbContext, loggingService);
                 service.UpdateControlPosition(tabName, controlIndex, row, column, rowSpan, columnSpan);
             }
             catch (Exception ex)
             {
-                _loggingService.Log("Error", $"Failed to update control position in tab '{tabName}'", ex.ToString());
+                Console.WriteLine($"Error: Failed to update control position in tab '{tabName}' - {ex.Message}");
             }
         }
         
@@ -592,12 +562,13 @@ var service = new UserSettingsService(dbContext);
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
-                var service = new TabConfigurationService(dbContext);
+                var loggingService = new LoggingService();
+                var service = new TabConfigurationService(dbContext, loggingService);
                 service.RemoveControl(tabName, controlIndex);
             }
             catch (Exception ex)
             {
-                _loggingService.Log("Error", $"Failed to remove control from tab '{tabName}'", ex.ToString());
+                Console.WriteLine($"Error: Failed to remove control from tab '{tabName}' - {ex.Message}");
             }
         }
         
@@ -639,16 +610,16 @@ var service = new UserSettingsService(dbContext);
                 
                 if (deleted)
                 {
-                    _loggingService.Log("Info", $"Deleted trading rule with Id {ruleId}");
+                    Console.WriteLine($"Info: Deleted trading rule with Id {ruleId}");
                 }
                 else
                 {
-                    _loggingService.Log("Warning", $"Trading rule with Id {ruleId} not found");
+                    Console.WriteLine($"Warning: Trading rule with Id {ruleId} not found");
                 }
             }
             catch (Exception ex)
             {
-                _loggingService.LogErrorWithContext(ex, $"Failed to delete trading rule with Id {ruleId}");
+                Console.WriteLine($"Error: Failed to delete trading rule with Id {ruleId} - {ex.Message}");
                 throw;
             }
         }
@@ -708,7 +679,7 @@ var parts = entry.Split(',');
         }
           catch (Exception ex)
    {
-     _loggingService.Log("Warning", $"Failed to parse control entry: {entry}", ex.ToString());
+     Console.WriteLine($"Warning: Failed to parse control entry: {entry} - {ex.Message}");
             }
   }
 
@@ -716,7 +687,7 @@ var parts = entry.Split(',');
       }
         catch (Exception ex)
       {
- _loggingService.Log("Error", $"Failed to load controls for tab '{tabName}'", ex.ToString());
+ Console.WriteLine($"Error: Failed to load controls for tab '{tabName}' - {ex.Message}");
        return new List<ControlModel>();
      }
 }
