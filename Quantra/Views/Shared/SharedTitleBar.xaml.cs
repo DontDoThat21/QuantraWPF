@@ -291,13 +291,13 @@ namespace Quantra
             }
 
             // Call the main constructor with services from DI container
-            var alphaVantageService = App.ServiceProvider.GetService<AlphaVantageService>();
+            var alphaVantageService = App.ServiceProvider.GetService<IAlphaVantageService>();
             var userSettingsService = App.ServiceProvider.GetService<UserSettingsService>();
             var historicalDataService = App.ServiceProvider.GetService<HistoricalDataService>();
             var technicalIndicatorService = App.ServiceProvider.GetService<TechnicalIndicatorService>();
 
             // Initialize using the main constructor logic
-            InitializeWithServices(alphaVantageService, userSettingsService, historicalDataService, technicalIndicatorService);
+            InitializeWithServices(alphaVantageService as AlphaVantageService, userSettingsService, historicalDataService, technicalIndicatorService);
         }
 
         public SharedTitleBar(AlphaVantageService alphaVantageService,
