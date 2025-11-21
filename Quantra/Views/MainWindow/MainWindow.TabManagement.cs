@@ -2090,33 +2090,8 @@ namespace Quantra
 
         #region Grid Initialization
 
-        // Ensure grids are initialized with default dimensions when a tab is created or loaded
-        private void EnsureGridInitialized(TabItem tabItem, string tabName)
-        {
-            if (tabItem.Content is not Grid)
-            {
-                var grid = new Grid();
-
-                // Default grid dimensions (4x4)
-                int rows = 4;
-                int columns = 4;
-
-                // Add rows and columns
-                for (int i = 0; i < rows; i++)
-                {
-                    grid.RowDefinitions.Add(new RowDefinition());
-                }
-                for (int j = 0; j < columns; j++)
-                {
-                    grid.ColumnDefinitions.Add(new ColumnDefinition());
-                }
-
-                tabItem.Content = grid;
-
-                // Log grid initialization
-                //DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
-            }
-        }
+        // Note: EnsureGridInitialized method is implemented in MainWindow.UI.cs
+        // to avoid duplicate member definitions in this partial class
 
         #endregion
 
