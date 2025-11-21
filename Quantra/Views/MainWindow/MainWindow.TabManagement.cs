@@ -372,15 +372,8 @@ namespace Quantra
                         // Load tab controls directly without complex dispatcher logic
                         try
                         {
-                            if (TabManager != null)
-                            {
-                                // Use TabManager to load tab controls
-                                TabManager.LoadTabControls(selectedTab.Header.ToString());
-                            }
-                            else
-                            {
-                                LoadTabControls(selectedTab.Header.ToString());
-                            }
+                            // Use TabManager to load tab controls
+                            TabManager.LoadTabControls(selectedTab.Header.ToString());
                         }
                         catch (Exception ex)
                         {
