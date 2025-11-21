@@ -2,6 +2,7 @@ using Xunit;
 using Quantra.DAL.Services.Interfaces;
 using Quantra;
 using System;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {
@@ -11,7 +12,7 @@ namespace Quantra.Tests.Services
 
         public StockDataCacheServiceTests()
         {
-            _cacheService = new StockDataCacheService();
+            _cacheService = new ContinStockDataCacheService();
         }
 
         [Fact]

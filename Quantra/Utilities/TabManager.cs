@@ -411,7 +411,7 @@ namespace Quantra.Utilities
         /// <summary>
         /// Creates a new tab based on user input from the CreateTabWindow
         /// </summary>
-        public void AddNewTab()
+        public void  AddNewTab()
         {
             // Create and show the new tab creation dialog
             var createTabWindow = new CreateTabWindow(_userSettingsService);

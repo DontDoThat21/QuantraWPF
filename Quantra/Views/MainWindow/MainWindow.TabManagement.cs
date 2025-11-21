@@ -45,18 +45,20 @@ namespace Quantra
 
         private void InitializeTabManagement()
         {
-            var connection = ConnectionHelper.GetConnection();
-            _tabRepository = new TabRepository(connection);
-            
             // Validate prerequisites before creating TabManager
             if (MainTabControl == null)
             {
                 throw new InvalidOperationException("MainTabControl must be initialized before calling InitializeTabManagement");
             }
+            
+            // Ensure _userSettingsService is available
             if (_userSettingsService == null)
             {
-                throw new InvalidOperationException("UserSettingsService must be initialized before calling InitializeTabManagement");
+                throw new InvalidOperationException("UserSettingsService must be injected via constructor before calling InitializeTabManagement");
             }
+            
+            var connection = ConnectionHelper.GetConnection();
+            _tabRepository = new TabRepository(connection);
             
             // Initialize TabManager - ensuring it's never null
             TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
@@ -125,6 +127,7 @@ namespace Quantra
                 int gridColumns = createTabWindow.GridColumns;
 
                 // Add the tab to the UI
+                TabManager = new TabManager(this, MainTabControl, _userSettingsService ?? App.ServiceProvider.GetService<UserSettingsService>());
                 TabManager.AddCustomTab(newTabName);
 
                 // Save the tab to the database with specified grid dimensions
