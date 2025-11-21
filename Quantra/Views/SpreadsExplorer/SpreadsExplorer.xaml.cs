@@ -19,6 +19,14 @@ namespace Quantra.Controls
         private SpreadsExplorerViewModel _viewModel;
         private AlphaVantageService _alphaVantageService;
 
+        // Parameterless constructor for XAML designer support
+        public SpreadsExplorer()
+        {
+            InitializeComponent();
+            _viewModel = new SpreadsExplorerViewModel();
+            DataContext = _viewModel;
+        }
+
         public SpreadsExplorer(UserSettingsService userSettingsService, LoggingService loggingService)
         {
             InitializeComponent();

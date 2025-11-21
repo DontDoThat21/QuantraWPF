@@ -15,6 +15,14 @@ namespace Quantra
         public int GridColumns { get; private set; } = 4;
         private readonly UserSettingsService _userSettingsService;
 
+        // Parameterless constructor for XAML designer support
+        public CreateTabWindow()
+        {
+            InitializeComponent();
+            GridRows = 4;
+            GridColumns = 4;
+        }
+
         public CreateTabWindow(UserSettingsService userSettingsService)
         {
             InitializeComponent(); // Ensure this is called to initialize the UI components

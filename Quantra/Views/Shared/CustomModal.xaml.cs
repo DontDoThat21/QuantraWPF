@@ -22,6 +22,14 @@ namespace Quantra.Views.Shared
     public partial class CustomModal : Window
     {
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public CustomModal()
+        {
+            InitializeComponent();
+        }
+
+        /// <summary>
         /// Initializes a new instance of the CustomModal class.
         /// </summary>
         /// <param name="message">The message to display</param>

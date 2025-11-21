@@ -178,6 +178,17 @@ namespace Quantra.Controls.Components
             }
         }
 
+        // Parameterless constructor for XAML designer support
+        public IndicatorDisplayModule()
+        {
+            InitializeComponent();
+            DataContext = this;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _lastTradeTime = new Dictionary<string, DateTime>();
+            Indicators = new Dictionary<string, double>();
+            AvailableTradingRules = new ObservableCollection<TradingRule>();
+        }
+
         public IndicatorDisplayModule(
             SettingsService settingsService,
             TechnicalIndicatorService indicatorService,

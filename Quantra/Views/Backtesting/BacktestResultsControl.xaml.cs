@@ -38,6 +38,13 @@ namespace Quantra.Views.Backtesting
         private ObservableCollection<CustomBenchmark> _customBenchmarks;
         private UserSettingsService _userSettingsService;
         
+        // Parameterless constructor for XAML designer support
+        public BacktestResultsControl()
+        {
+            InitializeComponent();
+            _customBenchmarks = new ObservableCollection<CustomBenchmark>();
+        }
+        
         public BacktestResultsControl(HistoricalDataService historicalDataService,
             CustomBenchmarkService customBenchmarkService,
             UserSettingsService userSettingsService

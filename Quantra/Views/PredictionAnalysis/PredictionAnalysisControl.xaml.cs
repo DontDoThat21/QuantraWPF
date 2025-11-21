@@ -50,6 +50,14 @@ namespace Quantra.Controls
         // Confidence value (not duplicated in other files)
         private double confidence;
 
+        // Parameterless constructor for XAML designer support
+        public PredictionAnalysisControl()
+        {
+            InitializeComponent();
+            indicators = new Dictionary<string, double>();
+            _lastAnalysisTime = new Dictionary<string, DateTime>();
+        }
+
      public PredictionAnalysisControl(
         PredictionAnalysisViewModel viewModel,
         NotificationService notificationService,

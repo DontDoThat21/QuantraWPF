@@ -106,14 +106,22 @@ namespace Quantra.Views.PredictionAnalysis.Components
             }
         }
 
+        // Parameterless constructor for XAML designer support
+        public PredictionChartModule()
+        {
+            InitializeComponent();
+            InitializeChart();
+            DataContext = this;
+        }
+
         public PredictionChartModule(
             ITechnicalIndicatorService indicatorService,
             INotificationService notificationService,
             IStockDataCacheService stockDataCacheService)
         {
+            InitializeComponent();
             // Initialize properties before setting DataContext to avoid binding errors
             InitializeChart();
-            InitializeComponent();
             DataContext = this;
             _indicatorService = indicatorService;
             _notificationService = notificationService;
