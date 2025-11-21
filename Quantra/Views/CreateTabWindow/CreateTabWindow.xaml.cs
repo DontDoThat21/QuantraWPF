@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Linq;
+using Quantra.DAL.Services;
 
 namespace Quantra
 {
@@ -12,11 +13,12 @@ namespace Quantra
         public string NewTabName { get; private set; }
         public int GridRows { get; private set; } = 4;
         public int GridColumns { get; private set; } = 4;
-        
-        public CreateTabWindow()
+        private readonly UserSettingsService _userSettingsService;
+
+        public CreateTabWindow(UserSettingsService userSettingsService)
         {
             InitializeComponent(); // Ensure this is called to initialize the UI components
-            
+            _userSettingsService = userSettingsService;
             // Set window properties
             this.Owner = Application.Current.MainWindow;
             this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -25,7 +27,7 @@ namespace Quantra
             // Load default grid settings from user settings
             try
             {
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = _userSettingsService.GetUserSettings();
                 GridRows = Math.Max(1, settings.DefaultGridRows);
                 GridColumns = Math.Max(1, settings.DefaultGridColumns);
                 GridRowsTextBox.Text = GridRows.ToString();

@@ -3,6 +3,7 @@ using Quantra.Models;
 using Quantra.Configuration.Models;
 using Microsoft.Extensions.Configuration;
 using System.ComponentModel;
+using Quantra.DAL.Services;
 
 namespace Quantra.Configuration
 {
@@ -15,13 +16,14 @@ namespace Quantra.Configuration
         private readonly IConfigurationManager _configManager;
         private readonly IConfiguration _configuration;
         private readonly AppConfig _appConfig;
+        private readonly UserSettingsService _userSettingsService;
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="configManager">The configuration manager</param>
         /// <param name="configuration">The raw configuration</param>
-        public DatabaseConfigBridge(IConfigurationManager configManager, IConfiguration configuration)
+        public DatabaseConfigBridge(IConfigurationManager configManager, IConfiguration configuration, UserSettingsService userSettingsService)
         {
             _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -65,7 +67,7 @@ namespace Quantra.Configuration
             try
             {
                 // Get user settings from database
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = _userSettingsService.GetUserSettings();
 
                 // Update config values (but don't persist yet)
                 UpdateConfigFromUserSettings(settings, false);

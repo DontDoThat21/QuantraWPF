@@ -2,6 +2,9 @@ using System;
 using NUnit.Framework;
 using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Moq;
 
 namespace Quantra.Tests
 {
@@ -9,11 +12,41 @@ namespace Quantra.Tests
     public class OrderServiceTests
     {
         private OrderService _orderService;
+        private UserSettingsService _userSettingsService;
+        private LoggingService _loggingService;
+        private HistoricalDataService _historicalDataService;
+        private AlphaVantageService _alphaVantageService;
+        private TechnicalIndicatorService _technicalIndicatorService;
 
         [SetUp]
         public void Setup()
         {
-            _orderService = new OrderService();
+            // Create an in-memory SQLite database for testing
+            var connection = new Microsoft.Data.Sqlite.SqliteConnection("DataSource=:memory:");
+            connection.Open();
+
+            var options = new DbContextOptionsBuilder<QuantraDbContext>()
+                .UseSqlite(connection)
+                .Options;
+            var dbContext = new QuantraDbContext(options);
+            
+            // Ensure database is created
+            dbContext.Database.EnsureCreated();
+
+            // Create instances of the required services
+            _loggingService = new LoggingService();
+            _userSettingsService = new UserSettingsService(dbContext, _loggingService);
+            _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
+            _alphaVantageService = new AlphaVantageService(_userSettingsService, _loggingService);
+            _technicalIndicatorService = new TechnicalIndicatorService(_alphaVantageService, _userSettingsService, _loggingService);
+
+            // Create the OrderService with all required dependencies
+            _orderService = new OrderService(
+                _userSettingsService,
+                _historicalDataService,
+                _alphaVantageService,
+                _technicalIndicatorService
+            );
         }
 
         [Test]

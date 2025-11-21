@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(powershell -Command \"Get-ChildItem -Directory | Select-Object Name\")",
-      "Bash(powershell -Command \"Get-ChildItem -Path ''python'' -Directory | Select-Object Name\")"
+      "Bash(powershell -Command \"Get-ChildItem -Path ''python'' -Directory | Select-Object Name\")",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []

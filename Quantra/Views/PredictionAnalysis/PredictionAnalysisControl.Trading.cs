@@ -29,11 +29,11 @@ namespace Quantra.Controls
     var userSettingsService = new UserSettingsService(
 new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
    .UseSqlServer(ConnectionHelper.ConnectionString)
-    .Options));
+    .Options), _loggingService);
       
-    var alphaVantageService = new AlphaVantageService(userSettingsService);
-        var historicalDataService = new HistoricalDataService(userSettingsService);
-        var technicalIndicatorService = new TechnicalIndicatorService(alphaVantageService, userSettingsService);
+    var alphaVantageService = new AlphaVantageService(userSettingsService, _loggingService);
+        var historicalDataService = new HistoricalDataService(userSettingsService, _loggingService);
+        var technicalIndicatorService = new TechnicalIndicatorService(alphaVantageService, userSettingsService, _loggingService);
     
  _tradingBot = new WebullTradingBot(
   userSettingsService,
@@ -41,7 +41,7 @@ new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
             alphaVantageService,
    technicalIndicatorService);
       
-         _stockDataCache = new StockDataCacheService(userSettingsService);
+         _stockDataCache = new StockDataCacheService(userSettingsService, _loggingService);
   // _orderHistoryService is already initialized in constructor, no need to reassign
      
           // Default to paper trading mode
@@ -373,7 +373,7 @@ trailingStopOrderType
                 }
                 
                 // Get user settings for account size and risk parameters
-                var userSettings = DatabaseMonolith.GetUserSettings();
+                var userSettings = _userSettingsService.GetUserSettings();
                 double accountSize = userSettings.AccountSize;
                 double baseRiskPercentage = userSettings.BaseRiskPercentage;
                 

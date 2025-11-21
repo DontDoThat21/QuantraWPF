@@ -56,13 +56,18 @@ namespace Quantra.Extensions
             // Register database configuration bridge
             services.AddSingleton<DatabaseConfigBridge>();
             
+            // Register concrete types first, then interfaces pointing to the same instances
+            services.AddSingleton<SettingsService>();
+            services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
+
+            services.AddSingleton<UserSettingsService>();
+            services.AddSingleton<IUserSettingsService>(sp => sp.GetRequiredService<UserSettingsService>());
+
             // Audio and notification services depend on UserSettings from DatabaseMonolith, so construct via factories
-            services.AddSingleton<IAudioService>(sp => new AudioService(DatabaseMonolith.GetUserSettings()));
-            services.AddSingleton<ISettingsService, SettingsService>();
-            services.AddSingleton<IUserSettingsService, UserSettingsService>();
+            services.AddSingleton<IAudioService>(sp => new AudioService(sp.GetRequiredService<IUserSettingsService>().GetUserSettings()));
             services.AddSingleton<INotificationService>(sp =>
             {
-                var userSettings = DatabaseMonolith.GetUserSettings();
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
                 var audio = sp.GetRequiredService<IAudioService>();
                 var settings = sp.GetRequiredService<ISettingsService>();
                 return new NotificationService(userSettings, audio, settings);
@@ -79,6 +84,7 @@ namespace Quantra.Extensions
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();
             services.AddSingleton<RealTimeInferenceService>();
+            services.AddSingleton<StockSymbolCacheService>();
             services.AddSingleton<SystemHealthMonitorService>();
 
             // Register sentiment services and OpenAI helpers

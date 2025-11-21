@@ -316,7 +316,7 @@ namespace Quantra.Controls
             if (confirmed)
             {
                 // Delete from database using Entity Framework Core service
-                bool success = StockSymbolCacheService.DeleteStockSymbol(symbol);
+                bool success = _stockSymbolCacheService.DeleteStockSymbol(symbol);
                 
                 if (success)
                 {

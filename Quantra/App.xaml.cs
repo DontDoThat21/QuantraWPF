@@ -139,30 +139,11 @@ namespace Quantra
         {
             try
             {
-                // Register DbContext first
-                services.AddDbContext<QuantraDbContext>(options =>
-                {
-                    options.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
-                    {
-                        sqlServerOptions.CommandTimeout(30);
-                    });
-
-#if DEBUG
-                    options.EnableSensitiveDataLogging();
-                    options.EnableDetailedErrors();
-#endif
-                });
-
-                // Register LoggingService
+                // Register LoggingService first (needed by other services)
                 services.AddSingleton<LoggingService>();
 
-                // Register UserSettingsService
-                services.AddScoped<UserSettingsService>();
-
-                // Register SettingsService
-                services.AddScoped<ISettingsService, SettingsService>();
-
                 // Register application services using the extension method
+                // This will register DbContext, Settings services, and all other services
                 Quantra.Extensions.ServiceCollectionExtensions.AddQuantraServices(services);
                 
                 // Register AlertPublisher so non-UI services can emit alerts via DI
@@ -281,6 +262,8 @@ namespace Quantra
             {
                 try
                 {
+                    if (window == null) return;
+
                     var type = Type.GetType("Quantra.WindowResizeBehavior");
                     if (type == null) return;
 
@@ -291,15 +274,19 @@ namespace Quantra
                     if (method == null) return;
 
                     var parameters = method.GetParameters();
-                    if (parameters.Length == 1)
+                    if (parameters == null || parameters.Length == 0) return;
+
+                    // Build arguments array with default values for optional parameters
+                    object[] args = new object[parameters.Length];
+                    args[0] = window;
+
+                    // Fill in default values for optional parameters
+                    for (int i = 1; i < parameters.Length; i++)
                     {
-                        method.Invoke(null, new object[] { window });
+                        args[i] = parameters[i].DefaultValue ?? Type.Missing;
                     }
-                    else
-                    {
-                        // Support optional second parameter (resizeBorderThickness)
-                        method.Invoke(null, new object[] { window, Type.Missing });
-                    }
+
+                    method.Invoke(null, args);
                 }
                 catch
                 {

@@ -290,7 +290,7 @@ namespace Quantra.Managers
         public void HandleAddNewTabButtonClick(object sender, MouseButtonEventArgs e)
         {
             // Create and show the new tab creation dialog
-            var createTabWindow = new CreateTabWindow();
+            var createTabWindow = new CreateTabWindow(_userSettingsService);
             bool? result = createTabWindow.ShowDialog();
 
             // If the user clicked Create and provided a valid tab name

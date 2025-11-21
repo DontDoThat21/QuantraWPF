@@ -45,6 +45,7 @@ namespace Quantra.Controls
         private readonly AlphaVantageService _alphaVantageService;
         private readonly SectorSentimentAnalysisService _sectorSentimentService;
         private readonly TwitterSentimentService _twitterSentimentService;
+        private readonly StockSymbolCacheService _stockSymbolCacheService;
         
         private bool _isLoaded = false;
         private bool _isHandlingSelectionChanged = false;
@@ -477,20 +478,23 @@ namespace Quantra.Controls
         }
 
         public StockExplorer(StockDataCacheService stockDataCacheService,
-                            UserSettingsService userSettingsService)
+                            UserSettingsService userSettingsService, LoggingService loggingService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
             
             InitializeComponent();
-            _viewModel = new StockExplorerViewModel(userSettingsService);
+            _viewModel = new StockExplorerViewModel(userSettingsService, loggingService);
             _cacheService = stockDataCacheService;
 
             // Initialize sentiment analysis services with null checks
             try
             {
+                // Get UserSettings instance from the service
+                var userSettings = userSettingsService.GetUserSettings();
+                
                 _newsSentimentService = new FinancialNewsSentimentService();
-                _analystRatingService = new AnalystRatingService();
+                _analystRatingService = new AnalystRatingService(userSettings, null, loggingService);
                 _sectorSentimentService = new SectorSentimentAnalysisService();
                 _twitterSentimentService = new TwitterSentimentService();
                 // Don't initialize OpenAI service as it requires additional configuration
@@ -4478,7 +4482,7 @@ namespace Quantra.Controls
         {
             try
             {
-                return Quantra.DAL.Services.StockSymbolCacheService.GetAllSymbolsAsList();
+                return _stockSymbolCacheService.GetAllSymbolsAsList();
             }
             catch (Exception ex)
             {

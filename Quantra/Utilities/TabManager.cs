@@ -1,6 +1,7 @@
 using Dapper;
 using Quantra.Controls;
 using Quantra.DAL.Data;
+using Quantra.DAL.Services;
 using Quantra.Repositories;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace Quantra.Utilities
 
         private readonly MainWindow _mainWindow;
         private readonly TabControl _tabControl;
+        private readonly UserSettingsService _userSettingsService;
         private TabItem _lastNonPlusTab;
         private bool _isTabSelectionInProgress = false;
 
@@ -36,11 +38,12 @@ namespace Quantra.Utilities
 
         #region Constructor
 
-        public TabManager(MainWindow mainWindow, TabControl tabControl)
+        public TabManager(MainWindow mainWindow, TabControl tabControl, UserSettingsService userSettingsService)
         {
             _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
             _tabControl = tabControl ?? throw new ArgumentNullException(nameof(tabControl));
-            
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+
             // Attach event handlers
             _tabControl.PreviewMouseMove += TabControl_PreviewMouseMove;
             _tabControl.Drop += TabControl_Drop;
@@ -411,7 +414,7 @@ namespace Quantra.Utilities
         public void AddNewTab()
         {
             // Create and show the new tab creation dialog
-            var createTabWindow = new CreateTabWindow();
+            var createTabWindow = new CreateTabWindow(_userSettingsService);
             bool? result = createTabWindow.ShowDialog();
 
             // If the user clicked Create and provided a valid tab name

@@ -67,7 +67,7 @@ namespace Quantra.Tests
                 
                 // Create a MainWindow instance for testing
                 testMainWindow = new MainWindow(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService);
-                tabManager = new Utilities.TabManager(testMainWindow, testTabControl);
+                tabManager = new Utilities.TabManager(testMainWindow, testTabControl, userSettingsService);
                 
                 // Subscribe to the TabAdded event to verify it fires
                 tabManager.TabAdded += (tabName) =>

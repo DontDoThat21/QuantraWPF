@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Quantra.DAL.Services;
 
 namespace Quantra.Configuration
 {
@@ -37,8 +40,15 @@ namespace Quantra.Configuration
                     return;
                 }
                 
+                // Create temporary DbContext and service for backward compatibility
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                using var dbContext = new QuantraDbContext(optionsBuilder.Options);
+                var loggingService = new LoggingService();
+                var userSettingsService = new UserSettingsService(dbContext, loggingService);
+                
                 // Get settings from database
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = userSettingsService.GetUserSettings();
                 
                 // Create root object for JSON
                 var root = new JObject();

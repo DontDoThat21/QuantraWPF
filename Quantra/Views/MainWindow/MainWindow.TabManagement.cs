@@ -52,7 +52,7 @@ namespace Quantra
             // Keep the existing TabManager approach for compatibility
             try 
             {
-                TabManager = new Utilities.TabManager(this, MainTabControl);
+                TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
                 
                 // Hook up TabManager events
                 TabManager.TabAdded += (tabName) => {
@@ -113,7 +113,7 @@ namespace Quantra
         private void AddNewTabButton_Click(object sender, MouseButtonEventArgs e)
         {
             // Create and show the new tab creation dialog
-            var createTabWindow = new CreateTabWindow();
+            var createTabWindow = new CreateTabWindow(_userSettingsService);
             bool? result = createTabWindow.ShowDialog();
 
             // If the user clicked Create and provided a valid tab name
@@ -630,9 +630,10 @@ namespace Quantra
                 // Get required services from DI container
                 var stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
                 var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                var loggingService = App.ServiceProvider.GetService<LoggingService>();
                 
                 // Create a new instance of our custom StockExplorer
-                var symbolChartControl = new StockExplorer(stockDataCacheService, userSettingsService);
+                var symbolChartControl = new StockExplorer(stockDataCacheService, userSettingsService, loggingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width
@@ -817,7 +818,7 @@ namespace Quantra
         {
             try
             {
-                var configurationControl = new ConfigurationControl();
+                var configurationControl = new ConfigurationControl(_userSettingsService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 configurationControl.Width = double.NaN; // Auto width
@@ -971,9 +972,10 @@ namespace Quantra
             {
                 // Get required services from DI container
                 var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
+                var loggingService = App.ServiceProvider.GetService<LoggingService>();
                 
                 // Create a new instance of our custom SpreadsExplorer control
-                var spreadsExplorerControl = new SpreadsExplorer(userSettingsService);
+                var spreadsExplorerControl = new SpreadsExplorer(userSettingsService, loggingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 spreadsExplorerControl.Width = double.NaN; // Auto width

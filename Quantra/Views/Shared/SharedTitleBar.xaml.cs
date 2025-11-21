@@ -274,26 +274,64 @@ namespace Quantra
             monitoringClearTimer.Start();
         }
 
+        // Parameterless constructor for XAML instantiation
+        public SharedTitleBar()
+        {
+            // Check if we're in design mode or if ServiceProvider is not initialized
+            if (DesignerProperties.GetIsInDesignMode(this) || App.ServiceProvider == null)
+            {
+                // Initialize component for design-time support
+                InitializeComponent();
+                this.DataContext = this;
+
+                // Initialize monitoring display
+                CurrentCallee = "None";
+                CurrentCall = "None";
+                return;
+            }
+
+            // Call the main constructor with services from DI container
+            var alphaVantageService = App.ServiceProvider.GetService<AlphaVantageService>();
+            var userSettingsService = App.ServiceProvider.GetService<UserSettingsService>();
+            var historicalDataService = App.ServiceProvider.GetService<HistoricalDataService>();
+            var technicalIndicatorService = App.ServiceProvider.GetService<TechnicalIndicatorService>();
+
+            // Initialize using the main constructor logic
+            InitializeWithServices(alphaVantageService, userSettingsService, historicalDataService, technicalIndicatorService);
+        }
+
         public SharedTitleBar(AlphaVantageService alphaVantageService,
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            TechnicalIndicatorService technicalIndicatorService)
+        {
+            InitializeWithServices(alphaVantageService, userSettingsService, historicalDataService, technicalIndicatorService);
+        }
+
+        private void InitializeWithServices(AlphaVantageService alphaVantageService,
             UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             TechnicalIndicatorService technicalIndicatorService)
         {
             InitializeComponent();
             this.DataContext = this;
-            
+
             // Set current instance for global access
             _currentInstance = this;
-            
+
             // Initialize monitoring display
             CurrentCallee = "None";
             CurrentCall = "None";
-            
+
             // Subscribe to global loading state changes
             GlobalLoadingStateService.LoadingStateChanged += OnGlobalLoadingStateChanged;
 
-            // Get the order service
-            _orderService = App.ServiceProvider.GetService<IOrderService>();
+            // Get the order service (with null check)
+            if (App.ServiceProvider != null)
+            {
+                _orderService = App.ServiceProvider.GetService<IOrderService>();
+                _settingsService = App.ServiceProvider.GetService<ISettingsService>();
+            }
 
             // Instantiate AlphaVantageService
             _alphaVantageService = alphaVantageService;
@@ -309,7 +347,10 @@ namespace Quantra
                 // todo: remove db monolith and this call
 
                 // Then ensure settings profiles exist
-                _settingsService.EnsureSettingsProfiles();
+                if (_settingsService != null)
+                {
+                    _settingsService.EnsureSettingsProfiles();
+                }
                 //DatabaseMonolith.Log("Info", "SharedTitleBar: Database and settings profiles initialized successfully");
             }
             catch (Exception ex)
@@ -319,10 +360,10 @@ namespace Quantra
 
             // Start updating API usage count
             StartApiUsageTimer();
-            
+
             // Start checking emergency stop status
             StartEmergencyStopCheckTimer();
-            
+
             // Start VIX monitoring
             StartVixMonitoringTimer();
         }

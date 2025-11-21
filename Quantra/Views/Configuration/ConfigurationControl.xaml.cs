@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.Configuration;
+using Quantra.DAL.Services;
 using Quantra.ViewModels; // Add reference to ViewModels namespace
 
 namespace Quantra.Controls
@@ -14,6 +15,8 @@ namespace Quantra.Controls
     /// </summary>
     public partial class ConfigurationControl : UserControl, INotifyPropertyChanged
     {
+        private readonly UserSettingsService _userSettingsService;
+
         // Fallback property for legacy mode binding when ViewModel DI is unavailable
         private int _selectedSettingsTabIndex = 0;
         public int SelectedSettingsTabIndex 
@@ -36,10 +39,11 @@ namespace Quantra.Controls
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public ConfigurationControl()
+        public ConfigurationControl(UserSettingsService userSettingsService)
         {
             InitializeComponent();
-            
+            _userSettingsService = userSettingsService;
+
             // Debug: Check if TabControl was created properly
             //DatabaseMonolith.Log("Info", "ConfigurationControl constructor called");
             
@@ -86,7 +90,7 @@ namespace Quantra.Controls
             try
             {
                 // Try to load settings from database or settings file
-                var settings = DatabaseMonolith.GetUserSettings();
+                var settings = _userSettingsService.GetUserSettings();
 
                 // Apply loaded settings to UI controls
                 // Since settings is a tuple, we can directly access its properties
@@ -264,67 +268,65 @@ namespace Quantra.Controls
         {
             try
             {
-                // Save all settings to the database or settings file
-        
-                // For this example, we'll save the EnableApiModalChecks setting
-                bool enableApiModalChecks = EnableApiModalChecksCheckBox.IsChecked ?? false;
-                DatabaseMonolith.SaveUserSettings(WebullPinBox.Password, enableApiModalChecks);
-   
-                // In a real implementation, we would save all settings here
-                
-                // Save API keys
+                // Get current settings from the service
+                var settings = _userSettingsService.GetUserSettings();
+
+                // Update settings from UI controls
+                settings.EnableApiModalChecks = EnableApiModalChecksCheckBox.IsChecked ?? false;
+
+                // Parse and update position sizing settings
+                if (double.TryParse(AccountSizeTextBox.Text, out double accountSize))
+                    settings.AccountSize = accountSize;
+
+                if (double.TryParse(RiskPercentageTextBox.Text, out double riskPct))
+                    settings.BaseRiskPercentage = riskPct / 100.0;
+
+                if (PositionSizingMethodComboBox.SelectedItem is ComboBoxItem selectedMethod)
+                    settings.PositionSizingMethod = selectedMethod.Content.ToString();
+
+                if (double.TryParse(MaxPositionSizeTextBox.Text, out double maxPosSize))
+                    settings.MaxPositionSizePercent = maxPosSize / 100.0;
+
+                if (double.TryParse(FixedTradeAmountTextBox.Text, out double fixedAmt))
+                    settings.FixedTradeAmount = fixedAmt;
+
+                if (double.TryParse(ATRMultipleTextBox.Text, out double atrMult))
+                    settings.ATRMultiple = atrMult;
+
+                settings.UseKellyCriterion = UseKellyCriterionCheckBox.IsChecked ?? false;
+
+                if (double.TryParse(WinRateTextBox.Text, out double winRate))
+                    settings.HistoricalWinRate = winRate / 100.0;
+
+                if (double.TryParse(RewardRiskRatioTextBox.Text, out double rrRatio))
+                    settings.HistoricalRewardRiskRatio = rrRatio;
+
+                if (double.TryParse(KellyFractionTextBox.Text, out double kellyFrac))
+                    settings.KellyFractionMultiplier = kellyFrac;
+
+                // Save the updated settings
+                _userSettingsService.SaveUserSettings(settings);
+
+                // Save API keys using legacy method (if still needed)
                 string apiKey = FmpApiKeyBox.Password;
                 // Some method to securely save the API key
-                
+
                 // Save credentials if requested
                 if (RememberCredentialsCheckBox.IsChecked == true)
                 {
                     string username = WebullUsernameTextBox.Text;
                     string password = WebullPasswordBox.Password;
                     string pin = WebullPinBox.Password;
-                    
-                    // Save credentials securely (in a real app)
-                    
+
                     // Save credentials securely
                     DatabaseMonolith.RememberAccount(username, password, pin);
                 }
-                
-                // Save position sizing settings
-                if (double.TryParse(AccountSizeTextBox.Text, out double accountSize))
-                    DatabaseMonolith.SaveSetting("AccountSize", accountSize.ToString());
-                
-                if (double.TryParse(RiskPercentageTextBox.Text, out double riskPct))
-                    DatabaseMonolith.SaveSetting("BaseRiskPercentage", (riskPct / 100.0).ToString());
-                
-                if (PositionSizingMethodComboBox.SelectedItem is ComboBoxItem selectedMethod)
-                    DatabaseMonolith.SaveSetting("PositionSizingMethod", selectedMethod.Content.ToString());
-                
-                if (double.TryParse(MaxPositionSizeTextBox.Text, out double maxPosSize))
-                    DatabaseMonolith.SaveSetting("MaxPositionSizePercent", (maxPosSize / 100.0).ToString());
-                
-                if (double.TryParse(FixedTradeAmountTextBox.Text, out double fixedAmt))
-                    DatabaseMonolith.SaveSetting("FixedTradeAmount", fixedAmt.ToString());
-                
-                if (double.TryParse(ATRMultipleTextBox.Text, out double atrMult))
-                    DatabaseMonolith.SaveSetting("ATRMultiple", atrMult.ToString());
-                
-                bool useKelly = UseKellyCriterionCheckBox.IsChecked ?? false;
-                DatabaseMonolith.SaveSetting("UseKellyCriterion", useKelly.ToString());
-                
-                if (double.TryParse(WinRateTextBox.Text, out double winRate))
-                    DatabaseMonolith.SaveSetting("HistoricalWinRate", (winRate / 100.0).ToString());
-                
-                if (double.TryParse(RewardRiskRatioTextBox.Text, out double rrRatio))
-                    DatabaseMonolith.SaveSetting("HistoricalRewardRiskRatio", rrRatio.ToString());
-                
-                if (double.TryParse(KellyFractionTextBox.Text, out double kellyFrac))
-                    DatabaseMonolith.SaveSetting("KellyFractionMultiplier", kellyFrac.ToString());
-   
+
                 // Log success
                 //DatabaseMonolith.Log("Info", "Configuration settings saved successfully");
-                
+
                 // Show success message to user
-                MessageBox.Show("Settings have been saved successfully.", "Settings Saved", 
+                MessageBox.Show("Settings have been saved successfully.", "Settings Saved",
                                 MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)

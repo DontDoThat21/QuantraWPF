@@ -17,10 +17,10 @@ namespace Quantra.Modules
         private readonly ITechnicalIndicatorService _indicatorService;
         private readonly HistoricalDataService _historicalDataService;
 
-        public IndicatorCorrelationAnalysis(UserSettingsService userSettingsService)
+        public IndicatorCorrelationAnalysis(UserSettingsService userSettingsService, LoggingService loggingService)
         {
             _indicatorService = ServiceLocator.Resolve<ITechnicalIndicatorService>();
-            _historicalDataService = new HistoricalDataService(userSettingsService);
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
         }
 
         /// <summary>
