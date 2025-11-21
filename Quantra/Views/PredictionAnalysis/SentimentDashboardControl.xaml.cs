@@ -9,7 +9,8 @@ using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Modules;
-using Quantra.DAL.Services; // Add this for SentimentPriceVisualData, SentimentShiftEvent
+using Quantra.DAL.Services;
+using Quantra.ViewModels;
 
 namespace Quantra.Controls
 {
@@ -18,40 +19,7 @@ namespace Quantra.Controls
     /// </summary>
     public partial class SentimentDashboardControl : UserControl
     {
-        #region Chart Series Collections
-        public SeriesCollection SentimentSeries { get; private set; }
-        public SeriesCollection RatingDistributionSeries { get; private set; }
-        public SeriesCollection PriceTargetSeries { get; private set; }
-        public SeriesCollection InsiderActivitySeries { get; private set; }
-        public SeriesCollection SentimentShiftSeries { get; private set; }
-        #endregion
-
-        #region Services
-        // Disambiguate SentimentPriceCorrelationAnalysis
-        private readonly Quantra.Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
-        private readonly IAnalystRatingService _analystRatingService;
-        private readonly IInsiderTradingService _insiderTradingService;
-        #endregion
-
-        #region Data Caching
-        private SentimentPriceVisualData _currentSentimentData;
-        private AnalystRatingAggregate _currentAnalystData;
-        private List<InsiderTransaction> _currentInsiderData;
-        private int _currentLookbackDays = 30;
-        #endregion
-
-        #region Properties
-        private string _symbol;
-        public string Symbol 
-        { 
-            get => _symbol; 
-            set 
-            {
-                _symbol = value;
-                SymbolTextBlock.Text = value.ToUpper();
-            }
-        }
-        #endregion
+        private readonly SentimentDashboardControlViewModel _viewModel;
 
         /// <summary>
         /// Parameterless constructor for XAML designer support
@@ -59,44 +27,82 @@ namespace Quantra.Controls
         public SentimentDashboardControl()
         {
             InitializeComponent();
-            SentimentSeries = new SeriesCollection();
-            RatingDistributionSeries = new SeriesCollection();
-            PriceTargetSeries = new SeriesCollection();
-            InsiderActivitySeries = new SeriesCollection();
-            SentimentShiftSeries = new SeriesCollection();
         }
 
         /// <summary>
-        /// Initializes a new instance of the SentimentDashboardControl
+        /// Constructor with dependency injection
         /// </summary>
-        public SentimentDashboardControl(UserSettings userSettings,
-            UserSettingsService userSettingsService,
-            LoggingService loggingService
-            )
+        public SentimentDashboardControl(SentimentDashboardControlViewModel viewModel)
         {
             InitializeComponent();
-            
-            // Initialize chart collections
-            SentimentSeries = new SeriesCollection();
-            RatingDistributionSeries = new SeriesCollection();
-            PriceTargetSeries = new SeriesCollection();
-            InsiderActivitySeries = new SeriesCollection();
-            SentimentShiftSeries = new SeriesCollection();
-            
+
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
+
+            // Subscribe to ViewModel events
+            _viewModel.DashboardUpdated += OnDashboardUpdated;
+            _viewModel.ErrorOccurred += OnErrorOccurred;
+
             // Set chart series
-            SentimentTrendChart.Series = SentimentSeries;
-            RatingDistributionChart.Series = RatingDistributionSeries;
-            PriceTargetTrendChart.Series = PriceTargetSeries;
-            InsiderActivityChart.Series = InsiderActivitySeries;
-            SentimentShiftChart.Series = SentimentShiftSeries;
+            SentimentTrendChart.Series = _viewModel.SentimentSeries;
+            RatingDistributionChart.Series = _viewModel.RatingDistributionSeries;
+            PriceTargetTrendChart.Series = _viewModel.PriceTargetSeries;
+            InsiderActivityChart.Series = _viewModel.InsiderActivitySeries;
+            SentimentShiftChart.Series = _viewModel.SentimentShiftSeries;
+
+            // Set symbol text
+            SymbolTextBlock.Text = _viewModel.Symbol;
+        }
+
+        /// <summary>
+        /// Legacy constructor using direct services for compatibility
+        /// </summary>
+        public SentimentDashboardControl(
+            UserSettings userSettings,
+            UserSettingsService userSettingsService,
+            LoggingService loggingService,
+            IAnalystRatingService analystRatingService,
+            IInsiderTradingService insiderTradingService)
+            : this(new SentimentDashboardControlViewModel(
+                userSettings, 
+                userSettingsService, 
+                loggingService, 
+                analystRatingService, 
+                insiderTradingService))
+        {
+        }
+
+        private void OnDashboardUpdated(object sender, string symbol)
+        {
+            // Update UI elements based on ViewModel data
+            SymbolTextBlock.Text = _viewModel.Symbol;
             
-            // Initialize services
-            _sentimentCorrelationAnalysis = new Quantra.Modules.SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
-            _analystRatingService = ServiceLocator.Resolve<IAnalystRatingService>();
-            _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
+            // Get data from ViewModel
+            var sentimentData = _viewModel.GetCurrentSentimentData();
+            var analystData = _viewModel.GetCurrentAnalystData();
+            var insiderData = _viewModel.GetCurrentInsiderData();
             
-            // Default to empty symbol
-            Symbol = "--";
+            // Update tabs with ViewModel data
+            UpdateHistoricalTrendsTab();
+            UpdateAnalystRatingsTab();
+            UpdateInsiderTradingTab();
+            UpdateNewsAndShiftsTab();
+        }
+
+        private void OnErrorOccurred(object sender, string errorMessage)
+        {
+            MessageBox.Show(errorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+        protected override void OnUnloaded(RoutedEventArgs e)
+        {
+            // Clean up
+            if (_viewModel != null)
+            {
+                _viewModel.DashboardUpdated -= OnDashboardUpdated;
+                _viewModel.ErrorOccurred -= OnErrorOccurred;
+            }
+            base.OnUnloaded(e);
         }
 
         #region Public Methods
@@ -106,45 +112,12 @@ namespace Quantra.Controls
         /// <param name="symbol">Stock symbol to display</param>
         public async void UpdateDashboard(string symbol)
         {
-            if (string.IsNullOrEmpty(symbol))
-                return;
-
-            Symbol = symbol;
-            
-            try
+            if (_viewModel != null)
             {
                 // Update the timeframe from the UI selection
                 UpdateTimeframeFromUI();
                 
-                // Get sentiment data
-                // TODO: Replace with actual implementation when available
-                // _currentSentimentData = await _sentimentCorrelationAnalysis.AnalyzeSentimentPriceCorrelation(
-                //     symbol, 
-                //     _currentLookbackDays,
-                //     null);
-                // For now, set to null or mock
-                _currentSentimentData = null;
-                
-                // Get analyst data
-                _currentAnalystData = await _analystRatingService.GetAggregatedRatingsAsync(symbol);
-                
-                // Get insider trading data
-                _currentInsiderData = await _insiderTradingService.GetInsiderTransactionsAsync(symbol);
-                
-                // Update all tabs
-                UpdateHistoricalTrendsTab();
-                UpdateAnalystRatingsTab();
-                UpdateInsiderTradingTab();
-                UpdateNewsAndShiftsTab();
-                
-                // Update overall sentiment score
-                UpdateOverallSentiment();
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to update sentiment dashboard", ex.ToString());
-                MessageBox.Show($"Error updating sentiment dashboard: {ex.Message}", "Error", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                await _viewModel.UpdateDashboardAsync(symbol);
             }
         }
         
@@ -183,7 +156,7 @@ namespace Quantra.Controls
         /// </summary>
         private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            UpdateDashboard(Symbol);
+            UpdateDashboard(_viewModel?.Symbol ?? "--");
         }
         
         /// <summary>
@@ -238,10 +211,9 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateHistoricalTrendsTab()
         {
-            if (_currentSentimentData == null)
+            var data = _viewModel?.GetCurrentSentimentData();
+            if (data == null)
                 return;
-                
-            var data = _currentSentimentData;
             
             // Clear existing chart data
             SentimentSeries.Clear();
