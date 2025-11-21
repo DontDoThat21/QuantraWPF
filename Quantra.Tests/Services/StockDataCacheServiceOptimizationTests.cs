@@ -4,6 +4,7 @@ using Quantra.Models;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {
