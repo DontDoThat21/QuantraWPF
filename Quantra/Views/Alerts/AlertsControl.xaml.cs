@@ -79,10 +79,11 @@ namespace Quantra.Controls
             base.OnUnloaded(e);
         }
 
-        #region Remaining UI Event Handlers (to be reviewed and potentially moved to ViewModel)
+        #region Remaining UI Event Handlers
         
-        // Note: The following methods are UI-specific event handlers that may need to remain
-        // or be refactored to use commands/bindings. Keeping them for now to maintain functionality.
+        // Note: These methods remain in code-behind for XAML event bindings.
+        // They delegate to ViewModel commands and properties where appropriate.
+        // Further refactoring to pure XAML bindings can be done in a future PR.
         
         private void OnGlobalAlertEmitted_Legacy(AlertModel alert)
         {

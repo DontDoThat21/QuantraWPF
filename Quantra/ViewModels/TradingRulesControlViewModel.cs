@@ -29,7 +29,19 @@ namespace Quantra.ViewModels
             TradingRules = new ObservableCollection<TradingRule>();
             
             InitializeCommands();
-            _ = LoadRulesAsync();
+            
+            // Load rules asynchronously with proper exception handling
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await LoadRulesAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error during initial rule loading: {ex.Message}");
+                }
+            });
         }
 
         #region Properties

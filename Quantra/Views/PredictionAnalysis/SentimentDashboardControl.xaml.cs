@@ -212,11 +212,11 @@ namespace Quantra.Controls
         private void UpdateHistoricalTrendsTab()
         {
             var data = _viewModel?.GetCurrentSentimentData();
-            if (data == null)
+            if (data == null || _viewModel?.SentimentSeries == null)
                 return;
             
             // Clear existing chart data
-            SentimentSeries.Clear();
+            _viewModel.SentimentSeries.Clear();
             
             // Update date labels for sentiment trend chart
             var dateLabels = data.Dates.Select(d => d.ToString("MM/dd")).ToList();

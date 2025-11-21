@@ -244,8 +244,18 @@ namespace Quantra.ViewModels
             if (parameter is int days)
             {
                 CurrentLookbackDays = days;
-                // Re-update dashboard with new timeframe
-                _ = UpdateDashboardAsync(Symbol);
+                // Re-update dashboard with new timeframe with proper exception handling
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await UpdateDashboardAsync(Symbol);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error updating dashboard on timeframe change: {ex.Message}");
+                    }
+                });
             }
         }
 
