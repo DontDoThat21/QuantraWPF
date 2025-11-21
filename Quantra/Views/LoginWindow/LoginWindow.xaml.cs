@@ -8,126 +8,123 @@ using System.Windows.Input;
 using static Quantra.ResizableBorder;
 using System.Text.Json;
 using Quantra.DAL.Services; // For JSON deserialization
+using Quantra.ViewModels;
 
 namespace Quantra
 {
     public partial class LoginWindow : Window
     {
-        private Dictionary<string, (string Username, string Password, string Pin)> rememberedAccounts;
-
-        UserSettingsService _userSettingsService;
-        HistoricalDataService _historicalDataService;
-        AlphaVantageService _alphaVantageService;
-        TechnicalIndicatorService _technicalIndicatorService;
+        private readonly LoginWindowViewModel _viewModel;
 
         // Parameterless constructor for XAML designer support
         public LoginWindow()
         {
             InitializeComponent();
-            rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
         }
 
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public LoginWindow(LoginWindowViewModel viewModel)
+        {
+            InitializeComponent();
+            
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
+            
+            // Subscribe to ViewModel events
+            _viewModel.LoginSuccessful += OnLoginSuccessful;
+            _viewModel.LoginFailed += OnLoginFailed;
+            _viewModel.SettingsRequested += OnSettingsRequested;
+        }
+
+        /// <summary>
+        /// Legacy constructor for compatibility - creates ViewModel internally
+        /// </summary>
         public LoginWindow(UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,
-            TechnicalIndicatorService technicalIndicatorService
-            )
+            TechnicalIndicatorService technicalIndicatorService)
+            : this(new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
         {
-            InitializeComponent();
-            //DatabaseMonolith.EnsureDatabaseAndTables();
-            LoadRememberedAccounts();
-            //UsernameTextBox.Text = DictionaryEn.DefaultUsername; // Set default value programmatically
         }
 
-        private void LoadRememberedAccounts()
+        private void OnLoginSuccessful(object sender, LoginSuccessEventArgs e)
         {
-            try 
+            var mainWindow = new MainWindow(
+                e.UserSettingsService,
+                e.HistoricalDataService,
+                e.AlphaVantageService,
+                e.TechnicalIndicatorService);
+
+            if (e.SavedWindowState.HasValue)
             {
-                rememberedAccounts = DatabaseMonolith.GetRememberedAccounts();
-                AccountComboBox.ItemsSource = rememberedAccounts.Keys.ToList();
+                mainWindow.WindowState = e.SavedWindowState.Value;
             }
-            catch (Exception ex)
-            {
-                // Handle exception gracefully - still allow login window to open
-                MessageBox.Show($"Unable to load saved accounts: {ex.Message}", 
-                    "Account Loading Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                
-                // Initialize with empty dictionary to prevent null reference exceptions
-                rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
-            }
+
+            mainWindow.Show();
+            this.Close();
         }
 
-        private async void LoginButton_Click(object sender, RoutedEventArgs e)
+        private void OnLoginFailed(object sender, string errorMessage)
         {
-            var username = UsernameTextBox.Text;
-            var password = PasswordBox.Password;
-            var pin = PinTextBox.Text;
-
-            // Example: If you need to pass the API key to a service, use the new method
-            string alphaVantageApiKey = AlphaVantageService.GetApiKey();
-
-            var tradingBot = new WebullTradingBot(_userSettingsService, _historicalDataService, _alphaVantageService, _technicalIndicatorService);
-            bool isAuthenticated = false;
-
-            if (!string.IsNullOrEmpty(pin) && rememberedAccounts.Values.Any(a => a.Pin == pin))
-            {
-                var account = rememberedAccounts.Values.First(a => a.Pin == pin);
-                isAuthenticated = await tradingBot.Authenticate(account.Username, account.Password);
-            }
-            else
-            {
-                isAuthenticated = await tradingBot.Authenticate(username, password);
-            }
-
-            if (isAuthenticated)
-            {
-                if (RememberMeCheckBox.IsChecked == true)
-                {
-                    DatabaseMonolith.RememberAccount(username, password, pin);
-                }
-
-                var mainWindow = new MainWindow(_userSettingsService,
-                    _historicalDataService,
-                    _alphaVantageService,
-                    _technicalIndicatorService);
-                
-                // Restore window state if enabled
-                var savedWindowState = _userSettingsService.GetSavedWindowState();
-                if (savedWindowState.HasValue)
-                {
-                    mainWindow.WindowState = savedWindowState.Value;
-                }
-                
-                mainWindow.Show();
-                this.Close();
-            }
-            else
-            {
-                MessageBox.Show("Authentication unsuccessful.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            MessageBox.Show(errorMessage, "Login Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        private void OnSettingsRequested(object sender, EventArgs e)
         {
             var settingsWindow = new SettingsWindow();
             settingsWindow.Show();
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (_viewModel != null)
+            {
+                _viewModel.LoginSuccessful -= OnLoginSuccessful;
+                _viewModel.LoginFailed -= OnLoginFailed;
+                _viewModel.SettingsRequested -= OnSettingsRequested;
+            }
+            base.OnClosed(e);
+        }
+
+        #region UI Event Handlers (XAML-referenced)
+
+        private void LoginButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Update ViewModel properties from UI (PasswordBox can't bind directly)
+            if (_viewModel != null)
+            {
+                _viewModel.Username = UsernameTextBox.Text;
+                _viewModel.Password = PasswordBox.Password;
+                _viewModel.Pin = PinTextBox.Text;
+                _viewModel.RememberMe = RememberMeCheckBox.IsChecked == true;
+                
+                // Execute login command
+                if (_viewModel.LoginCommand.CanExecute(null))
+                {
+                    _viewModel.LoginCommand.Execute(null);
+                }
+            }
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            _viewModel?.OpenSettingsCommand?.Execute(null);
+        }
+
         private void AccountComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            if (AccountComboBox.SelectedItem != null)
+            if (_viewModel != null && AccountComboBox.SelectedItem != null)
             {
-                var selectedAccount = AccountComboBox.SelectedItem.ToString();
-                if (rememberedAccounts.ContainsKey(selectedAccount))
-                {
-                    var account = rememberedAccounts[selectedAccount];
-                    UsernameTextBox.Text = account.Username;
-                    PasswordBox.Password = account.Password;
-                    PinTextBox.Text = account.Pin;
-                    
-                    // Use the container for better visibility handling
-                    PinTextBoxContainer.Visibility = Visibility.Visible;
-                }
+                _viewModel.SelectedAccount = AccountComboBox.SelectedItem.ToString();
+                
+                // Update UI from ViewModel
+                UsernameTextBox.Text = _viewModel.Username;
+                PasswordBox.Password = _viewModel.Password;
+                PinTextBox.Text = _viewModel.Pin;
+                PinTextBoxContainer.Visibility = _viewModel.IsPinVisible ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 

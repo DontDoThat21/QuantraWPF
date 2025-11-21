@@ -106,6 +106,8 @@ namespace Quantra.Extensions
             
             // Register ViewModels
             services.AddTransient<PredictionAnalysisViewModel>();
+            services.AddTransient<LoginWindowViewModel>();
+            services.AddTransient<CreateTabWindowViewModel>();
             
             // Register Views
             services.AddTransient<PredictionAnalysisControl>();
