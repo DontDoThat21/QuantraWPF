@@ -388,6 +388,11 @@ namespace Quantra
                                 // Use TabManager to load tab controls
                                 TabManager.LoadTabControls(selectedTab.Header.ToString());
                             }
+                            else
+                            {
+                                // Tab header is null - log warning and skip loading
+                                //DatabaseMonolith.Log("Warning", "Tab header is null, cannot load tab controls");
+                            }
                         }
                         catch (Exception ex)
                         {
