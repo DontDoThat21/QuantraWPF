@@ -27,6 +27,15 @@ namespace Quantra.Views.SupportResistance
         private bool _isLoading = false;
         private List<string> _dateLabels = new List<string>();
         
+        // Parameterless constructor for XAML designer support
+        public SupportResistanceDemoView()
+        {
+            InitializeComponent();
+            DataContext = this;
+            _strategy = new SupportResistanceStrategy();
+            _dateLabels = new List<string>();
+        }
+        
         public SupportResistanceDemoView(UserSettingsService userSettingsService, LoggingService loggingService)
         {
             InitializeComponent();

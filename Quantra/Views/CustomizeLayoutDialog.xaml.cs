@@ -13,6 +13,16 @@ namespace Quantra.Views
         private CustomizeLayoutDialogViewModel _viewModel;
 
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public CustomizeLayoutDialog()
+        {
+            InitializeComponent();
+            _viewModel = new CustomizeLayoutDialogViewModel(null);
+            DataContext = _viewModel;
+        }
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="currentLayout">Current layout configuration</param>

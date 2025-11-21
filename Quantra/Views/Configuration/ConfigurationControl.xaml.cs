@@ -39,6 +39,13 @@ namespace Quantra.Controls
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        // Parameterless constructor for XAML designer support
+        public ConfigurationControl()
+        {
+            InitializeComponent();
+            DataContext = this;
+        }
+
         public ConfigurationControl(UserSettingsService userSettingsService)
         {
             InitializeComponent();

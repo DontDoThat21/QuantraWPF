@@ -59,7 +59,7 @@ namespace Quantra.Controls
         private System.Threading.CancellationTokenSource _symbolOperationCancellation = new System.Threading.CancellationTokenSource();
         
         // Memory pressure monitoring
-        private readonly System.Windows.Threading.DispatcherTimer _memoryMonitorTimer;
+        private System.Windows.Threading.DispatcherTimer _memoryMonitorTimer;
         private const long MEMORY_THRESHOLD_BYTES = 500 * 1024 * 1024; // 500MB threshold
         
         // Stable instance identifier for persisting DataGrid settings across application runs
@@ -475,6 +475,51 @@ namespace Quantra.Controls
                 "P/E Ratio" or "PE Ratio" => $"{value:F1}",
                 _ => $"{value:F2}"
             };
+        }
+
+        // Parameterless constructor for XAML designer support
+        public StockExplorer() : this(Guid.NewGuid().ToString())
+        {
+        }
+
+        private StockExplorer(string instanceId)
+        {
+            _instanceId = instanceId;
+            InitializeComponent();
+            _uiBatchUpdater = new UIBatchUpdater(this.Dispatcher);
+            _memoryMonitorTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMinutes(2)
+            };
+            
+            // Initialize labels
+            SymbolText = "";
+            PriceText = "";
+            
+            // Initialize indicator values to default placeholders
+            RsiValue = "--";
+            PeRatioValue = "--";
+            MacdValue = "--";
+            MacdSignalValue = "--";
+            MacdHistValue = "--";
+            VwapValue = "--";
+            AdxValue = "--";
+            CciValue = "--";
+            AtrValue = "--";
+            MfiValue = "--";
+            StochKValue = "--";
+            StochDValue = "--";
+            
+            // Initialize sentiment analysis properties
+            IsSentimentLoading = false;
+            CanRunSentimentAnalysis = true;
+            SentimentError = "";
+            HasSentimentResults = false;
+            OverallSentimentScore = 0.0;
+            NewsSentimentScore = 0.0;
+            SocialMediaSentimentScore = 0.0;
+            AnalystSentimentScore = 0.0;
+            SentimentSummary = "";
         }
 
         public StockExplorer(StockDataCacheService stockDataCacheService,

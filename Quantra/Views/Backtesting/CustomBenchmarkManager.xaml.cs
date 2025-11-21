@@ -25,6 +25,15 @@ namespace Quantra.Views.Backtesting
         public CustomBenchmark SelectedBenchmark => _selectedBenchmark;
         
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public CustomBenchmarkManager()
+        {
+            InitializeComponent();
+            _benchmarks = new List<CustomBenchmark>();
+        }
+        
+        /// <summary>
         /// Constructor
         /// </summary>
         public CustomBenchmarkManager(CustomBenchmarkService customBenchmarkService,

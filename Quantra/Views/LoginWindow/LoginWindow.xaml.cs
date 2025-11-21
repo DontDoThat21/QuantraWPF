@@ -20,6 +20,13 @@ namespace Quantra
         AlphaVantageService _alphaVantageService;
         TechnicalIndicatorService _technicalIndicatorService;
 
+        // Parameterless constructor for XAML designer support
+        public LoginWindow()
+        {
+            InitializeComponent();
+            rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
+        }
+
         public LoginWindow(UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,

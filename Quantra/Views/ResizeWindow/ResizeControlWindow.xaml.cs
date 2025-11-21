@@ -38,6 +38,18 @@ namespace Quantra
         private enum ResizeModeType { None, Move, ResizeRight, ResizeBottom, ResizeCorner }
 
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public ResizeControlWindow()
+        {
+            InitializeComponent();
+            ResultRow = 0;
+            ResultColumn = 0;
+            ResultRowSpan = 1;
+            ResultColumnSpan = 1;
+        }
+
+        /// <summary>
         /// Creates a new resize control window
         /// </summary>
         /// <param name="tabName">The tab name containing the control</param>

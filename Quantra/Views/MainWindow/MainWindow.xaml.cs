@@ -73,6 +73,19 @@ namespace Quantra
         public Utilities.TabManager TabManager { get; private set; }
         #endregion
 
+        // Parameterless constructor for XAML designer support
+        public MainWindow()
+        {
+            InitializeComponent();
+            ActiveSymbols = new ObservableCollection<TradingSymbol>();
+            TradingRules = new ObservableCollection<StockItem>();
+            UpperBandValues = new ChartValues<double>();
+            MiddleBandValues = new ChartValues<double>();
+            LowerBandValues = new ChartValues<double>();
+            StockPriceLineValues = new ChartValues<double>();
+            RSIValues = new ChartValues<double>();
+        }
+
         public MainWindow(UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,

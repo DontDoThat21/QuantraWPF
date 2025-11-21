@@ -29,6 +29,14 @@ namespace Quantra.Views.MoveControlWindow
         private readonly SolidColorBrush _occupiedCellBrush = new SolidColorBrush(Color.FromArgb(40, 255, 0, 0)); // Light red
         private readonly SolidColorBrush _selectedCellBrush = new SolidColorBrush(Color.FromArgb(80, 0, 255, 0)); // Light green
 
+        // Parameterless constructor for XAML designer support
+        public MoveControlWindow()
+        {
+            InitializeComponent();
+            ResultRow = 0;
+            ResultColumn = 0;
+        }
+
         public MoveControlWindow(string sourceTabName, List<string> availableTabs, int currentRow, int currentColumn, int rowSpan, int columnSpan)
         {
             InitializeComponent();

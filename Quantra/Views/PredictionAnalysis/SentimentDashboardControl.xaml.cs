@@ -54,6 +54,19 @@ namespace Quantra.Controls
         #endregion
 
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public SentimentDashboardControl()
+        {
+            InitializeComponent();
+            SentimentSeries = new SeriesCollection();
+            RatingDistributionSeries = new SeriesCollection();
+            PriceTargetSeries = new SeriesCollection();
+            InsiderActivitySeries = new SeriesCollection();
+            SentimentShiftSeries = new SeriesCollection();
+        }
+
+        /// <summary>
         /// Initializes a new instance of the SentimentDashboardControl
         /// </summary>
         public SentimentDashboardControl(UserSettings userSettings,

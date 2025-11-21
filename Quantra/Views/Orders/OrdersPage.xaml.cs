@@ -130,6 +130,28 @@ namespace Quantra.Views.Orders
             new SolidColorBrush((Color)ColorConverter.ConvertFromString("#50E070")) : 
             new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E05050"));
 
+        // Parameterless constructor for XAML designer support
+        public OrdersPage()
+        {
+            InitializeComponent();
+            Order = new OrderModel
+            {
+                Symbol = "",
+                Quantity = 100,
+                Price = 0,
+                OrderType = "BUY",
+                IsPaperTrade = true,
+                Status = "New",
+                Timestamp = DateTime.Now,
+                StopLoss = 0,
+                TakeProfit = 0,
+                PredictionSource = ""
+            };
+            OrderHistory = new ObservableCollection<OrderModel>();
+            FilteredOrders = new ObservableCollection<OrderModel>(OrderHistory);
+            this.DataContext = this;
+        }
+
         public OrdersPage(UserSettingsService userSettingsService, HistoricalDataService historicalDataService, AlphaVantageService alphaVantageService, TechnicalIndicatorService technicalIndicatorService)
         {
             InitializeComponent();

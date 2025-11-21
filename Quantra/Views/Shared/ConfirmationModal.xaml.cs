@@ -12,6 +12,15 @@ namespace Quantra.Views.Shared
         private bool result = false;
 
         /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public ConfirmationModal()
+        {
+            InitializeComponent();
+            result = false;
+        }
+
+        /// <summary>
         /// Initializes a new instance of the ConfirmationModal class.
         /// </summary>
         /// <param name="message">The message to display</param>
