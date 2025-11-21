@@ -48,6 +48,16 @@ namespace Quantra
             var connection = ConnectionHelper.GetConnection();
             _tabRepository = new TabRepository(connection);
             
+            // Validate prerequisites before creating TabManager
+            if (MainTabControl == null)
+            {
+                throw new InvalidOperationException("MainTabControl must be initialized before calling InitializeTabManagement");
+            }
+            if (_userSettingsService == null)
+            {
+                throw new InvalidOperationException("UserSettingsService must be initialized before calling InitializeTabManagement");
+            }
+            
             // Initialize TabManager - ensuring it's never null
             TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
             
@@ -372,8 +382,12 @@ namespace Quantra
                         // Load tab controls directly without complex dispatcher logic
                         try
                         {
-                            // Use TabManager to load tab controls
-                            TabManager.LoadTabControls(selectedTab.Header.ToString());
+                            // Validate the tab header before loading controls
+                            if (selectedTab.Header != null)
+                            {
+                                // Use TabManager to load tab controls
+                                TabManager.LoadTabControls(selectedTab.Header.ToString());
+                            }
                         }
                         catch (Exception ex)
                         {
