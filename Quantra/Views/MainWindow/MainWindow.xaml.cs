@@ -103,17 +103,25 @@ namespace Quantra
             _userSettingsService = userSettingsService;
             _historicalDataService = historicalDataService;
             _technicalIndicatorService = technicalIndicatorService;
-
-            // Initialize services needed by TabManagement.cs
-            _notificationService = App.ServiceProvider.GetService<INotificationService>() as NotificationService;
-            _indicatorService = App.ServiceProvider.GetService<ITechnicalIndicatorService>() as TechnicalIndicatorService;
-            _stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
             _alphaVantageService = alphaVantageService;
-            _emailService = App.ServiceProvider.GetService<IEmailService>() as EmailService;
-            _tradingService = App.ServiceProvider.GetService<ITradingService>() as TradingService;
-            _settingsService = App.ServiceProvider.GetService<ISettingsService>() as SettingsService;
-            _loggingService = App.ServiceProvider.GetService<LoggingService>();
-            _quantraDbContext = App.ServiceProvider.GetService<QuantraDbContext>();
+
+            // Initialize services needed by TabManagement.cs from DI container
+            _notificationService = App.ServiceProvider.GetService<NotificationService>() 
+                ?? throw new InvalidOperationException("NotificationService not registered in DI container");
+            _indicatorService = technicalIndicatorService as TechnicalIndicatorService 
+                ?? throw new InvalidOperationException("TechnicalIndicatorService is not of expected type");
+            _stockDataCacheService = App.ServiceProvider.GetService<StockDataCacheService>()
+                ?? throw new InvalidOperationException("StockDataCacheService not registered in DI container");
+            _emailService = App.ServiceProvider.GetService<EmailService>()
+                ?? throw new InvalidOperationException("EmailService not registered in DI container");
+            _tradingService = App.ServiceProvider.GetService<TradingService>()
+                ?? throw new InvalidOperationException("TradingService not registered in DI container");
+            _settingsService = App.ServiceProvider.GetService<SettingsService>()
+                ?? throw new InvalidOperationException("SettingsService not registered in DI container");
+            _loggingService = App.ServiceProvider.GetService<LoggingService>()
+                ?? throw new InvalidOperationException("LoggingService not registered in DI container");
+            _quantraDbContext = App.ServiceProvider.GetService<QuantraDbContext>()
+                ?? throw new InvalidOperationException("QuantraDbContext not registered in DI container");
 
             UpperBandValues = [];
             MiddleBandValues = [];
