@@ -5,21 +5,16 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Quantra.ViewModels;
 
 namespace Quantra.Views.MoveControlWindow
 {
     public partial class MoveControlWindow : Window
     {
-        // Properties for binding
-        public string SourceTabName { get; private set; }
-        public string SelectedTabName { get; private set; }
-        public int ResultRow { get; private set; }
-        public int ResultColumn { get; private set; }
+        private readonly MoveControlWindowViewModel _viewModel;
         public bool IsApplied { get; private set; }
 
-        // Private fields
-        private readonly int _rowSpan;
-        private readonly int _columnSpan;
+        // Private fields for UI
         private readonly List<(int Row, int Col)> _occupiedCells = new List<(int Row, int Col)>();
         private readonly Dictionary<string, List<(int Row, int Col)>> _tabOccupiedCells = new Dictionary<string, List<(int Row, int Col)>>();
 
@@ -33,48 +28,76 @@ namespace Quantra.Views.MoveControlWindow
         public MoveControlWindow()
         {
             InitializeComponent();
-            ResultRow = 0;
-            ResultColumn = 0;
         }
 
-        public MoveControlWindow(string sourceTabName, List<string> availableTabs, int currentRow, int currentColumn, int rowSpan, int columnSpan)
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public MoveControlWindow(MoveControlWindowViewModel viewModel)
         {
             InitializeComponent();
 
-            // Set initial values
-            SourceTabName = sourceTabName;
-            SelectedTabName = sourceTabName;
-            ResultRow = currentRow;
-            ResultColumn = currentColumn;
-            _rowSpan = rowSpan;
-            _columnSpan = columnSpan;
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
+
+            // Subscribe to ViewModel events
+            _viewModel.MoveApplied += OnMoveApplied;
+            _viewModel.CloseRequested += OnCloseRequested;
 
             // Setup UI
-            SourceTabTextBlock.Text = sourceTabName;
-            RowTextBox.Text = currentRow.ToString();
-            ColumnTextBox.Text = currentColumn.ToString();
+            SourceTabTextBlock.Text = _viewModel.SourceTabName;
+            RowTextBox.Text = _viewModel.ResultRow.ToString();
+            ColumnTextBox.Text = _viewModel.ResultColumn.ToString();
 
             // Load available tabs
-            if (availableTabs != null && availableTabs.Count > 0)
-            {
-                DestinationTabComboBox.ItemsSource = availableTabs;
-                DestinationTabComboBox.SelectedItem = sourceTabName;
-            }
+            DestinationTabComboBox.ItemsSource = _viewModel.AvailableTabs;
+            DestinationTabComboBox.SelectedItem = _viewModel.SelectedTabName;
 
             // Initialize grid preview
             InitializePreviewGrid();
 
             // Load occupied cells for the current tab
-            LoadOccupiedCells(sourceTabName);
+            LoadOccupiedCells(_viewModel.SourceTabName);
 
             // Update the preview
             UpdatePreview();
 
             // Set window title to include control position
-            Title = $"Move Control - Currently at ({currentRow},{currentColumn})";
+            Title = $"Move Control - Currently at ({_viewModel.ResultRow},{_viewModel.ResultColumn})";
 
             // Set focus to the row textbox
             Loaded += (s, e) => RowTextBox.Focus();
+        }
+
+        /// <summary>
+        /// Legacy constructor for compatibility
+        /// </summary>
+        public MoveControlWindow(string sourceTabName, List<string> availableTabs, int currentRow, int currentColumn, int rowSpan, int columnSpan)
+            : this(new MoveControlWindowViewModel(sourceTabName, availableTabs, currentRow, currentColumn, rowSpan, columnSpan))
+        {
+        }
+
+        private void OnMoveApplied(object sender, MoveControlEventArgs e)
+        {
+            IsApplied = true;
+        }
+
+        private void OnCloseRequested(object sender, bool applied)
+        {
+            IsApplied = applied;
+            DialogResult = applied;
+            Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (_viewModel != null)
+            {
+                _viewModel.MoveApplied -= OnMoveApplied;
+                _viewModel.CloseRequested -= OnCloseRequested;
+            }
+            base.OnClosed(e);
         }
 
         private void InitializePreviewGrid()

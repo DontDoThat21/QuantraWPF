@@ -5,15 +5,16 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Linq;
 using Quantra.DAL.Services;
+using Quantra.ViewModels;
 
 namespace Quantra
 {
     public partial class CreateTabWindow : Window
     {
+        private readonly CreateTabWindowViewModel _viewModel;
         public string NewTabName { get; private set; }
         public int GridRows { get; private set; } = 4;
         public int GridColumns { get; private set; } = 4;
-        private readonly UserSettingsService _userSettingsService;
 
         // Parameterless constructor for XAML designer support
         public CreateTabWindow()
@@ -23,31 +24,28 @@ namespace Quantra
             GridColumns = 4;
         }
 
-        public CreateTabWindow(UserSettingsService userSettingsService)
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public CreateTabWindow(CreateTabWindowViewModel viewModel)
         {
-            InitializeComponent(); // Ensure this is called to initialize the UI components
-            _userSettingsService = userSettingsService;
+            InitializeComponent();
+            
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
+            
             // Set window properties
             this.Owner = Application.Current.MainWindow;
             this.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             this.ShowInTaskbar = false;
             
-            // Load default grid settings from user settings
-            try
-            {
-                var settings = _userSettingsService.GetUserSettings();
-                GridRows = Math.Max(1, settings.DefaultGridRows);
-                GridColumns = Math.Max(1, settings.DefaultGridColumns);
-                GridRowsTextBox.Text = GridRows.ToString();
-                GridColumnsTextBox.Text = GridColumns.ToString();
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to load default grid settings", ex.ToString());
-                // Fall back to 4x4 grid
-                GridRowsTextBox.Text = "4";
-                GridColumnsTextBox.Text = "4";
-            }
+            // Subscribe to ViewModel events
+            _viewModel.TabCreated += OnTabCreated;
+            _viewModel.CloseRequested += OnCloseRequested;
+            
+            // Initialize UI
+            GridRowsTextBox.Text = _viewModel.GridRows.ToString();
+            GridColumnsTextBox.Text = _viewModel.GridColumns.ToString();
             
             // Set focus to tab name textbox
             this.Loaded += (s, e) => {
@@ -62,9 +60,54 @@ namespace Quantra
             // Add keyboard shortcuts
             this.KeyDown += CreateTabWindow_KeyDown;
         }
+
+        /// <summary>
+        /// Legacy constructor for compatibility
+        /// </summary>
+        public CreateTabWindow(UserSettingsService userSettingsService)
+            : this(new CreateTabWindowViewModel(userSettingsService))
+        {
+        }
+
+        private void OnTabCreated(object sender, CreateTabEventArgs e)
+        {
+            NewTabName = e.TabName;
+            GridRows = e.GridRows;
+            GridColumns = e.GridColumns;
+            DialogResult = true;
+        }
+
+        private void OnCloseRequested(object sender, bool accepted)
+        {
+            DialogResult = accepted;
+            Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            // Unsubscribe from events to prevent memory leaks
+            if (_viewModel != null)
+            {
+                _viewModel.TabCreated -= OnTabCreated;
+                _viewModel.CloseRequested -= OnCloseRequested;
+            }
+            base.OnClosed(e);
+        }
         
         private void GridDimension_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // Update ViewModel from UI
+            if (_viewModel != null)
+            {
+                if (int.TryParse(GridRowsTextBox.Text, out int rows))
+                {
+                    _viewModel.GridRows = rows;
+                }
+                if (int.TryParse(GridColumnsTextBox.Text, out int columns))
+                {
+                    _viewModel.GridColumns = columns;
+                }
+            }
             UpdateGridPreview();
         }
         
@@ -205,20 +248,23 @@ namespace Quantra
                 return;
             }
             
-            // Save the values
-            NewTabName = tabName;
-            GridRows = rows;
-            GridColumns = columns;
-            
-            // Return success
-            this.DialogResult = true;
-            this.Close();
+            // Update ViewModel and execute command
+            if (_viewModel != null)
+            {
+                _viewModel.TabName = tabName;
+                _viewModel.GridRows = rows;
+                _viewModel.GridColumns = columns;
+                
+                if (_viewModel.CreateCommand.CanExecute(null))
+                {
+                    _viewModel.CreateCommand.Execute(null);
+                }
+            }
         }
         
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            this.DialogResult = false;
-            this.Close();
+            _viewModel?.CancelCommand?.Execute(null);
         }
         
         private void ShowWarning(string message)

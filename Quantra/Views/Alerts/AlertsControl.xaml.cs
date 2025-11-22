@@ -10,78 +10,82 @@ using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using System.Threading.Tasks;
 using Quantra.DAL.Services;
+using Quantra.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Quantra.Controls
 {
     public partial class AlertsControl : UserControl
     {
-        private const int MaxSymbolsToCheck = 50; // Limit symbol processing to avoid API overuse
-        private string selectedCategoryFilter = "All Categories";
-        private List<AlertModel> alerts = new List<AlertModel>();
-        private AlertModel currentEditAlert = null;
-        private TechnicalIndicatorAlertService technicalIndicatorAlertService;
-        private VolumeAlertService volumeAlertService;
-        private SettingsService settingsService;
-        private PatternAlertService patternAlertService;
-        private DispatcherTimer alertMonitoringTimer;
+        private readonly AlertsControlViewModel _viewModel;
 
         // Static event for global alert emission
         public static event Action<AlertModel> GlobalAlertEmitted;
 
+        // Parameterless constructor for XAML designer support
         public AlertsControl()
         {
             InitializeComponent();
-            // Subscribe to global alert event
-            GlobalAlertEmitted += OnGlobalAlertEmitted;
-            
-            // Initialize the technical indicator alert service
-            var indicatorService = ServiceLocator.Resolve<ITechnicalIndicatorService>();
-            technicalIndicatorAlertService = new TechnicalIndicatorAlertService(indicatorService);
-            
-            // Initialize the volume alert service
-            var historicalDataService = ServiceLocator.Resolve<IHistoricalDataService>();
-            volumeAlertService = new VolumeAlertService(historicalDataService, indicatorService);
-
-            settingsService = ServiceLocator.Resolve<SettingsService>();
-
-            // Initialize the pattern alert service
-            var stockDataService = ServiceLocator.Resolve<StockDataCacheService>();
-            var patternRecognitionService = new PricePatternRecognitionService(stockDataService);
-            patternAlertService = new PatternAlertService(patternRecognitionService);
-            
-            // Start a timer to monitor indicator alerts (replacing complex async loop)
-            StartIndicatorAlertMonitoring();
         }
-        
-        private void StartIndicatorAlertMonitoring()
+
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public AlertsControl(AlertsControlViewModel viewModel)
         {
-            // Stop and dispose of the existing timer if it exists
-            if (alertMonitoringTimer != null)
-            {
-                alertMonitoringTimer.Stop();
-                alertMonitoringTimer = null;
-            }
+            InitializeComponent();
             
-            // Use a simple timer instead of complex async loop
-            alertMonitoringTimer = new DispatcherTimer 
-            { 
-                Interval = TimeSpan.FromSeconds(30) // Check every 30 seconds
-            };
-            alertMonitoringTimer.Tick += async (s, e) => 
-            {
-                try
-                {
-                    await CheckTechnicalIndicatorAlerts();
-                }
-                catch (Exception ex)
-                {
-                    //DatabaseMonolith.Log("Error", "Error checking technical indicator alerts", ex.ToString());
-                }
-            };
-            alertMonitoringTimer.Start();
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
+            
+            // Subscribe to ViewModel events
+            _viewModel.AlertTriggered += OnAlertTriggered;
+            
+            // Subscribe to global alert event
+            GlobalAlertEmitted += _viewModel.OnGlobalAlertEmitted;
+            
+            // Start monitoring
+            _viewModel.StartMonitoring();
         }
+
+        /// <summary>
+        /// Legacy constructor using ServiceLocator for compatibility
+        /// </summary>
+        public AlertsControl(
+            ITechnicalIndicatorService indicatorService,
+            IHistoricalDataService historicalDataService,
+            SettingsService settingsService,
+            StockDataCacheService stockDataCacheService)
+            : this(new AlertsControlViewModel(indicatorService, historicalDataService, settingsService, stockDataCacheService))
+        {
+        }
+
+        private void OnAlertTriggered(object sender, AlertModel alert)
+        {
+            // Handle alert triggered in UI if needed
+            System.Diagnostics.Debug.WriteLine($"Alert triggered: {alert.Message}");
+        }
+
+        protected override void OnUnloaded(RoutedEventArgs e)
+        {
+            // Clean up
+            if (_viewModel != null)
+            {
+                _viewModel.StopMonitoring();
+                _viewModel.AlertTriggered -= OnAlertTriggered;
+                GlobalAlertEmitted -= _viewModel.OnGlobalAlertEmitted;
+                _viewModel.Dispose();
+            }
+            base.OnUnloaded(e);
+        }
+
+        #region Remaining UI Event Handlers
         
-        private async Task CheckTechnicalIndicatorAlerts()
+        // Note: These methods remain in code-behind for XAML event bindings.
+        // They delegate to ViewModel commands and properties where appropriate.
+        // Further refactoring to pure XAML bindings can be done in a future PR.
+        
+        private void OnGlobalAlertEmitted_Legacy(AlertModel alert)
         {
             try
             {
