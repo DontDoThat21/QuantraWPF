@@ -9,6 +9,7 @@ using Quantra.Models;
 using Quantra.ViewModels;
 using LiveCharts;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Views
 {

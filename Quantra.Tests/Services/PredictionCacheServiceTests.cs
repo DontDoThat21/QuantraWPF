@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {
@@ -13,12 +14,16 @@ namespace Quantra.Tests.Services
     {
         private PredictionCacheService _cacheService;
         private string _testDatabasePath;
+        private LoggingService _loggingService;
 
         [SetUp]
         public void SetUp()
         {
+            // Create logging service for tests
+            _loggingService = new LoggingService();
+            
             // Use a test-specific cache with shorter validity period
-            _cacheService = new PredictionCacheService(TimeSpan.FromMinutes(5));
+            _cacheService = new PredictionCacheService(_loggingService, TimeSpan.FromMinutes(5));
 
             // Clean up any existing test data
             var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Quantra");

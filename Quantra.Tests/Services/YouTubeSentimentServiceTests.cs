@@ -8,6 +8,7 @@ using System.ComponentModel;
 using Quantra.Configuration;
 using Quantra.Configuration.Models;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {

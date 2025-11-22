@@ -5,6 +5,7 @@ using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using System.Reflection;
 using Xunit;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {

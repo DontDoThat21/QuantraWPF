@@ -3,6 +3,7 @@ using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using System;
 using static NUnit.Framework.Assert;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {

@@ -11,6 +11,7 @@ using Quantra.DAL.Services.Interfaces;
 using System.Threading.Tasks;
 using Quantra.DAL.Services;
 using Quantra.ViewModels;
+using Quantra.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Quantra.Controls
@@ -44,6 +45,10 @@ namespace Quantra.Controls
             // Subscribe to global alert event
             GlobalAlertEmitted += _viewModel.OnGlobalAlertEmitted;
             
+            // Subscribe to control lifecycle events
+            Loaded += AlertsControl_Loaded;
+            Unloaded += AlertsControl_Unloaded;
+            
             // Start monitoring
             _viewModel.StartMonitoring();
         }
@@ -63,10 +68,15 @@ namespace Quantra.Controls
         private void OnAlertTriggered(object sender, AlertModel alert)
         {
             // Handle alert triggered in UI if needed
-            System.Diagnostics.Debug.WriteLine($"Alert triggered: {alert.Message}");
+            System.Diagnostics.Debug.WriteLine($"Alert triggered: {alert.Name}");
         }
 
-        protected override void OnUnloaded(RoutedEventArgs e)
+        private void AlertsControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Initialize if needed
+        }
+
+        private void AlertsControl_Unloaded(object sender, RoutedEventArgs e)
         {
             // Clean up
             if (_viewModel != null)
@@ -76,7 +86,6 @@ namespace Quantra.Controls
                 GlobalAlertEmitted -= _viewModel.OnGlobalAlertEmitted;
                 _viewModel.Dispose();
             }
-            base.OnUnloaded(e);
         }
 
         #region Remaining UI Event Handlers
@@ -85,89 +94,48 @@ namespace Quantra.Controls
         // They delegate to ViewModel commands and properties where appropriate.
         // Further refactoring to pure XAML bindings can be done in a future PR.
         
-        private void OnGlobalAlertEmitted_Legacy(AlertModel alert)
-        {
-            try
-            {
-                // Only check active, non-triggered technical indicator alerts
-                var indicatorAlerts = alerts.Where(a => 
-                    a.Category == AlertCategory.TechnicalIndicator && 
-                    a.IsActive && 
-                    !a.IsTriggered).ToList();
-                
-                if (indicatorAlerts.Count > 0)
-                {
-                    int triggeredCount = await technicalIndicatorAlertService.CheckAllAlertsAsync(indicatorAlerts);
-                    
-                    // Also check for volume spike alerts
-                    int volumeTriggeredCount = await volumeAlertService.CheckAllVolumeAlertsAsync(indicatorAlerts);
-                    triggeredCount += volumeTriggeredCount;
-                    
-                    // Check for pattern alerts
-                    var symbols = alerts
-                        .Where(a => a.IsActive && !string.IsNullOrWhiteSpace(a.Symbol))
-                        .Select(a => a.Symbol)
-                        .Distinct()
-                        .Take(MaxSymbolsToCheck) // Limit to top symbols to avoid API overuse
-                        .ToList();
-                    
-                    if (symbols.Count > 0)
-                    {
-                        int patternTriggeredCount = await patternAlertService.DetectPatternsForSymbolsAsync(symbols);
-                        triggeredCount += patternTriggeredCount;
-                    }
-                    
-                    if (triggeredCount > 0)
-                    {
-                        // Refresh UI if any alerts were triggered
-                        ApplyFilter();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                EmitGlobalError("Error checking technical indicator alerts", ex);
-            }
-        }
+        // Legacy method - no longer needed as ViewModel handles this
 
         private async void OnGlobalAlertEmitted(AlertModel alert)
         {
-            if (alert == null) return;
+            if (alert == null || _viewModel == null) return;
             // Insert at the top for newest first
-            alerts.Insert(0, alert);
+            _viewModel.Alerts.Insert(0, alert);
             // Optionally limit the number of alerts to avoid memory issues
-            if (alerts.Count > 500)
-                alerts.RemoveAt(alerts.Count - 1);
+            if (_viewModel.Alerts.Count > 500)
+                _viewModel.Alerts.RemoveAt(_viewModel.Alerts.Count - 1);
             // Refresh UI directly, ensuring UI-bound calls are marshaled to the UI thread
             await Dispatcher.InvokeAsync(() => ApplyFilter());
         }
 
         private void AddAlert(AlertModel alert)
         {
-            if (alert == null) return;
-            alerts.Insert(0, alert);
-            if (alerts.Count > 500)
-                alerts.RemoveAt(alerts.Count - 1);
+            if (alert == null || _viewModel == null) return;
+            _viewModel.Alerts.Insert(0, alert);
+            if (_viewModel.Alerts.Count > 500)
+                _viewModel.Alerts.RemoveAt(_viewModel.Alerts.Count - 1);
             ApplyFilter();
         }
 
         private void CategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_viewModel == null) return;
             var comboBoxItem = CategoryFilterComboBox.SelectedItem as ComboBoxItem;
-            selectedCategoryFilter = comboBoxItem?.Content.ToString() ?? "All Categories";
+            _viewModel.SelectedCategoryFilter = comboBoxItem?.Content.ToString() ?? "All Categories";
             ApplyFilter();
         }
 
         private void ApplyFilter()
         {
-            string query = SearchBox.Text.ToUpper().Trim();
-            var comboBoxItem = FilterComboBox.SelectedItem as ComboBoxItem;
+            if (_viewModel == null) return;
+            string query = SearchBox?.Text?.ToUpper()?.Trim() ?? string.Empty;
+            var comboBoxItem = FilterComboBox?.SelectedItem as ComboBoxItem;
             string filterOption = comboBoxItem?.Content.ToString() ?? "All";
-            var categoryComboBoxItem = CategoryFilterComboBox.SelectedItem as ComboBoxItem;
+            var categoryComboBoxItem = CategoryFilterComboBox?.SelectedItem as ComboBoxItem;
             string categoryFilter = categoryComboBoxItem?.Content.ToString() ?? "All Categories";
 
             // Start with all alerts
-            IEnumerable<AlertModel> filtered = alerts;
+            IEnumerable<AlertModel> filtered = _viewModel.Alerts;
 
             // Apply filter based on selection
             switch (filterOption)
@@ -210,13 +178,22 @@ namespace Quantra.Controls
                                .ThenBy(a => a.Priority)
                                .ThenBy(a => a.Category);
 
-            AlertsDataGrid.ItemsSource = filtered.ToList();
+            if (AlertsDataGrid != null)
+            {
+                AlertsDataGrid.ItemsSource = filtered.ToList();
+            }
         }
 
         // Add missing event handler stubs for XAML events
         private void DeleteAlert_Click(object sender, RoutedEventArgs e)
         {
-            // TODO: Implement delete alert logic
+            var button = sender as Button;
+            var alert = button?.DataContext as AlertModel;
+            if (alert != null && _viewModel != null)
+            {
+                _viewModel.Alerts.Remove(alert);
+                ApplyFilter();
+            }
         }
 
         private void EditAlert_Click(object sender, RoutedEventArgs e)
@@ -224,9 +201,9 @@ namespace Quantra.Controls
             var button = sender as Button;
             var alert = button?.DataContext as AlertModel;
             
-            if (alert != null)
+            if (alert != null && _viewModel != null)
             {
-                currentEditAlert = alert;
+                _viewModel.CurrentEditAlert = alert;
                 
                 // Fill in the form with the alert details
                 AlertNameTextBox.Text = alert.Name;
@@ -365,7 +342,10 @@ namespace Quantra.Controls
             PriceConditionPanel.Visibility = Visibility.Visible;
             IndicatorConditionPanel.Visibility = Visibility.Collapsed;
             
-            currentEditAlert = null; // Creating a new alert, not editing
+            if (_viewModel != null)
+            {
+                _viewModel.CurrentEditAlert = null; // Creating a new alert, not editing
+            }
             
             // Show the popup
             AlertEditorPopup.IsOpen = true;
@@ -373,10 +353,11 @@ namespace Quantra.Controls
 
         private void SaveAlertButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_viewModel == null) return;
             try
             {
                 // Create or update an alert model
-                var alert = currentEditAlert ?? new AlertModel();
+                var alert = _viewModel.CurrentEditAlert ?? new AlertModel();
                 
                 alert.Name = AlertNameTextBox.Text;
                 alert.Symbol = SymbolTextBox.Text.ToUpper();
@@ -464,7 +445,7 @@ namespace Quantra.Controls
                 }
                 
                 // If it's a new alert, add it
-                if (currentEditAlert == null)
+                if (_viewModel.CurrentEditAlert == null)
                 {
                     AddAlert(alert);
                 }
@@ -560,18 +541,9 @@ namespace Quantra.Controls
             ApplyFilter();
         }
 
-        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+        private void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            // Check for new technical indicator alerts directly
-            try
-            {
-                await CheckTechnicalIndicatorAlerts();
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error refreshing alerts", ex.ToString());
-            }
-            
+            // Refresh the UI filter
             ApplyFilter();
         }
 
@@ -587,9 +559,8 @@ namespace Quantra.Controls
         public void EmitGlobalAlert(AlertModel alert)
         {
             GlobalAlertEmitted?.Invoke(alert);
-            // Send email if enabled in settings
-            var settings = settingsService.GetDefaultSettingsProfile();
-            EmailAlertService.SendAlertEmail(alert, settings);
+            // Delegate to AlertManager for proper handling
+            AlertManager.EmitGlobalAlert(alert);
         }
 
         /// <summary>
@@ -693,3 +664,5 @@ namespace Quantra.Controls
         }
     }
 }
+
+#endregion

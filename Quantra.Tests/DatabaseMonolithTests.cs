@@ -1,7 +1,10 @@
 using System;
+using System.Data.SQLite;
+
 //using System.Data.SQLite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Quantra;
+using Quantra.DAL.Data;
 
 namespace Quantra.Tests
 {

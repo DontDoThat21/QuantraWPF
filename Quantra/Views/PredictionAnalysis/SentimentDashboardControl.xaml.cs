@@ -39,6 +39,9 @@ namespace Quantra.Controls
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             DataContext = _viewModel;
 
+            // Subscribe to control events
+            this.Unloaded += UserControl_Unloaded;
+
             // Subscribe to ViewModel events
             _viewModel.DashboardUpdated += OnDashboardUpdated;
             _viewModel.ErrorOccurred += OnErrorOccurred;
@@ -94,7 +97,7 @@ namespace Quantra.Controls
             MessageBox.Show(errorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        protected override void OnUnloaded(RoutedEventArgs e)
+        private void UserControl_Unloaded(object sender, RoutedEventArgs e)
         {
             // Clean up
             if (_viewModel != null)
@@ -102,7 +105,6 @@ namespace Quantra.Controls
                 _viewModel.DashboardUpdated -= OnDashboardUpdated;
                 _viewModel.ErrorOccurred -= OnErrorOccurred;
             }
-            base.OnUnloaded(e);
         }
 
         #region Public Methods
@@ -126,27 +128,30 @@ namespace Quantra.Controls
         /// </summary>
         public void ClearDashboard()
         {
+            if (_viewModel == null)
+                return;
+
             // Clear sentiment trends
-            SentimentSeries.Clear();
+            _viewModel.SentimentSeries.Clear();
             
             // Clear analyst ratings
-            RatingDistributionSeries.Clear();
-            PriceTargetSeries.Clear();
+            _viewModel.RatingDistributionSeries.Clear();
+            _viewModel.PriceTargetSeries.Clear();
             AnalystRatingListView.Items.Clear();
             
             // Clear insider trading
-            InsiderActivitySeries.Clear();
+            _viewModel.InsiderActivitySeries.Clear();
             InsiderTransactionListView.Items.Clear();
             
             // Clear sentiment shifts
-            SentimentShiftSeries.Clear();
+            _viewModel.SentimentShiftSeries.Clear();
             SentimentShiftListView.Items.Clear();
             
             // Reset metrics
             ResetMetrics();
             
             // Reset symbol
-            Symbol = "--";
+            _viewModel.Symbol = "--";
         }
         #endregion
 
@@ -164,11 +169,11 @@ namespace Quantra.Controls
         /// </summary>
         private void TrendTimeframeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (string.IsNullOrEmpty(Symbol) || Symbol == "--")
+            if (_viewModel == null || string.IsNullOrEmpty(_viewModel.Symbol) || _viewModel.Symbol == "--")
                 return;
                 
             UpdateTimeframeFromUI();
-            UpdateDashboard(Symbol);
+            UpdateDashboard(_viewModel.Symbol);
         }
         
         /// <summary>
@@ -176,7 +181,7 @@ namespace Quantra.Controls
         /// </summary>
         private void SourceCheckBox_Changed(object sender, RoutedEventArgs e)
         {
-            if (_currentSentimentData == null)
+            if (_viewModel?.GetCurrentSentimentData() == null)
                 return;
                 
             UpdateSentimentSeriesVisibility();
@@ -187,7 +192,7 @@ namespace Quantra.Controls
         /// </summary>
         private void InsiderViewComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_currentInsiderData == null)
+            if (_viewModel?.GetCurrentInsiderData() == null)
                 return;
                 
             UpdateInsiderActivityChart();
@@ -198,7 +203,7 @@ namespace Quantra.Controls
         /// </summary>
         private void ShiftFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_currentSentimentData == null)
+            if (_viewModel?.GetCurrentSentimentData() == null)
                 return;
                 
             UpdateSentimentShiftList();
@@ -234,7 +239,7 @@ namespace Quantra.Controls
             // Add combined sentiment series
             if (data.CombinedSentiment != null && data.CombinedSentiment.Count > 0)
             {
-                SentimentSeries.Add(new LineSeries
+                _viewModel.SentimentSeries.Add(new LineSeries
                 {
                     Title = "Combined",
                     Values = new ChartValues<double>(data.CombinedSentiment),
@@ -256,7 +261,7 @@ namespace Quantra.Controls
                         // Get color or use a default color
                         var color = sourceColors.ContainsKey(source) ? sourceColors[source] : Colors.Gray;
                         
-                        SentimentSeries.Add(new LineSeries
+                        _viewModel.SentimentSeries.Add(new LineSeries
                         {
                             Title = source,
                             Values = new ChartValues<double>(values),
@@ -281,10 +286,9 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateAnalystRatingsTab()
         {
-            if (_currentAnalystData == null)
+            var data = _viewModel?.GetCurrentAnalystData();
+            if (data == null)
                 return;
-                
-            var data = _currentAnalystData;
             
             // Update consensus metrics
             ConsensusRatingText.Text = data.ConsensusRating;
@@ -339,8 +343,8 @@ namespace Quantra.Controls
             }
             
             // Clear existing chart data
-            RatingDistributionSeries.Clear();
-            PriceTargetSeries.Clear();
+            _viewModel.RatingDistributionSeries.Clear();
+            _viewModel.PriceTargetSeries.Clear();
             
             // Update rating distribution chart
             UpdateRatingDistributionChart();
@@ -357,7 +361,7 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateInsiderTradingTab()
         {
-            if (_currentInsiderData == null)
+            if (_viewModel?.GetCurrentInsiderData() == null)
                 return;
                 
             // Calculate metrics
@@ -375,7 +379,7 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateNewsAndShiftsTab()
         {
-            if (_currentSentimentData == null)
+            if (_viewModel?.GetCurrentSentimentData() == null)
                 return;
                 
             // Update sentiment shift chart
@@ -392,7 +396,10 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateSentimentSeriesVisibility()
         {
-            foreach (var series in SentimentSeries)
+            if (_viewModel?.SentimentSeries == null)
+                return;
+                
+            foreach (var series in _viewModel.SentimentSeries)
             {
                 if (series is LineSeries lineSeries)
                 {
@@ -423,11 +430,12 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateRatingDistributionChart()
         {
-            if (_currentAnalystData == null || _currentAnalystData.Ratings == null)
+            var data = _viewModel?.GetCurrentAnalystData();
+            if (data == null || data.Ratings == null)
                 return;
                 
             // Group ratings by category
-            var ratings = _currentAnalystData.Ratings;
+            var ratings = data.Ratings;
             var ratingGroups = ratings
                 .GroupBy(r => r.Rating)
                 .Select(g => new { Rating = g.Key, Count = g.Count() })
@@ -442,7 +450,7 @@ namespace Quantra.Controls
             RatingDistributionChartAxisX.Labels = ratingLabels;
             
             // Add column series
-            RatingDistributionSeries.Add(new ColumnSeries
+            _viewModel.RatingDistributionSeries.Add(new ColumnSeries
             {
                 Title = "Ratings",
                 Values = ratingCounts,
@@ -457,11 +465,12 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdatePriceTargetTrendChart()
         {
-            if (_currentAnalystData == null || _currentAnalystData.Ratings == null)
+            var data = _viewModel?.GetCurrentAnalystData();
+            if (data == null || data.Ratings == null)
                 return;
                 
             // Filter ratings with valid price targets and sort by date
-            var ratings = _currentAnalystData.Ratings
+            var ratings = data.Ratings
                 .Where(r => r.PriceTarget > 0)
                 .OrderBy(r => r.RatingDate)
                 .ToList();
@@ -477,7 +486,7 @@ namespace Quantra.Controls
             PriceTargetTrendChartAxisX.Labels = dates;
             
             // Add line series
-            PriceTargetSeries.Add(new LineSeries
+            _viewModel.PriceTargetSeries.Add(new LineSeries
             {
                 Title = "Price Target",
                 Values = priceTargets,
@@ -489,12 +498,12 @@ namespace Quantra.Controls
             });
             
             // Add average price target line
-            if (_currentAnalystData.AveragePriceTarget > 0)
+            if (data.AveragePriceTarget > 0)
             {
                 var avgValues = new ChartValues<double>(
-                    Enumerable.Repeat(_currentAnalystData.AveragePriceTarget, dates.Count));
+                    Enumerable.Repeat(data.AveragePriceTarget, dates.Count));
                     
-                PriceTargetSeries.Add(new LineSeries
+                _viewModel.PriceTargetSeries.Add(new LineSeries
                 {
                     Title = "Average",
                     Values = avgValues,
@@ -511,17 +520,18 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateInsiderActivityChart()
         {
-            if (_currentInsiderData == null || _currentInsiderData.Count == 0)
+            var insiderData = _viewModel?.GetCurrentInsiderData();
+            if (insiderData == null || insiderData.Count == 0)
                 return;
                 
             // Clear existing chart data
-            InsiderActivitySeries.Clear();
+            _viewModel.InsiderActivitySeries.Clear();
             
             // Get selected view
             var viewMode = InsiderViewComboBox.SelectedIndex;
             
             // Group transactions by date
-            var transactionsByDate = _currentInsiderData
+            var transactionsByDate = insiderData
                 .OrderBy(t => t.TransactionDate)
                 .GroupBy(t => t.TransactionDate.Date)
                 .ToList();
@@ -623,7 +633,7 @@ namespace Quantra.Controls
             if (viewMode == 0 || viewMode == 1) // Transaction Value or Count
             {
                 // Add buy series
-                InsiderActivitySeries.Add(new ColumnSeries
+                _viewModel.InsiderActivitySeries.Add(new ColumnSeries
                 {
                     Title = "Buy",
                     Values = buyValues,
@@ -632,7 +642,7 @@ namespace Quantra.Controls
                 });
                 
                 // Add sell series
-                InsiderActivitySeries.Add(new ColumnSeries
+                _viewModel.InsiderActivitySeries.Add(new ColumnSeries
                 {
                     Title = "Sell",
                     Values = sellValues,
@@ -642,7 +652,7 @@ namespace Quantra.Controls
             }
             
             // Always add net series
-            InsiderActivitySeries.Add(new LineSeries
+            _viewModel.InsiderActivitySeries.Add(new LineSeries
             {
                 Title = viewMode <= 1 ? "Net" : viewMode == 2 ? "Balance" : "Sentiment",
                 Values = netValues,
@@ -660,22 +670,23 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateSentimentShiftChart()
         {
-            if (_currentSentimentData == null || _currentSentimentData.SentimentShiftEvents == null)
+            var sentimentData = _viewModel?.GetCurrentSentimentData();
+            if (sentimentData == null || sentimentData.SentimentShiftEvents == null)
                 return;
                 
             // Clear existing chart data
-            SentimentShiftSeries.Clear();
+            _viewModel.SentimentShiftSeries.Clear();
             
             // Add combined sentiment series
-            if (_currentSentimentData.CombinedSentiment != null && _currentSentimentData.CombinedSentiment.Count > 0)
+            if (sentimentData.CombinedSentiment != null && sentimentData.CombinedSentiment.Count > 0)
             {
-                var dates = _currentSentimentData.Dates.Select(d => d.ToString("MM/dd")).ToList();
+                var dates = sentimentData.Dates.Select(d => d.ToString("MM/dd")).ToList();
                 SentimentShiftChartAxisX.Labels = dates;
                 
-                SentimentShiftSeries.Add(new LineSeries
+                _viewModel.SentimentShiftSeries.Add(new LineSeries
                 {
                     Title = "Combined Sentiment",
-                    Values = new ChartValues<double>(_currentSentimentData.CombinedSentiment),
+                    Values = new ChartValues<double>(sentimentData.CombinedSentiment),
                     PointGeometry = null,
                     Stroke = new SolidColorBrush(Colors.White),
                     StrokeThickness = 2,
@@ -683,12 +694,12 @@ namespace Quantra.Controls
                 });
                 
                 // Add price change series as columns in background
-                if (_currentSentimentData.PriceChanges != null && _currentSentimentData.PriceChanges.Count > 0)
+                if (sentimentData.PriceChanges != null && sentimentData.PriceChanges.Count > 0)
                 {
                     // Scale to fit in the chart
-                    var scaledChanges = _currentSentimentData.PriceChanges.Select(p => p / 100.0).ToList();
+                    var scaledChanges = sentimentData.PriceChanges.Select(p => p / 100.0).ToList();
                     
-                    SentimentShiftSeries.Add(new ColumnSeries
+                    _viewModel.SentimentShiftSeries.Add(new ColumnSeries
                     {
                         Title = "Price Changes",
                         Values = new ChartValues<double>(scaledChanges),
@@ -699,15 +710,15 @@ namespace Quantra.Controls
                 }
                 
                 // Mark significant sentiment shifts on the chart with points
-                foreach (Quantra.Modules.SentimentShiftEvent shift in _currentSentimentData.SentimentShiftEvents)
+                foreach (Quantra.Modules.SentimentShiftEvent shift in sentimentData.SentimentShiftEvents)
                 {
                     // Find the index of this date in the original dates list
-                    int index = _currentSentimentData.Dates.FindIndex(d => d.Date == shift.Date.Date);
+                    int index = sentimentData.Dates.FindIndex(d => d.Date == shift.Date.Date);
                     
-                    if (index >= 0 && index < _currentSentimentData.CombinedSentiment.Count)
+                    if (index >= 0 && index < sentimentData.CombinedSentiment.Count)
                     {
                         // Get the sentiment value at this point
-                        double sentimentValue = _currentSentimentData.CombinedSentiment[index];
+                        double sentimentValue = sentimentData.CombinedSentiment[index];
                         
                         // Create a single-point series to highlight this shift
                         var pointValue = new ChartValues<double> { sentimentValue };
@@ -717,7 +728,7 @@ namespace Quantra.Controls
                             Color.FromRgb(32, 192, 64) : // Green for positive
                             Color.FromRgb(192, 32, 32);  // Red for negative
                             
-                        SentimentShiftSeries.Add(new LineSeries
+                        _viewModel.SentimentShiftSeries.Add(new LineSeries
                         {
                             Title = $"{shift.Source} Shift",
                             Values = pointValue,
@@ -740,13 +751,14 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateAnalystRatingsList()
         {
-            if (_currentAnalystData == null || _currentAnalystData.Ratings == null)
+            var data = _viewModel?.GetCurrentAnalystData();
+            if (data == null || data.Ratings == null)
                 return;
                 
             AnalystRatingListView.Items.Clear();
             
             // Sort by rating date (most recent first)
-            var sortedRatings = _currentAnalystData.Ratings
+            var sortedRatings = data.Ratings
                 .OrderByDescending(r => r.RatingDate)
                 .Take(10) // Show only the 10 most recent
                 .ToList();
@@ -784,13 +796,14 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateInsiderTransactionList()
         {
-            if (_currentInsiderData == null)
+            var insiderData = _viewModel?.GetCurrentInsiderData();
+            if (insiderData == null)
                 return;
                 
             InsiderTransactionListView.Items.Clear();
             
             // Sort by transaction date (most recent first)
-            var sortedTransactions = _currentInsiderData
+            var sortedTransactions = insiderData
                 .OrderByDescending(t => t.TransactionDate)
                 .Take(10) // Show only the 10 most recent
                 .ToList();
@@ -823,7 +836,8 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateSentimentShiftList()
         {
-            if (_currentSentimentData == null || _currentSentimentData.SentimentShiftEvents == null)
+            var sentimentData = _viewModel?.GetCurrentSentimentData();
+            if (sentimentData == null || sentimentData.SentimentShiftEvents == null)
                 return;
                 
             SentimentShiftListView.Items.Clear();
@@ -834,7 +848,7 @@ namespace Quantra.Controls
                 : "All Sources";
                 
             // Filter events based on selection
-            var filteredEvents = _currentSentimentData.SentimentShiftEvents.Where(e => 
+            var filteredEvents = sentimentData.SentimentShiftEvents.Where(e => 
             {
                 if (filter == "All Sources")
                     return true;
@@ -877,10 +891,9 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateHistoricalTrendsMetrics()
         {
-            if (_currentSentimentData == null)
+            var data = _viewModel?.GetCurrentSentimentData();
+            if (data == null)
                 return;
-                
-            var data = _currentSentimentData;
             
             // Lead/Lag relationship
             LeadLagDaysText.Text = $"{data.LeadLagRelationship:F1} days";
@@ -1003,12 +1016,13 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateInsiderTradingMetrics()
         {
-            if (_currentInsiderData == null || _currentInsiderData.Count == 0)
+            var insiderData = _viewModel?.GetCurrentInsiderData();
+            if (insiderData == null || insiderData.Count == 0)
                 return;
                 
             // Calculate buy/sell ratio
-            int buyCount = _currentInsiderData.Count(t => t.TransactionType == InsiderTransactionType.Purchase);
-            int sellCount = _currentInsiderData.Count(t => t.TransactionType == InsiderTransactionType.Sale);
+            int buyCount = insiderData.Count(t => t.TransactionType == InsiderTransactionType.Purchase);
+            int sellCount = insiderData.Count(t => t.TransactionType == InsiderTransactionType.Sale);
             double buySellRatio = sellCount > 0 ? (double)buyCount / sellCount : buyCount;
             
             BuySellRatioText.Text = $"{buySellRatio:F1}";
@@ -1027,11 +1041,11 @@ namespace Quantra.Controls
             }
             
             // Calculate net insider value
-            double buyValue = _currentInsiderData
+            double buyValue = insiderData
                 .Where(t => t.TransactionType == InsiderTransactionType.Purchase)
                 .Sum(t => t.Quantity * t.Price);
                 
-            double sellValue = _currentInsiderData
+            double sellValue = insiderData
                 .Where(t => t.TransactionType == InsiderTransactionType.Sale)
                 .Sum(t => t.Quantity * t.Price);
                 
@@ -1054,7 +1068,7 @@ namespace Quantra.Controls
             }
             
             // Calculate CEO activity
-            var ceoTransactions = _currentInsiderData
+            var ceoTransactions = insiderData
                 .Where(t => t.InsiderTitle?.Contains("CEO") == true || 
                            t.InsiderTitle?.Contains("Chief Executive") == true)
                 .ToList();
@@ -1094,7 +1108,7 @@ namespace Quantra.Controls
             }
             
             // Calculate notable figure activity
-            var notableTransactions = _currentInsiderData
+            var notableTransactions = insiderData
                 .Where(t => t.IsNotableFigure)
                 .ToList();
                 
@@ -1138,10 +1152,11 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateOverallSentiment()
         {
-            if (_currentSentimentData == null)
+            var sentimentData = _viewModel?.GetCurrentSentimentData();
+            if (sentimentData == null)
                 return;
                 
-            double overallSentiment = _currentSentimentData.OverallCorrelation;
+            double overallSentiment = sentimentData.OverallCorrelation;
             
             // Display the overall sentiment
             OverallSentimentTextBlock.Text = $"{overallSentiment:F2}";
@@ -1222,27 +1237,27 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateTimeframeFromUI()
         {
-            if (TrendTimeframeComboBox.SelectedItem != null)
+            if (_viewModel == null || TrendTimeframeComboBox.SelectedItem == null)
+                return;
+                
+            string selectedItem = (TrendTimeframeComboBox.SelectedItem as ComboBoxItem).Content.ToString();
+            switch (selectedItem)
             {
-                string selectedItem = (TrendTimeframeComboBox.SelectedItem as ComboBoxItem).Content.ToString();
-                switch (selectedItem)
-                {
-                    case "7 Days":
-                        _currentLookbackDays = 7;
-                        break;
-                    case "30 Days":
-                        _currentLookbackDays = 30;
-                        break;
-                    case "90 Days":
-                        _currentLookbackDays = 90;
-                        break;
-                    case "1 Year":
-                        _currentLookbackDays = 365;
-                        break;
-                    default:
-                        _currentLookbackDays = 30;
-                        break;
-                }
+                case "7 Days":
+                    _viewModel.CurrentLookbackDays = 7;
+                    break;
+                case "30 Days":
+                    _viewModel.CurrentLookbackDays = 30;
+                    break;
+                case "90 Days":
+                    _viewModel.CurrentLookbackDays = 90;
+                    break;
+                case "1 Year":
+                    _viewModel.CurrentLookbackDays = 365;
+                    break;
+                default:
+                    _viewModel.CurrentLookbackDays = 30;
+                    break;
             }
         }
         
@@ -1308,9 +1323,10 @@ namespace Quantra.Controls
         {
             // In a real implementation, we'd get current price from a market data service
             // For now, use the lowest price target as a conservative approach
-            if (_currentAnalystData != null && _currentAnalystData.LowestPriceTarget > 0)
+            var analystData = _viewModel?.GetCurrentAnalystData();
+            if (analystData != null && analystData.LowestPriceTarget > 0)
             {
-                return _currentAnalystData.LowestPriceTarget * 0.9; // 90% of lowest target as an estimate
+                return analystData.LowestPriceTarget * 0.9; // 90% of lowest target as an estimate
             }
             
             return 0;

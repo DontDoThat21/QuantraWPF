@@ -3,6 +3,7 @@ using Quantra.Enums;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Xunit;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {

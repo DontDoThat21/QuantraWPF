@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Tests.Services

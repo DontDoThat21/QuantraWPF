@@ -20,6 +20,7 @@ using Quantra.Enums;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.DAL.Services;
+using Quantra.DAL.Data;
 
 namespace Quantra
 {

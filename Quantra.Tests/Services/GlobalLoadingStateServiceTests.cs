@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {

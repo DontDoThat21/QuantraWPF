@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
+using Quantra.DAL.Services;
 
 namespace Quantra.Tests.Services
 {
@@ -10,11 +11,15 @@ namespace Quantra.Tests.Services
     public class AnalystRatingServiceTests
     {
         private AnalystRatingService _service;
+        private LoggingService _loggingService;
+        private UserSettings _userSettings;
 
         [TestInitialize]
         public void Setup()
         {
-            _service = new AnalystRatingService();
+            _loggingService = new LoggingService();
+            _userSettings = new UserSettings();
+            _service = new AnalystRatingService(_userSettings, null, _loggingService);
         }
 
         [TestMethod]
