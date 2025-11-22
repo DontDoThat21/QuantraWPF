@@ -5,16 +5,18 @@ using System.Windows;
 using System.Windows.Controls;
 using Quantra.Models;
 using Quantra.Modules;
+using Quantra.DAL.Services;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl
     {
         // Sentiment correlation analyzer
-        private SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
+        private Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         
         // Latest correlation analysis result
-        private SentimentPriceCorrelationResult _lastSentimentCorrelation;
+        private Modules.SentimentPriceCorrelationResult _lastSentimentCorrelation;
         
         // Sentiment visualization controls
         private SentimentVisualizationControl _sentimentVisualizationControl;
@@ -25,13 +27,25 @@ namespace Quantra.Controls
         /// </summary>
         private void InitializeSentimentCorrelationAnalysis()
         {
-            _sentimentCorrelationAnalysis = new SentimentPriceCorrelationAnalysis(_userSettings, _userSettingsService, _loggingService);
+            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(_userSettings, _userSettingsService, _loggingService);
             
             // Create the sentiment visualization control
             _sentimentVisualizationControl = new SentimentVisualizationControl();
             
+            // Get or create required services for SentimentDashboardControl
+            var analystRatingService = Quantra.DAL.Services.ServiceLocator.Resolve<IAnalystRatingService>() 
+                ?? new Quantra.DAL.Services.AnalystRatingService(_userSettings, null, _loggingService);
+            
+            var insiderTradingService = Quantra.DAL.Services.ServiceLocator.Resolve<IInsiderTradingService>() 
+                ?? new Quantra.DAL.Services.InsiderTradingService(_userSettings);
+            
             // Create the sentiment dashboard control (new interactive dashboard)
-            _sentimentDashboardControl = new SentimentDashboardControl(_userSettings, _userSettingsService, _loggingService);
+            _sentimentDashboardControl = new SentimentDashboardControl(
+                _userSettings, 
+                _userSettingsService, 
+                _loggingService,
+                analystRatingService,
+                insiderTradingService);
             
             // Add them to the UI if sentiment visualization container exists
             var sentimentVisualizationContainer = this.FindName("sentimentVisualizationContainer") as Panel;

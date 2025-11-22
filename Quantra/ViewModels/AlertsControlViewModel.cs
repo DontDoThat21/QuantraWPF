@@ -224,7 +224,7 @@ namespace Quantra.ViewModels
         {
             var newAlert = new AlertModel
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = 0,
                 CreatedDate = DateTime.Now,
                 IsActive = true,
                 IsTriggered = false

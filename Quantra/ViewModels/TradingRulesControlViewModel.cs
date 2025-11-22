@@ -121,20 +121,19 @@ namespace Quantra.ViewModels
 
             try
             {
-                if (string.IsNullOrEmpty(rule.RuleId))
+                bool isNewRule = rule.Id == 0;
+                
+                await _tradingRuleService.SaveTradingRuleAsync(rule);
+                
+                if (isNewRule)
                 {
-                    // New rule
-                    rule.RuleId = Guid.NewGuid().ToString();
-                    await _tradingRuleService.AddTradingRuleAsync(rule);
+                    // Add to collection if new
                     TradingRules.Add(rule);
                 }
                 else
                 {
-                    // Update existing rule
-                    await _tradingRuleService.UpdateTradingRuleAsync(rule);
-                    
                     // Update in collection
-                    var existingRule = TradingRules.FirstOrDefault(r => r.RuleId == rule.RuleId);
+                    var existingRule = TradingRules.FirstOrDefault(r => r.Id == rule.Id);
                     if (existingRule != null)
                     {
                         var index = TradingRules.IndexOf(existingRule);
@@ -160,7 +159,7 @@ namespace Quantra.ViewModels
 
             try
             {
-                await _tradingRuleService.DeleteTradingRuleAsync(rule.RuleId);
+                await _tradingRuleService.DeleteTradingRuleAsync(rule.Id);
                 TradingRules.Remove(rule);
                 return true;
             }
@@ -193,7 +192,6 @@ namespace Quantra.ViewModels
         {
             CurrentRule = new TradingRule
             {
-                RuleId = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.Now,
                 IsActive = true
             };
@@ -229,7 +227,7 @@ namespace Quantra.ViewModels
 
         private bool CanExecuteSaveRule(object parameter)
         {
-            return CurrentRule != null && !string.IsNullOrWhiteSpace(CurrentRule.RuleName);
+            return CurrentRule != null && !string.IsNullOrWhiteSpace(CurrentRule.Name);
         }
 
         private async Task ExecuteSaveRuleAsync()

@@ -192,8 +192,8 @@ namespace Quantra.Views.MoveControlWindow
                 bool isOccupied = _occupiedCells.Contains((row, col));
 
                 // Check if this is the cell that would be occupied by this control (and spans)
-                bool isSelectedCell = (row >= ResultRow && row < ResultRow + _rowSpan) &&
-                                     (col >= ResultColumn && col < ResultColumn + _columnSpan);
+                bool isSelectedCell = (row >= _viewModel.ResultRow && row < _viewModel.ResultRow + _viewModel.RowSpan) &&
+                                     (col >= _viewModel.ResultColumn && col < _viewModel.ResultColumn + _viewModel.ColumnSpan);
 
                 // Update cell visuals
                 if (isSelectedCell)
@@ -236,17 +236,17 @@ namespace Quantra.Views.MoveControlWindow
         private bool CheckForOverlap()
         {
             // Skip the current control position if in the same tab
-            if (SelectedTabName == SourceTabName)
+            if (_viewModel.SelectedTabName == _viewModel.SourceTabName)
             {
-                for (int r = ResultRow; r < ResultRow + _rowSpan; r++)
+                for (int r = _viewModel.ResultRow; r < _viewModel.ResultRow + _viewModel.RowSpan; r++)
                 {
-                    for (int c = ResultColumn; c < ResultColumn + _columnSpan; c++)
+                    for (int c = _viewModel.ResultColumn; c < _viewModel.ResultColumn + _viewModel.ColumnSpan; c++)
                     {
                         foreach (var cell in _occupiedCells)
                         {
                             // Skip checking the original position
-                            if (cell.Row >= ResultRow && cell.Row < ResultRow + _rowSpan &&
-                                cell.Col >= ResultColumn && cell.Col < ResultColumn + _columnSpan)
+                            if (cell.Row >= _viewModel.ResultRow && cell.Row < _viewModel.ResultRow + _viewModel.RowSpan &&
+                                cell.Col >= _viewModel.ResultColumn && cell.Col < _viewModel.ResultColumn + _viewModel.ColumnSpan)
                             {
                                 continue;
                             }
@@ -262,9 +262,9 @@ namespace Quantra.Views.MoveControlWindow
             else
             {
                 // Check for any overlap in a different tab
-                for (int r = ResultRow; r < ResultRow + _rowSpan; r++)
+                for (int r = _viewModel.ResultRow; r < _viewModel.ResultRow + _viewModel.RowSpan; r++)
                 {
-                    for (int c = ResultColumn; c < ResultColumn + _columnSpan; c++)
+                    for (int c = _viewModel.ResultColumn; c < _viewModel.ResultColumn + _viewModel.ColumnSpan; c++)
                     {
                         if (_occupiedCells.Contains((r, c)))
                         {
@@ -285,8 +285,8 @@ namespace Quantra.Views.MoveControlWindow
                 // Ensure values are non-negative
                 if (newRow >= 0 && newColumn >= 0)
                 {
-                    ResultRow = newRow;
-                    ResultColumn = newColumn;
+                    _viewModel.ResultRow = newRow;
+                    _viewModel.ResultColumn = newColumn;
                     UpdatePreview();
                 }
             }
@@ -296,7 +296,7 @@ namespace Quantra.Views.MoveControlWindow
         {
             if (DestinationTabComboBox.SelectedItem is string selectedTab)
             {
-                SelectedTabName = selectedTab;
+                _viewModel.SelectedTabName = selectedTab;
 
                 // Load occupied cells for the new tab
                 LoadOccupiedCells(selectedTab);

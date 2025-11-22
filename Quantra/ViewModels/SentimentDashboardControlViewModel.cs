@@ -17,7 +17,7 @@ namespace Quantra.ViewModels
     /// </summary>
     public class SentimentDashboardControlViewModel : ViewModelBase
     {
-        private readonly SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
+        private readonly Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly IAnalystRatingService _analystRatingService;
         private readonly IInsiderTradingService _insiderTradingService;
         
@@ -45,7 +45,7 @@ namespace Quantra.ViewModels
             _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
             _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
             
-            _sentimentCorrelationAnalysis = new SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
+            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
             
             // Initialize chart collections
             SentimentSeries = new SeriesCollection();
@@ -205,20 +205,16 @@ namespace Quantra.ViewModels
             if (_currentAnalystData != null)
             {
                 // Weight ratings: Buy=100, Hold=50, Sell=0
-                int totalRatings = _currentAnalystData.StrongBuyCount + 
-                                   _currentAnalystData.BuyCount + 
+                int totalRatings = _currentAnalystData.BuyCount + 
                                    _currentAnalystData.HoldCount + 
-                                   _currentAnalystData.SellCount + 
-                                   _currentAnalystData.StrongSellCount;
+                                   _currentAnalystData.SellCount;
 
                 if (totalRatings > 0)
                 {
                     double weightedScore = 
-                        (_currentAnalystData.StrongBuyCount * 100) +
-                        (_currentAnalystData.BuyCount * 75) +
+                        (_currentAnalystData.BuyCount * 100) +
                         (_currentAnalystData.HoldCount * 50) +
-                        (_currentAnalystData.SellCount * 25) +
-                        (_currentAnalystData.StrongSellCount * 0);
+                        (_currentAnalystData.SellCount * 0);
 
                     sentiment = weightedScore / totalRatings;
                 }
