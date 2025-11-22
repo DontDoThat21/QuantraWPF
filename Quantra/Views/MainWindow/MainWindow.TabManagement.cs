@@ -114,6 +114,12 @@ namespace Quantra
 
         private void AddNewTabButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Ensure _userSettingsService is available
+            if (_userSettingsService == null)
+            {
+                AppendAlert("Unable to create tab: UserSettingsService not initialized", "negative");
+            }
+            
             // Create and show the new tab creation dialog
             var createTabWindow = new CreateTabWindow(_userSettingsService);
             bool? result = createTabWindow.ShowDialog();

@@ -85,6 +85,14 @@ namespace Quantra
             LowerBandValues = new ChartValues<double>();
             StockPriceLineValues = new ChartValues<double>();
             RSIValues = new ChartValues<double>();
+            
+            // Initialize _userSettingsService from DI container to avoid null reference
+            _userSettingsService = App.ServiceProvider?.GetService<UserSettingsService>();
+            if (_userSettingsService == null)
+            {
+                // Log warning but don't throw - XAML designer might be using this constructor
+                System.Diagnostics.Debug.WriteLine("Warning: UserSettingsService not available in parameterless constructor");
+            }
         }
 
         public MainWindow(UserSettingsService userSettingsService,
