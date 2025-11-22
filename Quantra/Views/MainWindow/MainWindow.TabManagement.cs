@@ -45,27 +45,30 @@ namespace Quantra
 
         private void InitializeTabManagement()
         {
+            // Validate prerequisites before creating TabManager
+            if (MainTabControl == null)
+            {
+                throw new InvalidOperationException("MainTabControl must be initialized before calling InitializeTabManagement");
+            }
+            
+            // Ensure _userSettingsService is available
+            if (_userSettingsService == null)
+            {
+                throw new InvalidOperationException("UserSettingsService must be injected via constructor before calling InitializeTabManagement");
+            }
+            
             var connection = ConnectionHelper.GetConnection();
             _tabRepository = new TabRepository(connection);
             
-            // Initialize TabManager but avoid the complex PreviewMouseMove hookup
-            // Keep the existing TabManager approach for compatibility
-            try 
-            {
-                TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
-                
-                // Hook up TabManager events
-                TabManager.TabAdded += (tabName) => {
-                    // Raise the MainWindow's TabAdded event so AddControlWindow can be notified
-                    TabAdded?.Invoke(tabName);
-                    //DatabaseMonolith.Log("Info",($"MainWindow raised TabAdded event for tab: {tabName}"));
-                };
-            }
-            catch
-            {
-                // Fallback if TabManager constructor fails
-                TabManager = null;
-            }
+            // Initialize TabManager - ensuring it's never null
+            TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
+            
+            // Hook up TabManager events
+            TabManager.TabAdded += (tabName) => {
+                // Raise the MainWindow's TabAdded event so AddControlWindow can be notified
+                TabAdded?.Invoke(tabName);
+                //DatabaseMonolith.Log("Info",($"MainWindow raised TabAdded event for tab: {tabName}"));
+            };
             
             // Wire up events directly
             MainTabControl.SelectionChanged += MainTabControl_SelectionChanged;
@@ -124,6 +127,7 @@ namespace Quantra
                 int gridColumns = createTabWindow.GridColumns;
 
                 // Add the tab to the UI
+                TabManager = new TabManager(this, MainTabControl, _userSettingsService ?? App.ServiceProvider.GetService<UserSettingsService>());
                 TabManager.AddCustomTab(newTabName);
 
                 // Save the tab to the database with specified grid dimensions
@@ -381,14 +385,16 @@ namespace Quantra
                         // Load tab controls directly without complex dispatcher logic
                         try
                         {
-                            if (TabManager != null)
+                            // Validate the tab header before loading controls
+                            if (selectedTab.Header != null)
                             {
                                 // Use TabManager to load tab controls
                                 TabManager.LoadTabControls(selectedTab.Header.ToString());
                             }
                             else
                             {
-                                LoadTabControls(selectedTab.Header.ToString());
+                                // Tab header is null - log warning and skip loading
+                                //DatabaseMonolith.Log("Warning", "Tab header is null, cannot load tab controls");
                             }
                         }
                         catch (Exception ex)
@@ -2087,33 +2093,8 @@ namespace Quantra
 
         #region Grid Initialization
 
-        // Ensure grids are initialized with default dimensions when a tab is created or loaded
-        //private void EnsureGridInitialized(TabItem tabItem, string tabName)
-        //{
-        //    if (tabItem.Content is not Grid grid)
-        //    {
-        //        grid = new Grid();
-
-        //        // Default grid dimensions (4x4)
-        //        int rows = 4;
-        //        int columns = 4;
-
-        //        // Add rows and columns
-        //        for (int i = 0; i < rows; i++)
-        //        {
-        //            grid.RowDefinitions.Add(new RowDefinition());
-        //        }
-        //        for (int j = 0; j < columns; j++)
-        //        {
-        //            grid.ColumnDefinitions.Add(new ColumnDefinition());
-        //        }
-
-        //        tabItem.Content = grid;
-
-        //        // Log grid initialization
-        //        //DatabaseMonolith.Log("Info", $"Initialized grid for tab '{tabName}' with default dimensions {rows}x{columns}");
-        //    }
-        //}
+        // Note: EnsureGridInitialized method is implemented in MainWindow.UI.cs
+        // to avoid duplicate member definitions in this partial class
 
         #endregion
 
