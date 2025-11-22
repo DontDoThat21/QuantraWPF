@@ -101,6 +101,19 @@ namespace Quantra
             TradingRules = [];
 
             _userSettingsService = userSettingsService;
+            _historicalDataService = historicalDataService;
+            _technicalIndicatorService = technicalIndicatorService;
+
+            // Initialize services needed by TabManagement.cs
+            _notificationService = App.ServiceProvider.GetService<INotificationService>() as NotificationService;
+            _indicatorService = App.ServiceProvider.GetService<ITechnicalIndicatorService>() as TechnicalIndicatorService;
+            _stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
+            _alphaVantageService = alphaVantageService;
+            _emailService = App.ServiceProvider.GetService<IEmailService>() as EmailService;
+            _tradingService = App.ServiceProvider.GetService<ITradingService>() as TradingService;
+            _settingsService = App.ServiceProvider.GetService<ISettingsService>() as SettingsService;
+            _loggingService = App.ServiceProvider.GetService<LoggingService>();
+            _quantraDbContext = App.ServiceProvider.GetService<QuantraDbContext>();
 
             UpperBandValues = [];
             MiddleBandValues = [];

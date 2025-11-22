@@ -15,7 +15,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Microsoft.Extensions.DependencyInjection; // For accessing App.ServiceProvider
 
 namespace Quantra
 {
@@ -127,7 +126,7 @@ namespace Quantra
                 int gridColumns = createTabWindow.GridColumns;
 
                 // Add the tab to the UI
-                TabManager = new TabManager(this, MainTabControl, _userSettingsService ?? App.ServiceProvider.GetService<UserSettingsService>());
+                TabManager = new TabManager(this, MainTabControl, _userSettingsService);
                 TabManager.AddCustomTab(newTabName);
 
                 // Save the tab to the database with specified grid dimensions
@@ -633,13 +632,9 @@ namespace Quantra
         {
             try
             {
-                // Get required services from DI container
-                var stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
-                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
-                var loggingService = App.ServiceProvider.GetService<LoggingService>();
-                
+                // Use services from MainWindow's initialized fields
                 // Create a new instance of our custom StockExplorer
-                var symbolChartControl = new StockExplorer(stockDataCacheService, userSettingsService, loggingService);
+                var symbolChartControl = new StockExplorer(_stockDataCacheService, _userSettingsService, _loggingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width
@@ -707,27 +702,13 @@ namespace Quantra
         {
             try
             {
-                // Get all required services from the DI container
-                var notificationService = App.ServiceProvider.GetService<INotificationService>() as NotificationService;
-                var indicatorService = App.ServiceProvider.GetService<ITechnicalIndicatorService>() as TechnicalIndicatorService;
-                var stockDataCacheService = App.ServiceProvider.GetService<IStockDataCacheService>() as StockDataCacheService;
-                var alphaVantageService = App.ServiceProvider.GetService<IAlphaVantageService>() as AlphaVantageService;
-                var emailService = App.ServiceProvider.GetService<IEmailService>() as EmailService;
-                var tradingService = App.ServiceProvider.GetService<ITradingService>() as TradingService;
-                var settingsService = App.ServiceProvider.GetService<ISettingsService>() as SettingsService;
-                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
-                
-                // Get DbContext for services that need it
-                var dbContext = App.ServiceProvider.GetService<QuantraDbContext>();
-                
-                // Get LoggingService from DI container
-                var loggingService = App.ServiceProvider.GetService<LoggingService>();
+                // Use services from MainWindow's initialized fields
                 
                 // Initialize services that need DbContext
-                var historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
-                var indicatorSettingsService = new IndicatorSettingsService(dbContext);
-                var tradingRuleService = new TradingRuleService(dbContext);
-                var orderHistoryService = new OrderHistoryService(dbContext);
+                var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
+                var indicatorSettingsService = new IndicatorSettingsService(_quantraDbContext);
+                var tradingRuleService = new TradingRuleService(_quantraDbContext);
+                var orderHistoryService = new OrderHistoryService(_quantraDbContext);
                 
                 // Initialize repositories
                 if (_analysisRepository == null)
@@ -739,31 +720,31 @@ namespace Quantra
                 if (_viewModel == null)
                 {
                     _viewModel = new PredictionAnalysisViewModel(
-                        indicatorService,
+                        _indicatorService,
                         _analysisRepository,
-                        tradingService,
-                        settingsService,
-                        alphaVantageService,
-                        emailService,
+                        _tradingService,
+                        _settingsService,
+                        _alphaVantageService,
+                        _emailService,
                         tradingRuleService);
                 }
                 
                 // Create a new instance of our custom PredictionAnalysisControl with all required dependencies
                 var predictionAnalysisControl = new PredictionAnalysisControl(
                     _viewModel,
-                    notificationService,
-                    indicatorService,
+                    _notificationService,
+                    _indicatorService,
                     _analysisRepository,
-                    stockDataCacheService,
-                    tradingService,
+                    _stockDataCacheService,
+                    _tradingService,
                     historicalDataService,
-                    settingsService,
-                    alphaVantageService,
-                    emailService,
+                    _settingsService,
+                    _alphaVantageService,
+                    _emailService,
                     indicatorSettingsService,
                     tradingRuleService,
-                    userSettingsService,
-                    loggingService,
+                    _userSettingsService,
+                    _loggingService,
                     orderHistoryService);
 
                 // Ensure the control has proper sizing and stretching behavior
@@ -976,12 +957,9 @@ namespace Quantra
         {
             try
             {
-                // Get required services from DI container
-                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
-                var loggingService = App.ServiceProvider.GetService<LoggingService>();
-                
+                // Use services from MainWindow's initialized fields
                 // Create a new instance of our custom SpreadsExplorer control
-                var spreadsExplorerControl = new SpreadsExplorer(userSettingsService, loggingService);
+                var spreadsExplorerControl = new SpreadsExplorer(_userSettingsService, _loggingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 spreadsExplorerControl.Width = double.NaN; // Auto width
@@ -1035,12 +1013,9 @@ namespace Quantra
         {
             try
             {
-                // Get required services from DI container
-                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
-                _loggingService = App.ServiceProvider.GetService<LoggingService>();
-
+                // Use services from MainWindow's initialized fields
                 // Create SectorMomentumService
-                var sectorMomentumService = new SectorMomentumService(userSettingsService, _loggingService);
+                var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService);
 
                 // Create a new instance of our custom SectorAnalysisHeatmapControl
                 var sectorHeatmapControl = new SectorAnalysisHeatmapControl(sectorMomentumService);
@@ -1096,18 +1071,15 @@ namespace Quantra
         {
             try
             {
-                // Get required services from DI container
-                var userSettingsService = App.ServiceProvider.GetService<IUserSettingsService>() as UserSettingsService;
-                var loggingService = App.ServiceProvider.GetService<LoggingService>();
-
+                // Use services from MainWindow's initialized fields
                 // Create services that need dependencies
-                var historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+                var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
                 
                 var backtestResultsControl = new Views.Backtesting.BacktestResultsControl(
                     historicalDataService,
                     customBenchmarkService,
-                    userSettingsService);
+                    _userSettingsService);
                     
                 backtestResultsControl.Width = double.NaN;
                 backtestResultsControl.Height = double.NaN;
