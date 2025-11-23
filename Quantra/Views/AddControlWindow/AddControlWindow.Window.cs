@@ -80,36 +80,47 @@ namespace Quantra
 
                     // Retrieve tabs from the MainWindow
                     var mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
-                    if (mainWindow != null)
+                    if (mainWindow == null)
+                    {                        
+                        MessageBox.Show("MainWindow not found!", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    var tabs = mainWindow.GetTabNames();
+                    
+                    // Debug: Show tab count
+                    if (tabs == null || tabs.Count == 0)
                     {
-                        var tabs = mainWindow.GetTabNames();
+                        MessageBox.Show("No tabs found! Please create a tab first using the '+' button.", 
+                                      "No Tabs Available", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
 
-                        // Update the tab list
-                        if (TabComboBox != null)
+                    // Update the tab list
+                    if (TabComboBox != null)
+                    {
+                        TabComboBox.ItemsSource = tabs;
+
+                        // Select the new tab if specified, otherwise restore the previous selection
+                        if (!string.IsNullOrEmpty(newTabName) && tabs != null && tabs.Contains(newTabName))
                         {
-                            TabComboBox.ItemsSource = tabs;
-
-                            // Select the new tab if specified, otherwise restore the previous selection
-                            if (!string.IsNullOrEmpty(newTabName) && tabs.Contains(newTabName))
-                            {
-                                TabComboBox.SelectedItem = newTabName;
-                            }
-                            else if (!string.IsNullOrEmpty(currentSelection) && tabs.Contains(currentSelection))
-                            {
-                                TabComboBox.SelectedItem = currentSelection;
-                            }
-                            else if (tabs.Any())
-                            {
-                                TabComboBox.SelectedIndex = 0;
-                            }
-
-                            // Log the refresh
-                            //DatabaseMonolith.Log("Info", $"Refreshed tab list in AddControlWindow. Tab count: {tabs.Count}");
+                            TabComboBox.SelectedItem = newTabName;
                         }
+                        else if (!string.IsNullOrEmpty(currentSelection) && tabs != null && tabs.Contains(currentSelection))
+                        {
+                            TabComboBox.SelectedItem = currentSelection;
+                        }
+                        else if (tabs != null && tabs.Any())
+                        {
+                            TabComboBox.SelectedIndex = 0;
+                        }
+
+                        // Log the refresh
+                        //DatabaseMonolith.Log("Info", $"Refreshed tab list in AddControlWindow. Tab count: {tabs?.Count ?? 0}");
                     }
                 }
                 catch (Exception ex)
                 {
+                    MessageBox.Show($"Error refreshing tabs: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     //DatabaseMonolith.Log("Error", $"Error refreshing tabs in AddControlWindow: {ex.Message}", ex.ToString());
                 }
             }));
