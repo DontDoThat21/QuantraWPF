@@ -80,6 +80,7 @@ namespace Quantra.Extensions
             services.AddSingleton<ISmsService, SmsService>();
             services.AddSingleton<ITradingService, TradingService>();
             services.AddSingleton<IStockDataCacheService, StockDataCacheService>();
+            services.AddSingleton<IHistoricalDataService, HistoricalDataService>();
             
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();

@@ -76,10 +76,12 @@ namespace Quantra.Utilities
                         _tabControl.Items.Add(plusTab);
                     }
 
-                    // Add tabs from database
+                    // Add tabs from database and load their controls
                     foreach (var tab in tabs)
                     {
                         AddCustomTab(tab.TabName);
+                        // Load controls for each tab immediately after adding it
+                        LoadTabControls(tab.TabName);
                     }
                 }
             }
@@ -457,6 +459,13 @@ namespace Quantra.Utilities
         /// <param name="tabName">Name of the tab to load controls for</param>
         public void LoadTabControls(string tabName)
         {
+            var tabItem = _tabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == tabName);
+            if (tabItem == null)
+            {
+                //DatabaseMonolith.Log("Warning", $"Tab '{tabName}' not found when trying to load controls");
+                return;
+            }
+
             var controlsConfig = DatabaseMonolith.LoadControlsConfig(tabName);
             var gridConfig = DatabaseMonolith.LoadGridConfig(tabName);
 
@@ -464,7 +473,18 @@ namespace Quantra.Utilities
             int rows = Math.Max(4, gridConfig.Rows);
             int columns = Math.Max(4, gridConfig.Columns);
 
-            var grid = new Grid();
+            // Get existing grid or create new one
+            var grid = tabItem.Content as Grid;
+            if (grid == null)
+            {
+                grid = new Grid();
+                tabItem.Content = grid;
+            }
+
+            // Clear existing content but keep the grid structure
+            grid.Children.Clear();
+            grid.RowDefinitions.Clear();
+            grid.ColumnDefinitions.Clear();
 
             // Setup grid rows and columns
             for (int i = 0; i < rows; i++)
@@ -502,14 +522,8 @@ namespace Quantra.Utilities
                 }
             }
 
-            var tabItem = _tabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == tabName);
-            if (tabItem != null) tabItem.Content = grid;
-
             // Make the grid support direct drag-and-drop
-            if (grid != null)
-            {
-                _mainWindow.MakeGridDraggable(grid, tabName);
-            }
+            _mainWindow.MakeGridDraggable(grid, tabName);
         }
 
         /// <summary>

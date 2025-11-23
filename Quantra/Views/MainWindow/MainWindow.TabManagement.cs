@@ -27,7 +27,7 @@ namespace Quantra
         // Flag to track recursive tab selection operations
         private bool isTabSelectionInProgress = false;
         private TabRepository _tabRepository;
-        private PredictionAnalysisViewModel _viewModel;
+        private PredictionAnalysisViewModel _predictionAnalysisViewModel;
         private NotificationService _notificationService;
         private TechnicalIndicatorService _indicatorService;
         private PredictionAnalysisRepository _analysisRepository;
@@ -722,10 +722,10 @@ namespace Quantra
                     _analysisRepository = new PredictionAnalysisRepository();
                 }
                 
-                // Initialize ViewModel if not already done
-                if (_viewModel == null)
+                // Initialize PredictionAnalysisViewModel if not already done
+                if (_predictionAnalysisViewModel == null)
                 {
-                    _viewModel = new PredictionAnalysisViewModel(
+                    _predictionAnalysisViewModel = new PredictionAnalysisViewModel(
                         _indicatorService,
                         _analysisRepository,
                         _tradingService,
@@ -737,7 +737,7 @@ namespace Quantra
                 
                 // Create a new instance of our custom PredictionAnalysisControl with all required dependencies
                 var predictionAnalysisControl = new PredictionAnalysisControl(
-                    _viewModel,
+                    _predictionAnalysisViewModel,
                     _notificationService,
                     _indicatorService,
                     _analysisRepository,

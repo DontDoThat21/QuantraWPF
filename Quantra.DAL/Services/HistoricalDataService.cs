@@ -7,10 +7,11 @@ using Quantra.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
+using Quantra.DAL.Services.Interfaces;
 
 namespace Quantra.DAL.Services
 {
-    public class HistoricalDataService
+    public class HistoricalDataService : IHistoricalDataService
     {
         private static readonly HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 

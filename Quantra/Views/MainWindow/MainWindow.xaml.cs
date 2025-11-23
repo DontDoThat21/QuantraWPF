@@ -21,6 +21,7 @@ using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;
+using Quantra.ViewModels;
 
 namespace Quantra
 {
@@ -33,42 +34,54 @@ namespace Quantra
         public event Action<string> SymbolChanged;
 
         #region Core Properties and Fields
-        private WebullTradingBot tradingBot;// = new WebullTradingBot();
+        private WebullTradingBot tradingBot;
         private UserSettingsService _userSettingsService;
         private HistoricalDataService _historicalDataService;
         private TechnicalIndicatorService _technicalIndicatorService;
         private DispatcherTimer tradeUpdateTimer;
-        public ObservableCollection<TradingSymbol> ActiveSymbols { get; set; }
-        public ObservableCollection<StockItem> TradingRules { get; set; }
-        private bool isTradingActive = false;
-        public ChartValues<double> StockPriceValues { get; set; }
-        public ChartValues<double> UpperBandValues { get; set; }
-        public ChartValues<double> MiddleBandValues { get; set; }
-        public ChartValues<double> LowerBandValues { get; set; }
-        public ChartValues<double> StockPriceLineValues { get; set; }
-        public ChartValues<double> RSIValues { get; set; }
-        private List<string> availableStocks = new List<string>();
-        private string currentTicker = "";
         private DispatcherTimer debounceTimer;
         private Dictionary<string, Dictionary<string, StockData>> stockDataCache = new Dictionary<string, Dictionary<string, StockData>>();
         private Action confirmApiCallAction;
-
-        private bool isSymbolSelected;
-        public bool IsSymbolSelected
+        private List<string> availableStocks = new List<string>();
+        private string currentTicker = "";
+        private bool isTradingActive = false;
+        
+        // ViewModel
+        private MainWindowViewModel _viewModel;
+        public MainWindowViewModel ViewModel
         {
-            get => isSymbolSelected;
+            get => _viewModel;
             set
             {
-                if (isSymbolSelected != value)
+                _viewModel = value;
+                OnPropertyChanged(nameof(ViewModel));
+            }
+        }
+
+        // Expose ViewModel properties for backward compatibility
+        public ObservableCollection<TradingSymbol> ActiveSymbols => ViewModel?.ActiveSymbols;
+        public ObservableCollection<StockItem> TradingRules => ViewModel?.TradingRules;
+        public ChartValues<double> StockPriceValues => ViewModel?.StockPriceValues;
+        public ChartValues<double> UpperBandValues => ViewModel?.UpperBandValues;
+        public ChartValues<double> MiddleBandValues => ViewModel?.MiddleBandValues;
+        public ChartValues<double> LowerBandValues => ViewModel?.LowerBandValues;
+        public ChartValues<double> StockPriceLineValues => ViewModel?.StockPriceLineValues;
+        public ChartValues<double> RSIValues => ViewModel?.RSIValues;
+        public Func<double, string> DateFormatter => ViewModel?.DateFormatter;
+        
+        public bool IsSymbolSelected
+        {
+            get => ViewModel?.IsSymbolSelected ?? false;
+            set
+            {
+                if (ViewModel != null)
                 {
-                    isSymbolSelected = value;
-                    OnPropertyChanged(nameof(IsSymbolSelected));
+                    ViewModel.IsSymbolSelected = value;
                 }
             }
         }
 
-        public Func<double, string> DateFormatter { get; set; }
-        private bool EnableApiModalChecks { get; set; }
+        private bool EnableApiModalChecks => ViewModel?.EnableApiModalChecks ?? false;
 
         // Add TabManager property
         public Utilities.TabManager TabManager { get; private set; }
@@ -78,21 +91,29 @@ namespace Quantra
         public MainWindow()
         {
             InitializeComponent();
-            ActiveSymbols = new ObservableCollection<TradingSymbol>();
-            TradingRules = new ObservableCollection<StockItem>();
-            UpperBandValues = new ChartValues<double>();
-            MiddleBandValues = new ChartValues<double>();
-            LowerBandValues = new ChartValues<double>();
-            StockPriceLineValues = new ChartValues<double>();
-            RSIValues = new ChartValues<double>();
             
-            // Initialize _userSettingsService from DI container to avoid null reference
+            // Initialize services from DI container to avoid null reference
             _userSettingsService = App.ServiceProvider?.GetService<UserSettingsService>();
-            if (_userSettingsService == null)
+            var historicalDataService = App.ServiceProvider?.GetService<HistoricalDataService>();
+            var alphaVantageService = App.ServiceProvider?.GetService<AlphaVantageService>();
+            var technicalIndicatorService = App.ServiceProvider?.GetService<TechnicalIndicatorService>();
+            
+            if (_userSettingsService == null || historicalDataService == null || 
+                alphaVantageService == null || technicalIndicatorService == null)
             {
                 // Log warning but don't throw - XAML designer might be using this constructor
-                System.Diagnostics.Debug.WriteLine("Warning: UserSettingsService not available in parameterless constructor");
+                System.Diagnostics.Debug.WriteLine("Warning: Services not available in parameterless constructor");
+                return;
             }
+            
+            // Initialize ViewModel
+            ViewModel = new MainWindowViewModel(
+                _userSettingsService,
+                historicalDataService,
+                alphaVantageService,
+                technicalIndicatorService);
+            
+            DataContext = ViewModel;
         }
 
         public MainWindow(UserSettingsService userSettingsService,
@@ -102,17 +123,31 @@ namespace Quantra
             )
         {
             InitializeComponent();
-            tradingBot = new WebullTradingBot(userSettingsService,
-                historicalDataService,
-                alphaVantageService,
-                technicalIndicatorService);
-            ActiveSymbols = [];
-            TradingRules = [];
-
+            
+            // Initialize services
             _userSettingsService = userSettingsService;
             _historicalDataService = historicalDataService;
             _technicalIndicatorService = technicalIndicatorService;
             _alphaVantageService = alphaVantageService;
+
+            // Initialize ViewModel
+            ViewModel = new MainWindowViewModel(
+                userSettingsService,
+                historicalDataService,
+                alphaVantageService,
+                technicalIndicatorService);
+            
+            DataContext = ViewModel;
+            
+            // Subscribe to ViewModel events
+            ViewModel.SymbolChanged += OnSymbolChanged;
+            ViewModel.ShowNotification += OnShowNotification;
+            
+            // Initialize trading bot
+            tradingBot = new WebullTradingBot(userSettingsService,
+                historicalDataService,
+                alphaVantageService,
+                technicalIndicatorService);
 
             // Initialize services needed by TabManagement.cs from DI container
             _notificationService = App.ServiceProvider.GetService<NotificationService>() 
@@ -131,12 +166,6 @@ namespace Quantra
                 ?? throw new InvalidOperationException("LoggingService not registered in DI container");
             _quantraDbContext = App.ServiceProvider.GetService<QuantraDbContext>()
                 ?? throw new InvalidOperationException("QuantraDbContext not registered in DI container");
-
-            UpperBandValues = [];
-            MiddleBandValues = [];
-            LowerBandValues = [];
-            StockPriceLineValues = [];
-            RSIValues = [];
 
             // Initialize debounce timer - increased interval to reduce UI load
             debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
@@ -157,10 +186,6 @@ namespace Quantra
 
             // Load card positions
             LoadCardPositions();
-
-            // Load user settings
-            var settings = _userSettingsService.GetUserSettings();
-            EnableApiModalChecks = settings.EnableApiModalChecks;
 
             // Set the last non-'+' tab during initialization
             SetInitialLastNonPlusTab();
@@ -200,8 +225,11 @@ namespace Quantra
             base.OnClosed(e);
             SaveCardPositions();
 
+            // Cleanup ViewModel
+            ViewModel?.Cleanup();
+
             // Save window state for next startup
-            _userSettingsService.SaveWindowState(this.WindowState);
+            _userSettingsService?.SaveWindowState(this.WindowState);
 
             // Ensure the LoginWindow is shown when MainWindow is closed
             if (Application.Current.Windows.OfType<LoginWindow>().FirstOrDefault() == null)
@@ -266,7 +294,15 @@ namespace Quantra
         private void OnSymbolChanged(string symbol)
         {
             SymbolChanged?.Invoke(symbol);
-        }        
+        }
+        
+        // Handle ViewModel show notification event
+        private void OnShowNotification(string message, string type)
+        {
+            // Map to existing notification mechanism if available
+            // This can be expanded based on your notification system
+            AppendAlert(message, type);
+        }
 
         #endregion
     }
