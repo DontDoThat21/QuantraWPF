@@ -65,22 +65,49 @@ namespace Quantra.Extensions
 
             // Audio and notification services depend on UserSettings from DatabaseMonolith, so construct via factories
             services.AddSingleton<IAudioService>(sp => new AudioService(sp.GetRequiredService<IUserSettingsService>().GetUserSettings()));
-            services.AddSingleton<INotificationService>(sp =>
+            
+            // Register NotificationService as both concrete type and interface
+            services.AddSingleton<NotificationService>(sp =>
             {
                 var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
                 var audio = sp.GetRequiredService<IAudioService>();
                 var settings = sp.GetRequiredService<ISettingsService>();
                 return new NotificationService(userSettings, audio, settings);
             });
+            services.AddSingleton<INotificationService>(sp => sp.GetRequiredService<NotificationService>());
 
-            // Core services
-            services.AddSingleton<ITechnicalIndicatorService, TechnicalIndicatorService>();
-            services.AddSingleton<IAlphaVantageService, AlphaVantageService>();
-            services.AddSingleton<IEmailService, EmailService>();
-            services.AddSingleton<ISmsService, SmsService>();
-            services.AddSingleton<ITradingService, TradingService>();
-            services.AddSingleton<IStockDataCacheService, StockDataCacheService>();
-            services.AddSingleton<IHistoricalDataService, HistoricalDataService>();
+            // Core services - Register concrete types first, then interfaces pointing to same instances
+            services.AddSingleton<TechnicalIndicatorService>();
+            services.AddSingleton<ITechnicalIndicatorService>(sp => sp.GetRequiredService<TechnicalIndicatorService>());
+            
+            services.AddSingleton<AlphaVantageService>();
+            services.AddSingleton<IAlphaVantageService>(sp => sp.GetRequiredService<AlphaVantageService>());
+            
+            services.AddSingleton<HistoricalDataService>();
+            services.AddSingleton<IHistoricalDataService>(sp => sp.GetRequiredService<HistoricalDataService>());
+            
+            // Register EmailService as both concrete type and interface
+            services.AddSingleton<EmailService>();
+            services.AddSingleton<IEmailService>(sp => sp.GetRequiredService<EmailService>());
+            
+            // Register SmsService as both concrete type and interface
+            services.AddSingleton<SmsService>();
+            services.AddSingleton<ISmsService>(sp => sp.GetRequiredService<SmsService>());
+            
+            // Register TradingService as both concrete type and interface
+            services.AddSingleton<TradingService>();
+            services.AddSingleton<ITradingService>(sp => sp.GetRequiredService<TradingService>());
+            
+            // Register StockDataCacheService as both concrete type and interface
+            services.AddSingleton<StockDataCacheService>();
+            services.AddSingleton<IStockDataCacheService>(sp => sp.GetRequiredService<StockDataCacheService>());
+            
+            // Logging service
+            services.AddSingleton<LoggingService>();
+            
+            // Register TradeRecordService as both concrete type and interface
+            services.AddSingleton<TradeRecordService>();
+            services.AddSingleton<ITradeRecordService>(sp => sp.GetRequiredService<TradeRecordService>());
             
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();

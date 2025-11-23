@@ -26,6 +26,7 @@ namespace Quantra.DAL.Services
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _smsService = smsService ?? throw new ArgumentNullException(nameof(smsService));
             _tradeRecordService = tradeRecordService ?? throw new ArgumentNullException(nameof(tradeRecordService));
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
             
             // Load user settings for notification preferences
             _userSettings = _userSettingsService.GetUserSettings();
