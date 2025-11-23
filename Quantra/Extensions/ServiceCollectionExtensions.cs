@@ -73,14 +73,20 @@ namespace Quantra.Extensions
                 return new NotificationService(userSettings, audio, settings);
             });
 
-            // Core services
-            services.AddSingleton<ITechnicalIndicatorService, TechnicalIndicatorService>();
-            services.AddSingleton<IAlphaVantageService, AlphaVantageService>();
+            // Core services - Register concrete types first, then interfaces pointing to same instances
+            services.AddSingleton<TechnicalIndicatorService>();
+            services.AddSingleton<ITechnicalIndicatorService>(sp => sp.GetRequiredService<TechnicalIndicatorService>());
+            
+            services.AddSingleton<AlphaVantageService>();
+            services.AddSingleton<IAlphaVantageService>(sp => sp.GetRequiredService<AlphaVantageService>());
+            
+            services.AddSingleton<HistoricalDataService>();
+            services.AddSingleton<IHistoricalDataService>(sp => sp.GetRequiredService<HistoricalDataService>());
+            
             services.AddSingleton<IEmailService, EmailService>();
             services.AddSingleton<ISmsService, SmsService>();
             services.AddSingleton<ITradingService, TradingService>();
             services.AddSingleton<IStockDataCacheService, StockDataCacheService>();
-            services.AddSingleton<IHistoricalDataService, HistoricalDataService>();
             
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();
