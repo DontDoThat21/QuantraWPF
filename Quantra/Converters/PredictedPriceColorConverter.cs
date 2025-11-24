@@ -28,10 +28,10 @@ namespace Quantra.Converters
 
             // Calculate percentage difference
             double percentDiff = (predictedPrice - currentPrice) / currentPrice;
-            
+
             // Define threshold for "close" - within 1%
             const double closeThreshold = 0.01;
-            
+
             if (Math.Abs(percentDiff) <= closeThreshold)
             {
                 // Prices are close - white

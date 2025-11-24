@@ -12,7 +12,7 @@ namespace Quantra.Configuration.Providers
     {
         private const string PREFIX = "QUANTRA_";
         private readonly Dictionary<string, string> _data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -20,7 +20,7 @@ namespace Quantra.Configuration.Providers
         {
             LoadData();
         }
-        
+
         /// <summary>
         /// Get a configuration value with key
         /// </summary>
@@ -31,7 +31,7 @@ namespace Quantra.Configuration.Providers
         {
             return _data.TryGetValue(key, out value);
         }
-        
+
         /// <summary>
         /// Set a configuration value
         /// </summary>
@@ -41,7 +41,7 @@ namespace Quantra.Configuration.Providers
         {
             _data[key] = value;
         }
-        
+
         /// <summary>
         /// Get the children of a given key
         /// </summary>
@@ -78,7 +78,7 @@ namespace Quantra.Configuration.Providers
             results.Sort(StringComparer.OrdinalIgnoreCase);
             return results;
         }
-        
+
         /// <summary>
         /// Reload the configuration data
         /// </summary>
@@ -86,7 +86,7 @@ namespace Quantra.Configuration.Providers
         {
             LoadData();
         }
-        
+
         /// <summary>
         /// Get a change token that signals when the configuration changes
         /// </summary>
@@ -95,18 +95,18 @@ namespace Quantra.Configuration.Providers
         {
             return new ConfigurationReloadToken();
         }
-        
+
         /// <summary>
         /// Load data from environment variables
         /// </summary>
         private void LoadData()
         {
             _data.Clear();
-            
+
             foreach (var variable in Environment.GetEnvironmentVariables().Keys)
             {
                 var key = variable.ToString();
-                
+
                 // Only process our prefixed environment variables
                 if (key.StartsWith(PREFIX, StringComparison.OrdinalIgnoreCase))
                 {
@@ -114,7 +114,7 @@ namespace Quantra.Configuration.Providers
                     var normalizedKey = key.Substring(PREFIX.Length)
                         .Replace("__", ConfigurationPath.KeyDelimiter)
                         .Replace("_", ConfigurationPath.KeyDelimiter);
-                    
+
                     // Store in dictionary
                     var value = Environment.GetEnvironmentVariable(key);
                     if (!string.IsNullOrEmpty(value))
@@ -124,7 +124,7 @@ namespace Quantra.Configuration.Providers
                 }
             }
         }
-        
+
         /// <summary>
         /// Dispose the provider
         /// </summary>
@@ -133,7 +133,7 @@ namespace Quantra.Configuration.Providers
             // Nothing to dispose
         }
     }
-    
+
     /// <summary>
     /// Configuration source for environment variables
     /// </summary>
@@ -149,7 +149,7 @@ namespace Quantra.Configuration.Providers
             return new EnvironmentConfigProvider();
         }
     }
-    
+
     /// <summary>
     /// Extension methods for configuration builder
     /// </summary>

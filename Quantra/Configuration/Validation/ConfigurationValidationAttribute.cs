@@ -13,17 +13,17 @@ namespace Quantra.Configuration.Validation
         /// The environment in which this validation applies
         /// </summary>
         public string[] Environments { get; set; }
-        
+
         /// <summary>
         /// Error level for validation failures
         /// </summary>
         public ValidationErrorLevel ErrorLevel { get; set; } = ValidationErrorLevel.Error;
-        
+
         /// <summary>
         /// Description of the validation rule
         /// </summary>
         public string Description { get; set; }
-        
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -31,7 +31,7 @@ namespace Quantra.Configuration.Validation
         {
             Environments = new[] { "Development", "Staging", "Production" };
         }
-        
+
         /// <summary>
         /// Constructor with environments
         /// </summary>
@@ -39,7 +39,7 @@ namespace Quantra.Configuration.Validation
         {
             Environments = environments;
         }
-        
+
         /// <summary>
         /// Checks if this validation applies to the current environment
         /// </summary>
@@ -49,17 +49,17 @@ namespace Quantra.Configuration.Validation
         {
             if (Environments == null || Environments.Length == 0)
                 return true;
-                
+
             foreach (var env in Environments)
             {
                 if (string.Equals(env, environment, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
-            
+
             return false;
         }
     }
-    
+
     /// <summary>
     /// Error level for validation failures
     /// </summary>
@@ -69,18 +69,18 @@ namespace Quantra.Configuration.Validation
         /// Warning, doesn't prevent application from running
         /// </summary>
         Warning,
-        
+
         /// <summary>
         /// Error, prevents the configuration from being applied
         /// </summary>
         Error,
-        
+
         /// <summary>
         /// Critical error, prevents the application from starting
         /// </summary>
         Critical
     }
-    
+
     /// <summary>
     /// Validation attribute for range values
     /// </summary>
@@ -91,12 +91,12 @@ namespace Quantra.Configuration.Validation
         /// Minimum value
         /// </summary>
         public object Minimum { get; }
-        
+
         /// <summary>
         /// Maximum value
         /// </summary>
         public object Maximum { get; }
-        
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -105,7 +105,7 @@ namespace Quantra.Configuration.Validation
             Minimum = minimum;
             Maximum = maximum;
         }
-        
+
         /// <summary>
         /// Validate the value
         /// </summary>
@@ -113,9 +113,9 @@ namespace Quantra.Configuration.Validation
         {
             if (value == null)
                 return true; // Skip validation for null values
-                
+
             var type = value.GetType();
-            
+
             if (type == typeof(int))
             {
                 int min = Convert.ToInt32(Minimum);
@@ -137,11 +137,11 @@ namespace Quantra.Configuration.Validation
                 decimal val = (decimal)value;
                 return val >= min && val <= max;
             }
-            
+
             return false;
         }
     }
-    
+
     /// <summary>
     /// Validation attribute for requiring a value in specific environments
     /// </summary>
@@ -154,26 +154,26 @@ namespace Quantra.Configuration.Validation
         public RequiredInEnvironmentAttribute(params string[] environments) : base(environments)
         {
         }
-        
+
         /// <summary>
         /// Validate the value
         /// </summary>
         public override bool IsValid(object value)
         {
             // Only validate in environments where this is required
-            string currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+            string currentEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
                 ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                 ?? "Production";
-                
+
             if (!AppliesTo(currentEnvironment))
                 return true;
-                
+
             if (value == null)
                 return false;
-                
+
             if (value is string s)
                 return !string.IsNullOrWhiteSpace(s);
-                
+
             return true;
         }
     }

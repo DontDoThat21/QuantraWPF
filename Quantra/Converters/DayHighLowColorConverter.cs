@@ -24,23 +24,23 @@ namespace Quantra.Converters
 
             // Get the column type from parameter
             string columnType = parameter?.ToString()?.ToUpperInvariant();
-            
+
             // Avoid invalid scenarios
             if (dayHigh <= dayLow || currentPrice <= 0)
                 return new SolidColorBrush(Colors.White);
-            
+
             // Calculate the range and position
             double range = dayHigh - dayLow;
             double positionFromLow = currentPrice - dayLow;
             double positionRatio = positionFromLow / range; // 0.0 = at low, 1.0 = at high
-            
+
             if (columnType == "HIGH")
             {
                 // For Day High column: Green when price is close to the high
                 // Exponential intensity based on how close to high
                 double distanceFromHigh = Math.Abs(dayHigh - currentPrice) / range;
                 double intensity = Math.Pow(1.0 - distanceFromHigh, 3.0); // Exponential curve
-                
+
                 if (positionRatio > 0.8) // Only color when price is in top 20% of range
                 {
                     byte greenComponent = (byte)(155 + (100 * intensity)); // Range from 155 to 255
@@ -53,14 +53,14 @@ namespace Quantra.Converters
                 // Exponential intensity based on how close to low
                 double distanceFromLow = Math.Abs(currentPrice - dayLow) / range;
                 double intensity = Math.Pow(1.0 - distanceFromLow, 3.0); // Exponential curve
-                
+
                 if (positionRatio < 0.2) // Only color when price is in bottom 20% of range
                 {
                     byte redComponent = (byte)(155 + (100 * intensity)); // Range from 155 to 255
                     return new SolidColorBrush(Color.FromRgb(redComponent, 20, 60));
                 }
             }
-            
+
             return new SolidColorBrush(Colors.White);
         }
 

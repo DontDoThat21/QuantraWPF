@@ -21,7 +21,7 @@ namespace Quantra.ViewModels
         private readonly AlphaVantageService _alphaVantageService;
         private readonly TechnicalIndicatorService _technicalIndicatorService;
         private Dictionary<string, (string Username, string Password, string Pin)> _rememberedAccounts;
-        
+
         private string _username;
         private string _password;
         private string _pin;
@@ -43,10 +43,10 @@ namespace Quantra.ViewModels
             _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
             _technicalIndicatorService = technicalIndicatorService ?? throw new ArgumentNullException(nameof(technicalIndicatorService));
-            
+
             _rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
             RememberedAccountsList = new ObservableCollection<string>();
-            
+
             InitializeCommands();
             LoadRememberedAccounts();
         }

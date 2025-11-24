@@ -20,9 +20,9 @@ namespace Quantra.ViewModels
     {
         private readonly ITransactionService _transactionService;
         private readonly INotificationService _notificationService;
-        
+
         #region Properties
-        
+
         private ObservableCollection<TransactionModel> _transactions;
         public ObservableCollection<TransactionModel> Transactions
         {
@@ -127,11 +127,11 @@ namespace Quantra.ViewModels
             get => _totalFees;
             set => SetProperty(ref _totalFees, value);
         }
-        
+
         #endregion
 
         #region Commands
-        
+
         public ICommand SearchCommand { get; private set; }
         public ICommand ApplyFiltersCommand { get; private set; }
         public ICommand LoadTransactionsCommand { get; private set; }
@@ -139,12 +139,12 @@ namespace Quantra.ViewModels
         public ICommand ViewDetailsCommand { get; private set; }
         public ICommand CloseCommand { get; private set; }
         public ICommand SearchTextKeyUpCommand { get; private set; }
-        
+
         #endregion
 
         // Event to view transaction details
         public event Action<TransactionModel> ViewDetails;
-        
+
         // Event to close the window
         public event Action Close;
 
@@ -153,11 +153,11 @@ namespace Quantra.ViewModels
         {
             _transactionService = transactionService ?? throw new ArgumentNullException(nameof(transactionService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-            
+
             // Initialize collections
             _transactions = new ObservableCollection<TransactionModel>();
             _filteredTransactions = new ObservableCollection<TransactionModel>();
-            
+
             // Initialize commands
             SearchCommand = new RelayCommand((object _) => ExecuteSearch());
             ApplyFiltersCommand = new RelayCommand((object _) => ExecuteApplyFilters());
@@ -166,13 +166,13 @@ namespace Quantra.ViewModels
             ViewDetailsCommand = new RelayCommand((object _) => ExecuteViewDetails(), (object _) => SelectedTransaction != null);
             CloseCommand = new RelayCommand((object _) => Close?.Invoke());
             SearchTextKeyUpCommand = new RelayCommand((object param) => ExecuteSearchTextKeyUp(param));
-            
+
             // Load transactions
             LoadTransactions();
         }
-        
+
         #region Helper Methods
-        
+
         /// <summary>
         /// Converts DAL NotificationIcon enum to MaterialDesign PackIconKind
         /// </summary>
@@ -191,7 +191,7 @@ namespace Quantra.ViewModels
                 _ => PackIconKind.Information
             };
         }
-        
+
         /// <summary>
         /// Converts hex color string to Color object
         /// </summary>
@@ -206,11 +206,11 @@ namespace Quantra.ViewModels
                 return Colors.Blue; // Default fallback color
             }
         }
-        
+
         #endregion
-        
+
         #region Command Execution Methods
-        
+
         private void ExecuteSearchTextKeyUp(object param)
         {
             if (param is KeyEventArgs keyArgs && keyArgs.Key == Key.Enter)
@@ -218,80 +218,80 @@ namespace Quantra.ViewModels
                 ExecuteSearch();
             }
         }
-        
+
         private void ExecuteSearch()
         {
             Search(SearchText);
-            _notificationService.ShowNotification("Search applied.", 
-                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info), 
+            _notificationService.ShowNotification("Search applied.",
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info),
                 ConvertHexToColor("#2196F3"));
         }
-        
+
         private void ExecuteApplyFilters()
         {
             ApplyFilters();
-            _notificationService.ShowNotification("Filters applied.", 
-                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info), 
+            _notificationService.ShowNotification("Filters applied.",
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Info),
                 ConvertHexToColor("#2196F3"));
         }
-        
+
         private void ExecuteLoadTransactions()
         {
             LoadTransactions();
-            _notificationService.ShowNotification("Transaction data refreshed.", 
-                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success), 
+            _notificationService.ShowNotification("Transaction data refreshed.",
+                ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success),
                 ConvertHexToColor("#00C853"));
         }
-        
+
         private void ExecuteExportData()
         {
             try
             {
                 ExportData();
-                _notificationService.ShowNotification(NotificationText, 
-                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success), 
+                _notificationService.ShowNotification(NotificationText,
+                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Success),
                     ConvertHexToColor("#00C853"));
             }
             catch (Exception ex)
             {
-                _notificationService.ShowNotification($"Export failed: {ex.Message}", 
-                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Error), 
+                _notificationService.ShowNotification($"Export failed: {ex.Message}",
+                    ConvertToPackIconKind(Quantra.DAL.Notifications.NotificationIcon.Error),
                     ConvertHexToColor("#FF1744"));
                 //DatabaseMonolith.Log("Error", "Failed to export transaction data", ex.ToString());
             }
         }
-        
+
         private void ExecuteViewDetails()
         {
             if (SelectedTransaction != null)
             {
                 // Event to notify the view to show transaction details
                 ViewDetails?.Invoke(SelectedTransaction);
-                
+
                 // Also update notification text for feedback
                 NotificationText = $"Viewing details for {SelectedTransaction.Symbol} transaction";
             }
         }
-        
+
         #endregion
 
         #region Methods
-        
+
         public void LoadTransactions()
         {
             try
             {
                 var transactions = _transactionService.GetTransactions();
-                
+
                 // Rebuild collections to avoid any IEnumerable type mismatch issues
                 Transactions = new ObservableCollection<TransactionModel>();
                 foreach (var tx in transactions)
                 {
                     Transactions.Add(tx);
                 }
-                
+
                 FilteredTransactions = new ObservableCollection<TransactionModel>(Transactions);
-                
+
                 UpdateStatistics();
             }
             catch (Exception ex)
@@ -310,12 +310,12 @@ namespace Quantra.ViewModels
             }
             else
             {
-                var filtered = Transactions.Where(t => 
+                var filtered = Transactions.Where(t =>
                     t.Symbol.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     t.Notes?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true ||
                     t.TransactionType.Contains(searchText, StringComparison.OrdinalIgnoreCase)
                 ).ToList();
-                
+
                 FilteredTransactions = new ObservableCollection<TransactionModel>(filtered);
             }
         }
@@ -327,13 +327,13 @@ namespace Quantra.ViewModels
                 NotificationText = "Start date must be before end date";
                 return;
             }
-            
-            var filtered = Transactions.Where(t => 
-                t.ExecutionTime >= StartDate && 
+
+            var filtered = Transactions.Where(t =>
+                t.ExecutionTime >= StartDate &&
                 t.ExecutionTime <= EndDate &&
                 (SelectedTransactionType == "All" || t.TransactionType == SelectedTransactionType)
             ).ToList();
-            
+
             FilteredTransactions = new ObservableCollection<TransactionModel>(filtered);
         }
 
@@ -356,7 +356,7 @@ namespace Quantra.ViewModels
                     {
                         // Write header
                         writer.WriteLine("Symbol,Type,Quantity,Price,Total,Date,IsPaperTrade,Fees,PnL,PnLPercent,Notes");
-                        
+
                         // Write data
                         foreach (var transaction in FilteredTransactions)
                         {
@@ -395,16 +395,16 @@ namespace Quantra.ViewModels
 
             var realTrades = Transactions.Where(t => !t.IsPaperTrade).ToList();
             var paperTrades = Transactions.Where(t => t.IsPaperTrade).ToList();
-            
+
             RealTradingPnL = realTrades.Sum(t => t.RealizedPnL);
             PaperTradingPnL = paperTrades.Sum(t => t.RealizedPnL);
-            
+
             TotalFees = Transactions.Sum(t => t.Fees);
-            
+
             var profitableTrades = Transactions.Count(t => t.RealizedPnL > 0);
             WinRate = Transactions.Count > 0 ? (double)profitableTrades / Transactions.Count : 0;
         }
-        
+
         #endregion
     }
 }

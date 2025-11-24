@@ -15,7 +15,7 @@ namespace Quantra.Utilities
         private readonly Panel visualLayer;
         private readonly SolidColorBrush cellFillBrush;
         private readonly SolidColorBrush cellStrokeBrush;
-        
+
         private int gridRows;
         private int gridColumns;
         private bool isVisible = false;
@@ -31,18 +31,18 @@ namespace Quantra.Utilities
         {
             targetGrid = grid ?? throw new ArgumentNullException(nameof(grid));
             this.visualLayer = visualLayer ?? throw new ArgumentNullException(nameof(visualLayer));
-            
+
             // Set up brushes for visualization
             cellFillBrush = new SolidColorBrush(Color.FromArgb(40, 0, 255, 0)); // Light green semi-transparent
             cellStrokeBrush = new SolidColorBrush(Color.FromArgb(200, 0, 255, 0)); // Brighter green for borders
-            
+
             // Get grid dimensions
             gridRows = grid.RowDefinitions.Count;
             gridColumns = grid.ColumnDefinitions.Count;
-            
+
             // Create cell overlays
             cellOverlays = new Rectangle[gridRows, gridColumns];
-            
+
             // Initialize the cell overlays but don't add them to visual layer yet
             for (int row = 0; row < gridRows; row++)
             {
@@ -53,7 +53,7 @@ namespace Quantra.Utilities
                     Grid.SetColumn(cellOverlays[row, col], col);
                 }
             }
-            
+
             // Create selection rectangle
             selectionRect = new Rectangle
             {
@@ -62,11 +62,11 @@ namespace Quantra.Utilities
                 StrokeThickness = 2,
                 Visibility = Visibility.Collapsed
             };
-            
+
             // Add selection rectangle to visual layer
             visualLayer.Children.Add(selectionRect);
         }
-        
+
         private Rectangle CreateCellOverlay()
         {
             return new Rectangle
@@ -77,7 +77,7 @@ namespace Quantra.Utilities
                 Visibility = Visibility.Collapsed
             };
         }
-        
+
         /// <summary>
         /// Updates the grid dimensions if they have changed
         /// </summary>
@@ -93,13 +93,13 @@ namespace Quantra.Utilities
                 {
                     HideVisualizer();
                 }
-                
+
                 gridRows = rows;
                 gridColumns = columns;
-                
+
                 // Create new cell overlays
                 cellOverlays = new Rectangle[gridRows, gridColumns];
-                
+
                 for (int row = 0; row < gridRows; row++)
                 {
                     for (int col = 0; col < gridColumns; col++)
@@ -109,7 +109,7 @@ namespace Quantra.Utilities
                         Grid.SetColumn(cellOverlays[row, col], col);
                     }
                 }
-                
+
                 // If visualizer was visible, show the new overlays
                 if (isVisible)
                 {
@@ -117,7 +117,7 @@ namespace Quantra.Utilities
                 }
             }
         }
-        
+
         /// <summary>
         /// Shows the grid cell visualizer
         /// </summary>
@@ -137,11 +137,11 @@ namespace Quantra.Utilities
                         cellOverlays[row, col].Visibility = Visibility.Visible;
                     }
                 }
-                
+
                 isVisible = true;
             }
         }
-        
+
         /// <summary>
         /// Hides the grid cell visualizer
         /// </summary>
@@ -161,11 +161,11 @@ namespace Quantra.Utilities
                         }
                     }
                 }
-                
+
                 isVisible = false;
             }
         }
-        
+
         /// <summary>
         /// Highlights a region of cells in the grid
         /// </summary>
@@ -178,20 +178,20 @@ namespace Quantra.Utilities
             // Make sure we don't go out of bounds
             rowSpan = Math.Min(rowSpan, gridRows - row);
             columnSpan = Math.Min(columnSpan, gridColumns - column);
-            
+
             // Ensure spans are at least 1
             rowSpan = Math.Max(1, rowSpan);
             columnSpan = Math.Max(1, columnSpan);
-            
+
             // Set selection rectangle
             Grid.SetRow(selectionRect, row);
             Grid.SetColumn(selectionRect, column);
             Grid.SetRowSpan(selectionRect, rowSpan);
             Grid.SetColumnSpan(selectionRect, columnSpan);
-            
+
             selectionRect.Visibility = Visibility.Visible;
         }
-        
+
         /// <summary>
         /// Hides the cell selection highlight
         /// </summary>

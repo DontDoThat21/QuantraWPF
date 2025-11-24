@@ -19,17 +19,17 @@ namespace Quantra.ViewModels
     public class AlertsControlViewModel : ViewModelBase, IDisposable
     {
         private const int MaxSymbolsToCheck = 50;
-        
+
         private readonly ITechnicalIndicatorService _indicatorService;
         private readonly IHistoricalDataService _historicalDataService;
         private readonly SettingsService _settingsService;
         private readonly StockDataCacheService _stockDataCacheService;
-        
+
         private readonly TechnicalIndicatorAlertService _technicalIndicatorAlertService;
         private readonly VolumeAlertService _volumeAlertService;
         private readonly PatternAlertService _patternAlertService;
         private readonly DispatcherTimer _alertMonitoringTimer;
-        
+
         private string _selectedCategoryFilter;
         private AlertModel _currentEditAlert;
         private bool _isMonitoring;
@@ -47,14 +47,14 @@ namespace Quantra.ViewModels
             _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _stockDataCacheService = stockDataCacheService ?? throw new ArgumentNullException(nameof(stockDataCacheService));
-            
+
             // Initialize services
             _technicalIndicatorAlertService = new TechnicalIndicatorAlertService(_indicatorService);
             _volumeAlertService = new VolumeAlertService(_historicalDataService, _indicatorService);
-            
+
             var patternRecognitionService = new PricePatternRecognitionService(_stockDataCacheService);
             _patternAlertService = new PatternAlertService(patternRecognitionService);
-            
+
             // Initialize collections
             Alerts = new ObservableCollection<AlertModel>();
             Categories = new ObservableCollection<string>
@@ -65,16 +65,16 @@ namespace Quantra.ViewModels
                 "Volume Spike",
                 "Pattern Recognition"
             };
-            
+
             _selectedCategoryFilter = "All Categories";
-            
+
             // Initialize alert monitoring timer
             _alertMonitoringTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(30)
             };
             _alertMonitoringTimer.Tick += async (s, e) => await CheckTechnicalIndicatorAlertsAsync();
-            
+
             InitializeCommands();
         }
 
@@ -202,7 +202,7 @@ namespace Quantra.ViewModels
                 {
                     int triggeredCount = await _technicalIndicatorAlertService.CheckAllAlertsAsync(indicatorAlerts);
                     int volumeTriggeredCount = await _volumeAlertService.CheckAllVolumeAlertsAsync(indicatorAlerts);
-                    
+
                     // Fire events for triggered alerts
                     foreach (var alert in indicatorAlerts.Where(a => a.IsTriggered))
                     {
@@ -229,7 +229,7 @@ namespace Quantra.ViewModels
                 IsActive = true,
                 IsTriggered = false
             };
-            
+
             CurrentEditAlert = newAlert;
         }
 

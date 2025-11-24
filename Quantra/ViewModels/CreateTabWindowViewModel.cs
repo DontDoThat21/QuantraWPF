@@ -22,7 +22,7 @@ namespace Quantra.ViewModels
         public CreateTabWindowViewModel(UserSettingsService userSettingsService)
         {
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
-            
+
             // Load default grid settings
             try
             {

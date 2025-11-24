@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Models
             get => Get<AlphaVantageApiConfig>(new AlphaVantageApiConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// News API configuration
         /// </summary>
@@ -25,7 +25,7 @@ namespace Quantra.Configuration.Models
             get => Get<NewsApiConfig>(new NewsApiConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// OpenAI API configuration
         /// </summary>
@@ -35,7 +35,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Alpha Vantage API configuration
     /// </summary>
@@ -51,7 +51,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Base URL
         /// </summary>
@@ -62,7 +62,7 @@ namespace Quantra.Configuration.Models
             get => Get("https://www.alphavantage.co/query");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default timeout in seconds
         /// </summary>
@@ -72,7 +72,7 @@ namespace Quantra.Configuration.Models
             get => Get(30);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable API modal checks
         /// </summary>
@@ -82,7 +82,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// News API configuration
     /// </summary>
@@ -97,7 +97,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Base URL
         /// </summary>
@@ -108,7 +108,7 @@ namespace Quantra.Configuration.Models
             get => Get("https://newsapi.org/v2");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default timeout in seconds
         /// </summary>
@@ -119,7 +119,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// OpenAI API configuration
     /// </summary>
@@ -134,7 +134,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Base URL
         /// </summary>
@@ -145,7 +145,7 @@ namespace Quantra.Configuration.Models
             get => Get("https://api.openai.com/v1");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Model to use (e.g., gpt-4, gpt-3.5-turbo)
         /// </summary>
@@ -155,7 +155,7 @@ namespace Quantra.Configuration.Models
             get => Get("gpt-3.5-turbo");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default timeout in seconds
         /// </summary>
@@ -165,7 +165,7 @@ namespace Quantra.Configuration.Models
             get => Get(60);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Temperature for model responses (0.0-1.0)
         /// </summary>

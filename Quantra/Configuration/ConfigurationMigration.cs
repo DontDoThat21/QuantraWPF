@@ -26,33 +26,33 @@ namespace Quantra.Configuration
         {
             // Log start of migration
             //DatabaseMonolith.Log("Info", "Starting configuration migration from legacy sources");
-            
+
             try
             {
                 // Check if user settings file already exists - if so, migration already done
                 var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 var userSettingsPath = Path.Combine(appDataPath, "Quantra", "usersettings.json");
-                
+
                 if (File.Exists(userSettingsPath))
                 {
                     // Already migrated
                     //DatabaseMonolith.Log("Info", "Configuration already migrated, skipping");
                     return;
                 }
-                
+
                 // Create temporary DbContext and service for backward compatibility
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
                 var loggingService = new LoggingService();
                 var userSettingsService = new UserSettingsService(dbContext, loggingService);
-                
+
                 // Get settings from database
                 var settings = userSettingsService.GetUserSettings();
-                
+
                 // Create root object for JSON
                 var root = new JObject();
-                
+
                 // ---- API Settings ----
                 var api = new JObject();
                 var alphaVantage = new JObject();
@@ -60,13 +60,13 @@ namespace Quantra.Configuration
                 alphaVantage["DefaultTimeout"] = settings.ApiTimeoutSeconds;
                 api["AlphaVantage"] = alphaVantage;
                 root["Api"] = api;
-                
+
                 // ---- Cache Settings ----
                 var cache = new JObject();
                 cache["EnableHistoricalDataCache"] = settings.EnableHistoricalDataCache;
                 cache["CacheDurationMinutes"] = settings.CacheDurationMinutes;
                 root["Cache"] = cache;
-                
+
                 // ---- UI Settings ----
                 var ui = new JObject();
                 ui["EnableDarkMode"] = settings.EnableDarkMode;
@@ -75,12 +75,12 @@ namespace Quantra.Configuration
                 ui["DefaultGridColumns"] = settings.DefaultGridColumns;
                 ui["GridBorderColor"] = settings.GridBorderColor;
                 root["UI"] = ui;
-                
+
                 // ---- Notification Settings ----
                 var notifications = new JObject();
                 notifications["EnablePriceAlerts"] = settings.EnablePriceAlerts;
                 notifications["EnableTradeNotifications"] = settings.EnableTradeNotifications;
-                
+
                 // Email settings
                 var email = new JObject();
                 email["DefaultRecipient"] = settings.AlertEmail;
@@ -91,7 +91,7 @@ namespace Quantra.Configuration
                 email["EnableGlobalAlertEmails"] = settings.EnableGlobalAlertEmails;
                 email["EnableSystemHealthAlertEmails"] = settings.EnableSystemHealthAlertEmails;
                 notifications["Email"] = email;
-                
+
                 // SMS settings
                 var sms = new JObject();
                 sms["DefaultRecipient"] = settings.AlertPhoneNumber;
@@ -101,7 +101,7 @@ namespace Quantra.Configuration
                 sms["EnablePredictionAlertSms"] = settings.EnablePredictionAlertSms;
                 sms["EnableGlobalAlertSms"] = settings.EnableGlobalAlertSms;
                 notifications["SMS"] = sms;
-                
+
                 // Push notification settings
                 var push = new JObject();
                 push["UserId"] = settings.PushNotificationUserId;
@@ -115,7 +115,7 @@ namespace Quantra.Configuration
                 push["EnableSystemHealthAlertPushNotifications"] = settings.EnableSystemHealthAlertPushNotifications;
                 push["EnableTradeExecutionPushNotifications"] = settings.EnableTradeExecutionPushNotifications;
                 notifications["Push"] = push;
-                
+
                 // Sound settings
                 var sound = new JObject();
                 sound["EnableAlertSounds"] = settings.EnableAlertSounds;
@@ -125,7 +125,7 @@ namespace Quantra.Configuration
                 sound["DefaultTechnicalIndicatorSound"] = settings.DefaultTechnicalIndicatorSound;
                 sound["AlertVolume"] = settings.AlertVolume;
                 notifications["Sound"] = sound;
-                
+
                 // Visual indicator settings
                 var visual = new JObject();
                 visual["EnableVisualIndicators"] = settings.EnableVisualIndicators;
@@ -133,9 +133,9 @@ namespace Quantra.Configuration
                 visual["DefaultVisualIndicatorColor"] = settings.DefaultVisualIndicatorColor;
                 visual["VisualIndicatorDuration"] = settings.VisualIndicatorDuration;
                 notifications["Visual"] = visual;
-                
+
                 root["Notifications"] = notifications;
-                
+
                 // ---- Trading Settings ----
                 var trading = new JObject();
                 trading["EnablePaperTrading"] = settings.EnablePaperTrading;
@@ -152,10 +152,10 @@ namespace Quantra.Configuration
                 trading["HistoricalRewardRiskRatio"] = settings.HistoricalRewardRiskRatio;
                 trading["KellyFractionMultiplier"] = settings.KellyFractionMultiplier;
                 root["Trading"] = trading;
-                
+
                 // ---- Sentiment Analysis Settings ----
                 var sentimentAnalysis = new JObject();
-                
+
                 // News sentiment settings
                 var news = new JObject();
                 news["EnableNewsSentimentAnalysis"] = settings.EnableNewsSentimentAnalysis;
@@ -164,7 +164,7 @@ namespace Quantra.Configuration
                 news["EnableNewsSourceFiltering"] = settings.EnableNewsSourceFiltering;
                 news["EnabledNewsSources"] = JToken.FromObject(settings.EnabledNewsSources);
                 sentimentAnalysis["News"] = news;
-                
+
                 // Analyst ratings settings
                 var analystRatings = new JObject();
                 analystRatings["EnableAnalystRatings"] = settings.EnableAnalystRatings;
@@ -173,7 +173,7 @@ namespace Quantra.Configuration
                 analystRatings["EnableConsensusChangeAlerts"] = settings.EnableConsensusChangeAlerts;
                 analystRatings["AnalystRatingSentimentWeight"] = settings.AnalystRatingSentimentWeight;
                 sentimentAnalysis["AnalystRatings"] = analystRatings;
-                
+
                 // Insider trading settings
                 var insiderTrading = new JObject();
                 insiderTrading["EnableInsiderTradingAnalysis"] = settings.EnableInsiderTradingAnalysis;
@@ -185,25 +185,25 @@ namespace Quantra.Configuration
                 insiderTrading["HighlightOptionsActivity"] = settings.HighlightOptionsActivity;
                 insiderTrading["EnableInsiderTransactionNotifications"] = settings.EnableInsiderTransactionNotifications;
                 sentimentAnalysis["InsiderTrading"] = insiderTrading;
-                
+
                 root["SentimentAnalysis"] = sentimentAnalysis;
-                
+
                 // Create directory if it doesn't exist
                 var userSettingsDir = Path.GetDirectoryName(userSettingsPath);
                 if (!Directory.Exists(userSettingsDir))
                 {
                     Directory.CreateDirectory(userSettingsDir!);
                 }
-                
+
                 // Save to user settings file
                 using (var writer = new StreamWriter(userSettingsPath))
                 {
                     await writer.WriteAsync(root.ToString(Formatting.Indented));
                 }
-                
+
                 // Reload the configuration
                 await configManager.ReloadAsync();
-                
+
                 // Log successful migration
                 //DatabaseMonolith.Log("Info", "Successfully migrated configuration from legacy sources");
             }

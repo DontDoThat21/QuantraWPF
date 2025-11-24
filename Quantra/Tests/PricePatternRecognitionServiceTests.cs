@@ -59,7 +59,7 @@ namespace Quantra.Tests
         {
             var prices = new List<HistoricalPrice>();
             DateTime baseDate = DateTime.Today.AddDays(-100);
-            
+
             // Create a rising trend
             for (int i = 0; i < 30; i++)
             {
@@ -74,7 +74,7 @@ namespace Quantra.Tests
                     Volume = 1000000
                 });
             }
-            
+
             // Create first top
             prices.Add(new HistoricalPrice
             {
@@ -85,7 +85,7 @@ namespace Quantra.Tests
                 Low = 144,
                 Volume = 2000000
             });
-            
+
             // Create pullback
             for (int i = 1; i <= 10; i++)
             {
@@ -100,7 +100,7 @@ namespace Quantra.Tests
                     Volume = 1000000 + i * 50000
                 });
             }
-            
+
             // Create second top
             for (int i = 1; i <= 10; i++)
             {
@@ -115,7 +115,7 @@ namespace Quantra.Tests
                     Volume = 1200000
                 });
             }
-            
+
             prices.Add(new HistoricalPrice
             {
                 Date = baseDate.AddDays(51),
@@ -125,7 +125,7 @@ namespace Quantra.Tests
                 Low = 146,
                 Volume = 1800000
             });
-            
+
             // Create decline after second top
             for (int i = 1; i <= 10; i++)
             {
@@ -140,16 +140,16 @@ namespace Quantra.Tests
                     Volume = 1500000
                 });
             }
-            
+
             return prices;
         }
-        
+
         // Helper method to create a simulated double bottom pattern
         private List<HistoricalPrice> CreateDoubleBottomPattern()
         {
             var prices = new List<HistoricalPrice>();
             DateTime baseDate = DateTime.Today.AddDays(-100);
-            
+
             // Create a declining trend
             for (int i = 0; i < 30; i++)
             {
@@ -164,7 +164,7 @@ namespace Quantra.Tests
                     Volume = 1000000
                 });
             }
-            
+
             // Create first bottom
             prices.Add(new HistoricalPrice
             {
@@ -175,7 +175,7 @@ namespace Quantra.Tests
                 Low = 100,
                 Volume = 2000000
             });
-            
+
             // Create bounce
             for (int i = 1; i <= 10; i++)
             {
@@ -190,7 +190,7 @@ namespace Quantra.Tests
                     Volume = 1000000 + i * 50000
                 });
             }
-            
+
             // Create second bottom
             for (int i = 1; i <= 10; i++)
             {
@@ -205,7 +205,7 @@ namespace Quantra.Tests
                     Volume = 1200000
                 });
             }
-            
+
             prices.Add(new HistoricalPrice
             {
                 Date = baseDate.AddDays(51),
@@ -215,7 +215,7 @@ namespace Quantra.Tests
                 Low = 100.5,
                 Volume = 1800000
             });
-            
+
             // Create rise after second bottom
             for (int i = 1; i <= 10; i++)
             {
@@ -230,7 +230,7 @@ namespace Quantra.Tests
                     Volume = 1500000
                 });
             }
-            
+
             return prices;
         }
     }

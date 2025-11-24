@@ -20,7 +20,7 @@ namespace Quantra.ViewModels
         private readonly Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly IAnalystRatingService _analystRatingService;
         private readonly IInsiderTradingService _insiderTradingService;
-        
+
         private string _symbol;
         private int _currentLookbackDays;
         private SentimentPriceVisualData _currentSentimentData;
@@ -41,22 +41,22 @@ namespace Quantra.ViewModels
             if (userSettings == null) throw new ArgumentNullException(nameof(userSettings));
             if (userSettingsService == null) throw new ArgumentNullException(nameof(userSettingsService));
             if (loggingService == null) throw new ArgumentNullException(nameof(loggingService));
-            
+
             _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
             _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
-            
+
             _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
-            
+
             // Initialize chart collections
             SentimentSeries = new SeriesCollection();
             RatingDistributionSeries = new SeriesCollection();
             PriceTargetSeries = new SeriesCollection();
             InsiderActivitySeries = new SeriesCollection();
             SentimentShiftSeries = new SeriesCollection();
-            
+
             _currentLookbackDays = 30;
             _symbol = "--";
-            
+
             InitializeCommands();
         }
 
@@ -205,13 +205,13 @@ namespace Quantra.ViewModels
             if (_currentAnalystData != null)
             {
                 // Weight ratings: Buy=100, Hold=50, Sell=0
-                int totalRatings = _currentAnalystData.BuyCount + 
-                                   _currentAnalystData.HoldCount + 
+                int totalRatings = _currentAnalystData.BuyCount +
+                                   _currentAnalystData.HoldCount +
                                    _currentAnalystData.SellCount;
 
                 if (totalRatings > 0)
                 {
-                    double weightedScore = 
+                    double weightedScore =
                         (_currentAnalystData.BuyCount * 100) +
                         (_currentAnalystData.HoldCount * 50) +
                         (_currentAnalystData.SellCount * 0);

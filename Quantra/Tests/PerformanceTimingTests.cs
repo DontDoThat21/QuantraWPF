@@ -40,7 +40,7 @@ namespace Quantra.Tests
             // Assert
             Assert.That(actualDuration, Is.GreaterThan(TimeSpan.FromMilliseconds(40)));
             Assert.That(actualDuration, Is.LessThan(TimeSpan.FromMilliseconds(200)));
-            
+
             // Verify metrics were recorded
             var metrics = _monitoringManager.GetMetrics(operationName);
             Assert.That(metrics, Is.Not.Null);
@@ -69,7 +69,7 @@ namespace Quantra.Tests
             Assert.That(result, Is.EqualTo("test result"));
             Assert.That(actualDuration, Is.GreaterThan(TimeSpan.FromMilliseconds(40)));
             Assert.That(actualDuration, Is.LessThan(TimeSpan.FromMilliseconds(200)));
-            
+
             // Verify metrics were recorded
             var metrics = _monitoringManager.GetMetrics(operationName);
             Assert.That(metrics, Is.Not.Null);
@@ -86,7 +86,7 @@ namespace Quantra.Tests
         {
             // Arrange
             var operationName = "GetRSI_AAPL_1day";
-            
+
             // Act - Simulate an indicator calculation
             var (result, duration) = _monitoringManager.RecordExecutionTime(operationName, () =>
             {
@@ -98,7 +98,7 @@ namespace Quantra.Tests
             // Assert
             Assert.That(result, Is.EqualTo(65.5));
             Assert.That(duration, Is.GreaterThan(TimeSpan.Zero));
-            
+
             // Verify the operation was logged
             var metrics = _monitoringManager.GetMetrics(operationName);
             Assert.That(metrics, Is.Not.Null);
@@ -115,7 +115,7 @@ namespace Quantra.Tests
         {
             // Arrange
             var operationName = "UIUpdate_SetIndicators_AAPL";
-            
+
             // Act - Simulate a UI update operation
             var duration = await _monitoringManager.RecordExecutionTimeAsync(operationName, async () =>
             {
@@ -125,7 +125,7 @@ namespace Quantra.Tests
 
             // Assert
             Assert.That(duration, Is.GreaterThan(TimeSpan.Zero));
-            
+
             // Verify the operation was logged
             var metrics = _monitoringManager.GetMetrics(operationName);
             Assert.That(metrics, Is.Not.Null);

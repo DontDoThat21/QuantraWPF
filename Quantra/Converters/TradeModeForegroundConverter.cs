@@ -15,7 +15,7 @@ namespace Quantra.Converters
                     ? new SolidColorBrush(Color.FromRgb(80, 224, 112)) // Light green
                     : new SolidColorBrush(Color.FromRgb(224, 80, 80));  // Light red
             }
-            
+
             return new SolidColorBrush(Colors.White); // Default
         }
 

@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Chart update interval in seconds
         /// </summary>
@@ -26,7 +26,7 @@ namespace Quantra.Configuration.Models
             get => Get(2);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default grid rows
         /// </summary>
@@ -36,7 +36,7 @@ namespace Quantra.Configuration.Models
             get => Get(4);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default grid columns
         /// </summary>
@@ -46,7 +46,7 @@ namespace Quantra.Configuration.Models
             get => Get(4);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Grid border color
         /// </summary>
@@ -56,7 +56,7 @@ namespace Quantra.Configuration.Models
             get => Get("#FF00FFFF");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Chart layout configuration JSON
         /// </summary>

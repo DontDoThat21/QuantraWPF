@@ -36,15 +36,15 @@ namespace Quantra.ViewModels
 
             // Initialize collections
             Messages = new ObservableCollection<MarketChatMessage>();
-            
+
             // Initialize commands
             SendMessageCommand = new RelayCommand(_ => ExecuteSendMessage(), _ => CanSendMessage());
             ClearHistoryCommand = new RelayCommand(_ => ExecuteClearHistory());
             RequestTradingPlanCommand = new RelayCommand(_ => ExecuteRequestTradingPlan(), _ => !IsProcessing);
-            
+
             // Set initial status
             StatusMessage = "Ready to analyze market questions";
-            
+
             // Add welcome message
             AddWelcomeMessage();
         }
@@ -95,7 +95,7 @@ namespace Quantra.ViewModels
             get => _messages;
             set => SetProperty(ref _messages, value);
         }
-        
+
         /// <summary>
         /// Indicates if the latest user message is a trading plan request
         /// </summary>
@@ -118,7 +118,7 @@ namespace Quantra.ViewModels
         /// Command to clear chat history
         /// </summary>
         public ICommand ClearHistoryCommand { get; }
-        
+
         /// <summary>
         /// Command to explicitly request a trading plan
         /// </summary>
@@ -160,7 +160,7 @@ namespace Quantra.ViewModels
 
                 // Show processing state
                 IsProcessing = true;
-                
+
                 // Check if this is a trading plan request
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
                 StatusMessage = isTradingPlan ? "Creating trading plan..." : "Analyzing your question...";
@@ -178,7 +178,7 @@ namespace Quantra.ViewModels
 
                 // Get response based on message type
                 string response;
-                
+
                 if (isTradingPlan)
                 {
                     // Extract parameters from the message
@@ -186,9 +186,9 @@ namespace Quantra.ViewModels
                     string timeframe = ExtractTimeframe(userMessage);
                     string riskProfile = ExtractRiskProfile(userMessage);
                     string marketContext = ExtractMarketContext(userMessage);
-                    
+
                     _logger.LogInformation($"Detected trading plan request for ticker: {ticker}, timeframe: {timeframe}, risk: {riskProfile}");
-                    
+
                     // Generate trading plan
                     response = await _marketChatService.GetTradingPlanAsync(ticker, timeframe, marketContext, riskProfile);
                 }
@@ -217,8 +217,8 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 // Remove loading message if it exists
-                var loadingMessage = Messages.Count > 0 && Messages[Messages.Count - 1].IsLoading 
-                    ? Messages[Messages.Count - 1] 
+                var loadingMessage = Messages.Count > 0 && Messages[Messages.Count - 1].IsLoading
+                    ? Messages[Messages.Count - 1]
                     : null;
                 if (loadingMessage != null)
                 {
@@ -263,7 +263,7 @@ namespace Quantra.ViewModels
                 _logger.LogError(ex, "Error clearing chat history");
             }
         }
-        
+
         /// <summary>
         /// Executes the request trading plan command
         /// </summary>
@@ -296,26 +296,26 @@ namespace Quantra.ViewModels
             };
             Messages.Add(welcomeMessage);
         }
-        
+
         /// <summary>
         /// Determines if the message is requesting a trading plan
         /// </summary>
         private bool IsTradingPlanRequestMessage(string message)
         {
             string loweredMessage = message.ToLower().Trim();
-            
+
             // Check for trading plan keywords
-            bool containsTradingPlan = loweredMessage.Contains("trading plan") || 
+            bool containsTradingPlan = loweredMessage.Contains("trading plan") ||
                                        loweredMessage.Contains("trade plan") ||
-                                       (loweredMessage.Contains("plan") && 
+                                       (loweredMessage.Contains("plan") &&
                                         (loweredMessage.Contains("trade") || loweredMessage.Contains("trading")));
-            
+
             // Must contain a ticker symbol pattern (look for uppercase 1-5 letters that could be a ticker)
             bool containsTickerPattern = System.Text.RegularExpressions.Regex.IsMatch(message, @"\b[A-Z]{1,5}\b");
-            
+
             return containsTradingPlan && containsTickerPattern;
         }
-        
+
         /// <summary>
         /// Extracts ticker symbol from a message
         /// </summary>
@@ -325,14 +325,14 @@ namespace Quantra.ViewModels
             var match = System.Text.RegularExpressions.Regex.Match(message, @"\b[A-Z]{1,5}\b");
             return match.Success ? match.Value : string.Empty;
         }
-        
+
         /// <summary>
         /// Extracts timeframe from a message
         /// </summary>
         private string ExtractTimeframe(string message)
         {
             string loweredMessage = message.ToLower();
-            
+
             if (loweredMessage.Contains("next month") || loweredMessage.Contains("month"))
                 return "next month";
             if (loweredMessage.Contains("next week") || loweredMessage.Contains("week"))
@@ -343,25 +343,25 @@ namespace Quantra.ViewModels
                 return "long-term";
             if (loweredMessage.Contains("short term") || loweredMessage.Contains("short-term"))
                 return "short-term";
-                
+
             return "next month"; // Default timeframe
         }
-        
+
         /// <summary>
         /// Extracts risk profile from a message
         /// </summary>
         private string ExtractRiskProfile(string message)
         {
             string loweredMessage = message.ToLower();
-            
+
             if (loweredMessage.Contains("conservative") || loweredMessage.Contains("low risk"))
                 return "conservative";
             if (loweredMessage.Contains("aggressive") || loweredMessage.Contains("high risk"))
                 return "aggressive";
-                
+
             return "moderate"; // Default risk profile
         }
-        
+
         /// <summary>
         /// Extracts market context from a message
         /// </summary>
@@ -369,17 +369,17 @@ namespace Quantra.ViewModels
         {
             string loweredMessage = message.ToLower();
             StringBuilder contextBuilder = new StringBuilder();
-            
+
             if (loweredMessage.Contains("bull") || loweredMessage.Contains("bullish"))
                 contextBuilder.Append("in a bullish market ");
             else if (loweredMessage.Contains("bear") || loweredMessage.Contains("bearish"))
                 contextBuilder.Append("in a bearish market ");
-                
+
             if (loweredMessage.Contains("volatile") || loweredMessage.Contains("volatility"))
                 contextBuilder.Append("with high volatility ");
             else if (loweredMessage.Contains("stable"))
                 contextBuilder.Append("with low volatility ");
-                
+
             return contextBuilder.ToString().Trim();
         }
 

@@ -153,7 +153,7 @@ namespace Quantra.ViewModels
             Order = _orderService.CreateDefaultOrder();
             OrderHistory = _orderService.LoadOrderHistory();
             FilteredOrders = new ObservableCollection<OrderModel>(OrderHistory);
-            
+
             // Get modal dialog settings
             _enableApiModalChecks = _orderService.GetApiModalCheckSetting();
 
@@ -182,13 +182,13 @@ namespace Quantra.ViewModels
                 SetNotification("Please enter a valid symbol", PackIconKind.AlertCircle, Colors.Orange);
                 return;
             }
-            
+
             if (Order.Quantity <= 0)
             {
                 SetNotification("Quantity must be greater than zero", PackIconKind.AlertCircle, Colors.Orange);
                 return;
             }
-            
+
             if (Order.Price <= 0)
             {
                 SetNotification("Price must be greater than zero", PackIconKind.AlertCircle, Colors.Orange);
@@ -201,7 +201,7 @@ namespace Quantra.ViewModels
                 ShowApiConfirmationDialog = true;
                 return;
             }
-            
+
             // Otherwise place the order directly
             PlaceOrderSafely();
         }
@@ -212,7 +212,7 @@ namespace Quantra.ViewModels
             {
                 // Set trading mode in the service
                 _orderService.SetTradingMode(Order.IsPaperTrade ? TradingMode.Paper : TradingMode.Market);
-                
+
                 // Place the order using the service
                 bool success = await _orderService.PlaceLimitOrder(
                     Order.Symbol,
@@ -220,11 +220,11 @@ namespace Quantra.ViewModels
                     Order.OrderType,
                     Order.Price
                 );
-                
+
                 // Update the order status
                 Order.Status = success ? "Executed" : "Failed";
                 Order.Timestamp = DateTime.Now;
-                
+
                 // Add a copy of the current order to history
                 var orderCopy = new OrderModel
                 {
@@ -239,14 +239,14 @@ namespace Quantra.ViewModels
                     StopLoss = Order.StopLoss,
                     TakeProfit = Order.TakeProfit
                 };
-                
+
                 OrderHistory.Insert(0, orderCopy);
                 ApplyFilter();
-                
+
                 // Show success notification
-                SetNotification($"Order successfully placed for {Order.Symbol}", 
+                SetNotification($"Order successfully placed for {Order.Symbol}",
                                 PackIconKind.CheckCircle, Colors.LimeGreen);
-                
+
                 // Reset for next order
                 ResetOrderForm();
             }
@@ -255,7 +255,7 @@ namespace Quantra.ViewModels
                 // Update the status
                 Order.Status = "Failed";
                 Order.Timestamp = DateTime.Now;
-                
+
                 // Add error entry to history
                 var orderCopy = new OrderModel
                 {
@@ -270,15 +270,15 @@ namespace Quantra.ViewModels
                     StopLoss = Order.StopLoss,
                     TakeProfit = Order.TakeProfit
                 };
-                
+
                 OrderHistory.Insert(0, orderCopy);
                 ApplyFilter();
-                
+
                 // Log the error
                 //DatabaseMonolith.Log("Error", "Failed to place order", ex.ToString());
-                
+
                 // Show error notification
-                SetNotification($"Error placing order: {ex.Message}", 
+                SetNotification($"Error placing order: {ex.Message}",
                                 PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -293,10 +293,10 @@ namespace Quantra.ViewModels
                     _orderService.SaveApiModalCheckSetting(false);
                     _enableApiModalChecks = false;
                 }
-                
+
                 // Hide the confirmation dialog
                 ShowApiConfirmationDialog = false;
-                
+
                 // Execute the order
                 await PlaceOrderAsync();
             }
@@ -315,12 +315,12 @@ namespace Quantra.ViewModels
                 SetNotification("Please enter a valid symbol", PackIconKind.AlertCircle, Colors.Orange);
                 return;
             }
-            
+
             try
             {
                 // Fetch current market price
                 double marketPrice = await _orderService.GetMarketPrice(Order.Symbol);
-                
+
                 if (marketPrice > 0)
                 {
                     Order.Price = marketPrice;
@@ -328,14 +328,14 @@ namespace Quantra.ViewModels
                 }
                 else
                 {
-                    SetNotification($"Could not retrieve price for {Order.Symbol}", 
+                    SetNotification($"Could not retrieve price for {Order.Symbol}",
                                    PackIconKind.AlertCircle, Colors.Orange);
                 }
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", "Failed to refresh price", ex.ToString());
-                SetNotification($"Error refreshing price: {ex.Message}", 
+                SetNotification($"Error refreshing price: {ex.Message}",
                                PackIconKind.AlertCircle, Colors.Red);
             }
         }
@@ -343,10 +343,10 @@ namespace Quantra.ViewModels
         private void ExecutePaperTradeToggled(object param)
         {
             bool isPaperTrade = (bool)param;
-            
+
             Order.IsPaperTrade = isPaperTrade;
             TradeModeBadgeText = isPaperTrade ? "Paper Trade" : "Real Trade";
-            
+
             // Notify property change for computed properties
             OnPropertyChanged(nameof(TradeModeBadgeBackground));
             OnPropertyChanged(nameof(TradeModeBadgeForeground));
@@ -365,7 +365,7 @@ namespace Quantra.ViewModels
 
             MessageBoxResult result = ShowConfirmationDialog(
                 "Are you sure you want to clear your order history?");
-                
+
             if (result == MessageBoxResult.Yes)
             {
                 OrderHistory.Clear();
@@ -393,9 +393,9 @@ namespace Quantra.ViewModels
             {
                 OrderHistory = new ObservableCollection<OrderModel>();
             }
-            
+
             IEnumerable<OrderModel> orders = OrderHistory;
-            
+
             switch (SelectedFilter)
             {
                 case "Paper Trades":
@@ -414,7 +414,7 @@ namespace Quantra.ViewModels
                     orders = OrderHistory;
                     break;
             }
-            
+
             // Check if orders is null before applying OrderByDescending
             if (orders != null)
             {
@@ -441,7 +441,7 @@ namespace Quantra.ViewModels
         }
 
         #endregion
-        
+
         #region Public Methods
 
         public void CreateRuleFromPrediction(PredictionModel prediction)
@@ -466,10 +466,10 @@ namespace Quantra.ViewModels
                     Status = "New",
                     Timestamp = DateTime.Now,
                     PredictionSource = $"Prediction {prediction.Symbol} ({prediction.Confidence:P0})",
-                    StopLoss = prediction.PredictedAction == "BUY" ? 
+                    StopLoss = prediction.PredictedAction == "BUY" ?
                         prediction.CurrentPrice * 0.95 : // 5% stop loss for buy orders
                         prediction.CurrentPrice * 1.05,  // 5% stop loss for sell orders
-                    TakeProfit = prediction.PredictedAction == "BUY" ? 
+                    TakeProfit = prediction.PredictedAction == "BUY" ?
                         prediction.TargetPrice : // Use target price for take profit on buy orders
                         prediction.CurrentPrice * 0.9   // 10% take profit for sell orders
                 };
@@ -491,8 +491,8 @@ namespace Quantra.ViewModels
 
                 // Show notification to user
                 Color notificationColor = prediction.PredictedAction == "BUY" ? Colors.Green : Colors.OrangeRed;
-                SetNotification($"Trading rule created for {prediction.Symbol} ({prediction.PredictedAction})", 
-                    prediction.PredictedAction == "BUY" ? PackIconKind.TrendingUp : PackIconKind.TrendingDown, 
+                SetNotification($"Trading rule created for {prediction.Symbol} ({prediction.PredictedAction})",
+                    prediction.PredictedAction == "BUY" ? PackIconKind.TrendingUp : PackIconKind.TrendingDown,
                     notificationColor);
 
                 //DatabaseMonolith.Log("Info", $"Created trading rule from prediction for {prediction.Symbol} with {prediction.PredictedAction} signal");

@@ -17,7 +17,7 @@ namespace Quantra.Configuration.Models
             get => Get<NewsSentimentConfig>(new NewsSentimentConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Analyst ratings configuration
         /// </summary>
@@ -26,7 +26,7 @@ namespace Quantra.Configuration.Models
             get => Get<AnalystRatingsConfig>(new AnalystRatingsConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Insider trading configuration
         /// </summary>
@@ -35,7 +35,7 @@ namespace Quantra.Configuration.Models
             get => Get<InsiderTradingConfig>(new InsiderTradingConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// OpenAI sentiment analysis configuration
         /// </summary>
@@ -45,7 +45,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// News sentiment configuration
     /// </summary>
@@ -59,7 +59,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// News article refresh interval in minutes
         /// </summary>
@@ -69,7 +69,7 @@ namespace Quantra.Configuration.Models
             get => Get(30);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Maximum news articles per symbol
         /// </summary>
@@ -79,7 +79,7 @@ namespace Quantra.Configuration.Models
             get => Get(15);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable news source filtering
         /// </summary>
@@ -88,7 +88,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enabled news sources
         /// </summary>
@@ -107,7 +107,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Analyst ratings configuration
     /// </summary>
@@ -121,7 +121,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Ratings cache expiry in hours
         /// </summary>
@@ -131,7 +131,7 @@ namespace Quantra.Configuration.Models
             get => Get<int?>(24);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable rating change alerts
         /// </summary>
@@ -140,7 +140,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable consensus change alerts
         /// </summary>
@@ -149,7 +149,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Analyst rating sentiment weight
         /// </summary>
@@ -160,7 +160,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Insider trading configuration
     /// </summary>
@@ -174,7 +174,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Insider data refresh interval in minutes
         /// </summary>
@@ -184,7 +184,7 @@ namespace Quantra.Configuration.Models
             get => Get(120);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable insider trading alerts
         /// </summary>
@@ -193,7 +193,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Track notable insiders
         /// </summary>
@@ -202,7 +202,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Insider trading sentiment weight
         /// </summary>
@@ -212,7 +212,7 @@ namespace Quantra.Configuration.Models
             get => Get(2.5);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Highlight CEO transactions
         /// </summary>
@@ -221,7 +221,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Highlight options activity
         /// </summary>
@@ -230,7 +230,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable insider transaction notifications
         /// </summary>
@@ -240,7 +240,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// OpenAI sentiment analysis configuration
     /// </summary>
@@ -254,7 +254,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Cache expiry time for OpenAI sentiment analysis results in minutes
         /// </summary>
@@ -264,7 +264,7 @@ namespace Quantra.Configuration.Models
             get => Get(30);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Use OpenAI for enhanced prediction explanations
         /// </summary>
@@ -273,7 +273,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Maximum tokens to use in OpenAI requests
         /// </summary>
@@ -283,7 +283,7 @@ namespace Quantra.Configuration.Models
             get => Get(1000);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// OpenAI sentiment weight in combined sentiment score
         /// </summary>
@@ -293,7 +293,7 @@ namespace Quantra.Configuration.Models
             get => Get(3.0); // Higher weight than other sentiment sources
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Use context-aware prompts for specific data sources
         /// </summary>
@@ -302,7 +302,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable detailed sentiment score breakdown
         /// </summary>
@@ -311,7 +311,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable event detection in analyzed content
         /// </summary>

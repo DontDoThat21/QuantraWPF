@@ -12,7 +12,7 @@ namespace Quantra.Converters
             {
                 return isPaperTrade ? "Paper Trade" : "Real Trade";
             }
-            
+
             return "Unknown";
         }
 
@@ -22,7 +22,7 @@ namespace Quantra.Converters
             {
                 return text.Equals("Paper Trade", StringComparison.OrdinalIgnoreCase);
             }
-            
+
             return false;
         }
     }

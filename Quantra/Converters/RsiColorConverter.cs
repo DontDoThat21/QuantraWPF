@@ -25,13 +25,13 @@ namespace Quantra.Converters
             const double neutralHigh = 60.0;
             const double extremeLow = 25.0;
             const double extremeHigh = 75.0;
-            
+
             // If RSI is in neutral zone (40-60), keep it white
             if (rsi >= neutralLow && rsi <= neutralHigh)
                 return new SolidColorBrush(Colors.White);
-            
+
             double intensity = 0.0;
-            
+
             if (rsi < neutralLow)
             {
                 // RSI below 40 - calculate intensity from 40 down to 25
@@ -46,15 +46,15 @@ namespace Quantra.Converters
                 double distance = Math.Max(0, rsi - neutralHigh);
                 intensity = Math.Min(distance / range, 1.0);
             }
-            
+
             // Apply exponential curve for more dramatic effect
             intensity = Math.Pow(intensity, 2.0);
-            
+
             // Interpolate from white (255,255,255) to yellow (255,255,0)
             byte red = 255;
             byte green = 255;
             byte blue = (byte)(255 * (1.0 - intensity));
-            
+
             return new SolidColorBrush(Color.FromRgb(red, green, blue));
         }
 

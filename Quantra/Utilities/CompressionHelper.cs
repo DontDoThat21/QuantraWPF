@@ -25,14 +25,14 @@ namespace Quantra.Utilities
 
             // Convert string to bytes
             byte[] inputBytes = Encoding.UTF8.GetBytes(input);
-            
+
             using (var memoryStream = new MemoryStream())
             {
                 using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
                 {
                     gzipStream.Write(inputBytes, 0, inputBytes.Length);
                 }
-                
+
                 // Convert compressed data to Base64 string
                 byte[] compressedBytes = memoryStream.ToArray();
                 return CompressionMarker + Convert.ToBase64String(compressedBytes);

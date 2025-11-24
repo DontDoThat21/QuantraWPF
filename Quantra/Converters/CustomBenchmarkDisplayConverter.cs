@@ -17,7 +17,7 @@ namespace Quantra.Converters
                 // Return a formatted string with Name and DisplaySymbol
                 return $"{benchmark.Name} ({benchmark.DisplaySymbol})";
             }
-            
+
             // Fallback to string representation
             return value?.ToString() ?? "Unknown Benchmark";
         }

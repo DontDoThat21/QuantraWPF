@@ -31,7 +31,7 @@ namespace Quantra.Utilities
         {
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
             _pendingUpdates = new Dictionary<string, UpdateItem>();
-            
+
             _batchTimer = new DispatcherTimer(DispatcherPriority.Background, _dispatcher)
             {
                 Interval = TimeSpan.FromMilliseconds(BatchIntervalMs)
@@ -50,7 +50,7 @@ namespace Quantra.Utilities
             lock (_lock)
             {
                 _pendingUpdates[key] = new UpdateItem { Action = updateAction, Priority = priority };
-                
+
                 if (!_batchTimer.IsEnabled)
                 {
                     _batchTimer.Start();
@@ -74,12 +74,12 @@ namespace Quantra.Utilities
         public async Task FlushUpdates()
         {
             Dictionary<string, UpdateItem> updates;
-            
+
             lock (_lock)
             {
                 if (_pendingUpdates.Count == 0)
                     return;
-                    
+
                 updates = new Dictionary<string, UpdateItem>(_pendingUpdates);
                 _pendingUpdates.Clear();
                 _batchTimer.Stop();

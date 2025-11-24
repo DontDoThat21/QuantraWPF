@@ -54,8 +54,8 @@ namespace Quantra.Modules
             List<string> sentimentSources = null)
         {
             // Default to all sources if none specified
-            sentimentSources ??= new List<string> { 
-                "News", "Twitter", "Reddit", "AnalystRatings", "InsiderTrading" 
+            sentimentSources ??= new List<string> {
+                "News", "Twitter", "Reddit", "AnalystRatings", "InsiderTrading"
             };
 
             // Get historical price data
@@ -90,14 +90,14 @@ namespace Quantra.Modules
 
             // Get sentiment data for the same period
             var sentimentHistory = await GetHistoricalSentimentData(symbol, lookbackDays, sentimentSources);
-            
+
             // Align dates (sentiment and price data may have different collection points)
             var alignedData = AlignSentimentAndPriceData(sentimentHistory, priceHistory);
-            
+
             // Calculate correlations
             double overallCorrelation = 0;
             var sourceCorrelations = new Dictionary<string, double>();
-            
+
             // Calculate correlation for each source
             foreach (var source in sentimentSources.Where(s => alignedData.SentimentBySource.ContainsKey(s)))
             {
@@ -108,26 +108,26 @@ namespace Quantra.Modules
                     sourceCorrelations[source] = correlation;
                 }
             }
-            
+
             // Overall sentiment (combined weighted average)
             if (alignedData.CombinedSentiment.Count > 1)
             {
                 overallCorrelation = CalculatePearsonCorrelation(
-                    alignedData.CombinedSentiment, 
+                    alignedData.CombinedSentiment,
                     alignedData.PriceChanges);
             }
-            
+
             // Calculate lead/lag relationship
             double leadLagDays = CalculateLeadLagRelationship(
                 alignedData.CombinedSentiment,
                 alignedData.PriceChanges);
-            
+
             // Identify significant sentiment shift events
             var sentimentShiftEvents = IdentifySentimentShiftEvents(
                 alignedData.SentimentBySource,
                 alignedData.Dates,
                 alignedData.PriceChanges);
-            
+
             // Calculate predictive accuracy
             double predictiveAccuracy = CalculatePredictiveAccuracy(sentimentShiftEvents);
 
@@ -152,7 +152,7 @@ namespace Quantra.Modules
             List<string> sentimentSources = null)
         {
             var correlation = await AnalyzeSentimentPriceCorrelation(symbol, lookbackDays, sentimentSources);
-            
+
             return new SentimentPriceVisualData
             {
                 Symbol = symbol,
@@ -168,7 +168,7 @@ namespace Quantra.Modules
                 SentimentShiftEvents = correlation.SentimentShiftEvents
             };
         }
-        
+
         /// <summary>
         /// Analyzes correlation between sector sentiment and sector performance
         /// </summary>
@@ -185,7 +185,7 @@ namespace Quantra.Modules
             // Get sector performance data (using SectorMomentumService to get mock performance)
             var timeframe = lookbackDays <= 7 ? "1w" : lookbackDays <= 30 ? "1m" : "3m";
             var momentumData = _sectorMomentumService.GetSectorMomentumData(timeframe);
-            
+
             // If sector not found, return empty result
             if (!momentumData.ContainsKey(sector))
             {
@@ -199,37 +199,37 @@ namespace Quantra.Modules
                     SentimentShiftEvents = new List<SentimentShiftEvent>()
                 };
             }
-            
+
             // Generate historical sector performance based on current momentum data
             // In a real implementation, this would come from historical data
             var sectorPerformance = GenerateHistoricalSectorPerformance(
-                sector, 
+                sector,
                 momentumData[sector],
                 sectorSentimentTrend.Select(s => s.Date).ToList());
-            
+
             // Align dates and calculate correlation
             var alignedData = AlignSectorData(sectorSentimentTrend, sectorPerformance);
-            
+
             // Calculate overall correlation
             double overallCorrelation = 0;
             if (alignedData.SentimentValues.Count > 1 && alignedData.PerformanceValues.Count > 1)
             {
                 overallCorrelation = CalculatePearsonCorrelation(
-                    alignedData.SentimentValues, 
+                    alignedData.SentimentValues,
                     alignedData.PerformanceValues);
             }
-            
+
             // Calculate lead/lag relationship
             double leadLagDays = CalculateLeadLagRelationship(
                 alignedData.SentimentValues,
                 alignedData.PerformanceValues);
-            
+
             // Identify significant sentiment shift events
             var sentimentShiftEvents = IdentifySectorSentimentShiftEvents(
                 alignedData.Dates,
-                alignedData.SentimentValues, 
+                alignedData.SentimentValues,
                 alignedData.PerformanceValues);
-            
+
             return new SectorSentimentCorrelationResult
             {
                 Sector = sector,
@@ -241,7 +241,7 @@ namespace Quantra.Modules
                 AlignedDates = alignedData.Dates
             };
         }
-        
+
         /// <summary>
         /// Gets sector sentiment correlation visualization data for all or specified sectors
         /// </summary>
@@ -255,12 +255,12 @@ namespace Quantra.Modules
             // If no sectors specified, use all standard sectors
             sectors ??= new List<string> {
                 "Technology", "Financial", "Healthcare", "Energy", "Industrial",
-                "Materials", "Consumer Discretionary", "Consumer Staples", 
+                "Materials", "Consumer Discretionary", "Consumer Staples",
                 "Utilities", "Real Estate", "Communication"
             };
-            
+
             var results = new Dictionary<string, SectorSentimentCorrelationResult>();
-            
+
             foreach (var sector in sectors)
             {
                 try
@@ -273,7 +273,7 @@ namespace Quantra.Modules
                     //DatabaseMonolith.Log("Warning", $"Error analyzing sector correlation for {sector}", ex.ToString());
                 }
             }
-            
+
             return results;
         }
 
@@ -283,30 +283,30 @@ namespace Quantra.Modules
         /// Retrieves historical sentiment data from various sources
         /// </summary>
         private async Task<Dictionary<string, List<(DateTime Date, double Value)>>> GetHistoricalSentimentData(
-            string symbol, 
+            string symbol,
             int lookbackDays,
             List<string> sentimentSources)
         {
             var result = new Dictionary<string, List<(DateTime Date, double Value)>>();
-            
+
             // This would typically involve retrieving historical sentiment data from databases,
             // but for this implementation we'll use a simplified approach to simulate historical data
-            
+
             // In a real implementation, we would:
             // 1. Query a database table that stores daily sentiment scores
             // 2. Or use APIs that provide historical sentiment data
-            
+
             DateTime startDate = DateTime.Now.AddDays(-lookbackDays);
-            
+
             // Get financial news sentiment
             if (sentimentSources.Contains("News"))
             {
                 var newsHistory = new List<(DateTime Date, double Value)>();
-                
+
                 // For now, we'll make an approximation by getting current sentiment from different sources
                 // and creating synthetic history using random variations
                 double currentSentiment = await _financialNewsSentimentService.GetSymbolSentimentAsync(symbol);
-                
+
                 // Generate synthetic historical data based on current sentiment
                 var random = new Random();
                 for (int i = 0; i < lookbackDays; i++)
@@ -316,16 +316,16 @@ namespace Quantra.Modules
                     DateTime historicalDate = startDate.AddDays(i);
                     newsHistory.Add((historicalDate, historicalSentiment));
                 }
-                
+
                 result["News"] = newsHistory;
             }
-            
+
             // Similar approach for other sentiment sources
             if (sentimentSources.Contains("Twitter"))
             {
                 var twitterHistory = new List<(DateTime Date, double Value)>();
                 double currentTwitterSentiment = await _twitterSentimentService.GetSymbolSentimentAsync(symbol);
-                
+
                 var random = new Random(1); // Different seed
                 for (int i = 0; i < lookbackDays; i++)
                 {
@@ -334,15 +334,15 @@ namespace Quantra.Modules
                     DateTime historicalDate = startDate.AddDays(i);
                     twitterHistory.Add((historicalDate, historicalSentiment));
                 }
-                
+
                 result["Twitter"] = twitterHistory;
             }
-            
+
             if (sentimentSources.Contains("AnalystRatings"))
             {
                 var analystHistory = new List<(DateTime Date, double Value)>();
                 double currentAnalystSentiment = await _analystRatingService.GetAnalystSentimentAsync(symbol);
-                
+
                 var random = new Random(3); // Different seed
                 for (int i = 0; i < lookbackDays; i++)
                 {
@@ -351,15 +351,15 @@ namespace Quantra.Modules
                     DateTime historicalDate = startDate.AddDays(i);
                     analystHistory.Add((historicalDate, historicalSentiment));
                 }
-                
+
                 result["AnalystRatings"] = analystHistory;
             }
-            
+
             if (sentimentSources.Contains("InsiderTrading"))
             {
                 var insiderHistory = new List<(DateTime Date, double Value)>();
                 double currentInsiderSentiment = await _insiderTradingService.GetInsiderSentimentAsync(symbol);
-                
+
                 var random = new Random(4); // Different seed
                 for (int i = 0; i < lookbackDays; i++)
                 {
@@ -369,14 +369,14 @@ namespace Quantra.Modules
                         double variation = random.NextDouble() * 0.8 - 0.4; // -0.4 to +0.4 variation
                         currentInsiderSentiment = Math.Max(-1.0, Math.Min(1.0, currentInsiderSentiment + variation));
                     }
-                    
+
                     DateTime historicalDate = startDate.AddDays(i);
                     insiderHistory.Add((historicalDate, currentInsiderSentiment));
                 }
-                
+
                 result["InsiderTrading"] = insiderHistory;
             }
-            
+
             return result;
         }
 
@@ -395,13 +395,13 @@ namespace Quantra.Modules
                 SentimentBySource = new Dictionary<string, List<double>>(),
                 CombinedSentiment = new List<double>()
             };
-            
+
             // Initialize sentiment source lists
             foreach (var source in sentimentHistory.Keys)
             {
                 result.SentimentBySource[source] = new List<double>();
             }
-            
+
             // Iterate through price history and find matching sentiment data
             for (int i = 1; i < priceHistory.Count; i++) // Start at 1 to calculate price changes
             {
@@ -409,19 +409,19 @@ namespace Quantra.Modules
                 double price = priceHistory[i].Close;
                 double previousPrice = priceHistory[i - 1].Close;
                 double priceChange = (price - previousPrice) / previousPrice * 100.0;
-                
+
                 // Try to find sentiment data for this date
                 bool hasSentimentData = false;
                 double combinedSentiment = 0;
                 int sourcesWithData = 0;
-                
+
                 foreach (var source in sentimentHistory.Keys)
                 {
                     var sourceHistory = sentimentHistory[source];
                     var closestData = sourceHistory
                         .OrderBy(s => Math.Abs((s.Date - date).TotalDays))
                         .FirstOrDefault();
-                    
+
                     if (closestData != default && Math.Abs((closestData.Date - date).TotalDays) <= 1)
                     {
                         result.SentimentBySource[source].Add(closestData.Value);
@@ -434,7 +434,7 @@ namespace Quantra.Modules
                         result.SentimentBySource[source].Add(0); // No data
                     }
                 }
-                
+
                 // Only add data point if we have sentiment data
                 if (hasSentimentData)
                 {
@@ -444,7 +444,7 @@ namespace Quantra.Modules
                     result.CombinedSentiment.Add(sourcesWithData > 0 ? combinedSentiment / sourcesWithData : 0);
                 }
             }
-            
+
             return result;
         }
 
@@ -457,33 +457,33 @@ namespace Quantra.Modules
             {
                 return 0;
             }
-            
+
             int n = x.Count;
-            
+
             // Calculate means
             double meanX = x.Average();
             double meanY = y.Average();
-            
+
             // Calculate covariance and variances
             double covariance = 0;
             double varianceX = 0;
             double varianceY = 0;
-            
+
             for (int i = 0; i < n; i++)
             {
                 double deltaX = x[i] - meanX;
                 double deltaY = y[i] - meanY;
-                
+
                 covariance += deltaX * deltaY;
                 varianceX += deltaX * deltaX;
                 varianceY += deltaY * deltaY;
             }
-            
+
             if (varianceX == 0 || varianceY == 0)
             {
                 return 0;
             }
-            
+
             return covariance / Math.Sqrt(varianceX * varianceY);
         }
 
@@ -496,15 +496,15 @@ namespace Quantra.Modules
             {
                 return 0;
             }
-            
+
             // Calculate correlations with different lags (-5 to +5 days)
             double maxCorrelation = double.MinValue;
             int bestLag = 0;
-            
+
             for (int lag = -5; lag <= 5; lag++)
             {
                 if (lag == 0) continue;
-                
+
                 var laggedCorrelation = CalculateLaggedCorrelation(sentimentSeries, priceSeries, lag);
                 if (laggedCorrelation > maxCorrelation)
                 {
@@ -512,7 +512,7 @@ namespace Quantra.Modules
                     bestLag = lag;
                 }
             }
-            
+
             return bestLag; // Positive means sentiment leads price
         }
 
@@ -526,10 +526,10 @@ namespace Quantra.Modules
             {
                 return 0;
             }
-            
+
             var x = new List<double>();
             var y = new List<double>();
-            
+
             if (lag > 0)
             {
                 // series1 leads series2
@@ -542,7 +542,7 @@ namespace Quantra.Modules
                 x.AddRange(series1.Skip(-lag));
                 y.AddRange(series2.Take(n + lag));
             }
-            
+
             return CalculatePearsonCorrelation(x, y);
         }
 
@@ -555,30 +555,30 @@ namespace Quantra.Modules
             List<double> priceChanges)
         {
             var events = new List<SentimentShiftEvent>();
-            
+
             if (dates.Count < 3 || priceChanges.Count < dates.Count - 1)
                 return events;
-            
+
             // For each sentiment source
             foreach (var source in sentimentBySource.Keys)
             {
                 var sentiment = sentimentBySource[source];
                 if (sentiment.Count < dates.Count)
                     continue;
-                
+
                 // Look for significant shifts in sentiment
                 for (int i = 1; i < sentiment.Count; i++)
                 {
                     // Calculate the shift
                     double shift = sentiment[i] - sentiment[i - 1];
-                    
+
                     // If the shift is significant
                     if (Math.Abs(shift) >= 0.2) // 0.2 is threshold for significant shift
                     {
                         // Check subsequent price changes
                         double subsequentPriceChange = 0;
                         bool priceFollowedSentiment = false;
-                        
+
                         // Look at next 3 days for price changes
                         int daysToExamine = Math.Min(3, priceChanges.Count - i);
                         for (int j = 0; j < daysToExamine; j++)
@@ -587,16 +587,16 @@ namespace Quantra.Modules
                             if (priceIdx < priceChanges.Count)
                             {
                                 subsequentPriceChange += priceChanges[priceIdx];
-                                
+
                                 // Check if price movement aligned with sentiment shift
-                                if ((shift > 0 && priceChanges[priceIdx] > 0) || 
+                                if ((shift > 0 && priceChanges[priceIdx] > 0) ||
                                     (shift < 0 && priceChanges[priceIdx] < 0))
                                 {
                                     priceFollowedSentiment = true;
                                 }
                             }
                         }
-                        
+
                         // Create an event
                         events.Add(new SentimentShiftEvent
                         {
@@ -609,7 +609,7 @@ namespace Quantra.Modules
                     }
                 }
             }
-            
+
             return events;
         }
 
@@ -620,11 +620,11 @@ namespace Quantra.Modules
         {
             if (events.Count == 0)
                 return 0;
-            
+
             int correctPredictions = events.Count(e => e.PriceFollowedSentiment);
             return (double)correctPredictions / events.Count;
         }
-        
+
         /// <summary>
         /// Generates historical sector performance data based on current momentum values
         /// (in a real implementation, this would come from a database of historical data)
@@ -635,13 +635,13 @@ namespace Quantra.Modules
             List<DateTime> dates)
         {
             var result = new List<(DateTime, double)>();
-            
+
             // Calculate the average momentum for the sector
             double avgMomentum = momentumModels.Select(m => m.MomentumValue).Average();
-            
+
             // Use the sector name as seed for consistent but varied results per sector
             var random = new Random(sector.GetHashCode());
-            
+
             // Generate synthetic performance data for each date
             foreach (var date in dates)
             {
@@ -650,22 +650,22 @@ namespace Quantra.Modules
                 double dayFactor = (double)(date - dates.Min()).TotalDays / (dates.Max() - dates.Min()).TotalDays;
                 double trendComponent = dayFactor * avgMomentum * 2; // Trend increases over time
                 double randomComponent = (random.NextDouble() * 0.4) - 0.2; // -0.2 to +0.2 variation
-                
+
                 double performance = avgMomentum * 0.5 + trendComponent + randomComponent;
-                
+
                 // Ensure within reasonable bounds
                 performance = Math.Max(-0.5, Math.Min(0.5, performance));
-                
+
                 result.Add((date, performance));
             }
-            
+
             return result.OrderBy(r => r.Item1).ToList();
         }
-        
+
         /// <summary>
         /// Aligns sector sentiment and performance data by date
         /// </summary>
-        private (List<DateTime> Dates, List<double> SentimentValues, List<double> PerformanceValues) 
+        private (List<DateTime> Dates, List<double> SentimentValues, List<double> PerformanceValues)
             AlignSectorData(
                 List<(DateTime Date, double Sentiment)> sectorSentiment,
                 List<(DateTime Date, double Performance)> sectorPerformance)
@@ -674,18 +674,18 @@ namespace Quantra.Modules
             var dates = new List<DateTime>();
             var sentimentValues = new List<double>();
             var performanceValues = new List<double>();
-            
+
             // Use dates that exist in both datasets
             var sentimentDates = sectorSentiment.Select(s => s.Date.Date).ToHashSet();
             var performanceDates = sectorPerformance.Select(p => p.Date.Date).ToHashSet();
             var commonDates = sentimentDates.Intersect(performanceDates).OrderBy(d => d).ToList();
-            
+
             foreach (var date in commonDates)
             {
                 // Find matching entries
                 var sentimentEntry = sectorSentiment.FirstOrDefault(s => s.Date.Date == date);
                 var performanceEntry = sectorPerformance.FirstOrDefault(p => p.Date.Date == date);
-                
+
                 // Add if both exist
                 if (sentimentEntry != default && performanceEntry != default)
                 {
@@ -694,10 +694,10 @@ namespace Quantra.Modules
                     performanceValues.Add(performanceEntry.Performance);
                 }
             }
-            
+
             return (dates, sentimentValues, performanceValues);
         }
-        
+
         /// <summary>
         /// Identifies significant sector sentiment shift events and their impact on sector performance
         /// </summary>
@@ -707,23 +707,23 @@ namespace Quantra.Modules
             List<double> performanceValues)
         {
             var events = new List<SentimentShiftEvent>();
-            
+
             if (dates.Count < 3 || sentimentValues.Count < dates.Count || performanceValues.Count < dates.Count)
                 return events;
-            
+
             // Look for significant shifts in sentiment
             for (int i = 1; i < sentimentValues.Count; i++)
             {
                 // Calculate the shift
                 double shift = sentimentValues[i] - sentimentValues[i - 1];
-                
+
                 // If the shift is significant
                 if (Math.Abs(shift) >= 0.15) // 0.15 is threshold for significant shift (lower than stock-specific threshold)
                 {
                     // Check subsequent performance changes
                     double subsequentPerformanceChange = 0;
                     bool performanceFollowedSentiment = false;
-                    
+
                     // Look at next 3 days for performance changes
                     int daysToExamine = Math.Min(3, performanceValues.Count - i);
                     for (int j = 0; j < daysToExamine; j++)
@@ -733,7 +733,7 @@ namespace Quantra.Modules
                         {
                             double perfChange = j > 0 ? performanceValues[perfIdx] - performanceValues[perfIdx - 1] : 0;
                             subsequentPerformanceChange += perfChange;
-                            
+
                             // Check if performance movement aligned with sentiment shift
                             if ((shift > 0 && perfChange > 0) || (shift < 0 && perfChange < 0))
                             {
@@ -741,7 +741,7 @@ namespace Quantra.Modules
                             }
                         }
                     }
-                    
+
                     // Create an event
                     events.Add(new SentimentShiftEvent
                     {
@@ -753,7 +753,7 @@ namespace Quantra.Modules
                     });
                 }
             }
-            
+
             return events;
         }
 
@@ -771,32 +771,32 @@ namespace Quantra.Modules
         /// Symbol being analyzed
         /// </summary>
         public string Symbol { get; set; }
-        
+
         /// <summary>
         /// Overall correlation between combined sentiment and price changes
         /// </summary>
         public double OverallCorrelation { get; set; }
-        
+
         /// <summary>
         /// Correlations for each sentiment source
         /// </summary>
         public Dictionary<string, double> SourceCorrelations { get; set; } = new Dictionary<string, double>();
-        
+
         /// <summary>
         /// Lead/lag relationship in days (positive means sentiment leads price)
         /// </summary>
         public double LeadLagRelationship { get; set; }
-        
+
         /// <summary>
         /// Accuracy of sentiment shifts in predicting price movements
         /// </summary>
         public double PredictiveAccuracy { get; set; }
-        
+
         /// <summary>
         /// Significant sentiment shift events
         /// </summary>
         public List<SentimentShiftEvent> SentimentShiftEvents { get; set; } = new List<SentimentShiftEvent>();
-        
+
         /// <summary>
         /// Aligned data used for analysis
         /// </summary>
@@ -812,22 +812,22 @@ namespace Quantra.Modules
         /// Date of the sentiment shift
         /// </summary>
         public DateTime Date { get; set; }
-        
+
         /// <summary>
         /// Source of sentiment (News, Twitter, etc.)
         /// </summary>
         public string Source { get; set; }
-        
+
         /// <summary>
         /// Magnitude of sentiment shift
         /// </summary>
         public double SentimentShift { get; set; }
-        
+
         /// <summary>
         /// Subsequent change in price (%)
         /// </summary>
         public double SubsequentPriceChange { get; set; }
-        
+
         /// <summary>
         /// Whether the price movement aligned with sentiment shift
         /// </summary>
@@ -843,23 +843,23 @@ namespace Quantra.Modules
         /// Dates for the time series
         /// </summary>
         public List<DateTime> Dates { get; set; } = new List<DateTime>();
-        
+
         /// <summary>
         /// Price data
         /// </summary>
         public List<double> Prices { get; set; } = new List<double>();
-        
+
         /// <summary>
         /// Daily price changes (%)
         /// </summary>
         public List<double> PriceChanges { get; set; } = new List<double>();
-        
+
         /// <summary>
         /// Sentiment values for each source
         /// </summary>
-        public Dictionary<string, List<double>> SentimentBySource { get; set; } = 
+        public Dictionary<string, List<double>> SentimentBySource { get; set; } =
             new Dictionary<string, List<double>>();
-        
+
         /// <summary>
         /// Combined sentiment across all sources
         /// </summary>
@@ -875,53 +875,53 @@ namespace Quantra.Modules
         /// Symbol being analyzed
         /// </summary>
         public string Symbol { get; set; }
-        
+
         /// <summary>
         /// Dates for the time series
         /// </summary>
         public List<DateTime> Dates { get; set; } = new List<DateTime>();
-        
+
         /// <summary>
         /// Price data
         /// </summary>
         public List<double> Prices { get; set; } = new List<double>();
-        
+
         /// <summary>
         /// Daily price changes (%)
         /// </summary>
         public List<double> PriceChanges { get; set; } = new List<double>();
-        
+
         /// <summary>
         /// Sentiment values for each source
         /// </summary>
-        public Dictionary<string, List<double>> SentimentBySource { get; set; } = 
+        public Dictionary<string, List<double>> SentimentBySource { get; set; } =
             new Dictionary<string, List<double>>();
-        
+
         /// <summary>
         /// Combined sentiment across all sources
         /// </summary>
         public List<double> CombinedSentiment { get; set; } = new List<double>();
-        
+
         /// <summary>
         /// Overall correlation between combined sentiment and price changes
         /// </summary>
         public double OverallCorrelation { get; set; }
-        
+
         /// <summary>
         /// Correlations for each sentiment source
         /// </summary>
         public Dictionary<string, double> SourceCorrelations { get; set; } = new Dictionary<string, double>();
-        
+
         /// <summary>
         /// Lead/lag relationship in days (positive means sentiment leads price)
         /// </summary>
         public double LeadLagRelationship { get; set; }
-        
+
         /// <summary>
         /// Accuracy of sentiment shifts in predicting price movements
         /// </summary>
         public double PredictiveAccuracy { get; set; }
-        
+
         /// <summary>
         /// Significant sentiment shift events
         /// </summary>
@@ -937,32 +937,32 @@ namespace Quantra.Modules
         /// Sector being analyzed
         /// </summary>
         public string Sector { get; set; }
-        
+
         /// <summary>
         /// Overall correlation between sector sentiment and performance
         /// </summary>
         public double OverallCorrelation { get; set; }
-        
+
         /// <summary>
         /// The sector sentiment time series data
         /// </summary>
         public List<(DateTime Date, double Sentiment)> SectorSentiment { get; set; } = new List<(DateTime, double)>();
-        
+
         /// <summary>
         /// The sector performance time series data
         /// </summary>
         public List<(DateTime Date, double Value)> SectorPerformance { get; set; } = new List<(DateTime, double)>();
-        
+
         /// <summary>
         /// Lead/lag relationship in days (positive means sentiment leads performance)
         /// </summary>
         public double LeadLagRelationship { get; set; }
-        
+
         /// <summary>
         /// Significant sentiment shift events in the sector
         /// </summary>
         public List<SentimentShiftEvent> SentimentShiftEvents { get; set; } = new List<SentimentShiftEvent>();
-        
+
         /// <summary>
         /// Dates where both sentiment and performance data are aligned
         /// </summary>

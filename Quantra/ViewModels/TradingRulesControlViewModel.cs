@@ -25,11 +25,11 @@ namespace Quantra.ViewModels
         public TradingRulesControlViewModel(ITradingRuleService tradingRuleService)
         {
             _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
-            
+
             TradingRules = new ObservableCollection<TradingRule>();
-            
+
             InitializeCommands();
-            
+
             // Load rules asynchronously with proper exception handling
             Task.Run(async () =>
             {
@@ -93,11 +93,11 @@ namespace Quantra.ViewModels
             {
                 TradingRules.Clear();
                 var rules = await _tradingRuleService.GetTradingRulesAsync();
-                
+
                 foreach (var rule in rules)
                 {
                     // Parse indicators and conditions from saved rule
-                    if (!string.IsNullOrEmpty(rule.Condition) && 
+                    if (!string.IsNullOrEmpty(rule.Condition) &&
                         (rule.Conditions == null || rule.Conditions.Count == 0))
                     {
                         rule.Conditions = new System.Collections.Generic.List<string> { rule.Condition };
@@ -122,9 +122,9 @@ namespace Quantra.ViewModels
             try
             {
                 bool isNewRule = rule.Id == 0;
-                
+
                 await _tradingRuleService.SaveTradingRuleAsync(rule);
-                
+
                 if (isNewRule)
                 {
                     // Add to collection if new
@@ -140,7 +140,7 @@ namespace Quantra.ViewModels
                         TradingRules[index] = rule;
                     }
                 }
-                
+
                 return true;
             }
             catch (Exception ex)

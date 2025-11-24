@@ -21,7 +21,7 @@ namespace Quantra.Converters
                     _ => new SolidColorBrush(Colors.White)                                                 // Default
                 };
             }
-            
+
             return new SolidColorBrush(Colors.White); // Default
         }
 

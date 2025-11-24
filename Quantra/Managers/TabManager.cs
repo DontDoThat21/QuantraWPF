@@ -160,7 +160,8 @@ namespace Quantra.Managers
                     cellBorder.AllowDrop = true;
 
                     // Handle drag-and-drop on empty cells
-                    cellBorder.Drop += (s, e) => {
+                    cellBorder.Drop += (s, e) =>
+                    {
                         if (e.Data.GetDataPresent("ControlBorder"))
                         {
                             var draggedBorder = e.Data.GetData("ControlBorder") as Border;
@@ -210,10 +211,10 @@ namespace Quantra.Managers
 
             // Add context menu for removing and editing the tab
             var contextMenu = new ContextMenu();
-            
+
             // Apply enhanced styling
             contextMenu.Style = (Style)Application.Current.FindResource("EnhancedContextMenuStyle");
-            
+
             var removeMenuItem = new MenuItem { Header = "Remove Tab" };
             removeMenuItem.Style = (Style)Application.Current.FindResource("EnhancedMenuItemStyle");
             removeMenuItem.Click += (s, e) => RemoveCustomTab(tabItem, tabName);
@@ -230,7 +231,7 @@ namespace Quantra.Managers
 
             // Make the grid support direct drag-and-drop
             MakeGridDraggable(grid, tabName);
-            
+
             // Raise the TabAdded event to notify listeners
             TabAdded?.Invoke(tabName);
 
@@ -382,7 +383,7 @@ namespace Quantra.Managers
             {
                 // Set the flag to indicate we're processing a tab selection
                 _isTabSelectionInProgress = true;
-                
+
                 var selectedTab = _mainTabControl.SelectedItem as TabItem;
                 if (selectedTab != null)
                 {
@@ -410,7 +411,7 @@ namespace Quantra.Managers
                     {
                         // For other tabs, update the last non-'+' tab
                         _lastNonPlusTab = selectedTab;
-                        
+
                         // Notify about tab selection - the host will handle loading the controls
                         TabSelectionChanged?.Invoke(selectedTab.Header.ToString());
                     }

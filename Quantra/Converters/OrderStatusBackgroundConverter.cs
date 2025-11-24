@@ -21,7 +21,7 @@ namespace Quantra.Converters
                     _ => new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333344"))           // Default
                 };
             }
-            
+
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333344")); // Default
         }
 

@@ -13,7 +13,7 @@ namespace Quantra.Converters
                 return new SolidColorBrush(Colors.White);
 
             double winRate;
-            
+
             if (value is double doubleValue)
             {
                 winRate = doubleValue;

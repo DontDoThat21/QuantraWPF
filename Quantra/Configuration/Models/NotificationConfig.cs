@@ -15,7 +15,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable trade notifications
         /// </summary>
@@ -24,7 +24,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Email notification settings
         /// </summary>
@@ -33,7 +33,7 @@ namespace Quantra.Configuration.Models
             get => Get<EmailNotificationConfig>(new EmailNotificationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// SMS notification settings
         /// </summary>
@@ -42,7 +42,7 @@ namespace Quantra.Configuration.Models
             get => Get<SmsNotificationConfig>(new SmsNotificationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Push notification settings
         /// </summary>
@@ -51,7 +51,7 @@ namespace Quantra.Configuration.Models
             get => Get<PushNotificationConfig>(new PushNotificationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Sound notification settings
         /// </summary>
@@ -60,7 +60,7 @@ namespace Quantra.Configuration.Models
             get => Get<SoundNotificationConfig>(new SoundNotificationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Visual notification settings
         /// </summary>
@@ -70,7 +70,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Email notification settings
     /// </summary>
@@ -85,7 +85,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable email alerts
         /// </summary>
@@ -94,7 +94,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable standard alert emails
         /// </summary>
@@ -103,7 +103,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable opportunity alert emails
         /// </summary>
@@ -112,7 +112,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable prediction alert emails
         /// </summary>
@@ -121,7 +121,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable global alert emails
         /// </summary>
@@ -130,7 +130,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable system health alert emails
         /// </summary>
@@ -140,7 +140,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// SMS notification settings
     /// </summary>
@@ -155,7 +155,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable SMS alerts
         /// </summary>
@@ -164,7 +164,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable standard alert SMS
         /// </summary>
@@ -173,7 +173,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable opportunity alert SMS
         /// </summary>
@@ -182,7 +182,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable prediction alert SMS
         /// </summary>
@@ -191,7 +191,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable global alert SMS
         /// </summary>
@@ -201,7 +201,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Push notification settings
     /// </summary>
@@ -215,7 +215,7 @@ namespace Quantra.Configuration.Models
             get => Get(string.Empty);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable push notifications
         /// </summary>
@@ -224,7 +224,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable standard push notifications
         /// </summary>
@@ -233,7 +233,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable opportunity push notifications
         /// </summary>
@@ -242,7 +242,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable prediction push notifications
         /// </summary>
@@ -251,7 +251,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable global push notifications
         /// </summary>
@@ -260,7 +260,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable technical indicator push notifications
         /// </summary>
@@ -269,7 +269,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable sentiment shift push notifications
         /// </summary>
@@ -278,7 +278,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable system health push notifications
         /// </summary>
@@ -287,7 +287,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Enable trade execution push notifications
         /// </summary>
@@ -297,7 +297,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Sound notification settings
     /// </summary>
@@ -311,7 +311,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default alert sound
         /// </summary>
@@ -320,7 +320,7 @@ namespace Quantra.Configuration.Models
             get => Get("alert.wav");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default opportunity sound
         /// </summary>
@@ -329,7 +329,7 @@ namespace Quantra.Configuration.Models
             get => Get("opportunity.wav");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default prediction sound
         /// </summary>
@@ -338,7 +338,7 @@ namespace Quantra.Configuration.Models
             get => Get("prediction.wav");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default technical indicator sound
         /// </summary>
@@ -347,7 +347,7 @@ namespace Quantra.Configuration.Models
             get => Get("indicator.wav");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Alert volume (0-100)
         /// </summary>
@@ -357,7 +357,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Visual notification settings
     /// </summary>
@@ -371,7 +371,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default visual indicator type (Toast, Banner, Popup, Flashcard)
         /// </summary>
@@ -380,7 +380,7 @@ namespace Quantra.Configuration.Models
             get => Get("Toast");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Default visual indicator color
         /// </summary>
@@ -389,7 +389,7 @@ namespace Quantra.Configuration.Models
             get => Get("#FFFF00");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Visual indicator duration in seconds
         /// </summary>

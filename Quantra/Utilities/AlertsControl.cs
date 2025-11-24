@@ -19,7 +19,7 @@ namespace Quantra.Utilities
         //private static PushNotificationAlertService _pushNotificationAlertService;
         //private static EmailAlertService _emailAlertService;
         private static readonly ILogger _logger = Log.ForType(typeof(AlertManager));
-        
+
         static AlertManager()
         {
             // Ensure cross-cutting concerns are initialized
@@ -30,7 +30,7 @@ namespace Quantra.Utilities
         {
             _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
-            
+
             // Try to resolve settings service from DI container or create fallback
             try
             {
@@ -41,7 +41,7 @@ namespace Quantra.Utilities
                 _logger.Warning(ex.Message, audioService);
                 _settingsService = new SettingsService();
             }
-            
+
             _logger.Information("AlertManager initialized with audio and notification services");
         }
 
@@ -74,12 +74,12 @@ namespace Quantra.Utilities
                 ResilienceHelper.Retry(() =>
                 {
                     using var perfTimer = _logger.BeginTimedOperation("EmitGlobalAlert");
-                    
+
                     _logger.ForContext("AlertName", alert.Name)
                            .ForContext("AlertCategory", alert.Category)
                            .ForContext("AlertPriority", alert.Priority)
                            .Information("Emitting alert: {AlertCondition}", alert.Condition);
-                    
+
                     // Log the alert to the database for backward compatibility
                     //DatabaseMonolith.Log(alert.Category.ToString(), alert.Name, alert.Notes);
 
@@ -94,8 +94,8 @@ namespace Quantra.Utilities
                     {
                         _notificationService.ShowAlertNotification(alert);
                     }
-                    
-                    
+
+
                     if (_settingsService != null)
                     {
                         _settingsService.GetDefaultSettingsProfile();
@@ -117,8 +117,8 @@ namespace Quantra.Utilities
                             ResilienceHelper.Retry(() => PushNotificationAlertService.SendAlertPushNotification(alert, settings));
                         }
 
-                    }                    
-                    
+                    }
+
                     // Notify all registered handlers
                     foreach (var handler in _alertHandlers)
                     {
@@ -138,7 +138,7 @@ namespace Quantra.Utilities
             {
                 // Log using our new framework
                 _logger.Error(ex, "Failed to emit global alert: {AlertName}", alert.Name);
-                
+
                 // Also log to database for backward compatibility
                 //DatabaseMonolith.Log("Error", "Failed to emit global alert", ex.ToString());
             }

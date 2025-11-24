@@ -28,7 +28,7 @@ namespace Quantra.ViewModels
             OptionLegs = new ObservableCollection<OptionLeg>();
             BreakevenPrices = new ObservableCollection<double>();
             PayoffSeries = new SeriesCollection();
-            
+
             // Initialize with default values
             UnderlyingSymbol = "AAPL";
             UnderlyingPrice = 150.0;
@@ -137,8 +137,8 @@ namespace Quantra.ViewModels
 
         public string ProbabilityOfProfitDisplay => $"{ProbabilityOfProfit:P1}";
 
-        public string BreakevenDisplay => BreakevenPrices.Count == 0 ? "N/A" : 
-            BreakevenPrices.Count == 1 ? $"{BreakevenPrices[0]:C}" : 
+        public string BreakevenDisplay => BreakevenPrices.Count == 0 ? "N/A" :
+            BreakevenPrices.Count == 1 ? $"{BreakevenPrices[0]:C}" :
             $"{BreakevenPrices.Min():C} - {BreakevenPrices.Max():C}";
 
         public SeriesCollection PayoffSeries
@@ -159,7 +159,7 @@ namespace Quantra.ViewModels
 
         public string TotalVega => CalculateTotalGreek(leg => leg.Option.Vega * leg.Quantity * (leg.Action == "BUY" ? 1 : -1)).ToString("F3");
 
-        public string AverageImpliedVolatility => OptionLegs.Count > 0 ? 
+        public string AverageImpliedVolatility => OptionLegs.Count > 0 ?
             $"{OptionLegs.Average(leg => leg.Option.ImpliedVolatility):P1}" : "N/A";
 
         #endregion
@@ -245,7 +245,7 @@ namespace Quantra.ViewModels
 
             var strikes = OptionLegs.Select(leg => leg.Option.StrikePrice).OrderBy(s => s).ToList();
             var isCallSpread = OptionLegs.Any(leg => leg.Option.OptionType == "CALL");
-            
+
             if (isCallSpread)
             {
                 // Bull Call Spread or Bear Call Spread
@@ -330,7 +330,7 @@ namespace Quantra.ViewModels
             var strikes = OptionLegs.Select(leg => leg.Option.StrikePrice).OrderBy(s => s).ToList();
             MaxLoss = Math.Abs(NetCost);
             MaxProfit = (strikes.Max() - strikes.Min()) / 2 * 100 - MaxLoss;
-            
+
             var middleStrike = strikes[1];
             BreakevenPrices.Add(middleStrike - NetCost / 100);
             BreakevenPrices.Add(middleStrike + NetCost / 100);
@@ -354,7 +354,7 @@ namespace Quantra.ViewModels
             // For custom spreads, calculate basic metrics
             MaxLoss = Math.Abs(NetCost);
             MaxProfit = double.PositiveInfinity;
-            
+
             // Simple breakeven estimation
             var avgStrike = OptionLegs.Average(leg => leg.Option.StrikePrice);
             BreakevenPrices.Add(avgStrike);
@@ -373,7 +373,7 @@ namespace Quantra.ViewModels
                 // Simplified POP calculation based on distance from current price to breakevens
                 var avgIV = OptionLegs.Average(leg => leg.Option.ImpliedVolatility);
                 var daysToExpiry = OptionLegs.Average(leg => (leg.Option.ExpirationDate - DateTime.Now).TotalDays);
-                
+
                 if (daysToExpiry <= 0)
                 {
                     ProbabilityOfProfit = 0.0;
@@ -382,7 +382,7 @@ namespace Quantra.ViewModels
 
                 // Calculate expected move
                 var expectedMove = UnderlyingPrice * avgIV * Math.Sqrt(daysToExpiry / 365.0);
-                
+
                 // Simplified probability calculation
                 if (BreakevenPrices.Count == 1)
                 {
@@ -473,12 +473,12 @@ namespace Quantra.ViewModels
             var strikes = OptionLegs.Select(leg => leg.Option.StrikePrice).ToList();
             var minStrike = strikes.Min();
             var maxStrike = strikes.Max();
-            
+
             var rangeStart = Math.Max(0, Math.Min(minStrike * 0.8, UnderlyingPrice * 0.8));
             var rangeEnd = Math.Max(maxStrike * 1.2, UnderlyingPrice * 1.2);
-            
+
             var step = (rangeEnd - rangeStart) / 100.0;
-            
+
             return Enumerable.Range(0, 101)
                 .Select(i => rangeStart + (i * step))
                 .ToArray();
@@ -492,10 +492,10 @@ namespace Quantra.ViewModels
             {
                 var intrinsicValue = CalculateIntrinsicValue(leg.Option, price);
                 var legPnL = (intrinsicValue - leg.Price) * leg.Quantity * 100;
-                
+
                 if (leg.Action == "SELL")
                     legPnL = -legPnL;
-                
+
                 totalPnL += legPnL;
             }
 
@@ -577,8 +577,8 @@ namespace Quantra.ViewModels
                                  "Limited upside potential but provides downside protection."
             };
 
-            return definitions.TryGetValue(spreadType, out var definition) 
-                ? definition 
+            return definitions.TryGetValue(spreadType, out var definition)
+                ? definition
                 : "Custom spread strategy with user-defined option legs.";
         }
 

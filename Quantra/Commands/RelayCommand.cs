@@ -57,7 +57,7 @@ namespace Quantra.Commands
         {
             if (parameter == null && typeof(T).IsValueType)
                 return false;
-            
+
             try
             {
                 return _canExecute == null || _canExecute((T)parameter);

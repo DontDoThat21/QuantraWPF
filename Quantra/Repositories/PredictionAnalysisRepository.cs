@@ -17,7 +17,7 @@ namespace Quantra.Repositories
         {
             // Create DbContext with default connection
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-            
+
             string sqlConn = Environment.GetEnvironmentVariable("QUANTRA_RELATIONAL_CONNECTION");
             if (string.IsNullOrWhiteSpace(sqlConn))
             {

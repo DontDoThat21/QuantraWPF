@@ -46,7 +46,7 @@ namespace Quantra.ViewModels
         public ObservableCollection<string> AvailablePanelTypes { get; } = new ObservableCollection<string>
         {
             "RSI",
-            "MACD", 
+            "MACD",
             "StochRSI",
             "Williams %R",
             "CCI",
@@ -217,7 +217,7 @@ namespace Quantra.ViewModels
             {
                 // Find next available position
                 int nextRow = _currentLayout.Panels.Any() ? _currentLayout.Panels.Max(p => p.Row + p.RowSpan) : 0;
-                
+
                 var newPanel = new ChartPanelLayout
                 {
                     PanelId = panelType,
@@ -239,7 +239,7 @@ namespace Quantra.ViewModels
 
         private bool CanExecuteAddPanel(object parameter)
         {
-            return parameter is string panelType && 
+            return parameter is string panelType &&
                    !_currentLayout.Panels.Any(p => p.PanelId == panelType);
         }
 
@@ -255,8 +255,8 @@ namespace Quantra.ViewModels
 
         private bool CanExecuteRemovePanel(object parameter)
         {
-            return SelectedPanel != null && 
-                   SelectedPanel.PanelId != "Price" && 
+            return SelectedPanel != null &&
+                   SelectedPanel.PanelId != "Price" &&
                    SelectedPanel.PanelId != "Volume";
         }
 

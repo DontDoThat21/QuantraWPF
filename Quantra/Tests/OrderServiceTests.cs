@@ -29,7 +29,7 @@ namespace Quantra.Tests
                 .UseSqlite(connection)
                 .Options;
             var dbContext = new QuantraDbContext(options);
-            
+
             // Ensure database is created
             dbContext.Database.EnsureCreated();
 

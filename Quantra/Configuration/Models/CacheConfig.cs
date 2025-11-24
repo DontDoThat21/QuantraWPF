@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Cache duration in minutes
         /// </summary>

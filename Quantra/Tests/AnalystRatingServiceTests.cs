@@ -15,14 +15,14 @@ namespace Quantra.Tests
     {
         private Mock<IAnalystRatingService> _mockAnalystRatingService;
         private AnalystConsensusReportService _consensusReportService;
-        
+
         [TestInitialize]
         public void Setup()
         {
             _mockAnalystRatingService = new Mock<IAnalystRatingService>();
             _consensusReportService = new AnalystConsensusReportService(_mockAnalystRatingService.Object);
         }
-        
+
         [TestMethod]
         public async Task AnalyzeConsensusHistory_WithHistoricalData_ReturnsCorrectTrend()
         {
@@ -38,7 +38,7 @@ namespace Quantra.Tests
                 SellCount = 3,
                 LastUpdated = DateTime.Now.AddDays(-30)
             };
-            
+
             var newConsensus = new AnalystRatingAggregate
             {
                 Symbol = testSymbol,
@@ -49,21 +49,21 @@ namespace Quantra.Tests
                 SellCount = 2,
                 LastUpdated = DateTime.Now
             };
-            
+
             var historyData = new List<AnalystRatingAggregate> { oldConsensus, newConsensus };
-            
+
             _mockAnalystRatingService.Setup(s => s.GetAggregatedRatingsAsync(testSymbol))
                 .ReturnsAsync(newConsensus);
-                
+
             _mockAnalystRatingService.Setup(s => s.GetConsensusHistoryAsync(testSymbol, It.IsAny<int>()))
                 .ReturnsAsync(historyData);
-                
+
             _mockAnalystRatingService.Setup(s => s.AnalyzeConsensusHistoryAsync(testSymbol, It.IsAny<int>()))
                 .ReturnsAsync(newConsensus);
-                
+
             // Act
             var result = await _consensusReportService.GenerateConsensusReportAsync(testSymbol);
-            
+
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(testSymbol, result.Symbol);
@@ -75,7 +75,7 @@ namespace Quantra.Tests
             Assert.AreEqual("Hold", result.ConsensusChangeStats.StartConsensusRating);
             Assert.AreEqual("Buy", result.ConsensusChangeStats.EndConsensusRating);
         }
-        
+
         [TestMethod]
         public async Task GenerateConsensusReport_WithNoData_ReturnsBasicReport()
         {
@@ -91,19 +91,19 @@ namespace Quantra.Tests
                 SellCount = 0,
                 LastUpdated = DateTime.Now
             };
-            
+
             _mockAnalystRatingService.Setup(s => s.GetAggregatedRatingsAsync(testSymbol))
                 .ReturnsAsync(emptyConsensus);
-                
+
             _mockAnalystRatingService.Setup(s => s.GetConsensusHistoryAsync(testSymbol, It.IsAny<int>()))
                 .ReturnsAsync(new List<AnalystRatingAggregate>());
-                
+
             _mockAnalystRatingService.Setup(s => s.GetRecentRatingsAsync(testSymbol, It.IsAny<int>()))
                 .ReturnsAsync(new List<AnalystRating>());
-                
+
             // Act
             var result = await _consensusReportService.GenerateConsensusReportAsync(testSymbol);
-            
+
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(testSymbol, result.Symbol);

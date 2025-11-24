@@ -64,10 +64,10 @@ namespace Quantra.Converters
             {
                 // Positive change - calculate intensity relative to max positive
                 intensity = maxChange > 0 ? Math.Min(currentChange / maxChange, 1.0) : 0.0;
-                
+
                 // Apply exponential curve for more dramatic effect
                 intensity = Math.Pow(intensity, 1.5);
-                
+
                 // Green color with intensity
                 byte greenComponent = (byte)(155 + (100 * intensity)); // Range from 155 to 255
                 return new SolidColorBrush(Color.FromRgb(50, greenComponent, 50));
@@ -76,10 +76,10 @@ namespace Quantra.Converters
             {
                 // Negative change - calculate intensity relative to max negative
                 intensity = minChange < 0 ? Math.Min(Math.Abs(currentChange) / Math.Abs(minChange), 1.0) : 0.0;
-                
+
                 // Apply exponential curve for more dramatic effect
                 intensity = Math.Pow(intensity, 1.5);
-                
+
                 // Red color with intensity
                 byte redComponent = (byte)(155 + (100 * intensity)); // Range from 155 to 255
                 return new SolidColorBrush(Color.FromRgb(redComponent, 20, 60));

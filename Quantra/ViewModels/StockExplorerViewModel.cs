@@ -21,10 +21,10 @@ namespace Quantra.ViewModels
         // Cache management constants
         private const int MAX_CACHED_STOCKS = 50; // Limit cache size to prevent memory issues
         private const int CACHE_CLEANUP_THRESHOLD = 40; // Start cleanup when we reach this many items
-        
+
         // Observable collection of all cached stocks
         public ObservableCollection<QuoteData> CachedStocks { get; } = new();
-        
+
         // Track access order for LRU cache management
         private readonly Dictionary<string, DateTime> _accessTimes = new();
         private readonly object _cacheLock = new object();
@@ -50,9 +50,9 @@ namespace Quantra.ViewModels
                 {
                     // Clear previous stock's chart data to free memory
                     _selectedStock?.ClearChartData();
-                    
+
                     _selectedStock = value;
-                    
+
                     // Update access time for cache management
                     if (value != null)
                     {
@@ -61,7 +61,7 @@ namespace Quantra.ViewModels
                             _accessTimes[value.Symbol] = DateTime.Now;
                         }
                     }
-                    
+
                     OnPropertyChanged(nameof(SelectedStock));
                     // Notify chart property changes
                     OnPropertyChanged(nameof(StockPriceValues));
@@ -112,11 +112,11 @@ namespace Quantra.ViewModels
 
             SymbolSelectedCommand = new RelayCommand<string>(OnSymbolSelected);
             RunPredictionsCommand = new RelayCommand(async _ => await RunPredictionsAsync(), _ => CanRunPredictions);
-            
+
             // Load all cached stocks at startup
             LoadCachedStocks();
             LoadSymbolsAsync();
-            
+
             // Start background preloading for frequently accessed symbols
             _ = Task.Run(async () => await StartBackgroundPreloadingAsync());
         }
@@ -134,7 +134,7 @@ namespace Quantra.ViewModels
         {
             // Try to get from cache first using async version to avoid blocking UI thread
             var cached = await Task.Run(async () => await _cacheService.GetCachedStockAsync(symbol)).ConfigureAwait(false);
-            
+
             if (cached != null)
             {
                 // Update UI on UI thread
@@ -161,10 +161,10 @@ namespace Quantra.ViewModels
                                 LastAccessed = DateTime.Now,
                                 Timestamp = DateTime.Now // Use Timestamp instead of Date
                             };
-                            
+
                             // Cache the new data (database operation in background)
                             await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
-                            
+
                             // Update UI collections on UI thread
                             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                             {
@@ -385,16 +385,16 @@ namespace Quantra.ViewModels
             {
                 // Check if we already have cached data for this time range
                 var data = await Task.Run(() => _stockDataCacheService.GetStockData(symbol, timeRange, "1d", forceRefresh: false));
-                
+
                 if (data == null || data.Count == 0)
                 {
                     // No cached data, fetch from API
                     data = await Task.Run(() => _stockDataCacheService.GetStockData(symbol, timeRange, "1d", forceRefresh: true));
                 }
-                
+
                 // Update chart data on UI thread
                 await LoadChartDataAsync(data);
-                
+
                 //DatabaseMonolith.Log("Info", $"Loaded chart data for {symbol} with time range {timeRange}: {data?.Count ?? 0} records");
             }
             catch (Exception ex)
@@ -487,7 +487,7 @@ namespace Quantra.ViewModels
         {
             // Ensure VIX is available in the database cache for searching
             await Task.Run(() => SymbolCacheUtility.EnsureVixInCache());
-            
+
             _allSymbols = await _alphaVantageService.GetAllStockSymbols();
             UpdateFilteredSymbols();
         }
@@ -568,14 +568,14 @@ namespace Quantra.ViewModels
                 foreach (var stock in CachedStocks.ToList())
                 {
                     tasks.Add(RunPredictionForStockAsync(stock));
-                    
+
                     // Process in batches of 5 to avoid overwhelming the service
                     if (tasks.Count >= 5)
                     {
                         await Task.WhenAll(tasks);
                         tasks.Clear();
                         processedCount += 5;
-                        
+
                         // Update progress
                         await App.Current.Dispatcher.InvokeAsync(() =>
                         {
@@ -600,7 +600,7 @@ namespace Quantra.ViewModels
                 var sellCount = CachedStocks.Count(s => s.PredictedAction == "SELL");
                 var holdCount = CachedStocks.Count(s => s.PredictedAction == "HOLD");
                 var errorCount = CachedStocks.Count(s => s.PredictedAction == "ERROR");
-                
+
                 var validPredictions = CachedStocks.Where(s => s.PredictionConfidence > 0).ToList();
                 var avgConfidence = validPredictions.Any() ? validPredictions.Average(s => s.PredictionConfidence) : 0.0;
 
@@ -619,7 +619,7 @@ namespace Quantra.ViewModels
             finally
             {
                 IsPredictionLoading = false;
-                
+
                 // Reset cursor and clear global loading state
                 await App.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -666,7 +666,7 @@ namespace Quantra.ViewModels
                 {
                     prediction = cachedResult;
                     prediction.CurrentPrice = stock.Price; // Update current price
-                    
+
                     await App.Current.Dispatcher.InvokeAsync(() =>
                     {
                         //Quantra.Views.Shared.SharedTitleBar.UpdateDispatcherMonitoring($"UsingCachedPrediction_{stock.Symbol}", "RunPredictionForStockAsync");
@@ -679,7 +679,7 @@ namespace Quantra.ViewModels
                     //{
                     //    Quantra.Views.Shared.SharedTitleBar.UpdateDispatcherMonitoring($"RunningMLPrediction_{stock.Symbol}", "RunPredictionForStockAsync");
                     //});
-                    
+
                     prediction = await GetPredictionWithFallback(marketData, stock);
 
                     // Cache the result if successful
@@ -697,13 +697,13 @@ namespace Quantra.ViewModels
                 await App.Current.Dispatcher.InvokeAsync(() =>
                 {
                     //Quantra.Views.Shared.SharedTitleBar.UpdateDispatcherMonitoring($"UpdatingStockData_{stock.Symbol}", "RunPredictionForStockAsync");
-                    
+
                     stock.PredictedPrice = prediction.TargetPrice;
                     stock.PredictedAction = prediction.Action;
                     stock.PredictionConfidence = prediction.Confidence;
                     stock.PredictionTimestamp = prediction.PredictionDate;
                     stock.PredictionModelVersion = modelVersion;
-                    
+
                     // Cache the updated stock data with predictions to database asynchronously
                     //await _cacheService.CacheQuoteDataAsync(stock);
                 });
@@ -711,13 +711,13 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", $"Error predicting for {stock.Symbol}", ex.ToString());
-                
+
                 // Set error state on UI thread
                 await App.Current.Dispatcher.InvokeAsync(async () =>
                 {
                     stock.PredictedAction = "ERROR";
                     stock.PredictionConfidence = 0;
-                    
+
                     // Cache the updated stock data with error state to database asynchronously
                     await _cacheService.CacheQuoteDataAsync(stock);
                 });
@@ -740,7 +740,7 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Warning", $"ML prediction failed for {stock.Symbol}, using fallback: {ex.Message}");
-                
+
                 // Fallback to simple rule-based prediction
                 return GenerateFallbackPrediction(stock);
             }
@@ -790,10 +790,10 @@ namespace Quantra.ViewModels
             {
                 // Wait a bit after startup to avoid interfering with initial UI load
                 await Task.Delay(5000);
-                
+
                 // Get frequently accessed symbols from cache
                 var frequentSymbols = _stockDataCacheService.GetFrequentlyAccessedSymbols(5);
-                
+
                 if (frequentSymbols.Count > 0)
                 {
                     //DatabaseMonolith.Log("Info", $"Starting background preload for {frequentSymbols.Count} frequently accessed symbols");
@@ -817,12 +817,12 @@ namespace Quantra.ViewModels
                 stock?.Dispose();
             }
             CachedStocks.Clear();
-            
+
             lock (_cacheLock)
             {
                 _accessTimes.Clear();
             }
-            
+
             _inferenceService?.Dispose();
         }
 

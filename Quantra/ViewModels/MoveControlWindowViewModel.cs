@@ -38,7 +38,7 @@ namespace Quantra.ViewModels
             _columnSpan = columnSpan;
 
             AvailableTabs = new ObservableCollection<string>(availableTabs ?? new List<string>());
-            
+
             InitializeCommands();
         }
 

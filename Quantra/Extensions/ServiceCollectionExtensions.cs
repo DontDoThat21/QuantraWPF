@@ -45,17 +45,17 @@ namespace Quantra.Extensions
             services.AddSingleton<IDatabaseInitializationService, DatabaseInitializationService>();
 
             // Register configuration management
-            services.AddSingleton<IConfigurationManager>(sp => 
+            services.AddSingleton<IConfigurationManager>(sp =>
                 new ConfigurationManager(sp.GetRequiredService<IConfiguration>()));
-                
+
             // Register configuration models as singletons
             services.AddSingleton(sp => sp.GetRequiredService<IConfigurationManager>().GetSection<AppConfig>(""));
             services.AddSingleton(sp => sp.GetRequiredService<IConfigurationManager>().GetSection<ApiConfig>("Api"));
             services.AddSingleton(sp => sp.GetRequiredService<IConfigurationManager>().GetSection<TradingConfig>("Trading"));
-            
+
             // Register database configuration bridge
             services.AddSingleton<DatabaseConfigBridge>();
-            
+
             // Register concrete types first, then interfaces pointing to the same instances
             services.AddSingleton<SettingsService>();
             services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
@@ -65,7 +65,7 @@ namespace Quantra.Extensions
 
             // Audio and notification services depend on UserSettings from DatabaseMonolith, so construct via factories
             services.AddSingleton<IAudioService>(sp => new AudioService(sp.GetRequiredService<IUserSettingsService>().GetUserSettings()));
-            
+
             // Register NotificationService as both concrete type and interface
             services.AddSingleton<NotificationService>(sp =>
             {
@@ -79,36 +79,36 @@ namespace Quantra.Extensions
             // Core services - Register concrete types first, then interfaces pointing to same instances
             services.AddSingleton<TechnicalIndicatorService>();
             services.AddSingleton<ITechnicalIndicatorService>(sp => sp.GetRequiredService<TechnicalIndicatorService>());
-            
+
             services.AddSingleton<AlphaVantageService>();
             services.AddSingleton<IAlphaVantageService>(sp => sp.GetRequiredService<AlphaVantageService>());
-            
+
             services.AddSingleton<HistoricalDataService>();
             services.AddSingleton<IHistoricalDataService>(sp => sp.GetRequiredService<HistoricalDataService>());
-            
+
             // Register EmailService as both concrete type and interface
             services.AddSingleton<EmailService>();
             services.AddSingleton<IEmailService>(sp => sp.GetRequiredService<EmailService>());
-            
+
             // Register SmsService as both concrete type and interface
             services.AddSingleton<SmsService>();
             services.AddSingleton<ISmsService>(sp => sp.GetRequiredService<SmsService>());
-            
+
             // Register TradingService as both concrete type and interface
             services.AddSingleton<TradingService>();
             services.AddSingleton<ITradingService>(sp => sp.GetRequiredService<TradingService>());
-            
+
             // Register StockDataCacheService as both concrete type and interface
             services.AddSingleton<StockDataCacheService>();
             services.AddSingleton<IStockDataCacheService>(sp => sp.GetRequiredService<StockDataCacheService>());
-            
+
             // Logging service
             services.AddSingleton<LoggingService>();
-            
+
             // Register TradeRecordService as both concrete type and interface
             services.AddSingleton<TradeRecordService>();
             services.AddSingleton<ITradeRecordService>(sp => sp.GetRequiredService<TradeRecordService>());
-            
+
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();
             services.AddSingleton<RealTimeInferenceService>();
@@ -131,7 +131,7 @@ namespace Quantra.Extensions
                 var configMgr = sp.GetService<IConfigurationManager>();
                 return new OpenAIPredictionEnhancementService(sentiment, configMgr, null);
             });
-            
+
             // Register ViewModels
             services.AddTransient<PredictionAnalysisViewModel>();
             services.AddTransient<LoginWindowViewModel>();
@@ -141,10 +141,10 @@ namespace Quantra.Extensions
             services.AddTransient<TradingRulesControlViewModel>();
             services.AddTransient<ResizeControlWindowViewModel>();
             services.AddTransient<SentimentDashboardControlViewModel>();
-            
+
             // Register Views
             services.AddTransient<PredictionAnalysisControl>();
-            
+
             return services;
         }
     }

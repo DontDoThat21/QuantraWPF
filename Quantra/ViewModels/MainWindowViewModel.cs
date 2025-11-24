@@ -24,7 +24,7 @@ namespace Quantra.ViewModels
         private readonly AlphaVantageService _alphaVantageService;
         private readonly TechnicalIndicatorService _technicalIndicatorService;
         private readonly DispatcherTimer _tradeUpdateTimer;
-        
+
         private bool _isTradingActive;
         private string _currentTicker;
         private bool _isSymbolSelected;
@@ -201,9 +201,9 @@ namespace Quantra.ViewModels
             ResumeTradingCommand = new RelayCommand(ExecuteResumeTrading);
 
             // Initialize trade update timer
-            _tradeUpdateTimer = new DispatcherTimer 
-            { 
-                Interval = TimeSpan.FromSeconds(5) 
+            _tradeUpdateTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(5)
             };
             _tradeUpdateTimer.Tick += TradeUpdateTimer_Tick;
 
@@ -244,7 +244,7 @@ namespace Quantra.ViewModels
                 IsTradingActive = true;
                 _tradeUpdateTimer.Start();
                 ShowNotification?.Invoke("Trading started successfully", "success");
-                
+
                 ((RelayCommand)StartTradingCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)StopTradingCommand).RaiseCanExecuteChanged();
             }
@@ -268,7 +268,7 @@ namespace Quantra.ViewModels
                 IsTradingActive = false;
                 _tradeUpdateTimer.Stop();
                 ShowNotification?.Invoke("Trading stopped successfully", "success");
-                
+
                 ((RelayCommand)StartTradingCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)StopTradingCommand).RaiseCanExecuteChanged();
             }

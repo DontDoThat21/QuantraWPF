@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Models
             get => Get<ApplicationConfig>(new ApplicationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// API configuration
         /// </summary>
@@ -25,7 +25,7 @@ namespace Quantra.Configuration.Models
             get => Get<ApiConfig>(new ApiConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Cache configuration
         /// </summary>
@@ -34,7 +34,7 @@ namespace Quantra.Configuration.Models
             get => Get<CacheConfig>(new CacheConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// UI configuration
         /// </summary>
@@ -43,7 +43,7 @@ namespace Quantra.Configuration.Models
             get => Get<UIConfig>(new UIConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Notifications configuration
         /// </summary>
@@ -52,7 +52,7 @@ namespace Quantra.Configuration.Models
             get => Get<NotificationConfig>(new NotificationConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Trading configuration
         /// </summary>
@@ -61,7 +61,7 @@ namespace Quantra.Configuration.Models
             get => Get<TradingConfig>(new TradingConfig());
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Sentiment analysis configuration
         /// </summary>
@@ -71,7 +71,7 @@ namespace Quantra.Configuration.Models
             set => Set(value);
         }
     }
-    
+
     /// <summary>
     /// Application section configuration
     /// </summary>
@@ -86,7 +86,7 @@ namespace Quantra.Configuration.Models
             get => Get("Quantra");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Application version
         /// </summary>
@@ -96,7 +96,7 @@ namespace Quantra.Configuration.Models
             get => Get("1.0.0");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Application environment (Development, Staging, Production)
         /// </summary>

@@ -24,7 +24,7 @@ namespace Quantra.Configuration
     {
         private const string DEFAULT_USER_SETTINGS_FILE = "usersettings.json";
         private const string BACKUP_FOLDER = "ConfigBackups";
-        
+
         private readonly IConfiguration _configuration;
         private readonly IConfigurationBuilder _configurationBuilder;
         private readonly ConcurrentDictionary<string, object> _cachedSections = new ConcurrentDictionary<string, object>();
@@ -34,12 +34,12 @@ namespace Quantra.Configuration
         private readonly string _userSettingsFilePath;
         private readonly string _backupFolderPath;
         private IDisposable _changeTokenRegistration;
-        
+
         /// <summary>
         /// Event that fires when a configuration value changes
         /// </summary>
         public event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
-        
+
         /// <summary>
         /// Get the raw configuration object
         /// </summary>
@@ -52,10 +52,10 @@ namespace Quantra.Configuration
         public ConfigurationManager(IConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            
+
             // Initialize configuration builder
             _configurationBuilder = new ConfigurationBuilder();
-            
+
             // If configuration is a root, copy its sources to the builder
             if (configuration is IConfigurationRoot configRoot)
             {
@@ -65,22 +65,22 @@ namespace Quantra.Configuration
                     // This will be used only when rebuilding configuration
                 }
             }
-            
+
             // Set up file paths
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var appFolder = Path.Combine(appDataPath, "Quantra");
-            
+
             // Ensure app folder exists
             if (!Directory.Exists(appFolder))
                 Directory.CreateDirectory(appFolder);
-                
+
             _userSettingsFilePath = Path.Combine(appFolder, DEFAULT_USER_SETTINGS_FILE);
             _backupFolderPath = Path.Combine(appFolder, BACKUP_FOLDER);
-            
+
             // Ensure backup folder exists
             if (!Directory.Exists(_backupFolderPath))
                 Directory.CreateDirectory(_backupFolderPath);
-            
+
             // Register for config changes
             ChangeToken.OnChange(
                 () => _configuration.GetReloadToken(),
@@ -170,7 +170,7 @@ namespace Quantra.Configuration
         {
             Dispose(false);
         }
-        
+
         /// <summary>
         /// Dispose method
         /// </summary>
@@ -179,7 +179,7 @@ namespace Quantra.Configuration
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        
+
         /// <summary>
         /// Protected dispose method
         /// </summary>
@@ -203,19 +203,19 @@ namespace Quantra.Configuration
         {
             if (sectionPath == null)
                 throw new ArgumentNullException(nameof(sectionPath));
-            
+
             // Handle empty string as root level section - use special cache key
             string cacheKey = string.IsNullOrEmpty(sectionPath) ? "__ROOT__" : sectionPath;
-            
+
             // Get from cache if available
             if (_cachedSections.TryGetValue(cacheKey, out var cached) && cached is T typedCached)
                 return typedCached;
-            
+
             _configLock.EnterReadLock();
             try
             {
                 IConfigurationSection section;
-                
+
                 // For empty/null sectionPath, treat as root configuration
                 if (string.IsNullOrEmpty(sectionPath))
                 {
@@ -228,7 +228,7 @@ namespace Quantra.Configuration
                 else
                 {
                     section = _configuration.GetSection(sectionPath);
-                    
+
                     // Check if section exists
                     if (!section.Exists())
                     {
@@ -237,14 +237,14 @@ namespace Quantra.Configuration
                         _cachedSections[cacheKey] = defaultInstance;
                         return defaultInstance;
                     }
-                    
+
                     // Bind section to new instance
                     var instance = new T();
                     section.Bind(instance);
-                    
+
                     // Cache the bound instance
                     _cachedSections[cacheKey] = instance;
-                    
+
                     return instance;
                 }
             }
@@ -253,7 +253,7 @@ namespace Quantra.Configuration
                 _configLock.ExitReadLock();
             }
         }
-        
+
         /// <summary>
         /// Get a specific configuration value
         /// </summary>
@@ -265,7 +265,7 @@ namespace Quantra.Configuration
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key));
-            
+
             _configLock.EnterReadLock();
             try
             {
@@ -276,7 +276,7 @@ namespace Quantra.Configuration
                 _configLock.ExitReadLock();
             }
         }
-        
+
         /// <summary>
         /// Set a configuration value
         /// </summary>
@@ -288,16 +288,16 @@ namespace Quantra.Configuration
         {
             if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentNullException(nameof(key));
-            
+
             // Get old value for change notification
             var oldValue = GetValue<T>(key);
-            
+
             _configLock.EnterWriteLock();
             try
             {
                 // Store in the pending changes dictionary
                 _pendingChanges[key] = value;
-                
+
                 // Clear any cached sections that contain this key
                 foreach (var cachedKey in _cachedSections.Keys.ToList())
                 {
@@ -306,13 +306,13 @@ namespace Quantra.Configuration
                         _cachedSections.TryRemove(cachedKey, out _);
                     }
                 }
-                
+
                 // Persist if requested
                 if (persist)
                 {
                     SaveChangesAsync().GetAwaiter().GetResult();
                 }
-                
+
                 // Fire change notification
                 OnConfigurationValueChanged(key, oldValue, value);
             }
@@ -321,7 +321,7 @@ namespace Quantra.Configuration
                 _configLock.ExitWriteLock();
             }
         }
-        
+
         /// <summary>
         /// Save all pending configuration changes
         /// </summary>
@@ -330,13 +330,13 @@ namespace Quantra.Configuration
         {
             if (_pendingChanges.Count == 0)
                 return;
-            
+
             _configLock.EnterWriteLock();
             try
             {
                 // Get current user settings or create new if it doesn't exist
                 JObject userSettings = null;
-                
+
                 // Check if file exists and load it
                 if (File.Exists(_userSettingsFilePath))
                 {
@@ -347,16 +347,16 @@ namespace Quantra.Configuration
                 {
                     userSettings = new JObject();
                 }
-                
+
                 // Apply all pending changes
                 foreach (var change in _pendingChanges)
                 {
                     SetJsonValue(userSettings, change.Key, JToken.FromObject(change.Value));
                 }
-                
+
                 // Clear pending changes
                 _pendingChanges.Clear();
-                
+
                 // Save to file
                 var serialized = userSettings.ToString(Formatting.Indented);
                 await File.WriteAllTextAsync(_userSettingsFilePath, serialized);
@@ -371,7 +371,7 @@ namespace Quantra.Configuration
                 _configLock.ExitWriteLock();
             }
         }
-        
+
         /// <summary>
         /// Set a value in a JSON object using hierarchical path
         /// </summary>
@@ -382,20 +382,20 @@ namespace Quantra.Configuration
         {
             if (rootObject == null)
                 throw new ArgumentNullException(nameof(rootObject));
-                
+
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentNullException(nameof(path));
-                
+
             // Split path into segments
             var segments = path.Split(':');
-            
+
             JObject current = rootObject;
-            
+
             // Navigate to the parent object
             for (int i = 0; i < segments.Length - 1; i++)
             {
                 var segment = segments[i];
-                
+
                 if (!current.ContainsKey(segment))
                 {
                     // Create new object if it doesn't exist
@@ -406,7 +406,7 @@ namespace Quantra.Configuration
                 else
                 {
                     var token = current[segment];
-                    
+
                     // Convert to object if not already
                     if (token.Type != JTokenType.Object)
                     {
@@ -420,11 +420,11 @@ namespace Quantra.Configuration
                     }
                 }
             }
-            
+
             // Set value on the last segment
             current[segments.Last()] = value;
         }
-        
+
         /// <summary>
         /// Reload the configuration from all sources
         /// </summary>
@@ -436,13 +436,13 @@ namespace Quantra.Configuration
             {
                 // Clear caches
                 _cachedSections.Clear();
-                
+
                 // Force reload of configuration
                 if (_configuration is IConfigurationRoot configRoot)
                 {
                     configRoot.Reload();
                 }
-                
+
                 return Task.CompletedTask;
             }
             finally
@@ -450,7 +450,7 @@ namespace Quantra.Configuration
                 _configLock.ExitWriteLock();
             }
         }
-        
+
         /// <summary>
         /// Handler for configuration changes
         /// </summary>
@@ -461,7 +461,7 @@ namespace Quantra.Configuration
             {
                 // Clear cached sections
                 _cachedSections.Clear();
-                
+
                 // Notify subscribers of changes
                 NotifyChangeSubscribers();
             }
@@ -470,7 +470,7 @@ namespace Quantra.Configuration
                 _configLock.ExitWriteLock();
             }
         }
-        
+
         /// <summary>
         /// Handler for specific configuration value changes
         /// </summary>
@@ -481,11 +481,11 @@ namespace Quantra.Configuration
         {
             var args = new ConfigurationChangedEventArgs(key, oldValue, newValue);
             ConfigurationChanged?.Invoke(this, args);
-            
+
             // Notify subscribers for this specific path
             NotifyChangeSubscribers(key);
         }
-        
+
         /// <summary>
         /// Register a configuration object for automatic change notifications
         /// </summary>
@@ -495,13 +495,13 @@ namespace Quantra.Configuration
         {
             if (sectionPath == null)
                 throw new ArgumentNullException(nameof(sectionPath));
-                
+
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
-            
+
             // Handle empty string as root level section - use special cache key for consistency
             string cacheKey = string.IsNullOrEmpty(sectionPath) ? "__ROOT__" : sectionPath;
-                
+
             _configLock.EnterWriteLock();
             try
             {
@@ -511,7 +511,7 @@ namespace Quantra.Configuration
                     notifications = new List<WeakReference>();
                     _changeNotifications[cacheKey] = notifications;
                 }
-                
+
                 // Add weak reference to the instance
                 notifications.Add(new WeakReference(instance));
             }
@@ -520,7 +520,7 @@ namespace Quantra.Configuration
                 _configLock.ExitWriteLock();
             }
         }
-        
+
         /// <summary>
         /// Notify change subscribers
         /// </summary>
@@ -533,17 +533,17 @@ namespace Quantra.Configuration
                 foreach (var kvp in _changeNotifications)
                 {
                     // Skip if we have a specific path and it's not related to this subscription
-                    if (!string.IsNullOrEmpty(changedPath) && 
-                        !changedPath.StartsWith(kvp.Key) && 
+                    if (!string.IsNullOrEmpty(changedPath) &&
+                        !changedPath.StartsWith(kvp.Key) &&
                         !kvp.Key.StartsWith(changedPath))
                         continue;
-                        
+
                     var path = kvp.Key;
                     var references = kvp.Value;
-                    
+
                     // Clean up dead references while notifying live ones
                     var deadRefs = new List<WeakReference>();
-                    
+
                     foreach (var weakRef in references)
                     {
                         if (!weakRef.IsAlive)
@@ -551,18 +551,18 @@ namespace Quantra.Configuration
                             deadRefs.Add(weakRef);
                             continue;
                         }
-                        
+
                         var target = weakRef.Target;
                         if (target != null)
                         {
                             // Rebind the section to update the target
                             var section = _configuration.GetSection(path);
-                            
+
                             // Use reflection to get all property setters
                             var properties = target.GetType().GetProperties()
                                 .Where(p => p.CanWrite && p.CanRead)
                                 .ToList();
-                                
+
                             // For each property, try to get the value from config
                             foreach (var prop in properties)
                             {
@@ -586,7 +586,7 @@ namespace Quantra.Configuration
                             deadRefs.Add(weakRef);
                         }
                     }
-                    
+
                     // Remove dead references
                     if (deadRefs.Count > 0)
                     {
@@ -612,7 +612,7 @@ namespace Quantra.Configuration
                 _configLock.ExitReadLock();
             }
         }
-        
+
         /// <summary>
         /// Create a backup of the current configuration
         /// </summary>
@@ -625,7 +625,7 @@ namespace Quantra.Configuration
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 var backupFilename = $"config_backup_{timestamp}.json";
                 var backupPath = Path.Combine(_backupFolderPath, backupFilename);
-                
+
                 // Ensure we have user settings to backup
                 if (File.Exists(_userSettingsFilePath))
                 {
@@ -633,7 +633,7 @@ namespace Quantra.Configuration
                     //DatabaseMonolith.Log("Info", $"Configuration backup created at {backupPath}");
                     return backupPath;
                 }
-                
+
                 // If no user settings yet, create an empty backup
                 File.WriteAllText(backupPath, "{}");
                 return backupPath;
@@ -644,7 +644,7 @@ namespace Quantra.Configuration
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Restore configuration from a backup file
         /// </summary>
@@ -659,16 +659,16 @@ namespace Quantra.Configuration
                     //DatabaseMonolith.Log("Error", $"Configuration backup file not found: {backupPath}");
                     return false;
                 }
-                
+
                 // Create a backup of the current configuration before restoring
                 BackupConfiguration();
-                
+
                 // Restore from backup
                 File.Copy(backupPath, _userSettingsFilePath, true);
-                
+
                 // Reload configuration
                 ReloadAsync().GetAwaiter().GetResult();
-                
+
                 //DatabaseMonolith.Log("Info", $"Configuration restored from backup: {backupPath}");
                 return true;
             }
@@ -678,7 +678,7 @@ namespace Quantra.Configuration
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Reset to default configuration
         /// </summary>
@@ -697,7 +697,7 @@ namespace Quantra.Configuration
                         {
                             // Create a backup before resetting
                             BackupConfiguration();
-                            
+
                             // Delete user settings file
                             File.Delete(_userSettingsFilePath);
                         }
@@ -709,44 +709,44 @@ namespace Quantra.Configuration
                         {
                             // Create a backup before resetting
                             BackupConfiguration();
-                            
+
                             // Load user settings
                             var json = File.ReadAllText(_userSettingsFilePath);
                             var userSettings = JObject.Parse(json);
-                            
+
                             // Remove the section
                             var segments = sectionPath.Split(':');
                             JToken current = userSettings;
-                            
+
                             for (int i = 0; i < segments.Length - 1; i++)
                             {
                                 if (!(current is JObject currentObj))
                                     break;
-                                    
+
                                 if (!currentObj.ContainsKey(segments[i]))
                                     break;
-                                    
+
                                 current = currentObj[segments[i]];
                             }
-                            
+
                             if (current is JObject currentObj2 && currentObj2.ContainsKey(segments.Last()))
                             {
                                 currentObj2.Remove(segments.Last());
-                                
+
                                 // Save updated settings
                                 var serialized = userSettings.ToString(Formatting.Indented);
                                 File.WriteAllText(_userSettingsFilePath, serialized);
                             }
                         }
                     }
-                    
+
                     // Clear caches
                     _cachedSections.Clear();
                     _pendingChanges.Clear();
-                    
+
                     // Force configuration reload
                     ReloadAsync().GetAwaiter().GetResult();
-                    
+
                     //DatabaseMonolith.Log("Info", $"Configuration reset to defaults{(string.IsNullOrEmpty(sectionPath) ? "" : $" for section {sectionPath}")}");
                 }
                 finally

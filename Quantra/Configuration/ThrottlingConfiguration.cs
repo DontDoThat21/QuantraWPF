@@ -61,22 +61,22 @@ namespace Quantra.Configuration
         {
             if (TechnicalIndicatorMaxDegreeOfParallelism <= 0)
                 throw new ArgumentException("TechnicalIndicatorMaxDegreeOfParallelism must be greater than zero");
-            
+
             if (ApiBatchingMaxDegreeOfParallelism <= 0)
                 throw new ArgumentException("ApiBatchingMaxDegreeOfParallelism must be greater than zero");
-            
+
             if (SentimentAnalysisMaxDegreeOfParallelism <= 0)
                 throw new ArgumentException("SentimentAnalysisMaxDegreeOfParallelism must be greater than zero");
-            
+
             if (AlertCheckingMaxDegreeOfParallelism <= 0)
                 throw new ArgumentException("AlertCheckingMaxDegreeOfParallelism must be greater than zero");
 
             // Warn about potentially high values
             //if (TechnicalIndicatorMaxDegreeOfParallelism > 20)
-                //DatabaseMonolith.Log("Warning", "TechnicalIndicatorMaxDegreeOfParallelism is very high (>20), may cause thread pool exhaustion", "");
-            
+            //DatabaseMonolith.Log("Warning", "TechnicalIndicatorMaxDegreeOfParallelism is very high (>20), may cause thread pool exhaustion", "");
+
             //if (ApiBatchingMaxDegreeOfParallelism > 16)
-                //DatabaseMonolith.Log("Warning", "ApiBatchingMaxDegreeOfParallelism is very high (>16), may exceed API rate limits", "");
+            //DatabaseMonolith.Log("Warning", "ApiBatchingMaxDegreeOfParallelism is very high (>16), may exceed API rate limits", "");
         }
     }
 }

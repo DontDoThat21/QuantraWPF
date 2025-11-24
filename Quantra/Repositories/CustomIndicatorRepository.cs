@@ -27,10 +27,10 @@ namespace Quantra.Repositories
             var appDataPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Quantra");
-            
+
             _indicatorsDirectory = Path.Combine(appDataPath, "CustomIndicators");
             _cache = new Dictionary<string, CustomIndicatorDefinition>();
-            
+
             // Ensure the directory exists
             if (!Directory.Exists(_indicatorsDirectory))
             {
@@ -60,7 +60,7 @@ namespace Quantra.Repositories
                 using var stream = File.OpenRead(filePath);
                 var definition = await JsonSerializer.DeserializeAsync<CustomIndicatorDefinition>(
                     stream, _options);
-                
+
                 if (definition != null)
                 {
                     _cache[id] = definition;
@@ -84,10 +84,10 @@ namespace Quantra.Repositories
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
-            
+
             if (string.IsNullOrWhiteSpace(definition.Id))
                 definition.Id = Guid.NewGuid().ToString();
-            
+
             definition.ModifiedDate = DateTime.Now;
 
             var filePath = GetFilePath(definition.Id);
@@ -95,7 +95,7 @@ namespace Quantra.Repositories
             {
                 using var stream = File.Create(filePath);
                 await JsonSerializer.SerializeAsync(stream, definition, _options);
-                
+
                 // Update cache
                 _cache[definition.Id] = definition;
                 return true;
@@ -142,12 +142,12 @@ namespace Quantra.Repositories
         public async Task<List<CustomIndicatorDefinition>> GetAllIndicatorsAsync()
         {
             var indicators = new List<CustomIndicatorDefinition>();
-            
+
             try
             {
                 // Load all indicator definition files
                 var files = Directory.GetFiles(_indicatorsDirectory, "*.json");
-                
+
                 foreach (var file in files)
                 {
                     try
@@ -155,7 +155,7 @@ namespace Quantra.Repositories
                         using var stream = File.OpenRead(file);
                         var definition = await JsonSerializer.DeserializeAsync<CustomIndicatorDefinition>(
                             stream, _options);
-                            
+
                         if (definition != null)
                         {
                             indicators.Add(definition);
@@ -172,7 +172,7 @@ namespace Quantra.Repositories
             {
                 //DatabaseMonolith.Log("Error", "Failed to list indicator definition files", ex.ToString());
             }
-            
+
             return indicators;
         }
 
@@ -185,13 +185,13 @@ namespace Quantra.Repositories
         public async Task<List<CustomIndicatorDefinition>> SearchIndicatorsAsync(string searchTerm, string category = null)
         {
             var allIndicators = await GetAllIndicatorsAsync();
-            
+
             // Filter by search term and category if provided
             return allIndicators
-                .Where(i => (string.IsNullOrWhiteSpace(searchTerm) || 
+                .Where(i => (string.IsNullOrWhiteSpace(searchTerm) ||
                              i.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                              i.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) &&
-                            (string.IsNullOrWhiteSpace(category) || 
+                            (string.IsNullOrWhiteSpace(category) ||
                              i.Category.Equals(category, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
@@ -215,7 +215,7 @@ namespace Quantra.Repositories
         {
             if (string.IsNullOrWhiteSpace(id))
                 return false;
-                
+
             return File.Exists(GetFilePath(id));
         }
     }

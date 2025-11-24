@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Utilities
         private const string ENTROPY_FILE = "config.entropy";
         private static readonly byte[] _defaultEntropy = Encoding.UTF8.GetBytes("Quantra_Configuration_Protection");
         private static string _entropyFilePath;
-        
+
         /// <summary>
         /// Static constructor
         /// </summary>
@@ -25,12 +25,12 @@ namespace Quantra.Configuration.Utilities
             // Set up entropy file path
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var appFolder = Path.Combine(appDataPath, "Quantra");
-            
+
             if (!Directory.Exists(appFolder))
                 Directory.CreateDirectory(appFolder);
-                
+
             _entropyFilePath = Path.Combine(appFolder, ENTROPY_FILE);
-            
+
             // Create entropy file if it doesn't exist
             if (!File.Exists(_entropyFilePath))
             {
@@ -39,7 +39,7 @@ namespace Quantra.Configuration.Utilities
                 {
                     rng.GetBytes(entropy);
                 }
-                
+
                 File.WriteAllBytes(_entropyFilePath, entropy);
             }
         }
@@ -54,14 +54,14 @@ namespace Quantra.Configuration.Utilities
         {
             if (string.IsNullOrEmpty(plainText))
                 return plainText;
-            
+
             try
             {
 #if WINDOWS
                 byte[] entropy = useCustomEntropy ? GetEntropy() : _defaultEntropy;
                 byte[] data = Encoding.UTF8.GetBytes(plainText);
                 byte[] encryptedData = ProtectedData.Protect(data, entropy, DataProtectionScope.CurrentUser);
-                
+
                 return Convert.ToBase64String(encryptedData);
 #else
                 // On non-Windows platforms, we can't use DPAPI, so we'll just return the plain text
@@ -75,7 +75,7 @@ namespace Quantra.Configuration.Utilities
                 return plainText; // Return unencrypted if encryption fails
             }
         }
-        
+
         /// <summary>
         /// Decrypt sensitive data
         /// </summary>
@@ -86,14 +86,14 @@ namespace Quantra.Configuration.Utilities
         {
             if (string.IsNullOrEmpty(encryptedText))
                 return encryptedText;
-            
+
             try
             {
 #if WINDOWS
                 byte[] entropy = useCustomEntropy ? GetEntropy() : _defaultEntropy;
                 byte[] encryptedData = Convert.FromBase64String(encryptedText);
                 byte[] data = ProtectedData.Unprotect(encryptedData, entropy, DataProtectionScope.CurrentUser);
-                
+
                 return Encoding.UTF8.GetString(data);
 #else
                 // On non-Windows platforms, we just return the encrypted text as is
@@ -107,7 +107,7 @@ namespace Quantra.Configuration.Utilities
                 return encryptedText; // Return encrypted if decryption fails
             }
         }
-        
+
         /// <summary>
         /// Get entropy for encryption
         /// </summary>
@@ -121,11 +121,11 @@ namespace Quantra.Configuration.Utilities
                     return File.ReadAllBytes(_entropyFilePath);
                 }
             }
-            catch 
+            catch
             {
                 // Fall back to default entropy if file can't be read
             }
-            
+
             return _defaultEntropy;
         }
     }

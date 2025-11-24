@@ -20,10 +20,10 @@ namespace Quantra.Configuration.Providers
         {
             if (builder == null)
                 throw new ArgumentNullException(nameof(builder));
-                
+
             if (args == null || args.Length == 0)
                 return builder;
-                
+
             return builder.AddCommandLine(args, new Dictionary<string, string>
             {
                 // Map command line parameters to configuration keys

@@ -13,7 +13,7 @@ namespace Quantra.Configuration.Models
     {
         private readonly Dictionary<string, object> _properties = new Dictionary<string, object>();
         private readonly Dictionary<string, string> _errors = new Dictionary<string, string>();
-        
+
         /// <summary>
         /// Event that fires when a property changes
         /// </summary>
@@ -67,15 +67,15 @@ namespace Quantra.Configuration.Models
                 throw new ArgumentNullException(nameof(propertyName));
 
             // Check if value has changed
-            if (_properties.TryGetValue(propertyName, out object oldValue) && 
+            if (_properties.TryGetValue(propertyName, out object oldValue) &&
                 EqualityComparer<T>.Default.Equals((T)oldValue, value))
                 return false;
 
             _properties[propertyName] = value;
-            
+
             // Validate the new value
             ValidateProperty(propertyName);
-            
+
             OnPropertyChanged(propertyName);
             return true;
         }
@@ -88,17 +88,17 @@ namespace Quantra.Configuration.Models
         {
             // Remove existing error
             _errors.Remove(propertyName);
-            
+
             // Get property info
             var propertyInfo = GetType().GetProperty(propertyName);
             if (propertyInfo == null) return;
-            
+
             // Get property value
             object value = propertyInfo.GetValue(this);
-            
+
             // Get validation attributes
             var validationAttributes = (ValidationAttribute[])propertyInfo.GetCustomAttributes(typeof(ValidationAttribute), true);
-            
+
             // Validate each attribute
             foreach (var attribute in validationAttributes)
             {
@@ -117,12 +117,12 @@ namespace Quantra.Configuration.Models
         public virtual bool Validate()
         {
             _errors.Clear();
-            
+
             foreach (var property in GetType().GetProperties())
             {
                 ValidateProperty(property.Name);
             }
-            
+
             return _errors.Count == 0;
         }
 

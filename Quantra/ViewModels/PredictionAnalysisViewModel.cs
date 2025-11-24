@@ -39,8 +39,8 @@ namespace Quantra.ViewModels
         // Prediction data
         public ObservableCollection<PredictionModel> Predictions { get; set; } = new();
         private ObservableCollection<PredictionModel> _models = new();
-        public ObservableCollection<PredictionModel> Models 
-        { 
+        public ObservableCollection<PredictionModel> Models
+        {
             get => _models;
             private set
             {
@@ -314,13 +314,13 @@ namespace Quantra.ViewModels
             try
             {
                 await _tradingRuleService.SaveTradingRuleAsync(rule);
-                
+
                 // Only add to collection if it's a new rule
                 if (!TradingRules.Contains(rule))
                 {
                     TradingRules.Add(rule);
                 }
-                
+
                 StatusText = $"Trading rule saved for {rule.Symbol}";
             }
             catch (Exception ex)
@@ -353,23 +353,23 @@ namespace Quantra.ViewModels
                 // Get latest technical indicators
                 var indicators = await _indicatorService.GetIndicatorsForPrediction(
                     prediction.Symbol, "1day");
-                
+
                 // Validate trading conditions
                 if (!ValidateTradingConditions(prediction, indicators))
                     return false;
-                
+
                 // Execute trade through trading service
                 bool success = await TradingService.ExecuteTradeAsync(
                     prediction.Symbol,
                     prediction.PredictedAction,
                     prediction.CurrentPrice,
                     prediction.TargetPrice);
-                
+
                 if (success)
                 {
                     // Update prediction status
                     prediction.LastVerifiedDate = DateTime.Now;
-                    
+
                     // Save the updated prediction as a PredictionAnalysisResult
                     var result = new PredictionAnalysisResult
                     {
@@ -385,7 +385,7 @@ namespace Quantra.ViewModels
                     };
                     _analysisRepository.SaveAnalysisResults(new[] { result });
                 }
-                
+
                 return success;
             }
             catch (Exception ex)
@@ -399,7 +399,7 @@ namespace Quantra.ViewModels
         {
             if (prediction.Confidence < MinConfidence)
                 return false;
-                
+
             // Check if indicators support the trade direction
             if (indicators.TryGetValue("TradingSignal", out double signal))
             {
@@ -408,14 +408,14 @@ namespace Quantra.ViewModels
                 if (prediction.PredictedAction == "SELL" && signal > 30)
                     return false;
             }
-            
+
             // Check market conditions
             if (prediction.MarketContext != null)
             {
                 if (prediction.MarketContext.VolatilityIndex > 35) // High VIX
                     return false;
             }
-            
+
             return true;
         }
 
@@ -425,14 +425,14 @@ namespace Quantra.ViewModels
             {
                 // Get all symbols from the repository
                 var symbols = await Task.Run(() => _analysisRepository.GetSymbols());
-                
+
                 // Cache the models for faster retrieval
                 var modelTasks = symbols.Select(async symbol =>
                 {
                     // Get latest indicators for the symbol
                     var indicators = await _indicatorService.GetIndicatorsForPrediction(symbol, "1day");
                     var signals = await _indicatorService.GetAlgorithmicTradingSignals(symbol);
-                    
+
                     var model = new PredictionModel
                     {
                         Symbol = symbol,
@@ -487,15 +487,15 @@ namespace Quantra.ViewModels
 
                 // Use the selected strategy profile if set, otherwise default to SmaCrossover
                 var strategy = SelectedStrategyProfile ?? new Models.SmaCrossoverStrategy();
-                
+
                 // Analyze the symbol using the repository
                 var predictionResult = await Task.Run(() => _analysisRepository.AnalyzeSymbol(symbol, strategy));
-                
+
                 if (predictionResult != null)
                 {
                     return predictionResult.ToPredictionModel();
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -511,22 +511,22 @@ namespace Quantra.ViewModels
             {
                 var predictions = new List<PredictionModel>();
                 var symbols = await Task.Run(() => _analysisRepository.GetSymbols());
-                
+
                 foreach (var symbol in symbols)
                 {
                     // Use the selected strategy profile if set, otherwise default to SmaCrossover
                     var strategy = SelectedStrategyProfile ?? new Models.SmaCrossoverStrategy();
-                    
+
                     // Analyze each symbol using the repository
                     var predictionResult = await Task.Run(() => _analysisRepository.AnalyzeSymbol(symbol, strategy));
-                    
+
                     if (predictionResult != null)
                     {
                         var prediction = predictionResult.ToPredictionModel();
                         predictions.Add(prediction);
                     }
                 }
-                
+
                 return predictions;
             }
             catch (Exception ex)
@@ -546,7 +546,7 @@ namespace Quantra.ViewModels
         public static PredictionModel ToPredictionModel(this PredictionAnalysisResult result)
         {
             if (result == null) return null;
-            
+
             // Copy all indicators directly (no HasValue check needed for double)
             var indicators = result.Indicators != null
                 ? new Dictionary<string, double>(result.Indicators)

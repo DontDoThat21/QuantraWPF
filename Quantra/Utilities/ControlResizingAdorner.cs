@@ -19,7 +19,7 @@ namespace Quantra.Utilities
         private const double CORNER_THRESHOLD = 20; // Increased from 15
         // IMPROVEMENT: Added edge threshold for detecting edges
         private const double EDGE_THRESHOLD = 15; // New threshold for edges
-        
+
         private Brush handleFill = new SolidColorBrush(Color.FromArgb(180, 75, 169, 248));
         private Brush handleStroke = new SolidColorBrush(Color.FromRgb(75, 169, 248));
         // IMPROVEMENT: Different fill for bottom handles to provide visual feedback
@@ -28,7 +28,7 @@ namespace Quantra.Utilities
         private Brush previewFill = new SolidColorBrush(Color.FromArgb(50, 0, 255, 0)); // Semi-transparent green
         private Brush gridCellBrush = new SolidColorBrush(Color.FromArgb(100, 0, 255, 0)); // Semi-transparent green for cells
         private Pen gridCellPen = new Pen(new SolidColorBrush(Color.FromRgb(0, 255, 0)), 1.5); // Green pen for grid cells
-        
+
         // Visual elements for resize handles
         private readonly Rectangle topLeftHandle;
         private readonly Rectangle topRightHandle;
@@ -41,7 +41,7 @@ namespace Quantra.Utilities
         private readonly Rectangle rightCenterHandle;
         private readonly Rectangle topCenterHandle;
         private readonly VisualCollection visualChildren;
-        
+
         // Track resize operation
         private ResizeMode currentResizeMode = ResizeMode.None;
         private Point startPoint;
@@ -79,14 +79,14 @@ namespace Quantra.Utilities
         /// <param name="rows">Number of rows in the grid</param>
         /// <param name="columns">Number of columns in the grid</param>
         /// <param name="callback">Callback function for when resize is completed</param>
-        public ControlResizingAdorner(UIElement adornedElement, Grid parentGrid, int rows, int columns, 
+        public ControlResizingAdorner(UIElement adornedElement, Grid parentGrid, int rows, int columns,
             Action<int, int, int, int> callback) : base(adornedElement)
         {
             this.parentGrid = parentGrid;
             gridRows = rows;
             gridColumns = columns;
             resizeCallback = callback;
-            
+
             // Create the preview pen
             previewPen = new Pen(new SolidColorBrush(Color.FromArgb(200, 0, 255, 0)), 2);
 
@@ -120,15 +120,15 @@ namespace Quantra.Utilities
             MouseLeftButtonDown += OnMouseLeftButtonDown;
             MouseLeftButtonUp += OnMouseLeftButtonUp;
             MouseMove += OnMouseMove;
-            
+
             // Set up cursor feedback
             MouseEnter += OnMouseEnter;
             MouseLeave += OnMouseLeave;
-            
+
             // Initialize with current rect
             originalRect = new Rect(AdornedElement.RenderSize);
             currentRect = originalRect;
-            
+
             // Disable automatic grid and preview - only show when actively resizing
             showPreview = false;
             showGrid = false;
@@ -157,7 +157,7 @@ namespace Quantra.Utilities
             showPreview = show;
             InvalidateVisual();
         }
-        
+
         /// <summary>
         /// Shows or hides the grid visualization
         /// </summary>
@@ -180,7 +180,7 @@ namespace Quantra.Utilities
 
             int row = Math.Max(0, Math.Min(gridRows - 1, (int)(rect.Top / cellHeight)));
             int column = Math.Max(0, Math.Min(gridColumns - 1, (int)(rect.Left / cellWidth)));
-            
+
             // Calculate rowSpan and columnSpan, ensuring at least 1 and not exceeding grid bounds
             int rowSpan = Math.Max(1, Math.Min(gridRows - row, (int)Math.Ceiling(rect.Height / cellHeight)));
             int columnSpan = Math.Max(1, Math.Min(gridColumns - column, (int)Math.Ceiling(rect.Width / cellWidth)));
@@ -222,7 +222,7 @@ namespace Quantra.Utilities
                 {
                     double cellWidth = parentGrid.ActualWidth / gridColumns;
                     double cellHeight = parentGrid.ActualHeight / gridRows;
-                    
+
                     // Draw all grid cells with light lines
                     for (int r = 0; r <= gridRows; r++)
                     {
@@ -232,7 +232,7 @@ namespace Quantra.Utilities
                             new Point(0, r * cellHeight),
                             new Point(parentGrid.ActualWidth, r * cellHeight));
                     }
-                    
+
                     for (int c = 0; c <= gridColumns; c++)
                     {
                         // Draw vertical grid lines
@@ -258,10 +258,10 @@ namespace Quantra.Utilities
                     // Get cell-aligned rectangle for the current drag position
                     var (row, col, rowSpan, colSpan) = GetCellsFromRect(currentRect);
                     var cellAlignedRect = GetRectFromCells(row, col, rowSpan, colSpan);
-                    
+
                     // Draw the preview rectangle
                     drawingContext.DrawRectangle(previewFill, previewPen, cellAlignedRect);
-                    
+
                     if (showGrid)
                     {
                         // Draw grid visualization
@@ -274,11 +274,11 @@ namespace Quantra.Utilities
                             for (int c = col; c < col + colSpan; c++)
                             {
                                 Rect cellRect = new Rect(
-                                    c * cellWidth, 
+                                    c * cellWidth,
                                     r * cellHeight,
-                                    cellWidth, 
+                                    cellWidth,
                                     cellHeight);
-                                
+
                                 drawingContext.DrawRectangle(null, gridCellPen, cellRect);
                             }
                         }
@@ -387,7 +387,7 @@ namespace Quantra.Utilities
                 return ResizeMode.BottomLeft;
             if (IsCloseToPoint(position, adornedRect.BottomRight, CORNER_THRESHOLD))
                 return ResizeMode.BottomRight;
-            
+
             // IMPROVEMENT: Check edges
             if (IsCloseToHorizontalEdge(position, adornedRect.Top, adornedRect.Left, adornedRect.Right, EDGE_THRESHOLD))
                 return ResizeMode.TopEdge;
@@ -397,10 +397,10 @@ namespace Quantra.Utilities
                 return ResizeMode.LeftEdge;
             if (IsCloseToVerticalEdge(position, adornedRect.Right, adornedRect.Top, adornedRect.Bottom, EDGE_THRESHOLD))
                 return ResizeMode.RightEdge;
-            
+
             return ResizeMode.None;
         }
-        
+
         // IMPROVEMENT: New helper method to check if point is close to an edge
         private bool IsCloseToHorizontalEdge(Point point, double yEdge, double xStart, double xEnd, double threshold)
         {
@@ -518,24 +518,24 @@ namespace Quantra.Utilities
 
             // Calculate the final grid cell coordinates and spans
             var (row, column, rowSpan, columnSpan) = GetCellsFromRect(currentRect);
-            
+
             // Don't allow resizing to zero dimensions
             if (rowSpan < 1) rowSpan = 1;
             if (columnSpan < 1) columnSpan = 1;
-            
+
             // Call the resize callback with the new position and size
             resizeCallback?.Invoke(row, column, rowSpan, columnSpan);
-            
+
             // Reset cursor
             Cursor = Cursors.Arrow;
-            
+
             // IMPROVEMENT: Update currentRect to the new size of the adorned element
             // This ensures that the hover preview is correct after resizing.
             if (AdornedElement != null)
             {
                 currentRect = new Rect(AdornedElement.RenderSize);
             }
-            
+
             e.Handled = true;
         }
 
@@ -555,7 +555,7 @@ namespace Quantra.Utilities
 
             // IMPROVEMENT: Use the same enhanced detection for cursor updates
             var hoverMode = GetResizeMode(position, adornedRect);
-            
+
             switch (hoverMode)
             {
                 case ResizeMode.TopLeft:

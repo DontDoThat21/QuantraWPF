@@ -16,7 +16,7 @@ namespace Quantra.Configuration.Models
             get => Get(true);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Risk level (Low, Medium, High, Aggressive)
         /// </summary>
@@ -26,7 +26,7 @@ namespace Quantra.Configuration.Models
             get => Get("Low");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Account size
         /// </summary>
@@ -36,7 +36,7 @@ namespace Quantra.Configuration.Models
             get => Get(100000.0);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Base risk percentage (0.01 = 1%)
         /// </summary>
@@ -46,7 +46,7 @@ namespace Quantra.Configuration.Models
             get => Get(0.01);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Position sizing method (FixedRisk, FixedSize, Volatility, Kelly)
         /// </summary>
@@ -56,7 +56,7 @@ namespace Quantra.Configuration.Models
             get => Get("FixedRisk");
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Maximum position size as percentage of account (0.1 = 10%)
         /// </summary>
@@ -66,7 +66,7 @@ namespace Quantra.Configuration.Models
             get => Get(0.1);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Fixed trade amount
         /// </summary>
@@ -76,7 +76,7 @@ namespace Quantra.Configuration.Models
             get => Get(5000.0);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Use volatility-based sizing
         /// </summary>
@@ -85,7 +85,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// ATR multiple for volatility sizing
         /// </summary>
@@ -95,7 +95,7 @@ namespace Quantra.Configuration.Models
             get => Get(2.0);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Use Kelly criterion for position sizing
         /// </summary>
@@ -104,7 +104,7 @@ namespace Quantra.Configuration.Models
             get => Get(false);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Historical win rate for Kelly criterion
         /// </summary>
@@ -114,7 +114,7 @@ namespace Quantra.Configuration.Models
             get => Get(0.55);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Historical reward/risk ratio for Kelly criterion
         /// </summary>
@@ -124,7 +124,7 @@ namespace Quantra.Configuration.Models
             get => Get(2.0);
             set => Set(value);
         }
-        
+
         /// <summary>
         /// Kelly fraction multiplier (0.5 = half Kelly)
         /// </summary>

@@ -26,10 +26,10 @@ namespace Quantra.Converters
 
             // Calculate percentage difference
             double percentDiff = (price - vwap) / vwap;
-            
+
             // Define threshold for "close to VWAP" - within 0.5%
             const double closeThreshold = 0.005;
-            
+
             if (Math.Abs(percentDiff) <= closeThreshold)
             {
                 // Close to VWAP - white

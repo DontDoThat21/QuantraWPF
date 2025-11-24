@@ -14,12 +14,12 @@ namespace Quantra.Controllers
         private readonly ISentimentShiftAlertService _sentimentShiftAlertService;
         private readonly DispatcherTimer _monitorTimer;
         private readonly List<string> _watchlist;
-        
+
         public SentimentAlertExampleController(ISentimentShiftAlertService sentimentShiftAlertService)
         {
             _sentimentShiftAlertService = sentimentShiftAlertService;
             _watchlist = new List<string> { "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA" };
-            
+
             // Set up timer to periodically check for sentiment shifts
             _monitorTimer = new DispatcherTimer
             {
@@ -27,7 +27,7 @@ namespace Quantra.Controllers
             };
             _monitorTimer.Tick += MonitorTimer_Tick;
         }
-        
+
         /// <summary>
         /// Start monitoring sentiment for watchlist symbols
         /// </summary>
@@ -37,7 +37,7 @@ namespace Quantra.Controllers
             // Run immediately on start
             _ = MonitorWatchlistSentiment();
         }
-        
+
         /// <summary>
         /// Stop monitoring sentiment
         /// </summary>
@@ -45,7 +45,7 @@ namespace Quantra.Controllers
         {
             _monitorTimer.Stop();
         }
-        
+
         /// <summary>
         /// Add a symbol to the watchlist for sentiment monitoring
         /// </summary>
@@ -58,7 +58,7 @@ namespace Quantra.Controllers
                 _ = _sentimentShiftAlertService.MonitorSentimentShiftsAsync(symbol);
             }
         }
-        
+
         /// <summary>
         /// Remove a symbol from the watchlist
         /// </summary>
@@ -66,7 +66,7 @@ namespace Quantra.Controllers
         {
             _watchlist.Remove(symbol);
         }
-        
+
         /// <summary>
         /// Timer tick handler to monitor watchlist sentiment
         /// </summary>
@@ -74,7 +74,7 @@ namespace Quantra.Controllers
         {
             _ = MonitorWatchlistSentiment();
         }
-        
+
         /// <summary>
         /// Monitor sentiment for all symbols in the watchlist
         /// </summary>

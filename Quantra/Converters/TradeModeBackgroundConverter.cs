@@ -15,7 +15,7 @@ namespace Quantra.Converters
                     ? new SolidColorBrush(Color.FromRgb(45, 106, 76)) // Dark green
                     : new SolidColorBrush(Color.FromRgb(106, 45, 45)); // Dark red
             }
-            
+
             return new SolidColorBrush(Colors.Transparent);
         }
 

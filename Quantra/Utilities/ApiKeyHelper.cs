@@ -25,7 +25,7 @@ namespace Quantra.Helpers
             }
             throw new KeyNotFoundException($"'{ApiKeyProperty}' not found in settings file.");
         }
-        
+
         public static string GetNewsApiKey()
         {
             if (!File.Exists(SettingsFile))
@@ -39,7 +39,7 @@ namespace Quantra.Helpers
             }
             throw new KeyNotFoundException($"'{NewsApiKeyProperty}' not found in settings file.");
         }
-        
+
         public static string GetOpenAiApiKey()
         {
             if (!File.Exists(SettingsFile))
