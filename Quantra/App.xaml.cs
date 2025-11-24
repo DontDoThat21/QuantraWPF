@@ -19,6 +19,7 @@ using Quantra.DAL.Services;
 using System.Reflection;
 using Quantra.DAL.Data;
 using Microsoft.EntityFrameworkCore;
+using Quantra.ViewModels;
 
 namespace Quantra
 {
@@ -36,14 +37,14 @@ namespace Quantra
             // Initialize cross-cutting concerns first
             CrossCuttingRegistry.Initialize();
             _logger = Log.ForType<App>();
-            
+
             _logger.Information("Application starting");
 
             // Determine the environment
             string environment = Environment.GetEnvironmentVariable("QUANTRA_ENVIRONMENT")
                 ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                 ?? "Development";
-            
+
             _logger.ForContext("Environment", environment)
                   .Information("Running in {Environment} environment", environment);
 
@@ -58,7 +59,7 @@ namespace Quantra
                     .AddEnvironmentVariables();
                 // Disambiguate AddCommandLine by calling the static method
                 Microsoft.Extensions.Configuration.CommandLineConfigurationExtensions.AddCommandLine(builder, e.Args);
-                    
+
                 // Add custom Quantra environment variables provider
                 builder.AddQuantraEnvironmentVariables();
 
@@ -70,13 +71,13 @@ namespace Quantra
             {
                 _logger.Error(ex, "Failed to initialize application configuration");
                 ResilienceHelper.HandleException(ex, "ApplicationStartup");
-                MessageBox.Show($"Failed to initialize application: {ex.Message}", "Startup Error", 
+                MessageBox.Show($"Failed to initialize application: {ex.Message}", "Startup Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);
             }
 
             base.OnStartup(e);
-            
+
             try
             {
                 // Set up Dependency Injection
@@ -102,27 +103,42 @@ namespace Quantra
                 {
                     // Register the service in ServiceLocator
                     ServiceLocator.RegisterService(healthMonitor);
-                    
+
                     // Run an initial health check
                     _logger.Information("Running initial system health check");
                     _ = healthMonitor.CheckSystemHealthAsync();
                 }
-                
+
                 // Initialize database config bridge for config-database synchronization
                 var configBridge = ServiceProvider.GetService<DatabaseConfigBridge>();
-                
+
                 // Migrate legacy configuration if needed
                 var configManager = ServiceProvider.GetService<Quantra.Configuration.IConfigurationManager>();
                 if (configManager != null)
                 {
                     _ = ConfigurationMigration.MigrateFromLegacySources(configManager);
                 }
-                
+
                 // Register to hook each window as it's created to add resize functionality
                 this.Startup += App_Startup;
-                
+
+                // Create and show LoginWindow with dependency injection
+                var userSettingsService = ServiceProvider.GetRequiredService<UserSettingsService>();
+                var historicalDataService = ServiceProvider.GetRequiredService<HistoricalDataService>();
+                var alphaVantageService = ServiceProvider.GetRequiredService<AlphaVantageService>();
+                var technicalIndicatorService = ServiceProvider.GetRequiredService<TechnicalIndicatorService>();
+
+                var loginViewModel = new ViewModels.LoginWindowViewModel(
+                    userSettingsService,
+                    historicalDataService,
+                    alphaVantageService,
+                    technicalIndicatorService);
+
+                var loginWindow = new LoginWindow(loginViewModel);
+                loginWindow.Show();
+
                 _logger.Information("Application startup completed successfully");
-                
+
                 // Record initial memory usage
                 Performance.RecordMemoryUsage("ApplicationStart");
             }
@@ -130,7 +146,7 @@ namespace Quantra
             {
                 _logger.Error(ex, "Failed to complete application startup");
                 ResilienceHelper.HandleException(ex, "ApplicationStartup");
-                MessageBox.Show($"Failed to complete application startup: {ex.Message}", 
+                MessageBox.Show($"Failed to complete application startup: {ex.Message}",
                     "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -145,15 +161,15 @@ namespace Quantra
                 // Register application services using the extension method
                 // This will register DbContext, Settings services, and all other services
                 Quantra.Extensions.ServiceCollectionExtensions.AddQuantraServices(services);
-                
+
                 // Register AlertPublisher so non-UI services can emit alerts via DI
                 services.AddSingleton<IAlertPublisher, AlertPublisher>();
-                
+
                 // Initialize SystemHealthMonitorService (will be registered via AddQuantraServices)
-                
+
                 // Register services in ServiceLocator for components that don't use DI
                 // Note: We'll register these after building the ServiceProvider
-                
+
                 _logger.Debug("Service registration completed");
             }
             catch (Exception ex)
@@ -170,7 +186,7 @@ namespace Quantra
             // and attach the WindowOpened event to catch new windows
             Application.Current.Activated += Application_Activated;
             _logger.Debug("Application startup event handler registered");
-            
+
             // Register services in ServiceLocator after ServiceProvider is built
             try
             {
@@ -179,13 +195,13 @@ namespace Quantra
                 {
                     ServiceLocator.RegisterService(healthMonitor);
                 }
-                
+
                 var technicalIndicatorService = ServiceProvider.GetService<ITechnicalIndicatorService>();
                 if (technicalIndicatorService != null)
                 {
                     ServiceLocator.RegisterService<ITechnicalIndicatorService>(technicalIndicatorService);
                 }
-                
+
                 var stockDataCacheService = ServiceProvider.GetService<IStockDataCacheService>();
                 if (stockDataCacheService != null)
                 {
@@ -234,11 +250,11 @@ namespace Quantra
 
                 // Mark the window to avoid applying behavior multiple times
                 window.Tag = "ResizableApplied";
-                
+
                 _logger.Debug("Applied resize behavior to window {WindowType}", window.GetType().Name);
             }
         }
-        
+
         protected override void OnExit(ExitEventArgs e)
         {
             try
@@ -252,7 +268,7 @@ namespace Quantra
                 // Direct console logging as a last resort
                 Console.Error.WriteLine($"Error during application shutdown: {ex.Message}");
             }
-            
+
             base.OnExit(e);
         }
 

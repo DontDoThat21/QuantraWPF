@@ -56,9 +56,10 @@ namespace Quantra.DAL.Services
         {
             // Ensure cross-cutting concerns are initialized
             CrossCuttingRegistry.Initialize();
-            
+
             _inferenceService = inferenceService;
             _apiConnectivityService = apiConnectivityService;
+            _stockSymbolCacheService = stockSymbolCacheService;
             _checkIntervalSeconds = checkIntervalSeconds;
             _memoryThresholdMb = memoryThresholdMb;
             _cpuThresholdPercent = cpuThresholdPercent;
@@ -72,7 +73,7 @@ namespace Quantra.DAL.Services
                 dueTime: TimeSpan.FromSeconds(5), // Initial delay
                 period: TimeSpan.FromSeconds(_checkIntervalSeconds)
             );
-            
+
             // Start predictive analysis on a less frequent schedule
             _predictiveAnalysisTimer = new Timer(
                 callback: async (state) => await PerformPredictiveAnalysisAsync(),
@@ -80,8 +81,8 @@ namespace Quantra.DAL.Services
                 dueTime: TimeSpan.FromMinutes(1), // Initial delay
                 period: _predictiveAnalysisInterval
             );
-            
-            _logger.Information("SystemHealthMonitorService initialized with check interval {CheckIntervalSeconds}s", 
+
+            _logger.Information("SystemHealthMonitorService initialized with check interval {CheckIntervalSeconds}s",
                 _checkIntervalSeconds);
         }
 
@@ -90,10 +91,10 @@ namespace Quantra.DAL.Services
             try
             {
                 using var operation = _logger.BeginTimedOperation("SystemHealthCheck");
-                
+
                 // Use the new monitoring system to get overall health
                 var systemHealth = await Performance.CheckSystemHealthAsync();
-                
+
                 // If system is not healthy, raise an alert
                 if (systemHealth.Status != HealthStatus.Healthy)
                 {
@@ -103,7 +104,7 @@ namespace Quantra.DAL.Services
                         "Multiple component issues detected. See details in health dashboard.",
                         systemHealth.Status == HealthStatus.Unhealthy ? 3 : 2);
                 }
-                
+
                 // Also run legacy checks for backward compatibility
                 var tasks = new List<Task>
                 {
@@ -140,7 +141,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // Use resilience patterns for the database check
-                await ResilienceHelper.RetryAsync(async () => 
+                await ResilienceHelper.RetryAsync(async () =>
                 {
                     using var connection = ConnectionHelper.GetConnection();
                     await connection.OpenAsync();
@@ -149,15 +150,15 @@ namespace Quantra.DAL.Services
                     using var command = connection.CreateCommand();
                     command.CommandText = "SELECT 1";
                     await command.ExecuteScalarAsync();
-                    
+
                     Performance.RecordSuccess("DatabaseConnectivity");
-                }, 
+                },
                 RetryOptions.ForUserFacingOperation());
             }
             catch (Exception ex)
             {
                 Performance.RecordFailure("DatabaseConnectivity", ex);
-                
+
                 EmitSystemHealthAlert(
                     "Database Connectivity Issue",
                     "Unable to connect to the database or execute queries",
@@ -175,10 +176,10 @@ namespace Quantra.DAL.Services
             {
                 // Use performance tracking for ML health checks
                 bool isInferenceHealthy = await Performance.TimeAsync(
-                    "MLInferenceHealthCheck", 
+                    "MLInferenceHealthCheck",
                     () => _inferenceService.HealthCheckAsync()
                 );
-                
+
                 if (!isInferenceHealthy)
                 {
                     // Get metrics to understand the issue better
@@ -197,12 +198,12 @@ namespace Quantra.DAL.Services
                 {
                     // Occasionally check performance metrics even when healthy
                     var metrics = _inferenceService.GetPerformanceMetrics();
-                    
+
                     // Track these metrics in our new monitoring system
                     Performance.RecordMetric("ML.ErrorRate", metrics.ErrorRate);
                     Performance.RecordMetric("ML.AvgInferenceTimeMs", metrics.AverageInferenceTimeMs);
                     Performance.RecordMetric("ML.RequestsPerMinute", metrics.RequestsPerMinute);
-                    
+
                     if (metrics.ErrorRate > 0.20) // 20% error rate threshold
                     {
                         string details = $"Error Rate: {metrics.ErrorRate:P2}\n" +
@@ -232,7 +233,7 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 Performance.RecordFailure("MLInferenceHealthCheck", ex);
-                
+
                 EmitSystemHealthAlert(
                     "ML Service Monitoring Error",
                     "Failed to check ML inference service health",
@@ -250,17 +251,17 @@ namespace Quantra.DAL.Services
             {
                 // Use circuit breaker for API connectivity checks
                 var apiStatus = await ResilienceHelper.WithCircuitBreakerAsync(
-                    "APIsConnectivity", 
+                    "APIsConnectivity",
                     () => _apiConnectivityService.CheckConnectivityAsync()
                 );
-                
+
                 Performance.RecordMetric("API.Connected", apiStatus.IsConnected ? 1 : 0);
-                
+
                 if (!apiStatus.IsConnected)
                 {
-                    Performance.RecordFailure("APIConnectivity", null, 
+                    Performance.RecordFailure("APIConnectivity", null,
                         new Dictionary<string, string> { ["ApiName"] = apiStatus.ApiName });
-                        
+
                     EmitSystemHealthAlert(
                         "API Connectivity Issue",
                         $"Cannot connect to {apiStatus.ApiName}",
@@ -275,7 +276,7 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 Performance.RecordFailure("APIConnectivity", ex);
-                
+
                 EmitSystemHealthAlert(
                     "API Monitoring Error",
                     "Failed to check API connectivity",
@@ -291,20 +292,27 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Check if stock symbol cache is valid
-                if (_stockSymbolCacheService.IsSymbolCacheValid())
+                // Check if stock symbol cache is valid only if the service is available
+                if (_stockSymbolCacheService != null)
                 {
-                    Performance.RecordFailure("SymbolCacheValidity");
-                    
-                    EmitSystemHealthAlert(
-                        "Symbol Cache Invalid",
-                        "Stock symbol cache requires updating",
-                        "The stock symbol cache is too old or incomplete",
-                        1); // Low priority
+                    if (_stockSymbolCacheService.IsSymbolCacheValid())
+                    {
+                        Performance.RecordFailure("SymbolCacheValidity");
+
+                        EmitSystemHealthAlert(
+                            "Symbol Cache Invalid",
+                            "Stock symbol cache requires updating",
+                            "The stock symbol cache is too old or incomplete",
+                            1); // Low priority
+                    }
+                    else
+                    {
+                        Performance.RecordSuccess("SymbolCacheValidity");
+                    }
                 }
                 else
                 {
-                    Performance.RecordSuccess("SymbolCacheValidity");
+                    _logger.Warning("StockSymbolCacheService is not available for data integrity check");
                 }
 
                 // We could add more data integrity checks here
@@ -313,14 +321,14 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 Performance.RecordFailure("DataIntegrityCheck", ex);
-                
+
                 EmitSystemHealthAlert(
                     "Data Integrity Check Error",
                     "Failed to validate data integrity",
                     ex.ToString(),
                     2); // Medium priority
             }
-            
+
             await Task.CompletedTask; // For async signature
         }
 
@@ -333,15 +341,15 @@ namespace Quantra.DAL.Services
             {
                 // Use our new monitoring system to get resource utilization
                 var resources = Performance.GetResourceUtilization();
-                
+
                 // Register metrics in our monitoring system
                 Performance.RecordMetric("System.CpuUsagePercent", resources.CpuUsagePercent);
                 Performance.RecordMetric("System.MemoryUsageMB", resources.MemoryUsageBytes / (1024 * 1024));
                 Performance.RecordMetric("System.DiskUsagePercent", resources.DiskUsagePercent);
-                
+
                 // Memory check
                 var memoryUsageMb = resources.MemoryUsageBytes / (1024 * 1024);
-                
+
                 if (memoryUsageMb > _memoryThresholdMb)
                 {
                     EmitSystemHealthAlert(
@@ -350,14 +358,14 @@ namespace Quantra.DAL.Services
                         $"Current: {memoryUsageMb}MB\nThreshold: {_memoryThresholdMb}MB",
                         2); // Medium priority
                 }
-                
+
                 // Network connectivity check
                 using (Ping ping = new Ping())
                 {
                     var result = await ping.SendPingAsync("8.8.8.8", 3000);
-                    
+
                     Performance.RecordMetric("Network.PingLatencyMs", result.Status == IPStatus.Success ? result.RoundtripTime : -1);
-                    
+
                     if (result.Status != IPStatus.Success)
                     {
                         EmitSystemHealthAlert(
@@ -412,7 +420,7 @@ namespace Quantra.DAL.Services
 
                 // Update the last alert time
                 _lastAlertTimes[alertKey] = DateTime.Now;
-                
+
                 // Log the alert using the new logging system
                 _logger.ForContext("AlertName", name)
                        .ForContext("AlertPriority", priority)
@@ -422,12 +430,12 @@ namespace Quantra.DAL.Services
             {
                 // Log to new logging system
                 _logger.Error(ex, "Failed to emit system health alert");
-                
+
                 // Also log to database for backward compatibility
                 //DatabaseMonolith.Log("Error", "Failed to emit system health alert", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Performs predictive analysis to forecast potential system issues before they occur.
         /// </summary>
@@ -436,17 +444,17 @@ namespace Quantra.DAL.Services
             try
             {
                 _logger.Information("Starting predictive analysis for potential system issues");
-                
+
                 using var operation = _logger.BeginTimedOperation("PredictiveAnalysis");
-                
+
                 // Record current metrics for time-series data
                 var resources = Performance.GetResourceUtilization();
-                
+
                 // Record system metrics for predictive analysis
                 Performance.RecordTimeSeriesDataPoint("System.CpuUsagePercent", resources.CpuUsagePercent);
                 Performance.RecordTimeSeriesDataPoint("System.MemoryUsageMB", resources.MemoryUsageBytes / (1024 * 1024));
                 Performance.RecordTimeSeriesDataPoint("System.DiskUsagePercent", resources.DiskUsagePercent);
-                
+
                 // Get metrics from the inference service if available
                 if (_inferenceService != null)
                 {
@@ -455,7 +463,7 @@ namespace Quantra.DAL.Services
                     Performance.RecordTimeSeriesDataPoint("ML.AvgInferenceTimeMs", metrics.AverageInferenceTimeMs);
                     Performance.RecordTimeSeriesDataPoint("ML.RequestsPerMinute", metrics.RequestsPerMinute);
                 }
-                
+
                 // Define thresholds for alerts
                 var thresholds = new Dictionary<string, double>
                 {
@@ -465,28 +473,28 @@ namespace Quantra.DAL.Services
                     ["ML.ErrorRate"] = 0.2, // 20% error rate
                     ["ML.AvgInferenceTimeMs"] = 500 // 500ms inference time
                 };
-                
+
                 // Perform predictive analysis with different time horizons
                 var shortTermResult = Performance.PerformPredictiveAnalysis(
                     predictionHorizon: TimeSpan.FromMinutes(15),
                     analysisTimeWindow: TimeSpan.FromHours(6),
                     thresholds: thresholds
                 );
-                
+
                 var mediumTermResult = Performance.PerformPredictiveAnalysis(
                     predictionHorizon: TimeSpan.FromHours(1),
                     analysisTimeWindow: TimeSpan.FromDays(1),
                     thresholds: thresholds
                 );
-                
+
                 // Process and emit alerts for predictions
                 await ProcessPredictiveAlertsAsync(shortTermResult);
                 await ProcessPredictiveAlertsAsync(mediumTermResult);
-                
+
                 // Try to detect anomalies in key metrics using advanced algorithms
                 await DetectMetricAnomaliesAsync();
-                
-                _logger.Information("Predictive analysis completed with {ShortTermAlerts} short-term and {MediumTermAlerts} medium-term alerts", 
+
+                _logger.Information("Predictive analysis completed with {ShortTermAlerts} short-term and {MediumTermAlerts} medium-term alerts",
                     shortTermResult.Alerts.Count, mediumTermResult.Alerts.Count);
             }
             catch (Exception ex)
@@ -494,7 +502,7 @@ namespace Quantra.DAL.Services
                 _logger.Error(ex, "Error performing predictive analysis");
             }
         }
-        
+
         /// <summary>
         /// Processes predictive alerts and emits system alerts for predicted issues.
         /// </summary>
@@ -504,7 +512,7 @@ namespace Quantra.DAL.Services
             {
                 return;
             }
-            
+
             foreach (var alert in result.Alerts)
             {
                 try
@@ -514,33 +522,33 @@ namespace Quantra.DAL.Services
                     {
                         continue;
                     }
-                    
+
                     // Create user-friendly description
-                    var timeToIssue = alert.TimeToIssue.TotalMinutes > 60 
-                        ? $"{alert.TimeToIssue.TotalHours:F1} hours" 
+                    var timeToIssue = alert.TimeToIssue.TotalMinutes > 60
+                        ? $"{alert.TimeToIssue.TotalHours:F1} hours"
                         : $"{alert.TimeToIssue.TotalMinutes:F0} minutes";
-                        
+
                     string description = $"PREDICTIVE ALERT: {alert.Description}\n\n" +
                                         $"Current Value: {alert.CurrentValue:F2}\n" +
                                         $"Predicted Value: {alert.PredictedValue:F2}\n" +
                                         $"Threshold: {alert.Threshold:F2}\n" +
                                         $"Time to Issue: {timeToIssue}\n" +
                                         $"Confidence: {alert.Confidence:P0}";
-                                        
+
                     // Add suggested actions
                     if (alert.SuggestedActions.Count > 0)
                     {
                         description += "\n\nSuggested Actions:\n";
                         for (int i = 0; i < alert.SuggestedActions.Count; i++)
                         {
-                            description += $"{i+1}. {alert.SuggestedActions[i]}\n";
+                            description += $"{i + 1}. {alert.SuggestedActions[i]}\n";
                         }
                     }
-                    
+
                     // Map severity level
                     int priority = (int)alert.Severity;
                     if (priority > 3) priority = 3; // Max priority is 3 in our alert system
-                    
+
                     // Emit the alert
                     EmitSystemHealthAlert(
                         $"Predicted {alert.MetricName} Issue",
@@ -554,10 +562,10 @@ namespace Quantra.DAL.Services
                     _logger.Error(ex, "Error processing predictive alert for {MetricName}", alert.MetricName);
                 }
             }
-            
+
             await Task.CompletedTask; // For async signature
         }
-        
+
         /// <summary>
         /// Detects anomalies in key metrics using advanced anomaly detection algorithms.
         /// </summary>
@@ -574,16 +582,16 @@ namespace Quantra.DAL.Services
                     "ML.ErrorRate",
                     "ML.AvgInferenceTimeMs"
                 };
-                
+
                 foreach (var metricName in metricsToAnalyze)
                 {
                     try
                     {
                         var anomalyResult = await Performance.DetectAnomaliesAsync(
-                            metricName, 
+                            metricName,
                             TimeSpan.FromDays(3)
                         );
-                        
+
                         // Skip if no result was returned
                         // Fix: Check if the object reference is null (a proper object reference check)
                         // instead of trying to compare a JsonElement with null
@@ -591,29 +599,29 @@ namespace Quantra.DAL.Services
                         {
                             continue;
                         }
-                        
+
                         // Check for anomalies - first verify the property exists and then check its value
-                        if (anomalyResult.TryGetProperty("anomalies_detected", out JsonElement anomaliesDetectedElement) && 
+                        if (anomalyResult.TryGetProperty("anomalies_detected", out JsonElement anomaliesDetectedElement) &&
                             anomaliesDetectedElement.GetBoolean())
                         {
                             // Extract insights from the anomaly detection
                             string insights = "No detailed insights available.";
-                            
+
                             if (anomalyResult.TryGetProperty("recent_anomalies", out JsonElement recentAnomalies) &&
                                 recentAnomalies.GetArrayLength() > 0)
                             {
                                 var anomaly = recentAnomalies[0];
-                                
+
                                 // Extract anomaly types if available
                                 if (anomaly.TryGetProperty("types", out JsonElement typesElement))
                                 {
                                     var anomalyTypes = string.Join(", ", typesElement.EnumerateArray()
                                         .Select(t => t.GetString())
                                         .Where(t => !string.IsNullOrEmpty(t)));
-                                    
+
                                     insights = $"Anomaly Types: {anomalyTypes}\n\n";
                                 }
-                                
+
                                 // Try to extract insights
                                 if (anomaly.TryGetProperty("insights", out JsonElement insightData))
                                 {
@@ -627,7 +635,7 @@ namespace Quantra.DAL.Services
                                             insights += $"- {desc.GetString()}\n";
                                         }
                                     }
-                                    
+
                                     // Extract potential causes
                                     if (insightData.TryGetProperty("potential_causes", out JsonElement causes) &&
                                         causes.GetArrayLength() > 0)
@@ -638,7 +646,7 @@ namespace Quantra.DAL.Services
                                             insights += $"- {cause.GetString()}\n";
                                         }
                                     }
-                                    
+
                                     // Extract suggested actions
                                     if (insightData.TryGetProperty("suggested_actions", out JsonElement actions) &&
                                         actions.GetArrayLength() > 0)
@@ -651,7 +659,7 @@ namespace Quantra.DAL.Services
                                     }
                                 }
                             }
-                            
+
                             EmitSystemHealthAlert(
                                 $"Anomaly Detected in {metricName}",
                                 "Unusual pattern detected in metric behavior",
@@ -675,11 +683,11 @@ namespace Quantra.DAL.Services
         public void Dispose()
         {
             if (_disposed) return;
-            
+
             _monitorTimer?.Dispose();
             _predictiveAnalysisTimer?.Dispose();
             _disposed = true;
-            
+
             _logger.Information("SystemHealthMonitorService disposed");
         }
     }

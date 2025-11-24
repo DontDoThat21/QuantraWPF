@@ -27,7 +27,7 @@ namespace Quantra.DAL.Services
         {
             _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
         }
-        
+
         /// <summary>
         /// Gets forex historical price data
         /// </summary>
@@ -43,7 +43,7 @@ namespace Quantra.DAL.Services
                 {
                     return await avService.GetForexHistoricalData(fromSymbol, toSymbol, interval);
                 }
-                
+
                 throw new InvalidOperationException("Premium API required for forex data");
             }
             catch (Exception ex)
@@ -52,7 +52,7 @@ namespace Quantra.DAL.Services
                 return new List<HistoricalPrice>();
             }
         }
-        
+
         /// <summary>
         /// Gets cryptocurrency historical price data
         /// </summary>
@@ -68,7 +68,7 @@ namespace Quantra.DAL.Services
                 {
                     return await avService.GetCryptoHistoricalData(symbol, market, interval);
                 }
-                
+
                 throw new InvalidOperationException("Could not retrieve cryptocurrency data");
             }
             catch (Exception ex)
@@ -77,7 +77,7 @@ namespace Quantra.DAL.Services
                 return new List<HistoricalPrice>();
             }
         }
-        
+
         /// <summary>
         /// Gets complete historical price data with adjusted values for backtesting
         /// </summary>
@@ -100,7 +100,7 @@ namespace Quantra.DAL.Services
                     assetClass = cryptos.Contains(symbol) ? "crypto" : "stock";
                 }
             }
-            
+
             switch (assetClass.ToLower())
             {
                 case "forex":
@@ -110,10 +110,10 @@ namespace Quantra.DAL.Services
                         return await GetForexHistoricalData(parts[0], parts[1], interval);
                     }
                     break;
-                    
+
                 case "crypto":
                     return await GetCryptoHistoricalData(symbol, "USD", interval);
-                    
+
                 case "stock":
                 default:
                     if (_alphaVantageService is AlphaVantageService avService)
@@ -125,7 +125,7 @@ namespace Quantra.DAL.Services
                         return await GetHistoricalPrices(symbol, "max", interval);
                     }
             }
-            
+
             return new List<HistoricalPrice>();
         }
 
@@ -154,7 +154,7 @@ namespace Quantra.DAL.Services
                             return await avService.GetForexHistoricalData(fromSymbol, toSymbol, interval);
                         }
                     }
-                    
+
                     // Check if the asset is a cryptocurrency (e.g., BTC)
                     // This is a simple check - you might want to use a more comprehensive approach
                     string[] cryptos = { "BTC", "ETH", "XRP", "LTC", "BCH", "ADA", "DOT", "LINK", "XLM", "UNI" };
@@ -162,11 +162,11 @@ namespace Quantra.DAL.Services
                     {
                         return await avService.GetCryptoHistoricalData(symbol, "USD", interval);
                     }
-                    
+
                     // For stocks and other equities, use the extended historical data
                     return await avService.GetExtendedHistoricalData(symbol, interval, "full");
                 }
-                
+
                 // Fall back to standard implementation if not using AlphaVantageService
                 // Map interval to Alpha Vantage format
                 string function;
@@ -318,7 +318,7 @@ namespace Quantra.DAL.Services
             {
                 return new StockData();
             }
-            
+
             var stockData = new StockData
             {
                 Prices = historicalPrices.Select(h => h.Close).ToList(),
@@ -330,22 +330,22 @@ namespace Quantra.DAL.Services
                     h.Close
                 )).ToList()
             };
-            
+
             var period = Math.Min(20, historicalPrices.Count);
 
             var prices = (await GetHistoricalPrices(symbol, range, interval)).Select(h => h.Close).ToList();
-            
+
             if (prices.Count >= period)
             {
                 var (upperBand, middleBand, lowerBand) = CalculateBollingerBands(prices, period, 2.0);
                 stockData.UpperBand = upperBand;
                 stockData.MiddleBand = middleBand;
                 stockData.LowerBand = lowerBand;
-                
+
                 // Calculate RSI
                 stockData.RSI = CalculateRSI(prices, 14);
             }
-            
+
             return stockData;
         }
 

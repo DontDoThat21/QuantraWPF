@@ -26,7 +26,7 @@ namespace Quantra
             {
                 SetInitialLastNonPlusTab();
             }
-            
+
             // Load controls for each tab
             foreach (var item in MainTabControl.Items.Cast<TabItem>())
             {
@@ -35,13 +35,13 @@ namespace Quantra
                     LoadControlsForTab(item);
                 }
             }
-            
+
             // Select the first tab by default
             if (MainTabControl.Items.Count > 0)
             {
                 MainTabControl.SelectedIndex = 0;
             }
-            
+
             // Log initialization
             //DatabaseMonolith.Log("Info", "Main window loaded successfully");
         }
@@ -70,16 +70,16 @@ namespace Quantra
                 }
             }
         }
-        
+
         // Handler for notifications from the NotificationService
         private async void OnNotificationReceived(string message, NotificationIcon icon, string iconColorHex)
         {
             // Update dispatcher monitoring before making the call
             SharedTitleBar.UpdateDispatcherMonitoring("OnNotificationReceived_DispatcherCall");
-            
+
             // Use the AppendAlert method to show notifications consistently
             string intent = "neutral";
-            
+
             // Determine intent based on icon type and color
             switch (icon)
             {
@@ -102,7 +102,7 @@ namespace Quantra
                         intent = "warning";
                     break;
             }
-            
+
             // We need to ensure we're on the UI thread
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
@@ -155,7 +155,7 @@ namespace Quantra
             var filteredResultsListBox = sender as ListBox;
             var symbolSearchBox = FindName("SymbolSearchBox") as TextBox;
             IsSymbolSelected = filteredResultsListBox.SelectedItem != null;
-            
+
             if (filteredResultsListBox.SelectedItem != null)
             {
                 symbolSearchBox.Text = filteredResultsListBox.SelectedItem.ToString();
@@ -237,7 +237,7 @@ namespace Quantra
             var selectedSymbolLabel = FindName("SelectedSymbolLabel") as TextBlock;
             var companySymbolLabel = FindName("CompanySymbolLabel") as TextBlock;
             debounceTimer.Stop();
-            
+
             if (symbolSearchBox.Text == null)
                 return;
 
@@ -245,7 +245,7 @@ namespace Quantra
             selectedSymbolLabel.Text = $"Selected: {currentTicker}";
             companySymbolLabel.Text = $"Company: {currentTicker}";
             AppendAlert($"Selected ticker: {currentTicker}");
-            
+
             try
             {
                 double price = await tradingBot.GetMarketPrice(currentTicker);
@@ -412,7 +412,7 @@ namespace Quantra
                     _ => Brushes.White
                 }
             };
-            
+
             // Find and update the alerts listbox
             var alertsListBox = FindAlertListBox();
             if (alertsListBox != null)
@@ -650,10 +650,10 @@ namespace Quantra
             // Open settings window as a dialog
             var settingsWindow = new SettingsWindow();
             settingsWindow.Owner = this;
-            
+
             // Use ShowDialog() instead of Show() to open as modal dialog
             bool? result = settingsWindow.ShowDialog();
-            
+
             // Handle the result if needed
             if (result == true)
             {
@@ -779,7 +779,7 @@ namespace Quantra
                 }
 
                 tabItem.Content = grid;
-                
+
                 // Draw the grid lines to make them visible
                 DrawGridLines(grid);
 

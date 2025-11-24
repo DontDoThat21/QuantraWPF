@@ -165,7 +165,8 @@ namespace Quantra.Utilities
                     cellBorder.AllowDrop = true;
 
                     // Handle drag-and-drop on empty cells
-                    cellBorder.Drop += (s, e) => {
+                    cellBorder.Drop += (s, e) =>
+                    {
                         if (e.Data.GetDataPresent("ControlBorder"))
                         {
                             var draggedBorder = e.Data.GetData("ControlBorder") as Border;
@@ -215,10 +216,10 @@ namespace Quantra.Utilities
 
             // Add context menu for removing and editing the tab
             var contextMenu = new ContextMenu();
-            
+
             // Apply enhanced styling
             contextMenu.Style = (Style)Application.Current.FindResource("EnhancedContextMenuStyle");
-            
+
             var removeMenuItem = new MenuItem { Header = "Remove Tab" };
             removeMenuItem.Style = (Style)Application.Current.FindResource("EnhancedMenuItemStyle");
             removeMenuItem.Click += (s, e) => RemoveCustomTab(tabItem, tabName);
@@ -235,7 +236,7 @@ namespace Quantra.Utilities
 
             // Make the grid support direct drag-and-drop
             _mainWindow.MakeGridDraggable(grid, tabName);
-            
+
             // Raise the TabAdded event to notify listeners
             TabAdded?.Invoke(tabName);
 
@@ -413,7 +414,7 @@ namespace Quantra.Utilities
         /// <summary>
         /// Creates a new tab based on user input from the CreateTabWindow
         /// </summary>
-        public void  AddNewTab()
+        public void AddNewTab()
         {
             // Create and show the new tab creation dialog
             var createTabWindow = new CreateTabWindow(_userSettingsService);
@@ -562,7 +563,7 @@ namespace Quantra.Utilities
                         // Force the grid to re-measure
                         grid.InvalidateMeasure();
                         grid.UpdateLayout();
-                        
+
                         // Process each control in the grid
                         foreach (var child in grid.Children)
                         {
@@ -575,7 +576,7 @@ namespace Quantra.Utilities
                                     control.InvalidateMeasure();
                                     control.InvalidateArrange();
                                     control.UpdateLayout();
-                                    
+
                                     // Special handling for PredictionAnalysisControl
                                     if (control is Controls.PredictionAnalysisControl predictionControl)
                                     {
@@ -585,7 +586,7 @@ namespace Quantra.Utilities
                                 }
                             }
                         }
-                        
+
                         //DatabaseMonolith.Log("Info", $"Refreshed controls in tab '{tabName}'");
                     }
                 }
