@@ -39,9 +39,9 @@ namespace Quantra.DAL.Services
                 {
                     // Log the error
                     //DatabaseMonolith.Log("Error", "Failed to retrieve transactions from database", ex.ToString());
-                
-                // Return empty list in case of error
-                return new List<TransactionModel>();
+
+                    // Return empty list in case of error
+                    return new List<TransactionModel>();
                 }
             }, RetryOptions.ForUserFacingOperation());
         }

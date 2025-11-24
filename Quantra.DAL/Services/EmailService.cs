@@ -11,11 +11,11 @@ namespace Quantra.DAL.Services
         private const string SmtpServer = "smtp.gmail.com";
         private const int SmtpPort = 587;
         private const string FromEmail = "your-email@gmail.com";
-        
+
         private string GetEmailPassword()
         {
             // Get this from secure configuration or environment variables
-            return Environment.GetEnvironmentVariable("EMAIL_PASSWORD") 
+            return Environment.GetEnvironmentVariable("EMAIL_PASSWORD")
                 ?? "your-app-specific-password";
         }
 
@@ -36,9 +36,9 @@ namespace Quantra.DAL.Services
                     Body = body,
                     IsBodyHtml = false
                 };
-                
+
                 mailMessage.To.Add(to);
-                
+
                 await client.SendMailAsync(mailMessage);
             }
             catch (Exception ex)

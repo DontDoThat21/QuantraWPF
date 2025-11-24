@@ -71,7 +71,7 @@ namespace Quantra.DAL.Services
         {
             return _services.ContainsKey(typeof(T));
         }
-        
+
         /// <summary>
         /// Resolve a service of the specified type (alias for GetService)
         /// </summary>
@@ -85,7 +85,7 @@ namespace Quantra.DAL.Services
             {
                 return (T)service;
             }
-            
+
             // For the technical indicator service, create a mock implementation if needed
             if (typeof(T).Name == "ITechnicalIndicatorService")
             {

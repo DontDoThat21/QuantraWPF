@@ -31,10 +31,10 @@ namespace Quantra.DAL.Services
         /// <param name="tradeSize">Size per trade for each backtest</param>
         /// <returns>StrategyComparisonResult containing results of all strategies</returns>
         public async Task<StrategyComparisonResult> RunComparisonAsync(
-            string symbol, 
-            List<StrategyProfile> strategies, 
-            string interval = "daily", 
-            string assetClass = "auto", 
+            string symbol,
+            List<StrategyProfile> strategies,
+            string interval = "daily",
+            string assetClass = "auto",
             double initialCapital = 10000,
             int tradeSize = 1)
         {
@@ -43,7 +43,7 @@ namespace Quantra.DAL.Services
 
             // Get historical data (retrieve once for all strategies)
             var historicalData = await _historicalDataService.GetComprehensiveHistoricalData(symbol, interval, assetClass);
-            
+
             if (historicalData == null || !historicalData.Any())
                 throw new InvalidOperationException($"Failed to retrieve historical data for {symbol}");
 
@@ -59,7 +59,7 @@ namespace Quantra.DAL.Services
             };
 
             // Run backtests in parallel for better performance
-            var backTestTasks = strategies.Select(strategy => 
+            var backTestTasks = strategies.Select(strategy =>
                 _backtestingEngine.RunBacktestAsync(symbol, historicalData, strategy, initialCapital, tradeSize)
             ).ToList();
 
@@ -139,24 +139,24 @@ namespace Quantra.DAL.Services
 
             // Initialize the matrix
             result.CorrelationMatrix = new double[strategyCount, strategyCount];
-            
+
             // For each pair of strategies
             for (int i = 0; i < strategyCount; i++)
             {
                 var strategy1Returns = CalculateDailyReturns(result.StrategyResults[i].Result.EquityCurve);
-                
+
                 // Diagonal is always 1.0 (correlation with self)
                 result.CorrelationMatrix[i, i] = 1.0;
-                
+
                 // Calculate correlation with other strategies
                 for (int j = i + 1; j < strategyCount; j++)
                 {
                     var strategy2Returns = CalculateDailyReturns(result.StrategyResults[j].Result.EquityCurve);
-                    
+
                     // Align return series to ensure we're comparing the same dates
                     var alignedReturns = AlignReturnSeries(strategy1Returns, strategy2Returns);
                     double correlation = CalculateCorrelation(alignedReturns.series1, alignedReturns.series2);
-                    
+
                     // Correlation matrix is symmetric
                     result.CorrelationMatrix[i, j] = correlation;
                     result.CorrelationMatrix[j, i] = correlation;
@@ -170,16 +170,16 @@ namespace Quantra.DAL.Services
         private List<(DateTime date, double returnValue)> CalculateDailyReturns(List<BacktestingEngine.EquityPoint> equityCurve)
         {
             var returns = new List<(DateTime date, double returnValue)>();
-            
+
             for (int i = 1; i < equityCurve.Count; i++)
             {
                 var prev = equityCurve[i - 1].Equity;
                 var curr = equityCurve[i].Equity;
                 var dailyReturn = (curr - prev) / prev;
-                
+
                 returns.Add((equityCurve[i].Date, dailyReturn));
             }
-            
+
             return returns;
         }
 
@@ -193,14 +193,14 @@ namespace Quantra.DAL.Services
             // Create lookup dictionaries by date
             var dict1 = returns1.ToDictionary(r => r.date.Date, r => r.returnValue);
             var dict2 = returns2.ToDictionary(r => r.date.Date, r => r.returnValue);
-            
+
             // Find common dates
             var commonDates = dict1.Keys.Intersect(dict2.Keys).OrderBy(d => d).ToList();
-            
+
             // Create aligned series
             var series1 = commonDates.Select(d => dict1[d]).ToList();
             var series2 = commonDates.Select(d => dict2[d]).ToList();
-            
+
             return (series1, series2);
         }
 
@@ -211,27 +211,27 @@ namespace Quantra.DAL.Services
         {
             if (x.Count != y.Count || x.Count <= 1)
                 return 0;
-                
+
             double xMean = x.Average();
             double yMean = y.Average();
-            
+
             double numerator = 0;
             double denomX = 0;
             double denomY = 0;
-            
+
             for (int i = 0; i < x.Count; i++)
             {
                 double xDiff = x[i] - xMean;
                 double yDiff = y[i] - yMean;
-                
+
                 numerator += xDiff * yDiff;
                 denomX += xDiff * xDiff;
                 denomY += yDiff * yDiff;
             }
-            
+
             if (denomX <= 0 || denomY <= 0)
                 return 0;
-                
+
             return numerator / Math.Sqrt(denomX * denomY);
         }
 
@@ -245,22 +245,22 @@ namespace Quantra.DAL.Services
                 // Calculate volatility of daily returns
                 var returns = CalculateDailyReturns(strategyResult.Result.EquityCurve);
                 var returnValues = returns.Select(r => r.returnValue).ToList();
-                
+
                 if (returnValues.Count > 0)
                 {
                     // Daily volatility
                     double volatility = CalculateStandardDeviation(returnValues);
                     strategyResult.DailyReturnVolatility = volatility;
-                    
+
                     // Annualized volatility (assuming 252 trading days)
                     strategyResult.AnnualizedVolatility = volatility * Math.Sqrt(252);
-                    
+
                     // Calculate consistency score (higher is better)
                     // This is the ratio of positive to negative days, adjusted by the win rate
                     int positiveDays = returnValues.Count(r => r > 0);
                     int negativeDays = returnValues.Count(r => r < 0);
-                    
-                    strategyResult.ConsistencyScore = negativeDays > 0 
+
+                    strategyResult.ConsistencyScore = negativeDays > 0
                         ? (double)positiveDays / negativeDays * strategyResult.Result.WinRate
                         : strategyResult.Result.WinRate * 10; // Very high if no negative days
                 }
@@ -274,7 +274,7 @@ namespace Quantra.DAL.Services
         {
             if (values == null || values.Count <= 1)
                 return 0;
-                
+
             double avg = values.Average();
             double sumOfSquaresOfDifferences = values.Sum(val => Math.Pow(val - avg, 2));
             return Math.Sqrt(sumOfSquaresOfDifferences / (values.Count - 1));
@@ -289,13 +289,13 @@ namespace Quantra.DAL.Services
             {
                 return "forex";
             }
-            
+
             string[] cryptos = { "BTC", "ETH", "XRP", "LTC", "BCH", "ADA", "DOT", "LINK", "XLM", "UNI" };
             if (cryptos.Contains(symbol))
             {
                 return "crypto";
             }
-            
+
             return "stock";
         }
     }

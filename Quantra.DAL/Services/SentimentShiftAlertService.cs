@@ -14,7 +14,7 @@ namespace Quantra.DAL.Services
         private readonly SentimentPriceCorrelationAnalysis _sentimentAnalysis;
         private readonly Dictionary<string, Dictionary<string, double>> _lastSentimentValues;
         private readonly Models.UserSettings _userSettings;
-        
+
         // Threshold for significant sentiment change that triggers an alert
         private const double DefaultSentimentShiftThreshold = 0.2;
 
@@ -24,7 +24,7 @@ namespace Quantra.DAL.Services
             _sentimentAnalysis = new SentimentPriceCorrelationAnalysis();
             _lastSentimentValues = new Dictionary<string, Dictionary<string, double>>();
         }
-        
+
         /// <summary>
         /// Monitors sentiment for a specific symbol and generates alerts for significant shifts
         /// </summary>
@@ -35,21 +35,21 @@ namespace Quantra.DAL.Services
             try
             {
                 // Default to all sources if none specified
-                sources ??= new List<string> { 
-                    "News", "Twitter", "Reddit", "AnalystRatings", "InsiderTrading" 
+                sources ??= new List<string> {
+                    "News", "Twitter", "Reddit", "AnalystRatings", "InsiderTrading"
                 };
-                
+
                 // Get current sentiment from correlation analysis
                 var correlationResult = await _sentimentAnalysis.AnalyzeSentimentPriceCorrelation(
-                    symbol, 
+                    symbol,
                     lookbackDays: 7, // Only need recent data
                     sentimentSources: sources);
-                
+
                 if (correlationResult?.AlignedData == null)
                 {
                     return; // nothing to process
                 }
-                
+
                 if (!_lastSentimentValues.ContainsKey(symbol))
                 {
                     // First time monitoring this symbol, just store values as baseline
@@ -70,22 +70,22 @@ namespace Quantra.DAL.Services
                     {
                         var sentimentValues = correlationResult.AlignedData.SentimentBySource[source];
                         if (sentimentValues == null || sentimentValues.Count == 0) continue;
-                        
+
                         double currentSentiment = sentimentValues.Last();
-                        
+
                         // If we have a previous value for this source
                         if (_lastSentimentValues[symbol].ContainsKey(source))
                         {
                             double previousSentiment = _lastSentimentValues[symbol][source];
                             double shift = currentSentiment - previousSentiment;
-                            
+
                             // Check if shift exceeds threshold
                             if (Math.Abs(shift) >= GetShiftThreshold(source))
                             {
                                 // Create alert for significant shift
                                 CreateSentimentShiftAlert(symbol, source, previousSentiment, currentSentiment, shift, correlationResult);
                             }
-                            
+
                             // Update the stored value
                             _lastSentimentValues[symbol][source] = currentSentiment;
                         }
@@ -102,38 +102,38 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", $"Error monitoring sentiment shifts for {symbol}", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Creates an alert for a significant sentiment shift
         /// </summary>
         private void CreateSentimentShiftAlert(
-            string symbol, 
-            string source, 
-            double previousSentiment, 
-            double currentSentiment, 
+            string symbol,
+            string source,
+            double previousSentiment,
+            double currentSentiment,
             double shift,
             SentimentPriceCorrelationResult correlationResult)
         {
             // Determine if it's a positive or negative shift
             string direction = shift > 0 ? "positive" : "negative";
-            
+
             // Format the sentiment values to be more readable
             string formattedPrevious = FormatSentimentValue(previousSentiment);
             string formattedCurrent = FormatSentimentValue(currentSentiment);
-            
+
             // Get insight on how this source historically correlates with price
             double sourceCorrelation = 0;
             if (correlationResult.SourceCorrelations.ContainsKey(source))
             {
                 sourceCorrelation = correlationResult.SourceCorrelations[source];
             }
-            
+
             // Create a message based on shift direction and correlation
             string impactMessage = GenerateImpactMessage(shift, sourceCorrelation);
-            
+
             // Calculate alert priority based on shift magnitude and source importance
             int priority = CalculateAlertPriority(source, Math.Abs(shift));
-            
+
             // Create the alert
             var alert = new Models.AlertModel
             {
@@ -154,11 +154,11 @@ namespace Quantra.DAL.Services
                 TriggeredDate = DateTime.Now,
                 Priority = priority
             };
-            
+
             // Fallback emission: log alert details; higher-level layers may subscribe and forward
             //DatabaseMonolith.Log("Alert", alert.Name, alert.Notes);
         }
-        
+
         /// <summary>
         /// Formats a sentiment value to be more readable
         /// </summary>
@@ -170,7 +170,7 @@ namespace Quantra.DAL.Services
             if (sentiment >= -0.5) return "Negative";
             return "Very Negative";
         }
-        
+
         /// <summary>
         /// Generates a message describing potential price impact based on shift and correlation
         /// </summary>
@@ -180,7 +180,7 @@ namespace Quantra.DAL.Services
             {
                 return "Historically, this source has shown minimal correlation with price movements.";
             }
-            
+
             string directionHint;
             if (shift > 0 && correlation > 0 || shift < 0 && correlation < 0)
             {
@@ -190,12 +190,12 @@ namespace Quantra.DAL.Services
             {
                 directionHint = "potential downward";
             }
-            
+
             string strengthHint = Math.Abs(correlation) > 0.5 ? "strong" : "moderate";
-            
+
             return $"Historical analysis suggests {strengthHint} {directionHint} price pressure based on this sentiment shift.";
         }
-        
+
         /// <summary>
         /// Gets the threshold for considering a shift significant based on source
         /// </summary>
@@ -215,7 +215,7 @@ namespace Quantra.DAL.Services
                     return DefaultSentimentShiftThreshold;
             }
         }
-        
+
         /// <summary>
         /// Calculates priority for the alert based on source and shift magnitude
         /// </summary>
@@ -223,11 +223,11 @@ namespace Quantra.DAL.Services
         {
             // Base priority on magnitude
             int basePriority = 2; // Default to medium
-            
+
             if (shiftMagnitude >= 0.4) basePriority = 1; // High
             else if (shiftMagnitude >= 0.3) basePriority = 2; // Medium
             else basePriority = 3; // Low
-            
+
             // Adjust based on source reliability
             switch (source)
             {
@@ -241,7 +241,7 @@ namespace Quantra.DAL.Services
                     return basePriority;
             }
         }
-        
+
         /// <summary>
         /// Monitors sentiment shifts for a watchlist of symbols
         /// </summary>
@@ -249,7 +249,7 @@ namespace Quantra.DAL.Services
         public async Task MonitorWatchlistAsync(List<string> symbols)
         {
             if (symbols == null || symbols.Count == 0) return;
-            
+
             foreach (var symbol in symbols)
             {
                 await MonitorSentimentShiftsAsync(symbol);

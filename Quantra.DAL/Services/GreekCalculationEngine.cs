@@ -9,7 +9,7 @@ namespace Quantra.DAL.Services
     public class GreekCalculationEngine
     {
         private const double SQRT_2PI = 2.506628274631000502415765284811;
-        
+
         /// <summary>
         /// Calculates all Greek metrics for a given position
         /// </summary>
@@ -20,13 +20,13 @@ namespace Quantra.DAL.Services
         {
             if (position == null)
                 throw new ArgumentNullException(nameof(position));
-            
+
             if (market == null)
                 throw new ArgumentNullException(nameof(market));
-            
+
             // Use market interest rate if available, otherwise use position's rate
             double riskFreeRate = market.InterestRate > 0 ? market.InterestRate : position.RiskFreeRate;
-            
+
             return new GreekMetrics
             {
                 Alpha = CalculateAlpha(position, market),
@@ -40,7 +40,7 @@ namespace Quantra.DAL.Services
                 Rho = CalculateRho(position, market)
             };
         }
-        
+
         /// <summary>
         /// Calculates Theta - the rate of change of option value with respect to time
         /// </summary>
@@ -51,27 +51,27 @@ namespace Quantra.DAL.Services
         {
             if (position == null || position.TimeToExpiration <= 0)
                 return 0.0;
-            
+
             double S = position.UnderlyingPrice;
             double K = position.StrikePrice;
             double T = position.TimeToExpiration;
             double r = market?.InterestRate ?? position.RiskFreeRate;
             double sigma = position.Volatility;
-            
+
             if (S <= 0 || K <= 0 || sigma <= 0)
                 return 0.0;
-            
+
             // Calculate d1 and d2 for Black-Scholes
             double d1 = (Math.Log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.Sqrt(T));
             double d2 = d1 - sigma * Math.Sqrt(T);
-            
+
             // Standard normal density function
             double phi_d1 = 1.0 / Math.Sqrt(2 * Math.PI) * Math.Exp(-0.5 * d1 * d1);
-            
+
             // Calculate Theta components
             double term1 = -(S * phi_d1 * sigma) / (2 * Math.Sqrt(T));
             double term2, term3;
-            
+
             if (position.IsCall)
             {
                 // Call option Theta
@@ -84,14 +84,14 @@ namespace Quantra.DAL.Services
                 term2 = r * K * Math.Exp(-r * T) * CumulativeNormalDistribution(-d2);
                 term3 = 0; // No additional term for puts
             }
-            
+
             // Theta is typically expressed as the change per day, so divide by 365
             double theta = (term1 + term2) / 365.0;
-            
+
             // Apply position quantity (negative for short positions)
             return theta * position.Quantity;
         }
-        
+
         /// <summary>
         /// Placeholder for Alpha calculation (excess return generation)
         /// </summary>
@@ -100,7 +100,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement sophisticated alpha calculation
             return 0.0;
         }
-        
+
         /// <summary>
         /// Placeholder for Beta calculation (market exposure sensitivity)
         /// </summary>
@@ -109,7 +109,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement market beta calculation
             return 1.0;
         }
-        
+
         /// <summary>
         /// Placeholder for Volatility calculation
         /// </summary>
@@ -117,7 +117,7 @@ namespace Quantra.DAL.Services
         {
             return position.Volatility;
         }
-        
+
         /// <summary>
         /// Placeholder for Omega calculation (advanced risk-return optimization)
         /// </summary>
@@ -126,7 +126,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement Omega ratio calculation
             return 1.0;
         }
-        
+
         /// <summary>
         /// Placeholder for Delta calculation (price sensitivity)
         /// </summary>
@@ -135,7 +135,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement full Delta calculation
             return 0.5;
         }
-        
+
         /// <summary>
         /// Placeholder for Gamma calculation (rate of change of Delta)
         /// </summary>
@@ -144,7 +144,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement full Gamma calculation
             return 0.1;
         }
-        
+
         /// <summary>
         /// Placeholder for Vega calculation (volatility sensitivity)
         /// </summary>
@@ -153,7 +153,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement full Vega calculation
             return 0.2;
         }
-        
+
         /// <summary>
         /// Placeholder for Rho calculation (interest rate sensitivity)
         /// </summary>
@@ -162,7 +162,7 @@ namespace Quantra.DAL.Services
             // Simplified placeholder - would implement full Rho calculation
             return 0.05;
         }
-        
+
         /// <summary>
         /// Cumulative normal distribution function
         /// </summary>
@@ -172,10 +172,10 @@ namespace Quantra.DAL.Services
         {
             if (x < 0)
                 return 1.0 - CumulativeNormalDistribution(-x);
-            
+
             double k = 1.0 / (1.0 + 0.2316419 * x);
             double result = k * (0.319381530 + k * (-0.356563782 + k * (1.781477937 + k * (-1.821255978 + k * 1.330274429))));
-            
+
             result = result * Math.Exp(-0.5 * x * x) / Math.Sqrt(2 * Math.PI);
             return 1.0 - result;
         }

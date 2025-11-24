@@ -46,15 +46,15 @@ namespace Quantra.DAL.Services
             {
                 // In a production system, you'd call a transcript provider API
                 // For prototype, we'll simulate fetching from a mock service or database
-                
+
                 //DatabaseMonolith.Log("Info", $"Fetching earnings transcript for {symbol}");
-                
+
                 // Simulated API call - in production, replace with actual API call
                 await Task.Delay(200); // Simulate network delay
-                
+
                 // For demo purposes, generate a simple mock transcript if we can't fetch a real one
                 string mockTranscript = GenerateMockTranscript(symbol);
-                
+
                 return mockTranscript;
             }
             catch (Exception ex)
@@ -135,7 +135,7 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Error getting detailed sentiment for {symbol}", ex.ToString());
             }
-            
+
             return new Dictionary<string, double>();
         }
 
@@ -145,10 +145,10 @@ namespace Quantra.DAL.Services
         public async Task<EarningsTranscriptAnalysisResult> AnalyzeEarningsTranscriptAsync(string transcript)
         {
             var result = new EarningsTranscriptAnalysisResult();
-            
+
             if (string.IsNullOrWhiteSpace(transcript))
                 return result;
-                
+
             try
             {
                 var psi = new ProcessStartInfo
@@ -161,33 +161,33 @@ namespace Quantra.DAL.Services
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
-                
+
                 using var process = new Process { StartInfo = psi };
                 process.Start();
-                
+
                 // Send transcript as JSON to stdin
                 var inputData = new { transcript };
                 var json = JsonSerializer.Serialize(inputData);
                 await process.StandardInput.WriteLineAsync(json);
                 process.StandardInput.Close();
-                
+
                 // Read output (expecting a JSON object with analysis results)
                 string output = await process.StandardOutput.ReadLineAsync();
                 string error = await process.StandardError.ReadToEndAsync();
-                
+
                 process.WaitForExit();
-                
+
                 if (!string.IsNullOrWhiteSpace(error))
                 {
                     //DatabaseMonolith.Log("Warning", $"Python transcript analysis script stderr: {error}");
                 }
-                
+
                 if (!string.IsNullOrEmpty(output))
                 {
                     // Parse the JSON output
                     var analysisResults = JsonDocument.Parse(output);
                     var root = analysisResults.RootElement;
-                    
+
                     // Extract sentiment data
                     if (root.TryGetProperty("sentiment", out var sentimentElement))
                     {
@@ -195,7 +195,7 @@ namespace Quantra.DAL.Services
                         {
                             result.SentimentScore = scoreElement.GetDouble();
                         }
-                        
+
                         if (sentimentElement.TryGetProperty("distribution", out var distElement))
                         {
                             foreach (var property in distElement.EnumerateObject())
@@ -204,7 +204,7 @@ namespace Quantra.DAL.Services
                             }
                         }
                     }
-                    
+
                     // Extract topics
                     if (root.TryGetProperty("topics", out var topicsElement))
                     {
@@ -213,7 +213,7 @@ namespace Quantra.DAL.Services
                             result.KeyTopics.Add(topic.GetString());
                         }
                     }
-                    
+
                     // Extract entities
                     if (root.TryGetProperty("entities", out var entitiesElement))
                     {
@@ -233,7 +233,7 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", "Error analyzing earnings transcript", ex.ToString());
             }
-            
+
             return result;
         }
 
@@ -247,13 +247,13 @@ namespace Quantra.DAL.Services
             {
                 return new EarningsTranscriptAnalysisResult { Symbol = symbol };
             }
-            
+
             var result = await AnalyzeEarningsTranscriptAsync(transcript);
             result.Symbol = symbol;
-            
+
             // Extract quarter and date info from the transcript
             ExtractEarningsMetadata(transcript, result);
-            
+
             return result;
         }
 
@@ -265,7 +265,7 @@ namespace Quantra.DAL.Services
             // In a production system, you'd fetch historical transcripts
             // For the prototype, we'll just return the most recent one
             var result = new List<EarningsTranscriptAnalysisResult>();
-            
+
             try
             {
                 var latestAnalysis = await GetEarningsTranscriptAnalysisAsync(symbol);
@@ -278,7 +278,7 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Error getting historical earnings analysis for {symbol}", ex.ToString());
             }
-            
+
             return result;
         }
 
@@ -301,7 +301,7 @@ namespace Quantra.DAL.Services
                     int currentQuarter = (DateTime.Now.Month - 1) / 3 + 1;
                     result.Quarter = $"Q{currentQuarter} {DateTime.Now.Year}";
                 }
-                
+
                 // Extract or estimate date
                 var dateMatch = Regex.Match(transcript, @"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b");
                 if (dateMatch.Success)
@@ -328,7 +328,7 @@ namespace Quantra.DAL.Services
                 result.EarningsDate = DateTime.Now.AddDays(-7);
             }
         }
-        
+
         /// <summary>
         /// Generate a mock transcript for testing when API is unavailable
         /// </summary>
@@ -338,7 +338,7 @@ namespace Quantra.DAL.Services
             string quarter = $"Q{currentQuarter} {DateTime.Now.Year}";
             DateTime callDate = DateTime.Now.AddDays(-7);
             string dateFormatted = callDate.ToString("MMMM d, yyyy");
-            
+
             return $@"{symbol} Inc. ({symbol}) Q{currentQuarter} {DateTime.Now.Year} Earnings Conference Call {dateFormatted}
 
 Operator: Good morning and welcome to the {symbol} Inc. {quarter} Earnings Conference Call. [Operator Instructions] I would now like to turn the call over to our host, Jane Smith, Investor Relations. Please go ahead.

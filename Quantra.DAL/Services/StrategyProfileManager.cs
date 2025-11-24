@@ -18,7 +18,7 @@ namespace Quantra.DAL.Services
         private static readonly string BackupPath = "strategyprofiles.backup.json";
         private static readonly int CurrentVersion = 1;
         private static readonly Lazy<StrategyProfileManager> _instance = new Lazy<StrategyProfileManager>(() => new StrategyProfileManager());
-        
+
         /// <summary>
         /// The singleton instance of the strategy profile manager
         /// </summary>
@@ -61,7 +61,7 @@ namespace Quantra.DAL.Services
         /// <returns>The strategy profile, or null if not found</returns>
         public TradingStrategyProfile GetProfile(string profileName)
         {
-            if (string.IsNullOrEmpty(profileName)) 
+            if (string.IsNullOrEmpty(profileName))
                 return GetDefaultProfile();
 
             if (_profiles.TryGetValue(profileName, out TradingStrategyProfile profile))
@@ -195,14 +195,14 @@ namespace Quantra.DAL.Services
                 if (!merge)
                     _profiles.Clear();
 
-                if (data.TryGetValue("Profiles", out object profilesObj) && 
+                if (data.TryGetValue("Profiles", out object profilesObj) &&
                     profilesObj is JArray profileArray)
                 {
                     foreach (JObject profileObj in profileArray)
                     {
                         string type = profileObj["Type"]?.ToString();
                         string name = profileObj["Name"]?.ToString();
-                        
+
                         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type))
                             continue;
 
@@ -331,14 +331,14 @@ namespace Quantra.DAL.Services
                     string json = File.ReadAllText(ProfilesPath);
                     var profileData = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
 
-                    if (profileData.TryGetValue("Profiles", out object profilesObj) && 
+                    if (profileData.TryGetValue("Profiles", out object profilesObj) &&
                         profilesObj is JArray profileArray)
                     {
                         foreach (JObject profileObj in profileArray)
                         {
                             string type = profileObj["Type"]?.ToString();
                             string name = profileObj["Name"]?.ToString();
-                            
+
                             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type))
                                 continue;
 
@@ -348,7 +348,7 @@ namespace Quantra.DAL.Services
                         }
                     }
 
-                    if (profileData.TryGetValue("PacMappings", out object mappingsObj) && 
+                    if (profileData.TryGetValue("PacMappings", out object mappingsObj) &&
                         mappingsObj is JObject mappingObj)
                     {
                         foreach (var prop in mappingObj.Properties())
@@ -383,7 +383,7 @@ namespace Quantra.DAL.Services
                     string type = profile.GetType().Name;
                     var profileJson = JObject.FromObject(profile);
                     profileJson["Type"] = type;
-                    
+
                     // Special handling for aggregated strategies
                     if (profile is AggregatedStrategyProfile aggregatedProfile)
                     {
@@ -400,7 +400,7 @@ namespace Quantra.DAL.Services
                         }
                         profileJson["Strategies"] = strategiesArray;
                     }
-                    
+
                     profilesList.Add(profileJson);
                 }
 
@@ -439,7 +439,7 @@ namespace Quantra.DAL.Services
 
             var macdStrategy = new MacdCrossoverStrategy();
             _profiles[macdStrategy.Name] = macdStrategy;
-            
+
 
             // Add Support/Resistance strategy
             var supportResistanceStrategy = new SupportResistanceStrategy();
@@ -453,16 +453,16 @@ namespace Quantra.DAL.Services
                 MinConfidence = 0.7,
                 RiskLevel = 0.5
             };
-            
+
             // Add the existing strategies to the aggregated one
             aggregatedStrategy.AddStrategy(rsiStrategy, 1.0);
             aggregatedStrategy.AddStrategy(macdStrategy, 1.0);
-            
+
             _profiles[aggregatedStrategy.Name] = aggregatedStrategy;
 
             var ichimokuStrategy = new IchimokuCloudStrategy();
             _profiles[ichimokuStrategy.Name] = ichimokuStrategy;
-            
+
             var parabolicSarStrategy = new ParabolicSARStrategy();
             _profiles[parabolicSarStrategy.Name] = parabolicSarStrategy;
         }
@@ -523,7 +523,7 @@ namespace Quantra.DAL.Services
 
             return profile;
         }
-        
+
         /// <summary>
         /// Special deserializer for aggregated strategy profiles
         /// </summary>
@@ -532,26 +532,26 @@ namespace Quantra.DAL.Services
         private TradingStrategyProfile DeserializeAggregatedStrategy(JObject profileData)
         {
             var aggregatedProfile = new AggregatedStrategyProfile();
-            
+
             // Deserialize basic properties
             aggregatedProfile.Name = profileData["Name"]?.ToString();
             aggregatedProfile.Description = profileData["Description"]?.ToString();
-            
+
             if (profileData["MinConfidence"] != null)
                 aggregatedProfile.MinConfidence = profileData["MinConfidence"].Value<double>();
-            
+
             if (profileData["RiskLevel"] != null)
                 aggregatedProfile.RiskLevel = profileData["RiskLevel"].Value<double>();
-                
+
             if (profileData["IsEnabled"] != null)
                 aggregatedProfile.IsEnabled = profileData["IsEnabled"].Value<bool>();
-                
+
             if (profileData["Method"] != null)
                 aggregatedProfile.Method = (AggregatedStrategyProfile.AggregationMethod)profileData["Method"].Value<int>();
-                
+
             if (profileData["ConsensusThreshold"] != null)
                 aggregatedProfile.ConsensusThreshold = profileData["ConsensusThreshold"].Value<double>();
-                
+
             // Deserialize strategies array if it exists
             if (profileData["Strategies"] is JArray strategiesArray)
             {
@@ -559,14 +559,14 @@ namespace Quantra.DAL.Services
                 {
                     string strategyName = strategyObj["StrategyName"]?.ToString();
                     double weight = strategyObj["Weight"]?.Value<double>() ?? 1.0;
-                    
+
                     if (!string.IsNullOrEmpty(strategyName) && _profiles.TryGetValue(strategyName, out TradingStrategyProfile strategy))
                     {
                         aggregatedProfile.AddStrategy(strategy, weight);
                     }
                 }
             }
-            
+
             return aggregatedProfile;
         }
     }

@@ -21,10 +21,10 @@ namespace Quantra.DAL.Services
         private readonly AlphaVantageService _alphaVantageService;
         private readonly string _apiKey;
         private readonly Dictionary<string, Func<string, string, Task<double>>> _indicators;
-        
+
         // Dictionary of registered custom indicators
         private readonly Dictionary<string, IIndicator> _customIndicators;
-        
+
         // Repository for custom indicator definitions (local in-memory fallback to avoid cross-project dependency)
         private readonly CustomIndicatorRepository _customIndicatorRepository;
 
@@ -59,24 +59,24 @@ namespace Quantra.DAL.Services
                 { "BuySellSignal", CalculateBuySellSignal },
                 // Add other indicators as needed
             };
-            
+
             // Initialize custom indicators
             _customIndicators = new Dictionary<string, IIndicator>();
             _customIndicatorRepository = new CustomIndicatorRepository();
-            
+
             // Initialize monitoring manager for performance profiling
             _monitoringManager = MonitoringManager.Instance;
-            
+
             // Initialize task throttler with max degree of 6 for optimal performance
             _taskThrottler = new ConcurrentTaskThrottler(6);
-            
+
             // Register this service with the ServiceLocator
             ServiceLocator.RegisterService<ITechnicalIndicatorService>(this);
-            
+
             // Load saved custom indicators
             LoadSavedIndicatorsAsync().Wait();
         }
-        
+
 
         public async Task<Dictionary<string, double>> CalculateIndicators(string symbol, string timeframe)
         {
@@ -130,33 +130,33 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count < 35)
                     return (0, 0);
-                    
+
                 var prices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate MACD with standard settings (12, 26, 9)
                 var ema12 = CalculateEMA(prices, 12);
                 var ema26 = CalculateEMA(prices, 26);
-                
+
                 if (ema12.Count == 0 || ema26.Count == 0)
                     return (0, 0);
-                
+
                 // Calculate MACD line
                 var macdLine = new List<double>();
                 for (int i = 0; i < Math.Min(ema12.Count, ema26.Count); i++)
                 {
                     macdLine.Add(ema12[i] - ema26[i]);
                 }
-                
+
                 // Calculate signal line (9-day EMA of MACD line)
                 var signalLine = CalculateEMA(macdLine, 9);
-                
+
                 if (macdLine.Count > 0 && signalLine.Count > 0)
                     return (macdLine.Last(), signalLine.Last());
-                    
+
                 return (0, 0);
             }
             catch (Exception ex)
@@ -172,25 +172,25 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count == 0)
                     return 0;
-                
+
                 // VWAP calculation
                 double cumulativeTPV = 0; // Typical Price * Volume
                 long cumulativeVolume = 0;
-                
+
                 foreach (var bar in historicalData)
                 {
                     double typicalPrice = (bar.High + bar.Low + bar.Close) / 3;
                     cumulativeTPV += typicalPrice * bar.Volume;
                     cumulativeVolume += bar.Volume;
                 }
-                
+
                 if (cumulativeVolume == 0)
                     return historicalData.Last().Close;
-                    
+
                 return cumulativeTPV / cumulativeVolume;
             }
             catch (Exception ex)
@@ -206,15 +206,15 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count < 10)
                     return 0;
-                
+
                 int period = 10; // Standard ROC period
                 double currentPrice = historicalData.Last().Close;
                 double priceNPeriodsAgo = historicalData[historicalData.Count - period - 1].Close;
-                
+
                 return (currentPrice - priceNPeriodsAgo) / priceNPeriodsAgo * 100;
             }
             catch (Exception ex)
@@ -230,14 +230,14 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count == 0)
                     return (0, 0);
-                
+
                 double high = historicalData.Max(d => d.High);
                 double low = historicalData.Min(d => d.Low);
-                
+
                 return (high, low);
             }
             catch (Exception ex)
@@ -253,27 +253,27 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count < 14)
                     return (0, 0);
-                
+
                 // Calculate 13-period EMA
                 var prices = historicalData.Select(h => h.Close).ToList();
                 var ema13 = CalculateEMA(prices, 13);
-                
+
                 if (ema13.Count == 0)
                     return (0, 0);
-                
+
                 double emaValue = ema13.Last();
-                
+
                 // Get today's high and low
                 double high = historicalData.Last().High;
                 double low = historicalData.Last().Low;
-                
+
                 double bullPower = high - emaValue; // Bull Power = High - EMA
                 double bearPower = low - emaValue;  // Bear Power = Low - EMA
-                
+
                 return (bullPower, bearPower);
             }
             catch (Exception ex)
@@ -289,22 +289,22 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string interval = MapTimeframeToInterval(timeframe);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 if (historicalData.Count < 14)
                     return 0;
-                
+
                 // Take the last 14 periods
                 var lastNPeriods = historicalData.Skip(historicalData.Count - 14).ToList();
-                
+
                 double highestHigh = lastNPeriods.Max(d => d.High);
                 double lowestLow = lastNPeriods.Min(d => d.Low);
                 double currentClose = lastNPeriods.Last().Close;
-                
+
                 // Williams %R formula: ((Highest High - Close) / (Highest High - Lowest Low)) * -100
                 if (highestHigh - lowestLow == 0)
                     return -50; // Middle value when there's no range
-                    
+
                 return (highestHigh - currentClose) / (highestHigh - lowestLow) * -100;
             }
             catch (Exception ex)
@@ -313,7 +313,7 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
+
         private string MapTimeframeToRange(string timeframe)
         {
             switch (timeframe.ToLower())
@@ -337,7 +337,7 @@ namespace Quantra.DAL.Services
                     return "1mo";
             }
         }
-        
+
         private string MapTimeframeToInterval(string timeframe)
         {
             switch (timeframe.ToLower())
@@ -410,7 +410,7 @@ namespace Quantra.DAL.Services
 
                 return result;
             });
-            
+
             return result;
         }
 
@@ -428,33 +428,33 @@ namespace Quantra.DAL.Services
                 // Split into batches of 5 symbols to respect API rate limits
                 int batchSize = 5;
                 var result = new Dictionary<string, Dictionary<string, double>>();
-                
+
                 //DatabaseMonolith.Log("Info", $"Fetching indicators for {symbols.Count} symbols in batches of {batchSize} with throttling");
-                
+
                 for (int i = 0; i < symbols.Count; i += batchSize)
                 {
                     var batch = symbols.Skip(i).Take(batchSize).ToList();
-                    
+
                     // Process batch concurrently with throttling to prevent thread pool exhaustion
-                    var batchTaskFactories = batch.Select(symbol => 
-                        new Func<Task<KeyValuePair<string, Dictionary<string, double>>>>(() => 
+                    var batchTaskFactories = batch.Select(symbol =>
+                        new Func<Task<KeyValuePair<string, Dictionary<string, double>>>>(() =>
                             ProcessSymbolForBatch(symbol, timeframe)));
-                        
+
                     var batchResults = await _taskThrottler.ExecuteThrottledAsync(batchTaskFactories);
-                    
+
                     // Combine results
                     foreach (var kvp in batchResults)
                     {
                         result[kvp.Key] = kvp.Value;
                     }
-                    
+
                     // Respect API rate limits between batches
                     if (i + batchSize < symbols.Count)
                     {
                         await Task.Delay(2000); // 2-second delay between batches
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Successfully fetched indicators for {result.Count} symbols in batch with throttling");
                 return result;
             }
@@ -596,21 +596,21 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 15) // Need at least 15 data points for RSI calculation
                     return 50; // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract closing prices
                 var closingPrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate RSI using internal method
                 var rsiValues = CalculateRSI(closingPrices, 14);
-                
+
                 // Return the latest RSI value
                 var latestRsi = rsiValues.LastOrDefault(r => !double.IsNaN(r));
                 return double.IsNaN(latestRsi) ? 50 : latestRsi;
@@ -628,23 +628,23 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 30) // Need enough data for ADX calculation
                     return 25; // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate ADX using internal method
                 var adxValues = CalculateADX(highPrices, lowPrices, closePrices, 14);
-                
+
                 // Return the latest ADX value
                 var latestAdx = adxValues.LastOrDefault(a => !double.IsNaN(a));
                 return double.IsNaN(latestAdx) ? 25 : latestAdx;
@@ -662,23 +662,23 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 16) // Need enough data for ATR calculation
                     return 1.0; // Default value
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate ATR using internal method
                 var atrValues = CalculateATR(highPrices, lowPrices, closePrices, 14);
-                
+
                 // Return the latest ATR value
                 var latestAtr = atrValues.LastOrDefault(a => !double.IsNaN(a));
                 return double.IsNaN(latestAtr) ? 1.0 : latestAtr;
@@ -696,21 +696,21 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 12) // Need enough data for momentum calculation
                     return 0; // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract closing prices
                 var closingPrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate ROC (Rate of Change) as momentum using internal method
                 var rocValues = CalculateROC(closingPrices, 10);
-                
+
                 // Return the latest ROC value
                 var latestRoc = rocValues.LastOrDefault(r => !double.IsNaN(r));
                 return double.IsNaN(latestRoc) ? 0 : latestRoc;
@@ -728,27 +728,27 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 16) // Need enough data for stochastic calculation
                     return (50, 50); // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate Stochastic using internal method (14-period, 3-smoothing, 3-D period)
                 var stochValues = CalculateStochastic(highPrices, lowPrices, closePrices, 14, 3, 3);
-                
+
                 // Return the latest K and D values
                 var latestK = stochValues.K.LastOrDefault(k => !double.IsNaN(k));
                 var latestD = stochValues.D.LastOrDefault(d => !double.IsNaN(d));
-                
+
                 return (double.IsNaN(latestK) ? 50 : latestK, double.IsNaN(latestD) ? 50 : latestD);
             }
             catch (Exception ex)
@@ -765,15 +765,15 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 14)
                     return 50; // Default value
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Take the last 14 periods
                 var periods = historicalData.Skip(Math.Max(0, historicalData.Count - 14)).ToList();
 
@@ -784,11 +784,11 @@ namespace Quantra.DAL.Services
                 {
                     // Calculate typical price
                     double currentTypicalPrice = (periods[i].High + periods[i].Low + periods[i].Close) / 3;
-                    double prevTypicalPrice = (periods[i-1].High + periods[i-1].Low + periods[i-1].Close) / 3;
+                    double prevTypicalPrice = (periods[i - 1].High + periods[i - 1].Low + periods[i - 1].Close) / 3;
 
                     // Calculate raw money flow
                     double rawMoneyFlow = currentTypicalPrice * periods[i].Volume;
-                    
+
                     // Add to positive/negative money flow
                     if (currentTypicalPrice > prevTypicalPrice)
                         positiveMoneyFlow += rawMoneyFlow;
@@ -798,10 +798,10 @@ namespace Quantra.DAL.Services
 
                 // Calculate money flow ratio
                 double moneyFlowRatio = negativeMoneyFlow == 0 ? 100 : positiveMoneyFlow / negativeMoneyFlow;
-                
+
                 // Calculate MFI
                 double mfi = 100 - 100 / (1 + moneyFlowRatio);
-                
+
                 return mfi;
             }
             catch (Exception ex)
@@ -817,27 +817,27 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string mappedInterval = MapTimeframeToInterval(timeframe);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 16) // Need enough data for stochastic calculation
                     return (50, 50); // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate Stochastic using internal method (14-period, 3-smoothing, 3-D period)
                 var stochValues = CalculateStochastic(highPrices, lowPrices, closePrices, 14, 3, 3);
-                
+
                 // Return the latest K and D values
                 var latestK = stochValues.K.LastOrDefault(k => !double.IsNaN(k));
                 var latestD = stochValues.D.LastOrDefault(d => !double.IsNaN(d));
-                
+
                 return (double.IsNaN(latestK) ? 50 : latestK, double.IsNaN(latestD) ? 50 : latestD);
             }
             catch (Exception ex)
@@ -891,23 +891,23 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(timeframe);
                 string mappedInterval = MapTimeframeToInterval(timeframe);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 30) // Need enough data for Ultimate Oscillator calculation
                     return 50; // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate Ultimate Oscillator using internal method
                 var uoValues = CalculateUltimateOscillator(highPrices, lowPrices, closePrices, 7, 14, 28);
-                
+
                 // Return the latest Ultimate Oscillator value
                 var latestUo = uoValues.LastOrDefault(u => !double.IsNaN(u));
                 return double.IsNaN(latestUo) ? 50 : latestUo;
@@ -971,24 +971,24 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string intervalMapped = MapTimeframeToInterval(interval);
-                
+
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, intervalMapped);
                 if (historicalData.Count < 3)
                     return 0;
-                
+
                 // Use default parameters for SAR calculation
                 double accelerationFactor = 0.02;
                 double maxAccelerationFactor = 0.2;
-                
+
                 // Calculate the SAR values
                 var (sarValues, _, _) = CalculateParabolicSAR(historicalData, accelerationFactor, maxAccelerationFactor);
-                
+
                 // Return the latest valid SAR value
                 if (sarValues != null && sarValues.Count > 0)
                 {
                     return sarValues.Last();
                 }
-                
+
                 return 0;
             }
             catch (Exception ex)
@@ -997,7 +997,7 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Calculate Parabolic SAR values for a price series
         /// </summary>
@@ -1005,7 +1005,7 @@ namespace Quantra.DAL.Services
         /// <param name="initialAF">Initial acceleration factor</param>
         /// <param name="maxAF">Maximum acceleration factor</param>
         /// <returns>List of SAR values, extreme points, and uptrend status</returns>
-        private (List<double> sarValues, List<double> extremePoints, List<bool> isUptrend) 
+        private (List<double> sarValues, List<double> extremePoints, List<bool> isUptrend)
             CalculateParabolicSAR(List<HistoricalPrice> prices, double initialAF, double maxAF)
         {
             if (prices.Count < 3)
@@ -1025,13 +1025,13 @@ namespace Quantra.DAL.Services
 
             // Determine initial trend (based on closing prices)
             bool currentUptrend = prices[1].Close > prices[0].Close;
-            
+
             // Initial SAR value
             double sar = currentUptrend ? prices[0].Low : prices[0].High;
-            
+
             // Initial extreme point
             double ep = currentUptrend ? prices[1].High : prices[1].Low;
-            
+
             // Initial acceleration factor
             double af = initialAF;
 
@@ -1064,13 +1064,13 @@ namespace Quantra.DAL.Services
                 {
                     // Reverse the trend
                     currentUptrend = !currentUptrend;
-                    
+
                     // Reset acceleration factor
                     af = initialAF;
-                    
+
                     // Set new extreme point
                     ep = currentUptrend ? prices[i].High : prices[i].Low;
-                    
+
                     // Set new SAR at the prior extreme point
                     sar = ep;
                 }
@@ -1111,23 +1111,23 @@ namespace Quantra.DAL.Services
             {
                 string range = MapTimeframeToRange(interval);
                 string mappedInterval = MapTimeframeToInterval(interval);
-                
+
                 // Get historical price data
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, mappedInterval);
                 if (historicalData.Count < 22) // Need enough data for CCI calculation (20 period default)
                     return 0; // Neutral default
-                    
+
                 // Sort by date to ensure chronological order
                 historicalData = historicalData.OrderBy(h => h.Date).ToList();
-                
+
                 // Extract price data
                 var highPrices = historicalData.Select(h => h.High).ToList();
                 var lowPrices = historicalData.Select(h => h.Low).ToList();
                 var closePrices = historicalData.Select(h => h.Close).ToList();
-                
+
                 // Calculate CCI using internal method
                 var cciValues = CalculateCCI(highPrices, lowPrices, closePrices, 20);
-                
+
                 // Return the latest CCI value
                 var latestCci = cciValues.LastOrDefault(c => !double.IsNaN(c));
                 return double.IsNaN(latestCci) ? 0 : latestCci;
@@ -1151,7 +1151,7 @@ namespace Quantra.DAL.Services
         /// <param name="dataPoints">Number of historical data points to use</param>
         /// <returns>Correlation result</returns>
         public async Task<IndicatorCorrelationResult> CalculateIndicatorCorrelation(
-            string symbol, string firstIndicator, string secondIndicator, 
+            string symbol, string firstIndicator, string secondIndicator,
             string timeframe = "1day", int dataPoints = 30)
         {
             try
@@ -1159,7 +1159,7 @@ namespace Quantra.DAL.Services
                 // Get historical data for both indicators
                 var firstData = await GetHistoricalIndicatorData(symbol, firstIndicator, timeframe, dataPoints);
                 var secondData = await GetHistoricalIndicatorData(symbol, secondIndicator, timeframe, dataPoints);
-                
+
                 if (firstData.Count == 0 || secondData.Count == 0)
                 {
                     return new IndicatorCorrelationResult
@@ -1176,10 +1176,10 @@ namespace Quantra.DAL.Services
 
                 // Calculate correlation
                 var correlation = CalculatePearsonCorrelation(firstData, secondData);
-                
+
                 // Calculate confidence level based on sample size
                 double confidenceLevel = CalculateConfidenceLevel(correlation, Math.Min(firstData.Count, secondData.Count));
-                
+
                 return new IndicatorCorrelationResult
                 {
                     Symbol = symbol,
@@ -1196,7 +1196,7 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", $"Failed to calculate indicator correlation for {symbol}: {firstIndicator} vs {secondIndicator}", ex.ToString());
-                
+
                 return new IndicatorCorrelationResult
                 {
                     Symbol = symbol,
@@ -1209,7 +1209,7 @@ namespace Quantra.DAL.Services
                 };
             }
         }
-        
+
         /// <summary>
         /// Calculates correlation between all relevant indicator pairs
         /// </summary>
@@ -1221,27 +1221,27 @@ namespace Quantra.DAL.Services
             string symbol, string timeframe = "1day", int dataPoints = 30)
         {
             var results = new List<IndicatorCorrelationResult>();
-            
+
             try
             {
                 // Define key indicators to analyze
                 var indicators = new List<string> { "RSI", "MACD", "ADX", "StochRSI", "VWAP", "OBV", "MFI", "BB_Width" };
-                
+
                 // Create task factories for all indicator pairs
                 var correlationTaskFactories = new List<Func<Task<IndicatorCorrelationResult>>>();
-                
+
                 for (int i = 0; i < indicators.Count; i++)
                 {
                     for (int j = i + 1; j < indicators.Count; j++)
                     {
                         var firstIndicator = indicators[i];
                         var secondIndicator = indicators[j];
-                        
-                        correlationTaskFactories.Add(() => 
+
+                        correlationTaskFactories.Add(() =>
                             CalculateIndicatorCorrelation(symbol, firstIndicator, secondIndicator, timeframe, dataPoints));
                     }
                 }
-                
+
                 // Execute all correlation calculations with throttling
                 var correlationResults = await _taskThrottler.ExecuteThrottledAsync(correlationTaskFactories);
                 results.AddRange(correlationResults);
@@ -1250,10 +1250,10 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Failed to calculate all indicator correlations for {symbol}", ex.ToString());
             }
-            
+
             return results;
         }
-        
+
         /// <summary>
         /// Identifies confirmation patterns among multiple indicators
         /// </summary>
@@ -1263,46 +1263,46 @@ namespace Quantra.DAL.Services
         public async Task<List<IndicatorConfirmationPattern>> FindConfirmationPatterns(string symbol, string timeframe = "1day")
         {
             var patterns = new List<IndicatorConfirmationPattern>();
-            
+
             try
             {
                 // Get current indicator values for analysis
                 var indicators = await GetIndicatorsForPrediction(symbol, timeframe);
-                
+
                 // Get historical indicator correlations for additional context
                 var correlations = await CalculateAllIndicatorCorrelations(symbol, timeframe, 20);
-                
+
                 // Identify trend-momentum confirmation pattern
                 var trendMomentumPattern = IdentifyTrendMomentumPattern(symbol, indicators, correlations);
                 if (trendMomentumPattern != null)
                 {
                     patterns.Add(trendMomentumPattern);
                 }
-                
+
                 // Identify overbought/oversold confirmation pattern
                 var overextendedPattern = IdentifyOverextendedPattern(symbol, indicators, correlations);
                 if (overextendedPattern != null)
                 {
                     patterns.Add(overextendedPattern);
                 }
-                
+
                 // Identify volume-price confirmation pattern
                 var volumePricePattern = IdentifyVolumePricePattern(symbol, indicators, correlations);
                 if (volumePricePattern != null)
                 {
                     patterns.Add(volumePricePattern);
                 }
-                
+
                 // Add more pattern identifications as needed
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", $"Failed to find confirmation patterns for {symbol}", ex.ToString());
             }
-            
+
             return patterns;
         }
-        
+
         /// <summary>
         /// Gets historical data for a specific indicator
         /// </summary>
@@ -1317,7 +1317,7 @@ namespace Quantra.DAL.Services
             try
             {
                 // First check if we can use DatabaseMonolith's method for certain indicators
-                if (indicatorType == "RSI" || indicatorType == "MACD" || indicatorType == "ADX" || 
+                if (indicatorType == "RSI" || indicatorType == "MACD" || indicatorType == "ADX" ||
                     indicatorType == "ROC" || indicatorType == "BB_Width")
                 {
                     return await _alphaVantageService.GetHistoricalIndicatorData(symbol, indicatorType);
@@ -1331,40 +1331,40 @@ namespace Quantra.DAL.Services
                         // For StochRSI, get RSI values first then calculate StochRSI
                         var rsiValues = await _alphaVantageService.GetHistoricalIndicatorData(symbol, "RSI");
                         return CalculateStochRSIFromRSI(rsiValues);
-                        
+
                     case "VWAP":
                         // Get price and volume data and calculate VWAP
                         string range = MapTimeframeToRange(timeframe);
                         string interval = MapTimeframeToInterval(timeframe);
-                        
+
                         var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                         if (historicalData.Count == 0)
                             return new List<double>();
-                        
+
                         return CalculateHistoricalVWAP(historicalData);
-                        
+
                     case "OBV":
                         // Calculate historical OBV values
                         range = MapTimeframeToRange(timeframe);
                         interval = MapTimeframeToInterval(timeframe);
-                        
+
                         historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                         if (historicalData.Count == 0)
                             return new List<double>();
-                        
+
                         return CalculateHistoricalOBV(historicalData);
-                        
+
                     case "MFI":
                         // Calculate historical MFI values
                         range = MapTimeframeToRange(timeframe);
                         interval = MapTimeframeToInterval(timeframe);
-                        
+
                         historicalData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                         if (historicalData.Count < 14)
                             return new List<double>();
-                        
+
                         return CalculateHistoricalMFI(historicalData);
-                        
+
                     default:
                         // For unknown indicators, return empty list
                         //DatabaseMonolith.Log("Warning", $"Unknown indicator type for historical data: {indicatorType}", "");
@@ -1377,7 +1377,7 @@ namespace Quantra.DAL.Services
                 return new List<double>();
             }
         }
-        
+
         /// <summary>
         /// Identifies confirmation patterns based on trend and momentum indicators
         /// </summary>
@@ -1386,25 +1386,25 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                if (indicators == null || !indicators.ContainsKey("ADX") || 
+                if (indicators == null || !indicators.ContainsKey("ADX") ||
                     !indicators.ContainsKey("RSI") || !indicators.ContainsKey("MomentumScore"))
                 {
                     return null;
                 }
-                
+
                 double adx = indicators["ADX"];
                 double rsi = indicators["RSI"];
                 double momentum = indicators["MomentumScore"];
-                
+
                 // Only consider strong trends
                 if (adx < 25)
                 {
                     return null;
                 }
-                
+
                 string direction;
                 double strength;
-                
+
                 // Determine signal direction
                 if (rsi > 60 && momentum > 0)
                 {
@@ -1420,13 +1420,13 @@ namespace Quantra.DAL.Services
                 {
                     return null; // No clear pattern
                 }
-                
+
                 // Find relevant correlations
-                var supportingCorrelations = correlations.Where(c => 
+                var supportingCorrelations = correlations.Where(c =>
                     c.FirstIndicator == "ADX" && c.SecondIndicator == "RSI" ||
                     c.FirstIndicator == "RSI" && c.SecondIndicator == "MACD")
                     .ToList();
-                
+
                 // Create pattern
                 var pattern = new IndicatorConfirmationPattern
                 {
@@ -1445,7 +1445,7 @@ namespace Quantra.DAL.Services
                     TimeHorizon = adx > 40 ? "Medium-term" : "Short-term",
                     Reliability = adx / 100.0
                 };
-                
+
                 return pattern;
             }
             catch (Exception ex)
@@ -1454,7 +1454,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Identifies confirmation patterns for overbought/oversold conditions
         /// </summary>
@@ -1463,20 +1463,20 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                if (indicators == null || !indicators.ContainsKey("RSI") || 
+                if (indicators == null || !indicators.ContainsKey("RSI") ||
                     !indicators.ContainsKey("StochK") || !indicators.ContainsKey("StochD"))
                 {
                     return null;
                 }
-                
+
                 double rsi = indicators["RSI"];
                 double stochK = indicators["StochK"];
                 double stochD = indicators["StochD"];
                 double mfi = indicators.ContainsKey("MFI") ? indicators["MFI"] : 50;
-                
+
                 string direction;
                 double strength;
-                
+
                 // Check for oversold condition
                 if (rsi < 30 && stochK < 20 && stochD < 20 && mfi < 30)
                 {
@@ -1493,13 +1493,13 @@ namespace Quantra.DAL.Services
                 {
                     return null; // No clear overextended pattern
                 }
-                
+
                 // Find supporting correlations
-                var supportingCorrelations = correlations.Where(c => 
+                var supportingCorrelations = correlations.Where(c =>
                     c.FirstIndicator == "RSI" && c.SecondIndicator == "MFI" ||
                     c.FirstIndicator == "RSI" && c.SecondIndicator == "StochRSI")
                     .ToList();
-                
+
                 // Create pattern
                 var pattern = new IndicatorConfirmationPattern
                 {
@@ -1519,7 +1519,7 @@ namespace Quantra.DAL.Services
                     TimeHorizon = "Short-term",
                     Reliability = strength * 0.8 // Slightly lower reliability for mean reversion patterns
                 };
-                
+
                 return pattern;
             }
             catch (Exception ex)
@@ -1528,7 +1528,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Identifies price-volume confirmation patterns
         /// </summary>
@@ -1537,34 +1537,34 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                if (indicators == null || !indicators.ContainsKey("OBV") || 
+                if (indicators == null || !indicators.ContainsKey("OBV") ||
                     !indicators.ContainsKey("MFI") || !indicators.ContainsKey("MomentumScore"))
                 {
                     return null;
                 }
-                
+
                 double obv = indicators["OBV"];
                 double mfi = indicators["MFI"];
                 double momentum = indicators["MomentumScore"];
-                
+
                 // Get historical data for OBV to determine trend
                 string range = MapTimeframeToRange("1day");
                 string interval = MapTimeframeToInterval("1day");
                 var historicalData = _historicalDataService.GetHistoricalPrices(symbol, range, interval).Result;
-                
+
                 if (historicalData.Count < 10)
                     return null;
-                
+
                 // Analyze OBV trend
                 var obvHistory = CalculateHistoricalOBV(historicalData);
                 if (obvHistory.Count < 5)
                     return null;
-                
+
                 double obvTrend = obvHistory[obvHistory.Count - 1] - obvHistory[obvHistory.Count - 5];
-                
+
                 string direction;
                 double strength;
-                
+
                 // Check for bullish volume confirmation
                 if (obvTrend > 0 && mfi > 50 && momentum > 0)
                 {
@@ -1583,12 +1583,12 @@ namespace Quantra.DAL.Services
                 {
                     return null; // No clear volume-price confirmation
                 }
-                
+
                 // Find supporting correlations
-                var supportingCorrelations = correlations.Where(c => 
+                var supportingCorrelations = correlations.Where(c =>
                     c.FirstIndicator == "OBV" && c.SecondIndicator == "MFI")
                     .ToList();
-                
+
                 // Create pattern
                 var pattern = new IndicatorConfirmationPattern
                 {
@@ -1608,7 +1608,7 @@ namespace Quantra.DAL.Services
                     TimeHorizon = "Medium-term",
                     Reliability = 0.7 * strength
                 };
-                
+
                 return pattern;
             }
             catch (Exception ex)
@@ -1624,20 +1624,20 @@ namespace Quantra.DAL.Services
         private double CalculatePearsonCorrelation(List<double> x, List<double> y)
         {
             int n = Math.Min(x.Count, y.Count);
-            
+
             if (n <= 1)
                 return 0;
-            
+
             // Trim lists to same length
             var x1 = x.Take(n).ToList();
             var y1 = y.Take(n).ToList();
-            
+
             double sumX = 0;
             double sumY = 0;
             double sumXY = 0;
             double sumX2 = 0;
             double sumY2 = 0;
-            
+
             for (int i = 0; i < n; i++)
             {
                 sumX += x1[i];
@@ -1646,17 +1646,17 @@ namespace Quantra.DAL.Services
                 sumX2 += x1[i] * x1[i];
                 sumY2 += y1[i] * y1[i];
             }
-            
+
             // Calculate correlation coefficient
             double numerator = n * sumXY - sumX * sumY;
             double denominator = Math.Sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-            
+
             if (denominator == 0)
                 return 0;
-                
+
             return numerator / denominator;
         }
-        
+
         /// <summary>
         /// Calculate confidence level for a correlation based on sample size
         /// </summary>
@@ -1664,10 +1664,10 @@ namespace Quantra.DAL.Services
         {
             if (sampleSize <= 5)
                 return 0.3; // Very low confidence with small samples
-            
+
             double r2 = correlation * correlation;
             double absoluteCorr = Math.Abs(correlation);
-            
+
             // Adjust confidence based on sample size and correlation strength
             if (sampleSize > 30)
                 return Math.Min(1.0, 0.7 + absoluteCorr * 0.3);
@@ -1678,143 +1678,143 @@ namespace Quantra.DAL.Services
             else
                 return Math.Min(0.6, 0.4 + absoluteCorr * 0.2);
         }
-        
+
         /// <summary>
         /// Calculate Stochastic RSI values from RSI values
         /// </summary>
         private List<double> CalculateStochRSIFromRSI(List<double> rsiValues)
         {
             var stochRsi = new List<double>();
-            
+
             if (rsiValues.Count < 14)
                 return stochRsi;
-                
+
             for (int i = 13; i < rsiValues.Count; i++)
             {
                 // Get the last 14 RSI values
                 var window = rsiValues.Skip(i - 13).Take(14).ToList();
-                
+
                 double minRsi = window.Min();
                 double maxRsi = window.Max();
                 double currentRsi = window.Last();
-                
+
                 if (maxRsi - minRsi == 0)
                     stochRsi.Add(0.5); // Avoid division by zero
                 else
                     stochRsi.Add((currentRsi - minRsi) / (maxRsi - minRsi));
             }
-            
+
             return stochRsi;
         }
-        
+
         /// <summary>
         /// Calculate historical VWAP values
         /// </summary>
         private List<double> CalculateHistoricalVWAP(List<HistoricalPrice> prices)
         {
             var vwapValues = new List<double>();
-            
+
             if (prices.Count == 0)
                 return vwapValues;
-            
+
             double cumulativeTPV = 0;
             long cumulativeVolume = 0;
-            
+
             foreach (var bar in prices)
             {
                 double typicalPrice = (bar.High + bar.Low + bar.Close) / 3;
                 cumulativeTPV += typicalPrice * bar.Volume;
                 cumulativeVolume += bar.Volume;
-                
+
                 if (cumulativeVolume == 0)
                     vwapValues.Add(bar.Close);
                 else
                     vwapValues.Add(cumulativeTPV / cumulativeVolume);
             }
-            
+
             return vwapValues;
         }
-        
+
         /// <summary>
         /// Calculate historical OBV values
         /// </summary>
         private List<double> CalculateHistoricalOBV(List<HistoricalPrice> prices)
         {
             var obvValues = new List<double>();
-            
+
             if (prices.Count < 2)
                 return obvValues;
-                
+
             // First OBV value is arbitrary, set it to 0
             obvValues.Add(0);
             double obv = 0;
-            
+
             for (int i = 1; i < prices.Count; i++)
             {
                 var currentClose = prices[i].Close;
                 var previousClose = prices[i - 1].Close;
                 var currentVolume = prices[i].Volume;
-                
+
                 if (currentClose > previousClose)
                     obv += currentVolume;
                 else if (currentClose < previousClose)
                     obv -= currentVolume;
                 // Price unchanged - OBV remains the same
-                
+
                 obvValues.Add(obv);
             }
-            
+
             return obvValues;
         }
-        
+
         /// <summary>
         /// Calculate historical MFI values
         /// </summary>
         private List<double> CalculateHistoricalMFI(List<HistoricalPrice> prices)
         {
             var mfiValues = new List<double>();
-            
+
             if (prices.Count < 14)
                 return mfiValues;
-                
+
             // For the first 13 bars, we don't have enough history for MFI
             for (int i = 0; i < 13; i++)
             {
                 mfiValues.Add(50); // Neutral default
             }
-            
+
             // Calculate MFI for each bar with sufficient history
             for (int i = 13; i < prices.Count; i++)
             {
                 double positiveMoneyFlow = 0;
                 double negativeMoneyFlow = 0;
-                
+
                 for (int j = i - 13; j <= i; j++)
                 {
                     if (j == i - 13) continue; // Skip first bar in window
-                    
+
                     // Calculate typical price
                     double currentTypical = (prices[j].High + prices[j].Low + prices[j].Close) / 3;
                     double prevTypical = (prices[j - 1].High + prices[j - 1].Low + prices[j - 1].Close) / 3;
                     double rawMoneyFlow = currentTypical * prices[j].Volume;
-                    
+
                     if (currentTypical > prevTypical)
                         positiveMoneyFlow += rawMoneyFlow;
                     else if (currentTypical < prevTypical)
                         negativeMoneyFlow += rawMoneyFlow;
                 }
-                
+
                 // Calculate money flow ratio
                 double moneyFlowRatio = negativeMoneyFlow == 0 ? 100 : positiveMoneyFlow / negativeMoneyFlow;
-                
+
                 // Calculate MFI
                 double mfi = 100 - 100 / (1 + moneyFlowRatio);
                 mfiValues.Add(mfi);
             }
-            
+
             return mfiValues;
         }
-        
+
         #endregion
 
         #region Custom Indicators Implementation
@@ -1827,7 +1827,7 @@ namespace Quantra.DAL.Services
             try
             {
                 var indicatorDefinitions = await _customIndicatorRepository.GetAllIndicatorsAsync();
-                
+
                 foreach (var definition in indicatorDefinitions)
                 {
                     try
@@ -1844,7 +1844,7 @@ namespace Quantra.DAL.Services
                         //DatabaseMonolith.Log("Error", $"Failed to load indicator {definition.Id}", ex.ToString());
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Loaded {_customIndicators.Count} custom indicators", "");
             }
             catch (Exception ex)
@@ -1860,16 +1860,16 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrWhiteSpace(indicatorId))
                 throw new ArgumentNullException(nameof(indicatorId));
-                
+
             // Check if the indicator is already loaded
             if (_customIndicators.TryGetValue(indicatorId, out var indicator))
                 return indicator;
-                
+
             // Try to load it from the repository
             var definition = await _customIndicatorRepository.GetIndicatorAsync(indicatorId);
             if (definition == null)
                 return null;
-                
+
             try
             {
                 // Create indicator from definition
@@ -1884,7 +1884,7 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Failed to create indicator {indicatorId}", ex.ToString());
             }
-            
+
             return null;
         }
 
@@ -1895,17 +1895,17 @@ namespace Quantra.DAL.Services
         {
             if (indicator == null)
                 throw new ArgumentNullException(nameof(indicator));
-                
+
             if (string.IsNullOrWhiteSpace(indicator.Id))
                 throw new ArgumentException("Indicator ID cannot be null or empty", nameof(indicator));
-                
+
             // Check if the indicator is already registered
             if (_customIndicators.ContainsKey(indicator.Id))
                 return false;
-                
+
             // Add to in-memory dictionary
             _customIndicators[indicator.Id] = indicator;
-            
+
             // If it's a CustomIndicator, save it to the repository
             if (indicator is CustomIndicator customIndicator)
             {
@@ -1919,7 +1919,7 @@ namespace Quantra.DAL.Services
                     Dependencies = indicator.GetDependencies().ToList(),
                     IndicatorType = indicator is CompositeIndicator ? "Composite" : "Custom"
                 };
-                
+
                 // Save parameters
                 foreach (var param in indicator.Parameters)
                 {
@@ -1936,11 +1936,11 @@ namespace Quantra.DAL.Services
                         Options = param.Value.Options
                     };
                 }
-                
+
                 // Save to repository
                 await _customIndicatorRepository.SaveIndicatorAsync(definition);
             }
-            
+
             return true;
         }
 
@@ -1951,14 +1951,14 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrWhiteSpace(indicatorId))
                 throw new ArgumentNullException(nameof(indicatorId));
-                
+
             // Remove from in-memory dictionary
             if (!_customIndicators.Remove(indicatorId))
                 return false;
-                
+
             // Remove from repository
             _customIndicatorRepository.DeleteIndicator(indicatorId);
-            
+
             return true;
         }
 
@@ -1978,10 +1978,10 @@ namespace Quantra.DAL.Services
             var indicator = await GetIndicatorAsync(indicatorId);
             if (indicator == null)
                 throw new InvalidOperationException($"Indicator {indicatorId} not found");
-                
+
             // Get historical data for calculation
             List<HistoricalPrice> historicalData;
-            
+
             try
             {
                 historicalData = await _historicalDataService.GetHistoricalPrices(symbol, timeframe);
@@ -1991,7 +1991,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", $"Failed to get historical data for {symbol}", ex.ToString());
                 throw new InvalidOperationException("Failed to get historical data", ex);
             }
-            
+
             // Calculate the indicator
             return await indicator.CalculateAsync(historicalData);
         }
@@ -2003,7 +2003,7 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrWhiteSpace(indicatorId))
                 throw new ArgumentNullException(nameof(indicatorId));
-                
+
             return await _customIndicatorRepository.GetIndicatorAsync(indicatorId);
         }
 
@@ -2014,10 +2014,10 @@ namespace Quantra.DAL.Services
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
-                
+
             // Save to repository
             var result = await _customIndicatorRepository.SaveIndicatorAsync(definition);
-            
+
             // If successful and indicator is already loaded, update it
             if (result && _customIndicators.ContainsKey(definition.Id))
             {
@@ -2036,7 +2036,7 @@ namespace Quantra.DAL.Services
                     // Don't fail the operation, the definition was saved successfully
                 }
             }
-            
+
             return result;
         }
 
@@ -2049,7 +2049,7 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
-        
+
         /// <summary>
         /// Gets the correlation between two indicators
         /// </summary>
@@ -2067,18 +2067,18 @@ namespace Quantra.DAL.Services
             var result = await CalculateIndicatorCorrelation(symbol, indicator1, indicator2, timeframe, period);
             return result.CorrelationCoefficient;
         }
-        
+
         #region Visualization Framework Methods
-        
+
         // Methods for visualization framework
         public (List<double> Upper, List<double> Middle, List<double> Lower) CalculateBollingerBands(List<double> prices, int period, double stdDevMultiplier)
         {
             var result = (Upper: new List<double>(), Middle: new List<double>(), Lower: new List<double>());
-            
+
             // Calculate Simple Moving Average (SMA)
             var sma = CalculateSMA(prices, period);
             result.Middle = sma;
-            
+
             // Calculate standard deviation for each window
             for (int i = 0; i < prices.Count; i++)
             {
@@ -2089,24 +2089,24 @@ namespace Quantra.DAL.Services
                     result.Lower.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Get window of prices for calculating std dev
                 var window = prices.Skip(i - period + 1).Take(period).ToList();
                 var mean = sma[i];
                 var stdDev = Math.Sqrt(window.Average(v => Math.Pow(v - mean, 2)));
-                
+
                 // Calculate upper and lower bands
                 result.Upper.Add(mean + stdDevMultiplier * stdDev);
                 result.Lower.Add(mean - stdDevMultiplier * stdDev);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateSMA(List<double> prices, int period)
         {
             var result = new List<double>();
-            
+
             for (int i = 0; i < prices.Count; i++)
             {
                 if (i < period - 1)
@@ -2115,7 +2115,7 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Calculate SMA for this window
                 var sum = 0.0;
                 for (int j = i - period + 1; j <= i; j++)
@@ -2124,17 +2124,17 @@ namespace Quantra.DAL.Services
                 }
                 result.Add(sum / period);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateEMA(List<double> prices, int period)
         {
             var result = new List<double>();
-            
+
             // First EMA value is SMA
             var sma = CalculateSMA(prices, period);
-            
+
             for (int i = 0; i < prices.Count; i++)
             {
                 if (i < period - 1)
@@ -2143,55 +2143,55 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                     continue;
                 }
-                
+
                 if (i == period - 1)
                 {
                     // First EMA is SMA
                     result.Add(sma[i]);
                     continue;
                 }
-                
+
                 // Calculate EMA: EMA = Price * k + EMA(previous) * (1-k)
                 // where k = 2/(period+1)
                 double multiplier = 2.0 / (period + 1);
                 double ema = prices[i] * multiplier + result[i - 1] * (1 - multiplier);
                 result.Add(ema);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateVWAP(List<double> highPrices, List<double> lowPrices, List<double> closePrices, List<double> volumes)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), Math.Min(closePrices.Count, volumes.Count));
-            
+
             double cumulativeVolume = 0;
             double cumulativePV = 0; // Price * Volume
-            
+
             for (int i = 0; i < length; i++)
             {
                 // Typical price = (high + low + close) / 3
                 double typicalPrice = (highPrices[i] + lowPrices[i] + closePrices[i]) / 3;
-                
+
                 // Cumulative values
                 cumulativeVolume += volumes[i];
                 cumulativePV += typicalPrice * volumes[i];
-                
+
                 // VWAP = Cumulative PV / Cumulative Volume
                 double vwap = cumulativePV / cumulativeVolume;
                 result.Add(vwap);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateRSI(List<double> prices, int period)
         {
             var result = new List<double>();
-            
+
             // Need at least period+1 data points to calculate first RSI
             if (prices.Count <= period)
             {
@@ -2202,24 +2202,24 @@ namespace Quantra.DAL.Services
                 }
                 return result;
             }
-            
+
             // Calculate price changes
             var priceChanges = new List<double>();
             for (int i = 1; i < prices.Count; i++)
             {
                 priceChanges.Add(prices[i] - prices[i - 1]);
             }
-            
+
             // First gains and losses (for period)
             var gains = new List<double>();
             var losses = new List<double>();
-            
+
             for (int i = 0; i < priceChanges.Count; i++)
             {
                 double change = priceChanges[i];
                 gains.Add(change > 0 ? change : 0);
                 losses.Add(change < 0 ? Math.Abs(change) : 0);
-                
+
                 // Add NaN for initial values
                 if (i < period - 1)
                 {
@@ -2230,25 +2230,25 @@ namespace Quantra.DAL.Services
                     // Calculate average gains and average losses for this period
                     double avgGain = gains.Skip(i - period + 1).Take(period).Average();
                     double avgLoss = losses.Skip(i - period + 1).Take(period).Average();
-                    
+
                     // Calculate RS and RSI
                     double rs = avgLoss == 0 ? 100 : avgGain / avgLoss;
                     double rsi = 100 - 100 / (1 + rs);
                     result.Add(rsi);
                 }
             }
-            
+
             return result;
         }
-        
+
         public (List<double> MacdLine, List<double> SignalLine, List<double> Histogram) CalculateMACD(List<double> prices, int fastPeriod, int slowPeriod, int signalPeriod)
         {
             var result = (MacdLine: new List<double>(), SignalLine: new List<double>(), Histogram: new List<double>());
-            
+
             // Calculate EMAs
             var fastEMA = CalculateEMA(prices, fastPeriod);
             var slowEMA = CalculateEMA(prices, slowPeriod);
-            
+
             // Calculate MACD line
             var macdLine = new List<double>();
             for (int i = 0; i < prices.Count; i++)
@@ -2264,10 +2264,10 @@ namespace Quantra.DAL.Services
                     macdLine.Add(fastEMA[i] - slowEMA[i]);
                 }
             }
-            
+
             // Calculate signal line (EMA of MACD line)
             var signalLine = CalculateEMA(macdLine, signalPeriod);
-            
+
             // Calculate histogram (MACD - Signal)
             var histogram = new List<double>();
             for (int i = 0; i < macdLine.Count; i++)
@@ -2283,21 +2283,21 @@ namespace Quantra.DAL.Services
                     histogram.Add(macdLine[i] - signalLine[i]);
                 }
             }
-            
+
             result.MacdLine = macdLine;
             result.SignalLine = signalLine;
             result.Histogram = histogram;
-            
+
             return result;
         }
-        
+
         public (List<double> K, List<double> D) CalculateStochastic(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int kPeriod, int kSmoothing, int dPeriod)
         {
             var result = (K: new List<double>(), D: new List<double>());
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             // Calculate %K for each point
             var rawK = new List<double>();
             for (int i = 0; i < length; i++)
@@ -2308,40 +2308,40 @@ namespace Quantra.DAL.Services
                     rawK.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Find highest high and lowest low over period
                 var highestHigh = double.MinValue;
                 var lowestLow = double.MaxValue;
-                
+
                 for (int j = i - kPeriod + 1; j <= i; j++)
                 {
                     highestHigh = Math.Max(highestHigh, highPrices[j]);
                     lowestLow = Math.Min(lowestLow, lowPrices[j]);
                 }
-                
+
                 // Calculate raw %K
                 double currentClose = closePrices[i];
                 double stochK = highestHigh == lowestLow ? 50 : (currentClose - lowestLow) / (highestHigh - lowestLow) * 100;
                 rawK.Add(stochK);
             }
-            
+
             // Calculate smoothed %K (optional smoothing)
             var smoothedK = kSmoothing > 1 ? CalculateSMA(rawK, kSmoothing) : rawK;
             result.K = smoothedK;
-            
+
             // Calculate %D (SMA of %K)
             result.D = CalculateSMA(smoothedK, dPeriod);
-            
+
             return result;
         }
-        
+
         public List<double> CalculateStochRSI(List<double> prices, int rsiPeriod, int stochPeriod, int kPeriod, int dPeriod)
         {
             var result = new List<double>();
-            
+
             // Calculate RSI values
             var rsiValues = CalculateRSI(prices, rsiPeriod);
-            
+
             // Apply Stochastic to RSI values
             for (int i = 0; i < rsiValues.Count; i++)
             {
@@ -2351,11 +2351,11 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Find highest high and lowest low RSI over period
                 var highestRsi = double.MinValue;
                 var lowestRsi = double.MaxValue;
-                
+
                 for (int j = i - stochPeriod + 1; j <= i; j++)
                 {
                     if (!double.IsNaN(rsiValues[j]))
@@ -2364,23 +2364,23 @@ namespace Quantra.DAL.Services
                         lowestRsi = Math.Min(lowestRsi, rsiValues[j]);
                     }
                 }
-                
+
                 // Calculate StochRSI
                 double currentRsi = rsiValues[i];
                 double stochRsi = highestRsi == lowestRsi ? 0.5 : (currentRsi - lowestRsi) / (highestRsi - lowestRsi);
                 result.Add(stochRsi);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateWilliamsR(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             for (int i = 0; i < length; i++)
             {
                 if (i < period - 1)
@@ -2389,40 +2389,40 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Find highest high and lowest low over period
                 var highestHigh = double.MinValue;
                 var lowestLow = double.MaxValue;
-                
+
                 for (int j = i - period + 1; j <= i; j++)
                 {
                     highestHigh = Math.Max(highestHigh, highPrices[j]);
                     lowestLow = Math.Min(lowestLow, lowPrices[j]);
                 }
-                
+
                 // Calculate Williams %R
                 double currentClose = closePrices[i];
                 double williamsR = highestHigh == lowestLow ? -50 : (highestHigh - currentClose) / (highestHigh - lowestLow) * -100;
                 result.Add(williamsR);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateCCI(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             // Calculate typical prices: (H+L+C)/3
             var typicalPrices = new List<double>();
             for (int i = 0; i < length; i++)
             {
                 typicalPrices.Add((highPrices[i] + lowPrices[i] + closePrices[i]) / 3);
             }
-            
+
             // Calculate CCI
             for (int i = 0; i < length; i++)
             {
@@ -2432,7 +2432,7 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                     continue;
                 }
-                
+
                 // Calculate SMA of typical prices
                 var sma = 0.0;
                 for (int j = i - period + 1; j <= i; j++)
@@ -2440,7 +2440,7 @@ namespace Quantra.DAL.Services
                     sma += typicalPrices[j];
                 }
                 sma /= period;
-                
+
                 // Calculate mean deviation
                 var meanDev = 0.0;
                 for (int j = i - period + 1; j <= i; j++)
@@ -2448,22 +2448,22 @@ namespace Quantra.DAL.Services
                     meanDev += Math.Abs(typicalPrices[j] - sma);
                 }
                 meanDev /= period;
-                
+
                 // Calculate CCI
                 double cci = meanDev == 0 ? 0 : (typicalPrices[i] - sma) / (0.015 * meanDev);
                 result.Add(cci);
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateADX(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period = 14)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             if (length < period + 1)
             {
                 for (int i = 0; i < length; i++)
@@ -2472,12 +2472,12 @@ namespace Quantra.DAL.Services
                 }
                 return result;
             }
-            
+
             // Calculate True Range (TR) and Directional Movement (+DM, -DM)
             var trueRanges = new List<double>();
             var plusDMs = new List<double>();
             var minusDMs = new List<double>();
-            
+
             for (int i = 1; i < length; i++)
             {
                 // True Range
@@ -2486,36 +2486,36 @@ namespace Quantra.DAL.Services
                 double tr3 = Math.Abs(lowPrices[i] - closePrices[i - 1]);
                 double tr = Math.Max(tr1, Math.Max(tr2, tr3));
                 trueRanges.Add(tr);
-                
+
                 // Directional Movement
                 double highDiff = highPrices[i] - highPrices[i - 1];
                 double lowDiff = lowPrices[i - 1] - lowPrices[i];
-                
+
                 double plusDM = highDiff > lowDiff && highDiff > 0 ? highDiff : 0;
                 double minusDM = lowDiff > highDiff && lowDiff > 0 ? lowDiff : 0;
-                
+
                 plusDMs.Add(plusDM);
                 minusDMs.Add(minusDM);
             }
-            
+
             // Calculate smoothed versions (using EMA)
             var smoothedTRs = CalculateEMA(trueRanges, period);
             var smoothedPlusDMs = CalculateEMA(plusDMs, period);
             var smoothedMinusDMs = CalculateEMA(minusDMs, period);
-            
+
             // Calculate +DI and -DI
             var plusDIs = new List<double>();
             var minusDIs = new List<double>();
-            
+
             for (int i = 0; i < smoothedTRs.Count; i++)
             {
                 double plusDI = smoothedTRs[i] == 0 ? 0 : smoothedPlusDMs[i] / smoothedTRs[i] * 100;
                 double minusDI = smoothedTRs[i] == 0 ? 0 : smoothedMinusDMs[i] / smoothedTRs[i] * 100;
-                
+
                 plusDIs.Add(plusDI);
                 minusDIs.Add(minusDI);
             }
-            
+
             // Calculate DX
             var dxValues = new List<double>();
             for (int i = 0; i < plusDIs.Count; i++)
@@ -2524,28 +2524,28 @@ namespace Quantra.DAL.Services
                 double dx = diSum == 0 ? 0 : Math.Abs(plusDIs[i] - minusDIs[i]) / diSum * 100;
                 dxValues.Add(dx);
             }
-            
+
             // Calculate ADX (EMA of DX)
             var adxValues = CalculateEMA(dxValues, period);
-            
+
             // Pad with NaN for initial periods
             for (int i = 0; i < period; i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             result.AddRange(adxValues);
-            
+
             return result;
         }
-        
+
         public List<double> CalculateATR(List<double> highPrices, List<double> lowPrices, List<double> closePrices, int period = 14)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             if (length < 2)
             {
                 for (int i = 0; i < length; i++)
@@ -2554,13 +2554,13 @@ namespace Quantra.DAL.Services
                 }
                 return result;
             }
-            
+
             // Calculate True Range for each period
             var trueRanges = new List<double>();
-            
+
             // First period - just high-low
             result.Add(highPrices[0] - lowPrices[0]);
-            
+
             for (int i = 1; i < length; i++)
             {
                 double tr1 = highPrices[i] - lowPrices[i];
@@ -2569,7 +2569,7 @@ namespace Quantra.DAL.Services
                 double tr = Math.Max(tr1, Math.Max(tr2, tr3));
                 trueRanges.Add(tr);
             }
-            
+
             // Calculate ATR using EMA of True Range
             if (trueRanges.Count >= period)
             {
@@ -2584,14 +2584,14 @@ namespace Quantra.DAL.Services
                     result.Add(double.NaN);
                 }
             }
-            
+
             return result;
         }
-        
+
         public List<double> CalculateROC(List<double> prices, int period = 10)
         {
             var result = new List<double>();
-            
+
             for (int i = 0; i < prices.Count; i++)
             {
                 if (i < period)
@@ -2604,7 +2604,7 @@ namespace Quantra.DAL.Services
                     // ROC = ((current - previous) / previous) * 100
                     double current = prices[i];
                     double previous = prices[i - period];
-                    
+
                     if (previous == 0)
                     {
                         result.Add(0);
@@ -2616,18 +2616,18 @@ namespace Quantra.DAL.Services
                     }
                 }
             }
-            
+
             return result;
         }
-        
-        public List<double> CalculateUltimateOscillator(List<double> highPrices, List<double> lowPrices, List<double> closePrices, 
+
+        public List<double> CalculateUltimateOscillator(List<double> highPrices, List<double> lowPrices, List<double> closePrices,
             int period1 = 7, int period2 = 14, int period3 = 28)
         {
             var result = new List<double>();
-            
+
             // Ensure all input lists are the same length
             int length = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             if (length < period3 + 1)
             {
                 for (int i = 0; i < length; i++)
@@ -2636,18 +2636,18 @@ namespace Quantra.DAL.Services
                 }
                 return result;
             }
-            
+
             // Calculate Buying Pressure (BP) and True Range (TR)
             var buyingPressures = new List<double>();
             var trueRanges = new List<double>();
-            
+
             for (int i = 1; i < length; i++)
             {
                 // Buying Pressure = Close - Min(Low, Previous Close)
                 double minLow = Math.Min(lowPrices[i], closePrices[i - 1]);
                 double bp = closePrices[i] - minLow;
                 buyingPressures.Add(bp);
-                
+
                 // True Range
                 double tr1 = highPrices[i] - lowPrices[i];
                 double tr2 = Math.Abs(highPrices[i] - closePrices[i - 1]);
@@ -2655,7 +2655,7 @@ namespace Quantra.DAL.Services
                 double tr = Math.Max(tr1, Math.Max(tr2, tr3));
                 trueRanges.Add(tr);
             }
-            
+
             // Calculate Ultimate Oscillator
             for (int i = period3 - 1; i < buyingPressures.Count; i++)
             {
@@ -2663,38 +2663,38 @@ namespace Quantra.DAL.Services
                 double bp1Sum = 0, tr1Sum = 0;
                 double bp2Sum = 0, tr2Sum = 0;
                 double bp3Sum = 0, tr3Sum = 0;
-                
+
                 // Period 1
                 for (int j = i - period1 + 1; j <= i; j++)
                 {
                     bp1Sum += buyingPressures[j];
                     tr1Sum += trueRanges[j];
                 }
-                
+
                 // Period 2
                 for (int j = i - period2 + 1; j <= i; j++)
                 {
                     bp2Sum += buyingPressures[j];
                     tr2Sum += trueRanges[j];
                 }
-                
+
                 // Period 3
                 for (int j = i - period3 + 1; j <= i; j++)
                 {
                     bp3Sum += buyingPressures[j];
                     tr3Sum += trueRanges[j];
                 }
-                
+
                 // Calculate averages
                 double avg1 = tr1Sum == 0 ? 0 : bp1Sum / tr1Sum;
                 double avg2 = tr2Sum == 0 ? 0 : bp2Sum / tr2Sum;
                 double avg3 = tr3Sum == 0 ? 0 : bp3Sum / tr3Sum;
-                
+
                 // Ultimate Oscillator formula
                 double uo = 100 * (4 * avg1 + 2 * avg2 + avg3) / 7;
                 result.Add(uo);
             }
-            
+
             // Pad with NaN for initial periods
             var paddedResult = new List<double>();
             for (int i = 0; i < period3; i++)
@@ -2702,10 +2702,10 @@ namespace Quantra.DAL.Services
                 paddedResult.Add(double.NaN);
             }
             paddedResult.AddRange(result);
-            
+
             return paddedResult;
         }
-        
+
         #endregion
 
         /// <summary>

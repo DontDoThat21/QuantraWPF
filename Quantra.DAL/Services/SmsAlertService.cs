@@ -38,13 +38,13 @@ namespace Quantra.DAL.Services
             if (!shouldSend) return;
 
             string message = $"QUANTRA ALERT: {alert.Name} [{alert.Category}] - {alert.Symbol}: {alert.Condition}";
-            
+
             // Add technical indicator specific details if applicable
             if (alert.Category == AlertCategory.TechnicalIndicator && alert.CurrentIndicatorValue > 0)
             {
                 message += $"\nIndicator: {alert.IndicatorName} {alert.ComparisonOperator} {alert.ThresholdValue}";
             }
-            
+
             SendSms(settings.AlertPhoneNumber, message);
         }
     }

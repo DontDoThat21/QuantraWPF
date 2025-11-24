@@ -44,7 +44,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Calculates position size using adaptive risk adjustment
         /// </summary>
-        public int CalculatePositionSizeByAdaptiveRisk(string symbol, double price, double stopLossPrice, 
+        public int CalculatePositionSizeByAdaptiveRisk(string symbol, double price, double stopLossPrice,
             double riskPercentage, double accountSize, double volatility = 0, double winRate = 0.5)
         {
             try
@@ -104,16 +104,16 @@ namespace Quantra.DAL.Services
             try
             {
                 // Validate common parameters
-                if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) || 
+                if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) ||
                     parameters.Price <= 0 || parameters.AccountSize <= 0)
                 {
                     //DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
                     return 0;
                 }
-                
+
                 // Apply risk mode adjustments
                 AdjustParametersForRiskMode(parameters);
-                
+
                 // Calculate position size based on the specified method
                 int shares;
                 switch (parameters.Method)
@@ -141,16 +141,16 @@ namespace Quantra.DAL.Services
                         shares = CalculatePositionSizeByFixedRisk(parameters);
                         break;
                 }
-                
+
                 // Apply maximum position size constraint
                 int maxShares = CalculateMaxPositionSize(parameters);
                 shares = Math.Min(shares, maxShares);
-                
+
                 // Log the calculation
                 string methodName = parameters.Method.ToString();
                 //DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
-                    //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
-                
+                //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
+
                 return shares;
             }
             catch (Exception ex)
@@ -174,13 +174,13 @@ namespace Quantra.DAL.Services
                     parameters.KellyFractionMultiplier = 0.3; // Lower Kelly fraction
                     parameters.ATRMultiple *= 0.7; // Tighter ATR multiple
                     break;
-                
+
                 case RiskMode.Moderate:
                     // Moderate mode - slightly reduced risk factors
                     parameters.RiskPercentage *= 0.8; // 80% of normal risk
                     parameters.KellyFractionMultiplier = 0.4; // Moderate Kelly fraction
                     break;
-                
+
                 case RiskMode.Aggressive:
                     // Aggressive mode - increased risk factors
                     parameters.RiskPercentage *= 1.5; // 150% of normal risk
@@ -188,7 +188,7 @@ namespace Quantra.DAL.Services
                     parameters.KellyFractionMultiplier = 0.7; // Higher Kelly fraction
                     parameters.ATRMultiple *= 1.2; // Wider ATR multiple
                     break;
-                
+
                 case RiskMode.Normal:
                 default:
                     // Normal mode - no adjustments needed
@@ -225,13 +225,13 @@ namespace Quantra.DAL.Services
             // Kelly formula: f = (bp - q) / b
             // where b = odds received on the wager, p = probability of winning, q = probability of losing
             double kellyFraction = (parameters.WinProbability * parameters.AvgWin - parameters.LossProbability) / parameters.AvgWin;
-            
+
             // Apply multiplier to reduce risk (typically 0.25-0.5 of full Kelly)
             kellyFraction *= parameters.KellyFractionMultiplier;
-            
+
             // Ensure fraction is within reasonable bounds
             kellyFraction = Math.Max(0, Math.Min(kellyFraction, 0.5)); // Cap at 50% of account
-            
+
             double positionValue = parameters.AccountSize * kellyFraction;
             return (int)(positionValue / parameters.Price);
         }
@@ -251,21 +251,21 @@ namespace Quantra.DAL.Services
         {
             // Implement tier-based position sizing
             // This could be based on account size tiers, volatility tiers, etc.
-            
+
             double tierMultiplier = 1.0;
-            
+
             // Account size tiers
             if (parameters.AccountSize < 10000)
                 tierMultiplier = 0.5; // Small account - reduce size
             else if (parameters.AccountSize > 100000)
                 tierMultiplier = 1.5; // Large account - can take bigger positions
-            
+
             // Price tiers (adjust for stock price ranges)
             if (parameters.Price < 10)
                 tierMultiplier *= 1.2; // Cheaper stocks - can buy more shares
             else if (parameters.Price > 500)
                 tierMultiplier *= 0.8; // Expensive stocks - fewer shares
-            
+
             double basePositionValue = parameters.AccountSize * (parameters.RiskPercentage / 100) * tierMultiplier;
             return (int)(basePositionValue / parameters.Price);
         }
@@ -277,29 +277,29 @@ namespace Quantra.DAL.Services
         {
             // Base calculation using fixed risk
             int baseShares = CalculatePositionSizeByFixedRisk(parameters);
-            
+
             // Apply adaptive adjustments
             double adaptiveMultiplier = 1.0;
-            
+
             // Volatility adjustment
             if (parameters.CurrentVolatility > 0)
             {
                 double volRatio = parameters.CurrentVolatility / parameters.BaselineVolatility;
                 adaptiveMultiplier /= Math.Sqrt(volRatio); // Reduce size for higher volatility
             }
-            
+
             // Market conditions adjustment
             if (parameters.MarketTrend == "Bearish")
                 adaptiveMultiplier *= 0.8;
             else if (parameters.MarketTrend == "Bullish")
                 adaptiveMultiplier *= 1.1;
-            
+
             // Recent performance adjustment
             if (parameters.RecentWinRate > 0.6)
                 adaptiveMultiplier *= 1.1;
             else if (parameters.RecentWinRate < 0.4)
                 adaptiveMultiplier *= 0.9;
-            
+
             return (int)(baseShares * adaptiveMultiplier);
         }
 
@@ -310,13 +310,13 @@ namespace Quantra.DAL.Services
         {
             double riskAmount = parameters.AccountSize * (parameters.RiskPercentage / 100);
             double riskPerShare = Math.Abs(parameters.Price - parameters.StopLossPrice);
-            
+
             if (riskPerShare == 0)
             {
                 // Default to 1% of price if no stop loss provided
                 riskPerShare = parameters.Price * 0.01;
             }
-            
+
             return (int)(riskAmount / riskPerShare);
         }
 

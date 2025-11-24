@@ -90,7 +90,7 @@ namespace Quantra.DAL.Services
                 if (double.TryParse(output, out double sentiment))
                     return sentiment;
                 //else
-                    //DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
+                //DatabaseMonolith.Log("Warning", $"Python sentiment script returned non-numeric output: {output}");
             }
             catch (Exception ex)
             {

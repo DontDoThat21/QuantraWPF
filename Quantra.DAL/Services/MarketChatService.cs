@@ -35,7 +35,7 @@ namespace Quantra.DAL.Services
             _logger = logger;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
-            
+
             try
             {
                 // Set up the HTTP client with API key from settings
@@ -65,7 +65,7 @@ namespace Quantra.DAL.Services
 
                 // Build the system prompt
                 string systemPrompt = BuildSystemPrompt();
-                
+
                 // Build the user prompt with optional context
                 string enhancedPrompt = await BuildEnhancedPromptAsync(userQuestion, includeContext);
 
@@ -100,7 +100,7 @@ namespace Quantra.DAL.Services
                 });
 
                 string assistantResponse = response.Choices[0].Message.Content;
-                
+
                 // Store the conversation for context in future messages
                 StoreConversationTurn(userQuestion, assistantResponse);
 
@@ -130,24 +130,24 @@ namespace Quantra.DAL.Services
 
                 // Build the system prompt specific to trading plans
                 string systemPrompt = BuildTradingPlanSystemPrompt();
-                
+
                 // Build the user prompt
                 var promptBuilder = new StringBuilder();
-                
+
                 promptBuilder.AppendLine($"Suggest a detailed trading plan for {ticker} for the {timeframe}.");
                 promptBuilder.AppendLine($"Include entry and exit criteria, position sizing, stop-loss, and a brief rationale.");
                 promptBuilder.AppendLine($"Assume {riskProfile} risk tolerance.");
-                
+
                 if (!string.IsNullOrEmpty(marketContext))
                 {
                     promptBuilder.AppendLine($"Market context: {marketContext}");
                 }
-                
+
                 promptBuilder.AppendLine($"Current market session: {GetCurrentMarketSession()}");
                 promptBuilder.AppendLine($"Current timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss} UTC");
 
                 string userPrompt = promptBuilder.ToString();
-                
+
                 // Prepare conversation messages with specialized system prompt
                 var messages = new List<object>
                 {
@@ -184,7 +184,7 @@ namespace Quantra.DAL.Services
 
                 string tradingPlan = response.Choices[0].Message.Content;
                 _logger.LogInformation($"Successfully generated trading plan for {ticker}");
-                
+
                 return tradingPlan;
             }
             catch (Exception ex)
@@ -222,7 +222,7 @@ namespace Quantra.DAL.Services
                    "Always mention relevant risks and avoid giving direct investment advice. " +
                    "Use professional yet accessible language appropriate for experienced traders.";
         }
-        
+
         /// <summary>
         /// Builds the system prompt specifically for trading plan requests
         /// </summary>
@@ -242,7 +242,7 @@ namespace Quantra.DAL.Services
         private async Task<string> BuildEnhancedPromptAsync(string userQuestion, bool includeContext)
         {
             var promptBuilder = new StringBuilder();
-            
+
             if (includeContext)
             {
                 // Add current market context (simplified for now)
@@ -269,7 +269,7 @@ namespace Quantra.DAL.Services
             };
 
             // Add recent conversation history (last 4 messages to stay within token limits)
-            var recentHistory = _conversationHistory.Count > 4 
+            var recentHistory = _conversationHistory.Count > 4
                 ? _conversationHistory.GetRange(_conversationHistory.Count - 4, 4)
                 : _conversationHistory;
 
@@ -297,7 +297,7 @@ namespace Quantra.DAL.Services
         private void StoreConversationTurn(string userQuestion, string assistantResponse)
         {
             var timestamp = DateTime.UtcNow;
-            
+
             _conversationHistory.Add(new MarketChatMessage
             {
                 Content = userQuestion,
@@ -345,7 +345,7 @@ namespace Quantra.DAL.Services
                     return "Pre-Market";
                 }
             }
-            
+
             return "Market Closed (Weekend)";
         }
 
@@ -362,7 +362,7 @@ namespace Quantra.DAL.Services
             }
 
             // Fallback to local settings file
-             const string settingsFile = "alphaVantageSettings.json";
+            const string settingsFile = "alphaVantageSettings.json";
             const string openAiApiKeyProperty = "OpenAiApiKey";
 
             if (!File.Exists(settingsFile))

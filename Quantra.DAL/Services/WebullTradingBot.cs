@@ -34,19 +34,19 @@ namespace Quantra.DAL.Services
         private readonly AlphaVantageService _alphaVantageService;
 
         private Task _monitoringTask;
-        
+
         // Trading hour and market session related fields
         private List<TimeOnly> _tradingHourRestrictions = new List<TimeOnly>();
         private MarketSession _enabledMarketSessions = MarketSession.All;
         private bool _emergencyStopActive = false;
         private Dictionary<string, List<ScheduledOrder>> _scheduledOrders = new Dictionary<string, List<ScheduledOrder>>();
-        
+
         // Default market session times
         private TimeOnly _preMarketOpenTime = new TimeOnly(4, 0, 0); // 4:00 AM
         private TimeOnly _regularMarketOpenTime = new TimeOnly(9, 30, 0); // 9:30 AM
         private TimeOnly _regularMarketCloseTime = new TimeOnly(16, 0, 0); // 4:00 PM
         private TimeOnly _afterHoursCloseTime = new TimeOnly(20, 0, 0); // 8:00 PM
-        
+
         // Target allocations for portfolio rebalancing
         private Dictionary<string, double> _targetAllocations = new Dictionary<string, double>();
         private Dictionary<string, TrailingStopInfo> _trailingStops = new Dictionary<string, TrailingStopInfo>();
@@ -56,7 +56,7 @@ namespace Quantra.DAL.Services
         private Dictionary<string, DCAStrategy> _dollarCostAveraging = new Dictionary<string, DCAStrategy>();
         private CancellationTokenSource _monitoringCancellationTokenSource;
         private CancellationTokenSource _emergencyStopTokenSource = new CancellationTokenSource();
-        
+
         // Rebalancing related fields
         private Dictionary<string, RebalancingProfile> _rebalancingProfiles = new Dictionary<string, RebalancingProfile>();
         private string _activeRebalancingProfileId = null;
@@ -75,16 +75,16 @@ namespace Quantra.DAL.Services
 
             LoadSymbols();
             // Initialize the services without configuration
-            
+
 
 
             // Initialize rebalancing profiles
             InitializeRebalancingProfiles();
-            
+
             // Start the rebalancing scheduler
             StartRebalancingScheduler();
         }
-        
+
         /// <summary>
         /// Initializes the default rebalancing profiles
         /// </summary>
@@ -107,7 +107,7 @@ namespace Quantra.DAL.Services
                     RiskLevel = RebalancingRiskLevel.Conservative,
                     Schedule = RebalancingSchedule.Monthly
                 };
-                
+
                 // Create a balanced allocation profile (moderate risk)
                 var balancedProfile = new RebalancingProfile
                 {
@@ -123,7 +123,7 @@ namespace Quantra.DAL.Services
                     RiskLevel = RebalancingRiskLevel.Balanced,
                     Schedule = RebalancingSchedule.Monthly
                 };
-                
+
                 // Create a growth allocation profile (higher risk, growth-focused)
                 var growthProfile = new RebalancingProfile
                 {
@@ -139,15 +139,15 @@ namespace Quantra.DAL.Services
                     RiskLevel = RebalancingRiskLevel.Growth,
                     Schedule = RebalancingSchedule.Quarterly
                 };
-                
+
                 // Add profiles to the dictionary
                 _rebalancingProfiles[conservativeProfile.ProfileId] = conservativeProfile;
                 _rebalancingProfiles[balancedProfile.ProfileId] = balancedProfile;
                 _rebalancingProfiles[growthProfile.ProfileId] = growthProfile;
-                
+
                 // Set the balanced profile as active by default
                 _activeRebalancingProfileId = balancedProfile.ProfileId;
-                
+
                 //DatabaseMonolith.Log("Info", $"Initialized default rebalancing profiles: Conservative, Balanced, Growth");
             }
             catch (Exception ex)
@@ -155,7 +155,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Failed to initialize rebalancing profiles", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Starts the background monitoring of positions for trailing stops and other time-based events
         /// </summary>
@@ -164,11 +164,11 @@ namespace Quantra.DAL.Services
             try
             {
                 _monitoringCancellationTokenSource = new CancellationTokenSource();
-                _monitoringTask = Task.Run(async () => 
+                _monitoringTask = Task.Run(async () =>
                 {
                     await MonitorPositions(_monitoringCancellationTokenSource.Token);
                 });
-                
+
                 //DatabaseMonolith.Log("Info", "Position monitoring started successfully");
             }
             catch (Exception ex)
@@ -176,7 +176,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Failed to start position monitoring", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Stops the background monitoring of positions
         /// </summary>
@@ -189,7 +189,7 @@ namespace Quantra.DAL.Services
                     _monitoringCancellationTokenSource.Cancel();
                     _monitoringCancellationTokenSource = null;
                 }
-                
+
                 //DatabaseMonolith.Log("Info", "Position monitoring stopped");
             }
             catch (Exception ex)
@@ -197,7 +197,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Error stopping position monitoring", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Starts the scheduler to check for automated rebalancing opportunities
         /// </summary>
@@ -211,13 +211,13 @@ namespace Quantra.DAL.Services
                     _rebalancingScheduleTimer.Stop();
                     _rebalancingScheduleTimer.Dispose();
                 }
-                
+
                 // Create a new timer that checks every hour
                 _rebalancingScheduleTimer = new System.Timers.Timer(60 * 60 * 1000); // 1 hour
                 _rebalancingScheduleTimer.Elapsed += OnRebalancingTimerElapsed;
                 _rebalancingScheduleTimer.AutoReset = true;
                 _rebalancingScheduleTimer.Start();
-                
+
                 //DatabaseMonolith.Log("Info", "Portfolio rebalancing scheduler started (checking hourly)");
             }
             catch (Exception ex)
@@ -225,7 +225,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Failed to start rebalancing scheduler", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Handles the rebalancing timer elapsed event to check for scheduled rebalancing
         /// </summary>
@@ -234,13 +234,13 @@ namespace Quantra.DAL.Services
             // Prevent reentrancy
             if ((DateTime.Now - _lastRebalanceCheckTime).TotalMinutes < 30)
                 return;
-                
+
             _lastRebalanceCheckTime = DateTime.Now;
-            
+
             // Check if rebalancing is needed
             CheckScheduledRebalancing();
         }
-        
+
         /// <summary>
         /// Checks if a scheduled rebalancing should occur based on active profile
         /// </summary>
@@ -250,11 +250,11 @@ namespace Quantra.DAL.Services
             {
                 if (_activeRebalancingProfileId == null || !_rebalancingProfiles.ContainsKey(_activeRebalancingProfileId))
                     return;
-                    
+
                 var activeProfile = _rebalancingProfiles[_activeRebalancingProfileId];
-                
+
                 // Check if rebalancing is scheduled for now
-                if (activeProfile.NextScheduledRebalance.HasValue && 
+                if (activeProfile.NextScheduledRebalance.HasValue &&
                     DateTime.Now >= activeProfile.NextScheduledRebalance.Value)
                 {
                     // Check market session
@@ -263,12 +263,12 @@ namespace Quantra.DAL.Services
                         //DatabaseMonolith.Log("Info", "Scheduled rebalancing deferred: Trading not allowed at this time based on market session");
                         return;
                     }
-                    
+
                     //DatabaseMonolith.Log("Info", $"Executing scheduled portfolio rebalancing for profile: {activeProfile.Name}");
-                    
+
                     // Execute rebalancing using the active profile
                     bool result = await RebalancePortfolioWithProfile(activeProfile);
-                    
+
                     if (result)
                     {
                         // Update last rebalance date and calculate next scheduled date
@@ -342,32 +342,32 @@ namespace Quantra.DAL.Services
             {
                 return false;
             }
-            
+
             // Get current time
             TimeOnly now = TimeOnly.FromDateTime(DateTime.Now);
-            
+
             // If no market sessions are enabled, then trading is not allowed
             if (_enabledMarketSessions == MarketSession.None)
             {
                 return false;
             }
-            
+
             // Check if current time falls within any enabled market session
             bool inEnabledSession = IsInEnabledMarketSession(now);
-            
+
             // If custom trading hour restrictions are set, check those too
             if (_tradingHourRestrictions.Count > 0)
             {
                 TimeOnly marketOpen = _tradingHourRestrictions[0];
                 TimeOnly marketClose = _tradingHourRestrictions[1];
-                
+
                 // Must be within both custom hours AND an enabled session
                 if (now < marketOpen || now > marketClose)
                 {
                     return false;
                 }
             }
-            
+
             return inEnabledSession;
         }
 
@@ -379,7 +379,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Warning", $"ExecuteOptimalRiskTrading called but trading is not allowed at this time based on market session filters");
                 return; // Exit early if trading is not allowed
             }
-            
+
             volatileStocks = await GetMostVolatileStocks();
             volatileStocks = volatileStocks.Where(stock => IsHighLiquidity(stock) && HasRecentNewsCatalyst(stock)).ToList();
 
@@ -453,7 +453,7 @@ namespace Quantra.DAL.Services
                     RiskMode = riskMode,
                     Method = PositionSizingMethod.FixedRisk
                 };
-                
+
                 // Calculate position size using the default method
                 return CalculatePositionSize(parameters);
             }
@@ -463,7 +463,7 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Calculates position size using the AdaptiveRisk method with market conditions
         /// </summary>
@@ -476,8 +476,8 @@ namespace Quantra.DAL.Services
         /// <param name="performanceFactor">Recent performance factor (-1.0 to 1.0)</param>
         /// <param name="trendStrengthFactor">Trend strength factor (0.0 to 1.0)</param>
         /// <returns>Position size in shares</returns>
-        public int CalculatePositionSizeByAdaptiveRisk(string symbol, double price, double stopLossPrice, 
-            double basePositionPercentage, double accountSize, double volatilityFactor = 0.0, 
+        public int CalculatePositionSizeByAdaptiveRisk(string symbol, double price, double stopLossPrice,
+            double basePositionPercentage, double accountSize, double volatilityFactor = 0.0,
             double performanceFactor = 0.0, double trendStrengthFactor = 0.5)
         {
             try
@@ -496,7 +496,7 @@ namespace Quantra.DAL.Services
                     PerformanceFactor = performanceFactor,
                     TrendStrengthFactor = trendStrengthFactor
                 };
-                
+
                 // Calculate position size using the adaptive risk method
                 return CalculatePositionSize(parameters);
             }
@@ -506,7 +506,7 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Calculates position size using specified parameters and sizing method
         /// </summary>
@@ -517,16 +517,16 @@ namespace Quantra.DAL.Services
             try
             {
                 // Validate common parameters
-                if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) || 
+                if (parameters == null || string.IsNullOrWhiteSpace(parameters.Symbol) ||
                     parameters.Price <= 0 || parameters.AccountSize <= 0)
                 {
                     //DatabaseMonolith.Log("Warning", "Invalid parameters for position sizing calculation");
                     return 0;
                 }
-                
+
                 // Apply risk mode adjustments
                 AdjustParametersForRiskMode(parameters);
-                
+
                 // Calculate position size based on the specified method
                 int shares;
                 switch (parameters.Method)
@@ -554,16 +554,16 @@ namespace Quantra.DAL.Services
                         shares = CalculatePositionSizeByFixedRisk(parameters);
                         break;
                 }
-                
+
                 // Apply maximum position size constraint
                 int maxShares = CalculateMaxPositionSize(parameters);
                 shares = Math.Min(shares, maxShares);
-                
+
                 // Log the calculation
                 string methodName = parameters.Method.ToString();
                 //DatabaseMonolith.Log("Info", $"Position sizing for {parameters.Symbol} using {methodName}: " +
-                    //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
-                
+                //$"{shares} shares at {parameters.Price:C2} with {parameters.RiskMode} risk mode");
+
                 return shares;
             }
             catch (Exception ex)
@@ -572,7 +572,7 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
+
         /// <summary>
         /// Adjusts position sizing parameters based on risk mode
         /// </summary>
@@ -587,13 +587,13 @@ namespace Quantra.DAL.Services
                     parameters.KellyFractionMultiplier = 0.3; // Lower Kelly fraction
                     parameters.ATRMultiple *= 0.7; // Tighter ATR multiple
                     break;
-                
+
                 case RiskMode.Moderate:
                     // Moderate mode - slightly reduced risk factors
                     parameters.RiskPercentage *= 0.8; // 80% of normal risk
                     parameters.KellyFractionMultiplier = 0.4; // Moderate Kelly fraction
                     break;
-                
+
                 case RiskMode.Aggressive:
                     // Aggressive mode - increased risk factors
                     parameters.RiskPercentage *= 1.5; // 150% of normal risk
@@ -601,20 +601,20 @@ namespace Quantra.DAL.Services
                     parameters.KellyFractionMultiplier = 0.7; // Higher Kelly fraction
                     parameters.ATRMultiple *= 1.2; // Wider ATR multiple
                     break;
-                
+
                 case RiskMode.GoodFaithValue:
                     // Good Faith Value uses available cash rather than full account size
                     // This is just a placeholder - in a real implementation, we would get actual GFV
                     parameters.AccountSize *= 0.9; // Use 90% of account size as a proxy for GFV
                     break;
-                    
+
                 case RiskMode.Normal:
                 default:
                     // No adjustments for normal mode
                     break;
             }
         }
-        
+
         /// <summary>
         /// Calculates maximum allowed position size based on account size and maximum percentage
         /// </summary>
@@ -622,13 +622,13 @@ namespace Quantra.DAL.Services
         {
             // Calculate maximum dollar amount allowed for the position
             double maxDollarAmount = parameters.AccountSize * parameters.MaxPositionSizePercent;
-            
+
             // Calculate maximum shares based on price
             int maxShares = (int)Math.Floor(maxDollarAmount / parameters.Price);
-            
+
             return maxShares;
         }
-        
+
         /// <summary>
         /// Calculates position size based on fixed risk percentage of account
         /// </summary>
@@ -636,23 +636,23 @@ namespace Quantra.DAL.Services
         {
             // Calculate risk per share
             double riskPerShare = Math.Abs(parameters.Price - parameters.StopLossPrice);
-            
+
             if (riskPerShare <= 0)
             {
                 //DatabaseMonolith.Log("Warning", $"Invalid risk parameters for {parameters.Symbol}: " +
-                    //$"Price {parameters.Price:C2}, Stop Loss {parameters.StopLossPrice:C2}");
+                //$"Price {parameters.Price:C2}, Stop Loss {parameters.StopLossPrice:C2}");
                 return 0;
             }
-            
+
             // Calculate dollar amount to risk
             double riskAmount = parameters.AccountSize * parameters.RiskPercentage;
-            
+
             // Calculate number of shares
             int shares = (int)Math.Floor(riskAmount / riskPerShare);
-            
+
             return shares;
         }
-        
+
         /// <summary>
         /// Calculates position size based on a fixed percentage of account equity
         /// </summary>
@@ -660,13 +660,13 @@ namespace Quantra.DAL.Services
         {
             // Calculate dollar amount to allocate based on equity percentage
             double positionAmount = parameters.AccountSize * parameters.RiskPercentage;
-            
+
             // Calculate number of shares based on current price
             int shares = (int)Math.Floor(positionAmount / parameters.Price);
-            
+
             return shares;
         }
-        
+
         /// <summary>
         /// Calculates position size based on volatility (ATR)
         /// </summary>
@@ -674,7 +674,7 @@ namespace Quantra.DAL.Services
         {
             // If ATR is not provided, try to retrieve it
             double atr = parameters.ATR ?? 0;
-            
+
             if (atr <= 0)
             {
                 try
@@ -685,30 +685,30 @@ namespace Quantra.DAL.Services
                 catch (Exception ex)
                 {
                     //DatabaseMonolith.Log("Warning", $"Failed to retrieve ATR for {parameters.Symbol}, using estimate", ex.ToString());
-                    
+
                     // Estimate ATR as a percentage of price if retrieval fails (e.g., 2% of price)
                     atr = parameters.Price * 0.02;
                 }
             }
-            
+
             // Calculate dollar amount to risk based on risk percentage
             double riskAmount = parameters.AccountSize * parameters.RiskPercentage;
-            
+
             // Calculate position size based on ATR multiple for the stop loss distance
             double riskPerShare = atr * parameters.ATRMultiple;
-            
+
             if (riskPerShare <= 0)
             {
                 //DatabaseMonolith.Log("Warning", $"Invalid risk per share for {parameters.Symbol}: ATR={atr}, Multiple={parameters.ATRMultiple}");
                 return 0;
             }
-            
+
             // Calculate number of shares
             int shares = (int)Math.Floor(riskAmount / riskPerShare);
-            
+
             return shares;
         }
-        
+
         /// <summary>
         /// Calculates position size based on Kelly formula
         /// </summary>
@@ -717,34 +717,34 @@ namespace Quantra.DAL.Services
             // Kelly fraction = (winRate * rewardRiskRatio - (1 - winRate)) / rewardRiskRatio
             double winRate = parameters.WinRate;
             double rewardRiskRatio = parameters.RewardRiskRatio;
-            
+
             // Calculate the Kelly fraction (percentage of capital to risk)
             double kellyFraction = (winRate * rewardRiskRatio - (1 - winRate)) / rewardRiskRatio;
-            
+
             // Apply the Kelly fraction multiplier to be more conservative (usually 0.25 to 0.5)
             kellyFraction *= parameters.KellyFractionMultiplier;
-            
+
             // Ensure the Kelly fraction is positive and reasonable
             kellyFraction = Math.Max(0, Math.Min(kellyFraction, parameters.MaxPositionSizePercent));
-            
+
             // Use the Kelly fraction to calculate dollar amount to risk
             double kellyAmount = parameters.AccountSize * kellyFraction;
-            
+
             // Calculate risk per share
             double riskPerShare = Math.Abs(parameters.Price - parameters.StopLossPrice);
-            
+
             if (riskPerShare <= 0)
             {
                 // Default to a percentage of price (e.g., 2%) if stop loss isn't defined
                 riskPerShare = parameters.Price * 0.02;
             }
-            
+
             // Calculate number of shares
             int shares = (int)Math.Floor(kellyAmount / riskPerShare);
-            
+
             return shares;
         }
-        
+
         /// <summary>
         /// Calculates position size based on a fixed dollar amount per trade
         /// </summary>
@@ -752,10 +752,10 @@ namespace Quantra.DAL.Services
         {
             // Calculate number of shares based on the fixed amount allocated per trade
             int shares = (int)Math.Floor(parameters.FixedAmount / parameters.Price);
-            
+
             return shares;
         }
-        
+
         /// <summary>
         /// Calculates position size using a tiered approach based on signal confidence
         /// </summary>
@@ -763,10 +763,10 @@ namespace Quantra.DAL.Services
         {
             double confidence = parameters.Confidence;
             double baseRiskPercentage = parameters.RiskPercentage;
-            
+
             // Adjust risk percentage based on confidence tier
             double adjustedRiskPercentage;
-            
+
             if (confidence >= 0.9)
             {
                 // Highest tier - full risk percentage
@@ -787,12 +787,12 @@ namespace Quantra.DAL.Services
                 // Low tier - 40% of risk percentage
                 adjustedRiskPercentage = baseRiskPercentage * 0.5;
             }
-            
+
             // Update the risk percentage and calculate using fixed risk method
             parameters.RiskPercentage = adjustedRiskPercentage;
             return CalculatePositionSizeByFixedRisk(parameters);
         }
-        
+
         /// <summary>
         /// Calculates position size using adaptive risk sizing based on multiple factors
         /// including market volatility, recent performance, and trend strength
@@ -801,12 +801,12 @@ namespace Quantra.DAL.Services
         {
             // Start with base position percentage
             double basePositionPercentage = parameters.BasePositionPercentage;
-            
+
             // Extract factors from parameters
             double volatilityFactor = parameters.MarketVolatilityFactor;
             double performanceFactor = parameters.PerformanceFactor;
             double trendStrengthFactor = parameters.TrendStrengthFactor;
-            
+
             // 1. Adjust for market volatility
             // Reduce position size in high/increasing volatility, increase in low/decreasing volatility
             double volatilityAdjustment = 1.0;
@@ -820,7 +820,7 @@ namespace Quantra.DAL.Services
                 // Low/decreasing volatility - potentially increase position size
                 volatilityAdjustment = 1.0 + Math.Abs(volatilityFactor) * 0.3;
             }
-            
+
             // 2. Adjust for recent performance
             // Reduce position size after losses, carefully increase after gains
             double performanceAdjustment = 1.0;
@@ -834,31 +834,31 @@ namespace Quantra.DAL.Services
                 // Recent gains - modest increase in position size
                 performanceAdjustment = 1.0 + performanceFactor * 0.3;
             }
-            
+
             // 3. Adjust for trend strength
             // Increase position size in stronger trends, reduce in weaker trends
             double trendAdjustment = 0.8 + trendStrengthFactor * 0.4; // Range from 0.8 to 1.2
-            
+
             // Calculate adjusted risk percentage
             double adjustedRiskPercentage = basePositionPercentage * volatilityAdjustment * performanceAdjustment * trendAdjustment;
-            
+
             // Apply min/max constraints for safety
             double minRiskPercentage = parameters.BasePositionPercentage * 0.3; // Never go below 30% of base
             double maxRiskPercentage = parameters.BasePositionPercentage * 2.0; // Never go above 200% of base
             adjustedRiskPercentage = Math.Max(minRiskPercentage, Math.Min(adjustedRiskPercentage, maxRiskPercentage));
-            
+
             // Log the adaptive calculation factors
             //DatabaseMonolith.Log("Info", $"Adaptive sizing for {parameters.Symbol}: Base={parameters.BasePositionPercentage:P2}, " +
-                //$"Vol={volatilityFactor:F2} (adj={volatilityAdjustment:F2}), " +
-                //$"Perf={performanceFactor:F2} (adj={performanceAdjustment:F2}), " +
-                //$"Trend={trendStrengthFactor:F2} (adj={trendAdjustment:F2}), " +
-                //$"Final Risk={adjustedRiskPercentage:P2}");
-            
+            //$"Vol={volatilityFactor:F2} (adj={volatilityAdjustment:F2}), " +
+            //$"Perf={performanceFactor:F2} (adj={performanceAdjustment:F2}), " +
+            //$"Trend={trendStrengthFactor:F2} (adj={trendAdjustment:F2}), " +
+            //$"Final Risk={adjustedRiskPercentage:P2}");
+
             // Update risk percentage and use fixed risk calculation
             parameters.RiskPercentage = adjustedRiskPercentage;
             return CalculatePositionSizeByFixedRisk(parameters);
         }
-        
+
         /// <summary>
         /// Sets up a share-based dollar-cost averaging strategy for a symbol
         /// </summary>
@@ -868,7 +868,7 @@ namespace Quantra.DAL.Services
         /// <param name="intervalDays">Days between each order</param>
         /// <param name="strategyType">Distribution strategy type</param>
         /// <returns>Strategy ID if successful, null if failed</returns>
-        public string SetupDollarCostAveraging(string symbol, int totalShares, int numberOfOrders, int intervalDays, 
+        public string SetupDollarCostAveraging(string symbol, int totalShares, int numberOfOrders, int intervalDays,
             DCAStrategyType strategyType = DCAStrategyType.Equal)
         {
             try
@@ -879,10 +879,10 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: shares={totalShares}, orders={numberOfOrders}, interval={intervalDays}");
                     return null;
                 }
-                
+
                 int sharesPerOrder = totalShares / numberOfOrders;
                 if (sharesPerOrder <= 0) sharesPerOrder = 1;
-                
+
                 // Create new DCA strategy
                 var strategy = new DCAStrategy
                 {
@@ -895,16 +895,16 @@ namespace Quantra.DAL.Services
                     IntervalDays = intervalDays,
                     StrategyType = strategyType
                 };
-                
+
                 // Add strategy to dictionary using strategy ID
                 _dollarCostAveraging[strategy.StrategyId] = strategy;
-                
+
                 // Schedule the first order
                 ScheduleDollarCostAveragingOrder(strategy.StrategyId);
-                
+
                 //DatabaseMonolith.Log("Info", $"Share-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
-                    //$"{totalShares} shares over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
-                
+                //$"{totalShares} shares over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
+
                 return strategy.StrategyId;
             }
             catch (Exception ex)
@@ -913,7 +913,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Sets up a dollar-based dollar-cost averaging strategy for a symbol
         /// </summary>
@@ -923,7 +923,7 @@ namespace Quantra.DAL.Services
         /// <param name="intervalDays">Days between each order</param>
         /// <param name="strategyType">Distribution strategy type</param>
         /// <returns>Strategy ID if successful, null if failed</returns>
-        public string SetupDollarCostAveraging(string symbol, double totalAmount, int numberOfOrders, int intervalDays, 
+        public string SetupDollarCostAveraging(string symbol, double totalAmount, int numberOfOrders, int intervalDays,
             DCAStrategyType strategyType = DCAStrategyType.Equal)
         {
             try
@@ -934,10 +934,10 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Invalid parameters for DCA strategy for {symbol}: amount=${totalAmount}, orders={numberOfOrders}, interval={intervalDays}");
                     return null;
                 }
-                
+
                 double amountPerOrder = totalAmount / numberOfOrders;
                 if (amountPerOrder <= 0) amountPerOrder = 1;
-                
+
                 // Create new DCA strategy
                 var strategy = new DCAStrategy
                 {
@@ -950,16 +950,16 @@ namespace Quantra.DAL.Services
                     IntervalDays = intervalDays,
                     StrategyType = strategyType
                 };
-                
+
                 // Add strategy to dictionary using strategy ID
                 _dollarCostAveraging[strategy.StrategyId] = strategy;
-                
+
                 // Schedule the first order
                 ScheduleDollarCostAveragingOrder(strategy.StrategyId);
-                
+
                 //DatabaseMonolith.Log("Info", $"Dollar-based dollar-cost averaging set up for {symbol} (ID: {strategy.StrategyId}): " +
-                    //$"${totalAmount:N2} over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
-                
+                //$"${totalAmount:N2} over {numberOfOrders} orders every {intervalDays} days using {strategyType} distribution");
+
                 return strategy.StrategyId;
             }
             catch (Exception ex)
@@ -968,7 +968,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Pauses a dollar-cost averaging strategy
         /// </summary>
@@ -983,18 +983,18 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", $"Cannot pause DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
-                
+
                 var strategy = _dollarCostAveraging[strategyId];
-                
+
                 if (strategy.IsPaused)
                 {
                     //DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is already paused");
                     return true;
                 }
-                
+
                 strategy.IsPaused = true;
                 strategy.PausedAt = DateTime.Now;
-                
+
                 //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been paused");
                 return true;
             }
@@ -1004,7 +1004,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Resumes a paused dollar-cost averaging strategy
         /// </summary>
@@ -1019,17 +1019,17 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", $"Cannot resume DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
-                
+
                 var strategy = _dollarCostAveraging[strategyId];
-                
+
                 if (!strategy.IsPaused)
                 {
                     //DatabaseMonolith.Log("Warning", $"DCA strategy {strategyId} for {strategy.Symbol} is not paused");
                     return true;
                 }
-                
+
                 strategy.IsPaused = false;
-                
+
                 // If there are no scheduled orders for this strategy, schedule the next one
                 bool hasScheduledOrders = false;
                 if (_scheduledOrders.ContainsKey(strategy.Symbol))
@@ -1037,12 +1037,12 @@ namespace Quantra.DAL.Services
                     hasScheduledOrders = _scheduledOrders[strategy.Symbol]
                         .Any(o => o.IsDollarCostAveraging && o.Symbol == strategy.Symbol);
                 }
-                
+
                 if (!hasScheduledOrders && strategy.OrdersRemaining > 0)
                 {
                     ScheduleDollarCostAveragingOrder(strategyId);
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {strategy.Symbol} has been resumed");
                 return true;
             }
@@ -1052,7 +1052,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Cancels a dollar-cost averaging strategy
         /// </summary>
@@ -1067,33 +1067,33 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", $"Cannot cancel DCA strategy: Strategy ID {strategyId} not found");
                     return false;
                 }
-                
+
                 var strategy = _dollarCostAveraging[strategyId];
                 string symbol = strategy.Symbol;
-                
+
                 // Remove the strategy from the dictionary
                 _dollarCostAveraging.Remove(strategyId);
-                
+
                 // Cancel any pending scheduled orders for this strategy
                 if (_scheduledOrders.ContainsKey(symbol))
                 {
                     var ordersToRemove = _scheduledOrders[symbol]
                         .Where(o => o.IsDollarCostAveraging && o.Symbol == symbol)
                         .ToList();
-                        
+
                     foreach (var order in ordersToRemove)
                     {
                         _scheduledOrders[symbol].Remove(order);
                     }
-                    
+
                     if (_scheduledOrders[symbol].Count == 0)
                     {
                         _scheduledOrders.Remove(symbol);
                     }
-                    
+
                     //DatabaseMonolith.Log("Info", $"Cancelled {ordersToRemove.Count} pending orders for DCA strategy {strategyId}");
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"DCA strategy {strategyId} for {symbol} has been cancelled");
                 return true;
             }
@@ -1103,7 +1103,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets information about all active dollar-cost averaging strategies
         /// </summary>
@@ -1112,7 +1112,7 @@ namespace Quantra.DAL.Services
         {
             return _dollarCostAveraging.Values.ToList();
         }
-        
+
         /// <summary>
         /// Gets information about a specific dollar-cost averaging strategy
         /// </summary>
@@ -1124,10 +1124,10 @@ namespace Quantra.DAL.Services
             {
                 return strategy;
             }
-            
+
             return null;
         }
-        
+
         /// <summary>
         /// Schedules the next dollar-cost averaging order for a strategy
         /// </summary>
@@ -1138,31 +1138,31 @@ namespace Quantra.DAL.Services
             {
                 if (!_dollarCostAveraging.ContainsKey(strategyId))
                     return;
-                
+
                 var strategy = _dollarCostAveraging[strategyId];
-                
+
                 // Check if strategy is paused or completed
                 if (strategy.IsPaused)
                 {
                     //DatabaseMonolith.Log("Info", $"Skipped scheduling DCA order for {strategy.Symbol}: Strategy is paused");
                     return;
                 }
-                
+
                 if (strategy.OrdersRemaining <= 0)
                 {
                     //DatabaseMonolith.Log("Info", $"DCA strategy completed for {strategy.Symbol} (ID: {strategyId}): " + 
-                        //$"{strategy.OrdersExecuted} orders executed, {strategy.SharesAcquired} shares acquired, ${strategy.AmountInvested:N2} invested");
+                    //$"{strategy.OrdersExecuted} orders executed, {strategy.SharesAcquired} shares acquired, ${strategy.AmountInvested:N2} invested");
                     _dollarCostAveraging.Remove(strategyId);
                     return;
                 }
-                
+
                 // Get current market price
                 double price = await GetMarketPrice(strategy.Symbol);
-                
+
                 // Calculate quantity based on strategy type
                 int quantity = 0;
                 double orderAmount = 0;
-                
+
                 if (strategy.IsShareBased)
                 {
                     // Share-based DCA: Calculate shares based on distribution type
@@ -1174,11 +1174,11 @@ namespace Quantra.DAL.Services
                     // Dollar-based DCA: Calculate amount based on distribution type
                     orderAmount = CalculateDCAAmount(strategy);
                     quantity = (int)Math.Floor(orderAmount / price);
-                    
+
                     // Ensure at least 1 share
                     if (quantity < 1) quantity = 1;
                 }
-                
+
                 // Create scheduled order
                 var order = new ScheduledOrder
                 {
@@ -1189,30 +1189,30 @@ namespace Quantra.DAL.Services
                     ExecutionTime = DateTime.Now.AddDays(strategy.IntervalDays),
                     IsDollarCostAveraging = true
                 };
-                
+
                 // Add to scheduled orders
                 if (!_scheduledOrders.ContainsKey(strategy.Symbol))
                 {
                     _scheduledOrders[strategy.Symbol] = new List<ScheduledOrder>();
                 }
                 _scheduledOrders[strategy.Symbol].Add(order);
-                
+
                 // Update strategy information
                 strategy.OrdersRemaining--;
                 strategy.NextExecutionAt = order.ExecutionTime;
-                
+
                 // Update tracking after execution (will be applied when order is actually executed)
                 // These values get updated when the scheduled order is executed in MonitorScheduledOrders
-                
+
                 //DatabaseMonolith.Log("Info", $"Dollar-cost averaging order scheduled for {strategy.Symbol}: " + 
-                    //$"{quantity} shares (${orderAmount:N2}) at {price:C2} on {order.ExecutionTime}");
+                //$"{quantity} shares (${orderAmount:N2}) at {price:C2} on {order.ExecutionTime}");
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", $"Failed to schedule dollar-cost averaging order for strategy {strategyId}", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Calculates the number of shares to buy for a share-based DCA strategy based on the distribution type
         /// </summary>
@@ -1223,19 +1223,19 @@ namespace Quantra.DAL.Services
             int totalOrderCount = strategy.OrdersExecuted + strategy.OrdersRemaining;
             int currentOrderIndex = strategy.OrdersExecuted;
             double weightFactor = 0;
-            
+
             switch (strategy.StrategyType)
             {
                 case DCAStrategyType.FrontLoaded:
                     // Front-loaded: Larger chunks at the beginning, tapering off
                     weightFactor = (double)(totalOrderCount - currentOrderIndex) / totalOrderCount;
                     break;
-                    
+
                 case DCAStrategyType.BackLoaded:
                     // Back-loaded: Smaller chunks at the beginning, larger at the end
                     weightFactor = (double)(currentOrderIndex + 1) / totalOrderCount;
                     break;
-                    
+
                 case DCAStrategyType.Normal:
                     // Normal (bell curve): Middle chunks are larger
                     double mean = totalOrderCount / 2.0;
@@ -1243,7 +1243,7 @@ namespace Quantra.DAL.Services
                     weightFactor = Math.Exp(-0.5 * Math.Pow((currentOrderIndex - mean) / stdDev, 2));
                     weightFactor = weightFactor / Math.Exp(-0.5 * Math.Pow((mean - mean) / stdDev, 2)); // Normalize to max 1.0
                     break;
-                
+
                 // Additional distribution types
                 case DCAStrategyType.ValueBased:
                 case DCAStrategyType.VolatilityBased:
@@ -1251,34 +1251,34 @@ namespace Quantra.DAL.Services
                     // but these would be implemented with price and volatility data in a real scenario
                     weightFactor = 1.0;
                     break;
-                    
+
                 case DCAStrategyType.Custom:
                     // For custom, we'd look up from a custom weights array. Using Equal for now.
                     weightFactor = 1.0;
                     break;
-                    
+
                 case DCAStrategyType.Equal:
                 default:
                     // Equal distribution: Same amount for all orders
                     weightFactor = 1.0;
                     break;
             }
-            
+
             // Calculate shares for this order
             int baseShares = strategy.SharesPerOrder;
             int adjustedShares = (int)Math.Round(baseShares * weightFactor);
-            
+
             // Make sure we don't exceed the total remaining shares
             int remainingShares = strategy.TotalShares - strategy.SharesAcquired;
             if (adjustedShares > remainingShares)
                 adjustedShares = remainingShares;
-            
+
             // Ensure at least 1 share
             if (adjustedShares < 1) adjustedShares = 1;
-            
+
             return adjustedShares;
         }
-        
+
         /// <summary>
         /// Calculates the dollar amount to invest for a dollar-based DCA strategy based on the distribution type
         /// </summary>
@@ -1289,19 +1289,19 @@ namespace Quantra.DAL.Services
             int totalOrderCount = strategy.OrdersExecuted + strategy.OrdersRemaining;
             int currentOrderIndex = strategy.OrdersExecuted;
             double weightFactor = 0;
-            
+
             switch (strategy.StrategyType)
             {
                 case DCAStrategyType.FrontLoaded:
                     // Front-loaded: Larger chunks at the beginning, tapering off
                     weightFactor = (double)(totalOrderCount - currentOrderIndex) / totalOrderCount;
                     break;
-                    
+
                 case DCAStrategyType.BackLoaded:
                     // Back-loaded: Smaller chunks at the beginning, larger at the end
                     weightFactor = (double)(currentOrderIndex + 1) / totalOrderCount;
                     break;
-                    
+
                 case DCAStrategyType.Normal:
                     // Normal (bell curve): Middle chunks are larger
                     double mean = totalOrderCount / 2.0;
@@ -1309,7 +1309,7 @@ namespace Quantra.DAL.Services
                     weightFactor = Math.Exp(-0.5 * Math.Pow((currentOrderIndex - mean) / stdDev, 2));
                     weightFactor = weightFactor / Math.Exp(-0.5 * Math.Pow((mean - mean) / stdDev, 2)); // Normalize to max 1.0
                     break;
-                
+
                 // Additional distribution types
                 case DCAStrategyType.ValueBased:
                 case DCAStrategyType.VolatilityBased:
@@ -1317,34 +1317,34 @@ namespace Quantra.DAL.Services
                     // but these would be implemented with price and volatility data in a real scenario
                     weightFactor = 1.0;
                     break;
-                    
+
                 case DCAStrategyType.Custom:
                     // For custom, we'd look up from a custom weights array. Using Equal for now.
                     weightFactor = 1.0;
                     break;
-                    
+
                 case DCAStrategyType.Equal:
                 default:
                     // Equal distribution: Same amount for all orders
                     weightFactor = 1.0;
                     break;
             }
-            
+
             // Calculate amount for this order
             double baseAmount = strategy.AmountPerOrder;
             double adjustedAmount = baseAmount * weightFactor;
-            
+
             // Make sure we don't exceed the total remaining amount
             double remainingAmount = strategy.TotalAmount - strategy.AmountInvested;
             if (adjustedAmount > remainingAmount)
                 adjustedAmount = remainingAmount;
-            
+
             // Ensure a minimum investment amount (e.g. $1)
             if (adjustedAmount < 1) adjustedAmount = 1;
-            
+
             return adjustedAmount;
         }
-        
+
         /// <summary>
         /// Sets up portfolio target allocations for rebalancing
         /// </summary>
@@ -1361,7 +1361,7 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", $"Portfolio allocations do not sum to 100%: {total:P2}");
                     return false;
                 }
-                
+
                 _targetAllocations = new Dictionary<string, double>(allocations);
                 //DatabaseMonolith.Log("Info", $"Portfolio allocations set with {_targetAllocations.Count} symbols");
                 return true;
@@ -1372,7 +1372,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Adds a rebalancing profile to the available profiles
         /// </summary>
@@ -1387,22 +1387,22 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", "Cannot add null rebalancing profile");
                     return false;
                 }
-                
+
                 if (!profile.ValidateAllocations())
                 {
                     //DatabaseMonolith.Log("Warning", $"Invalid allocations in rebalancing profile: {profile.Name}");
                     return false;
                 }
-                
+
                 _rebalancingProfiles[profile.ProfileId] = profile;
                 //DatabaseMonolith.Log("Info", $"Added rebalancing profile: {profile.Name} ({profile.ProfileId})");
-                
+
                 // If this is the first profile, set it as active
                 if (_activeRebalancingProfileId == null)
                 {
                     _activeRebalancingProfileId = profile.ProfileId;
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -1411,7 +1411,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets all available rebalancing profiles
         /// </summary>
@@ -1420,7 +1420,7 @@ namespace Quantra.DAL.Services
         {
             return _rebalancingProfiles.Values.ToList();
         }
-        
+
         /// <summary>
         /// Gets the active rebalancing profile
         /// </summary>
@@ -1433,7 +1433,7 @@ namespace Quantra.DAL.Services
             }
             return null;
         }
-        
+
         /// <summary>
         /// Sets the active rebalancing profile
         /// </summary>
@@ -1446,23 +1446,23 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Warning", "Cannot set null or empty rebalancing profile ID as active");
                 return false;
             }
-            
+
             if (_rebalancingProfiles.ContainsKey(profileId))
             {
                 _activeRebalancingProfileId = profileId;
                 var profile = _rebalancingProfiles[profileId];
-                
+
                 // Update the target allocations based on the profile
                 _targetAllocations = new Dictionary<string, double>(profile.TargetAllocations);
-                
+
                 //DatabaseMonolith.Log("Info", $"Set active rebalancing profile to: {profile.Name} ({profileId})");
                 return true;
             }
-            
+
             //DatabaseMonolith.Log("Warning", $"Rebalancing profile not found with ID: {profileId}");
             return false;
         }
-        
+
         /// <summary>
         /// Gets the current portfolio allocations based on market prices
         /// </summary>
@@ -1470,16 +1470,16 @@ namespace Quantra.DAL.Services
         public async Task<Dictionary<string, double>> GetCurrentPortfolioAllocations()
         {
             var result = new Dictionary<string, double>();
-            
+
             try
             {
                 // Calculate current portfolio value and allocations
                 double portfolioValue = 0;
                 var currentValues = new Dictionary<string, double>();
-                
+
                 // Use all symbols from paper portfolio
                 var symbols = new HashSet<string>(paperPortfolio.Keys);
-                
+
                 // Also include any symbols from target allocations that aren't in the portfolio yet
                 if (_targetAllocations != null)
                 {
@@ -1488,17 +1488,17 @@ namespace Quantra.DAL.Services
                         symbols.Add(symbol);
                     }
                 }
-                
+
                 foreach (var symbol in symbols)
                 {
                     double shares = paperPortfolio.ContainsKey(symbol) ? paperPortfolio[symbol] : 0;
                     double price = await GetMarketPrice(symbol);
                     double value = shares * price;
-                    
+
                     currentValues[symbol] = value;
                     portfolioValue += value;
                 }
-                
+
                 // Calculate percentages if portfolio has value
                 if (portfolioValue > 0)
                 {
@@ -1507,7 +1507,7 @@ namespace Quantra.DAL.Services
                         result[symbol] = currentValues[symbol] / portfolioValue;
                     }
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -1516,7 +1516,7 @@ namespace Quantra.DAL.Services
                 return result;
             }
         }
-        
+
         /// <summary>
         /// Gets the current market conditions for rebalancing decisions
         /// </summary>
@@ -1524,13 +1524,13 @@ namespace Quantra.DAL.Services
         private async Task<Quantra.Models.MarketConditions> GetMarketConditions()
         {
             var conditions = new Quantra.Models.MarketConditions();
-            
+
             try
             {
                 // Get VIX index value as volatility indicator
                 const string vixSymbol = "^VIX";
                 double vixValue = 15.0; // Default moderate volatility
-                
+
                 try
                 {
                     var vixPrice = await GetMarketPrice(vixSymbol);
@@ -1543,13 +1543,13 @@ namespace Quantra.DAL.Services
                 {
                     // Fallback to default if we can't get VIX
                 }
-                
+
                 conditions.VolatilityIndex = vixValue;
-                
+
                 // Determine market trend from SPY
                 const string spySymbol = "SPY";
                 double marketTrend = 0; // Default neutral
-                
+
                 try
                 {
                     // Calculate 5-day vs 50-day moving average for trend
@@ -1558,7 +1558,7 @@ namespace Quantra.DAL.Services
                     {
                         double sma5 = historicalPrices.Take(5).Average(p => p.Close);
                         double sma50 = historicalPrices.Take(50).Average(p => p.Close);
-                        
+
                         // Scale to -1 to 1 range
                         marketTrend = Math.Min(1.0, Math.Max(-1.0, sma5 / sma50 - 1));
                     }
@@ -1567,11 +1567,11 @@ namespace Quantra.DAL.Services
                 {
                     // Fallback to default if we can't calculate trend
                 }
-                
+
                 conditions.MarketTrend = marketTrend;
-                
+
                 // Other conditions could be set here from external data sources
-                
+
                 return conditions;
             }
             catch (Exception ex)
@@ -1580,7 +1580,7 @@ namespace Quantra.DAL.Services
                 return conditions; // Return default conditions on error
             }
         }
-        
+
         /// <summary>
         /// Rebalances the portfolio to match target allocations
         /// </summary>
@@ -1594,11 +1594,11 @@ namespace Quantra.DAL.Services
                 // Use the active profile for rebalancing
                 return await RebalancePortfolioWithProfile(_rebalancingProfiles[_activeRebalancingProfileId]);
             }
-            
+
             // Fall back to basic rebalancing with the provided tolerance
             return await RebalancePortfolioBasic(tolerancePercentage);
         }
-        
+
         /// <summary>
         /// Rebalances the portfolio using a specific profile with advanced settings
         /// </summary>
@@ -1613,42 +1613,42 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", "Cannot rebalance: Null profile provided");
                     return false;
                 }
-                
+
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
                     //DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
                     return false;
                 }
-                
+
                 if (!profile.ValidateAllocations())
                 {
                     //DatabaseMonolith.Log("Warning", $"Cannot rebalance: Invalid target allocations in profile {profile.Name}");
                     return false;
                 }
-                
+
                 // Get market conditions if adjustments are enabled
                 Dictionary<string, double> targetAllocations;
                 if (profile.EnableMarketConditionAdjustments)
                 {
                     var marketConditions = await GetMarketConditions();
                     targetAllocations = profile.GetMarketAdjustedAllocations(marketConditions);
-                    
+
                     // Log market conditions and any adjustments
                     //DatabaseMonolith.Log("Info", $"Market conditions for rebalancing: " +
-                        //$"VIX={marketConditions.VolatilityIndex:F1}, " +
-                        //$"Trend={marketConditions.MarketTrend:F2}, " +
-                        //$"Risk={marketConditions.OverallRiskLevel:F2}");
+                    //$"VIX={marketConditions.VolatilityIndex:F1}, " +
+                    //$"Trend={marketConditions.MarketTrend:F2}, " +
+                    //$"Risk={marketConditions.OverallRiskLevel:F2}");
                 }
                 else
                 {
                     targetAllocations = new Dictionary<string, double>(profile.TargetAllocations);
                 }
-                
+
                 // Calculate current portfolio value and allocations
                 double portfolioValue = 0;
                 Dictionary<string, double> currentValues = new Dictionary<string, double>();
-                
+
                 foreach (var symbol in targetAllocations.Keys)
                 {
                     // For simplicity, we'll use paper portfolio positions
@@ -1656,43 +1656,43 @@ namespace Quantra.DAL.Services
                     double shares = paperPortfolio.ContainsKey(symbol) ? paperPortfolio[symbol] : 0;
                     double price = await GetMarketPrice(symbol);
                     double value = shares * price;
-                    
+
                     currentValues[symbol] = value;
                     portfolioValue += value;
                 }
-                
+
                 if (portfolioValue <= 0)
                 {
                     //DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
                     return false;
                 }
-                
+
                 // Calculate and schedule rebalancing trades based on profile's tolerance
                 Dictionary<string, int> sharesToAdjust = new Dictionary<string, int>();
                 Dictionary<string, double> pricesForAdjustment = new Dictionary<string, double>();
                 Dictionary<string, string> orderTypesForAdjustment = new Dictionary<string, string>();
-                
+
                 bool anyRebalanceNeeded = false;
-                
+
                 foreach (var symbol in targetAllocations.Keys)
                 {
                     double targetValue = portfolioValue * targetAllocations[symbol];
                     double currentValue = currentValues.ContainsKey(symbol) ? currentValues[symbol] : 0;
-                    
+
                     // Calculate the difference and see if it exceeds tolerance
                     double difference = targetValue - currentValue;
                     double differencePercentage = Math.Abs(difference) / portfolioValue;
-                    
+
                     if (differencePercentage > profile.TolerancePercentage)
                     {
                         // Need to rebalance this position
                         double price = await GetMarketPrice(symbol);
                         int sharesToAdjustForSymbol = (int)Math.Floor(Math.Abs(difference) / price);
-                        
+
                         if (sharesToAdjustForSymbol > 0)
                         {
                             string orderType = difference > 0 ? "BUY" : "SELL";
-                            
+
                             sharesToAdjust[symbol] = sharesToAdjustForSymbol;
                             pricesForAdjustment[symbol] = price;
                             orderTypesForAdjustment[symbol] = orderType;
@@ -1700,14 +1700,14 @@ namespace Quantra.DAL.Services
                         }
                     }
                 }
-                
+
                 // If no rebalancing is needed, return early
                 if (!anyRebalanceNeeded)
                 {
                     //DatabaseMonolith.Log("Info", $"No rebalancing needed - all positions within tolerance of {profile.TolerancePercentage:P2}");
                     return true;
                 }
-                
+
                 // Create combined multi-leg strategy for rebalancing
                 var strategy = CreateBasketOrder(
                     sharesToAdjust.Keys.ToList(),
@@ -1715,11 +1715,11 @@ namespace Quantra.DAL.Services
                     orderTypesForAdjustment.Values.ToList(),
                     targetAllocations.Values.ToList()
                 );
-                
+
                 if (strategy != null)
                 {
                     strategy.Name = $"Portfolio Rebalance - {profile.Name}";
-                    
+
                     // Execute each leg of the rebalancing
                     foreach (var order in strategy.Legs)
                     {
@@ -1735,23 +1735,23 @@ namespace Quantra.DAL.Services
                             IsMultiLegStrategy = true,
                             MultiLegStrategyId = strategy.StrategyId
                         };
-                        
+
                         // Add to scheduled orders for immediate execution
                         if (!_scheduledOrders.ContainsKey(order.Symbol))
                         {
                             _scheduledOrders[order.Symbol] = new List<ScheduledOrder>();
                         }
                         _scheduledOrders[order.Symbol].Add(rebalanceOrder);
-                        
+
                         //DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {order.Symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
                     }
-                    
+
                     // Update the last rebalance date on the profile
                     profile.LastRebalanceDate = DateTime.Now;
-                    
+
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -1760,7 +1760,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Basic portfolio rebalancing without advanced profile features (original implementation)
         /// </summary>
@@ -1776,17 +1776,17 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", "Portfolio rebalance rejected: Trading not allowed at this time based on market session filters");
                     return false;
                 }
-                
+
                 if (_targetAllocations.Count == 0)
                 {
                     //DatabaseMonolith.Log("Warning", "Cannot rebalance: No target allocations set");
                     return false;
                 }
-                
+
                 // Calculate current portfolio value and allocations
                 double portfolioValue = 0;
                 Dictionary<string, double> currentValues = new Dictionary<string, double>();
-                
+
                 foreach (var symbol in _targetAllocations.Keys)
                 {
                     // For simplicity, we'll use paper portfolio positions
@@ -1794,37 +1794,37 @@ namespace Quantra.DAL.Services
                     double shares = paperPortfolio.ContainsKey(symbol) ? paperPortfolio[symbol] : 0;
                     double price = await GetMarketPrice(symbol);
                     double value = shares * price;
-                    
+
                     currentValues[symbol] = value;
                     portfolioValue += value;
                 }
-                
+
                 if (portfolioValue <= 0)
                 {
                     //DatabaseMonolith.Log("Warning", "Cannot rebalance: Portfolio value is zero");
                     return false;
                 }
-                
+
                 // Calculate and schedule rebalancing trades
                 foreach (var symbol in _targetAllocations.Keys)
                 {
                     double targetValue = portfolioValue * _targetAllocations[symbol];
                     double currentValue = currentValues.ContainsKey(symbol) ? currentValues[symbol] : 0;
-                    
+
                     // Calculate the difference and see if it exceeds tolerance
                     double difference = targetValue - currentValue;
                     double differencePercentage = Math.Abs(difference) / portfolioValue;
-                    
+
                     if (differencePercentage > tolerancePercentage)
                     {
                         // Need to rebalance this position
                         double price = await GetMarketPrice(symbol);
                         int sharesToAdjust = (int)Math.Floor(Math.Abs(difference) / price);
-                        
+
                         if (sharesToAdjust > 0)
                         {
                             string orderType = difference > 0 ? "BUY" : "SELL";
-                            
+
                             // Create a rebalancing order
                             var order = new ScheduledOrder
                             {
@@ -1835,19 +1835,19 @@ namespace Quantra.DAL.Services
                                 ExecutionTime = DateTime.Now,
                                 IsRebalancing = true
                             };
-                            
+
                             // Add to scheduled orders for immediate execution
                             if (!_scheduledOrders.ContainsKey(symbol))
                             {
                                 _scheduledOrders[symbol] = new List<ScheduledOrder>();
                             }
                             _scheduledOrders[symbol].Add(order);
-                            
+
                             //DatabaseMonolith.Log("Info", $"Rebalancing order scheduled for {symbol}: {orderType} {sharesToAdjust} shares at {price:C2}");
                         }
                     }
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -1883,14 +1883,14 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Warning", $"Bracket order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {price:C2}");
                     return false;
                 }
-                
+
                 // Place the main order first
                 await PlaceLimitOrder(symbol, quantity, orderType, price);
-                
+
                 // Store the stop loss and take profit values for monitoring
                 trailingStopLoss[symbol] = stopLossPrice;
                 takeProfitTargets[symbol] = takeProfitPrice;
-                
+
                 // For WebULL integration - create true bracket orders
                 // Create an OCO (One-Cancels-Other) pair of orders for stop loss and take profit
                 if (tradingMode == TradingMode.Paper)
@@ -1899,10 +1899,10 @@ namespace Quantra.DAL.Services
                     {
                         // Create the stop loss order - opposite direction of entry order
                         string exitOrderType = orderType == "BUY" ? "SELL" : "BUY";
-                        
+
                         // Determine quantity for the exit orders
                         int exitQuantity = quantity;
-                        
+
                         // Create the stop loss order structure
                         var stopLossOrderData = new
                         {
@@ -1915,7 +1915,7 @@ namespace Quantra.DAL.Services
                             order_id = Guid.NewGuid().ToString(), // Generate unique ID for order
                             parent_order_id = Guid.NewGuid().ToString() // Track relationship to main order
                         };
-                        
+
                         // Create the take profit order structure
                         var takeProfitOrderData = new
                         {
@@ -1928,13 +1928,13 @@ namespace Quantra.DAL.Services
                             order_id = Guid.NewGuid().ToString(), // Generate unique ID for order
                             parent_order_id = symbol + DateTime.Now.Ticks // Track relationship to main order
                         };
-                        
+
                         // Example endpoint for Webull paper trading (replace with actual endpoint)
                         // string webullPaperEndpoint = "https://paper-api.webull.com/api/trade/order";
-                        
+
                         // NOTE: In a real implementation, you would send these orders to the broker
                         // For now, we're just storing them locally and monitoring them ourselves
-                        
+
                         // Add a scheduled order for monitoring that combines both stop loss and take profit  
                         var scheduledOrder = new ScheduledOrder
                         {
@@ -1946,7 +1946,7 @@ namespace Quantra.DAL.Services
                             StopLoss = stopLossPrice,
                             TakeProfit = takeProfitPrice
                         };
-                        
+
                         // Add to scheduled orders for monitoring
                         if (!_scheduledOrders.ContainsKey(symbol))
                         {
@@ -1960,7 +1960,7 @@ namespace Quantra.DAL.Services
                         // Main order was placed, continue despite exit order failure
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Bracket order placed for {symbol}: Entry at {price:C2}, Stop Loss at {stopLossPrice:C2}, Take Profit at {takeProfitPrice:C2}");
                 return true;
             }
@@ -1990,25 +1990,25 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Failed to set trailing stop: Symbol cannot be empty");
                     return false;
                 }
-                
+
                 if (initialPrice <= 0)
                 {
                     //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Initial price must be positive");
                     return false;
                 }
-                
+
                 if (trailingDistance <= 0 || trailingDistance >= 1)
                 {
                     //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Trailing distance must be between 0 and 1");
                     return false;
                 }
-                
+
                 if (orderType != "BUY" && orderType != "SELL")
                 {
                     //DatabaseMonolith.Log("Error", $"Failed to set trailing stop for {symbol}: Order type must be BUY or SELL");
                     return false;
                 }
-                
+
                 // Calculate initial trigger price based on order type
                 double initialTriggerPrice;
                 if (orderType == "SELL") // For long positions
@@ -2021,10 +2021,10 @@ namespace Quantra.DAL.Services
                     // Stop above current price
                     initialTriggerPrice = initialPrice * (1 + trailingDistance);
                 }
-                
+
                 // Add or update trailing stop
                 _trailingStops[symbol] = new TrailingStopInfo(symbol, initialPrice, trailingDistance);
-                
+
                 //DatabaseMonolith.Log("Info", $"Trailing stop ({orderType}) set for {symbol}: Initial price {initialPrice:C2}, Distance {trailingDistance:P2}, Trigger at {initialPrice * (1 - trailingDistance):C2}");
                 return true;
             }
@@ -2047,16 +2047,16 @@ namespace Quantra.DAL.Services
                 {
                     // Monitor trailing stops
                     await MonitorTrailingStops();
-                    
+
                     // Monitor bracket orders (stop loss and take profit)
                     await MonitorBracketOrders();
-                    
+
                     // Monitor time-based exits
                     await MonitorTimeBasedExits();
-                    
+
                     // Monitor scheduled orders
                     await MonitorScheduledOrders();
-                    
+
                     // Wait before checking again
                     //await Task.Delay(5000, cancellationToken);
                 }
@@ -2080,7 +2080,7 @@ namespace Quantra.DAL.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Monitors trailing stops and adjusts them based on price movements
         /// </summary>
@@ -2088,48 +2088,48 @@ namespace Quantra.DAL.Services
         {
             // Get symbols with trailing stops
             var symbols = _trailingStops.Keys.ToList();
-            
+
             foreach (var symbol in symbols)
             {
                 try
                 {
                     // Get current market price
                     double currentPrice = await GetMarketPrice(symbol);
-                    
+
                     // Get trailing stop information
                     var stopInfo = _trailingStops[symbol];
                     var initialPrice = stopInfo.InitialPrice;
                     var trailingDistance = stopInfo.TrailingDistance;
                     var currentTriggerPrice = stopInfo.CurrentStopPrice;
-                    
+
                     // Check if we have a valid price
                     if (currentPrice <= 0)
                     {
                         //DatabaseMonolith.Log("Warning", $"Invalid market price for {symbol}: {currentPrice}");
                         continue;
                     }
-                    
+
                     // If price has moved favorably, adjust the trigger price and check if triggered
                     bool triggered = stopInfo.UpdateStopPrice(currentPrice);
-                    
+
                     if (triggered)
                     {
                         // Determine the appropriate order type (for selling long positions)
                         string orderType = "SELL";
-                        
+
                         // Look up quantity in paper portfolio or use default
                         int quantity = 100; // Default quantity
                         if (paperPortfolio.TryGetValue(symbol, out double shares))
                         {
                             quantity = Math.Max(1, (int)Math.Round(shares));
                         }
-                        
+
                         // Place the order
                         await PlaceLimitOrder(symbol, quantity, orderType, currentPrice);
-                        
+
                         // Remove the trailing stop
                         _trailingStops.Remove(symbol);
-                        
+
                         //DatabaseMonolith.Log("Info", $"Trailing stop triggered for {symbol} at {currentPrice:C2}: Executed {orderType} order for {quantity} shares");
                     }
                 }
@@ -2139,7 +2139,7 @@ namespace Quantra.DAL.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Monitors bracket orders for stop loss and take profit conditions
         /// </summary>
@@ -2150,36 +2150,36 @@ namespace Quantra.DAL.Services
                 try
                 {
                     double currentPrice = await GetMarketPrice(stock);
-                    
+
                     // Check for stop loss and take profit conditions from bracket orders
                     if (trailingStopLoss.ContainsKey(stock) && currentPrice <= trailingStopLoss[stock])
                     {
                         // Stop loss triggered - execute exit order
                         await PlaceLimitOrder(stock, 100, "SELL", currentPrice);
                         //DatabaseMonolith.Log("Info", $"Stop loss triggered for {stock} at {currentPrice:C2}");
-                        
+
                         // Clean up after executing the stop loss
                         trailingStopLoss.Remove(stock);
                         takeProfitTargets.Remove(stock);
-                        
+
                         // Also remove any time-based exit strategies for this symbol
                         if (_timeBasedExits.ContainsKey(stock))
                             _timeBasedExits.Remove(stock);
-                            
+
                         if (_timeBasedExitStrategies.ContainsKey(stock))
                             _timeBasedExitStrategies.Remove(stock);
-                        
+
                         // If we have scheduled orders for this symbol that are part of the bracket, remove them
                         if (_scheduledOrders.ContainsKey(stock))
                         {
                             var bracketsToRemove = _scheduledOrders[stock]
                                 .Where(o => o.StopLoss.HasValue && o.TakeProfit.HasValue).ToList();
-                                
+
                             foreach (var order in bracketsToRemove)
                             {
                                 _scheduledOrders[stock].Remove(order);
                             }
-                            
+
                             if (_scheduledOrders[stock].Count == 0)
                             {
                                 _scheduledOrders.Remove(stock);
@@ -2191,29 +2191,29 @@ namespace Quantra.DAL.Services
                         // Take profit triggered - execute exit order
                         await PlaceLimitOrder(stock, 100, "SELL", currentPrice);
                         //DatabaseMonolith.Log("Info", $"Take profit triggered for {stock} at {currentPrice:C2}");
-                        
+
                         // Clean up after executing the take profit
                         trailingStopLoss.Remove(stock);
                         takeProfitTargets.Remove(stock);
-                        
+
                         // Also remove any time-based exit strategies for this symbol
                         if (_timeBasedExits.ContainsKey(stock))
                             _timeBasedExits.Remove(stock);
-                            
+
                         if (_timeBasedExitStrategies.ContainsKey(stock))
                             _timeBasedExitStrategies.Remove(stock);
-                        
+
                         // If we have scheduled orders for this symbol that are part of the bracket, remove them
                         if (_scheduledOrders.ContainsKey(stock))
                         {
                             var bracketsToRemove = _scheduledOrders[stock]
                                 .Where(o => o.StopLoss.HasValue && o.TakeProfit.HasValue).ToList();
-                                
+
                             foreach (var order in bracketsToRemove)
                             {
                                 _scheduledOrders[stock].Remove(order);
                             }
-                            
+
                             if (_scheduledOrders[stock].Count == 0)
                             {
                                 _scheduledOrders.Remove(stock);
@@ -2234,7 +2234,7 @@ namespace Quantra.DAL.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Monitors time-based exits and executes them when their exit time is reached
         /// </summary>
@@ -2242,52 +2242,52 @@ namespace Quantra.DAL.Services
         {
             // Get a list of symbols with time-based exit strategies
             var symbolsWithTimeBasedExits = _timeBasedExitStrategies.Keys.ToList();
-            
+
             foreach (var symbol in symbolsWithTimeBasedExits)
             {
                 try
                 {
                     var exitStrategy = _timeBasedExitStrategies[symbol];
                     var currentTime = DateTime.Now;
-                    
+
                     // Check if it's time to execute the exit strategy
                     if (currentTime >= exitStrategy.ExitTime)
                     {
                         // Get current price for the symbol
                         double currentPrice = await GetMarketPrice(symbol);
-                        
+
                         // Get quantity from paper portfolio or use default
                         int quantity = 100; // Default quantity if not found in portfolio
                         if (paperPortfolio.TryGetValue(symbol, out double shares))
                         {
                             quantity = Math.Max(1, (int)Math.Round(shares));
                         }
-                        
+
                         // Execute the exit order
                         await PlaceLimitOrder(symbol, quantity, "SELL", currentPrice);
-                        
+
                         // Log the execution with the specific strategy type
                         //DatabaseMonolith.Log("Info", $"Time-based exit ({exitStrategy.Strategy}) executed for {symbol} at {currentPrice:C2}");
-                        
+
                         // Clean up after executing the exit
                         _timeBasedExits.Remove(symbol);
                         _timeBasedExitStrategies.Remove(symbol);
                     }
-                    else if (exitStrategy.Strategy == TimeBasedExitStrategy.Duration && 
-                             exitStrategy.EntryTime.HasValue && 
+                    else if (exitStrategy.Strategy == TimeBasedExitStrategy.Duration &&
+                             exitStrategy.EntryTime.HasValue &&
                              exitStrategy.DurationMinutes.HasValue)
                     {
                         // Check if the position has been re-entered recently
                         // (Simple heuristic: price has moved significantly)
                         bool positionReentered = false;
-                        
+
                         // If detected re-entry, update entry time and exit time
                         if (positionReentered)
                         {
                             exitStrategy.EntryTime = DateTime.Now;
                             exitStrategy.ExitTime = DateTime.Now.AddMinutes(exitStrategy.DurationMinutes.Value);
                             _timeBasedExits[symbol] = exitStrategy.ExitTime;
-                            
+
                             //DatabaseMonolith.Log("Info", $"Position re-entry detected for {symbol}, time-based exit updated to {exitStrategy.ExitTime}");
                         }
                     }
@@ -2297,10 +2297,10 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Error monitoring time-based exit for {symbol}", ex.ToString());
                 }
             }
-            
+
             // Check the legacy/simple time-based exits
             var symbolsWithBasicExits = _timeBasedExits.Keys.Where(k => !_timeBasedExitStrategies.ContainsKey(k)).ToList();
-            
+
             foreach (var symbol in symbolsWithBasicExits)
             {
                 try
@@ -2309,20 +2309,20 @@ namespace Quantra.DAL.Services
                     {
                         // Get current price for the symbol
                         double currentPrice = await GetMarketPrice(symbol);
-                        
+
                         // Get quantity from paper portfolio or use default
                         int quantity = 100;
                         if (paperPortfolio.TryGetValue(symbol, out double shares))
                         {
                             quantity = Math.Max(1, (int)Math.Round(shares));
                         }
-                        
+
                         // Execute the exit order
                         await PlaceLimitOrder(symbol, quantity, "SELL", currentPrice);
-                        
+
                         // Log the execution
                         //DatabaseMonolith.Log("Info", $"Basic time-based exit executed for {symbol} at {currentPrice:C2}");
-                        
+
                         // Clean up after executing the exit
                         _timeBasedExits.Remove(symbol);
                     }
@@ -2333,7 +2333,7 @@ namespace Quantra.DAL.Services
                 }
             }
         }
-        
+
         /// <summary>
         /// Monitors and executes any scheduled orders
         /// </summary>
@@ -2349,21 +2349,21 @@ namespace Quantra.DAL.Services
                     {
                         await PlaceLimitOrder(order.Symbol, order.Quantity, order.OrderType, order.Price);
                         _scheduledOrders[symbol].Remove(order);
-                        
+
                         // If it's a bracketed order, set stop loss and take profit
                         if (order.StopLoss.HasValue && order.TakeProfit.HasValue)
                         {
                             trailingStopLoss[symbol] = order.StopLoss.Value;
                             takeProfitTargets[symbol] = order.TakeProfit.Value;
                         }
-                        
+
                         // If it's a DCA order, update strategy stats and schedule the next one
                         if (order.IsDollarCostAveraging)
                         {
                             // Find the associated DCA strategy for this symbol
                             var dcaStrategy = _dollarCostAveraging.Values
                                 .FirstOrDefault(s => s.Symbol == symbol && !s.IsPaused);
-                                
+
                             if (dcaStrategy != null)
                             {
                                 // Update strategy stats
@@ -2371,7 +2371,7 @@ namespace Quantra.DAL.Services
                                 dcaStrategy.SharesAcquired += order.Quantity;
                                 dcaStrategy.AmountInvested += order.Quantity * order.Price;
                                 dcaStrategy.LastExecutedAt = DateTime.Now;
-                                
+
                                 // If orders remain, schedule the next one
                                 if (dcaStrategy.OrdersRemaining > 0)
                                 {
@@ -2380,15 +2380,15 @@ namespace Quantra.DAL.Services
                                 else
                                 {
                                     //DatabaseMonolith.Log("Info", $"DCA strategy completed for {symbol} (ID: {dcaStrategy.StrategyId}): " +
-                                        //$"{dcaStrategy.OrdersExecuted} orders executed, {dcaStrategy.SharesAcquired} shares acquired, " +
-                                        //$"${dcaStrategy.AmountInvested:N2} invested, avg price: ${dcaStrategy.AveragePricePerShare:N2}");
+                                    //$"{dcaStrategy.OrdersExecuted} orders executed, {dcaStrategy.SharesAcquired} shares acquired, " +
+                                    //$"${dcaStrategy.AmountInvested:N2} invested, avg price: ${dcaStrategy.AveragePricePerShare:N2}");
                                 }
                             }
                         }
-                        
+
                         //DatabaseMonolith.Log("Info", $"Scheduled order executed for {symbol}: {order.OrderType} {order.Quantity} shares at {order.Price:C2}");
                     }
-                    
+
                     if (_scheduledOrders[symbol].Count == 0)
                     {
                         _scheduledOrders.Remove(symbol);
@@ -2429,7 +2429,7 @@ namespace Quantra.DAL.Services
                     EntryTime = DateTime.Now, // Record entry time for Duration-based strategies
                     SpecificTime = specificTime
                 };
-                
+
                 // Calculate the appropriate exit time based on strategy
                 switch (strategy)
                 {
@@ -2440,7 +2440,7 @@ namespace Quantra.DAL.Services
                         if (DateTime.Now > exitTime)
                             exitTime = exitTime.AddDays(1);
                         break;
-                        
+
                     case TimeBasedExitStrategy.EndOfWeek:
                         // Exit at market close on Friday
                         DateTime friday = DateTime.Today;
@@ -2449,7 +2449,7 @@ namespace Quantra.DAL.Services
                             friday = friday.AddDays(1);
                         exitTime = friday.AddHours(16); // 4:00 PM
                         break;
-                        
+
                     case TimeBasedExitStrategy.Duration:
                         if (!durationMinutes.HasValue)
                         {
@@ -2458,35 +2458,35 @@ namespace Quantra.DAL.Services
                         }
                         exitTime = DateTime.Now.AddMinutes(durationMinutes.Value);
                         break;
-                        
+
                     case TimeBasedExitStrategy.SpecificTimeOfDay:
                         if (!specificTime.HasValue)
                         {
                             //DatabaseMonolith.Log("Error", $"Specific time must be specified for SpecificTimeOfDay exit strategy on {symbol}");
                             return false;
                         }
-                        
+
                         // Calculate the next occurrence of the specific time
                         DateTime today = DateTime.Today;
                         DateTime specificDateTime = today.Add(specificTime.Value.ToTimeSpan());
-                        
+
                         // If the time has already passed today, set for tomorrow
                         if (DateTime.Now > specificDateTime)
                             specificDateTime = specificDateTime.AddDays(1);
-                            
+
                         exitTime = specificDateTime;
                         break;
-                        
+
                     default:
                         //DatabaseMonolith.Log("Error", $"Unknown time-based exit strategy: {strategy}");
                         return false;
                 }
-                
+
                 // Store the exit strategy and time
                 exitStrategy.ExitTime = exitTime;
                 _timeBasedExitStrategies[symbol] = exitStrategy;
                 _timeBasedExits[symbol] = exitTime; // For backward compatibility
-                
+
                 //DatabaseMonolith.Log("Info", $"Time-based exit strategy set for {symbol}: {strategy}, Exit time: {exitTime}");
                 return true;
             }
@@ -2496,7 +2496,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sets a time-based exit strategy for a position with a specific duration
         /// </summary>
@@ -2507,7 +2507,7 @@ namespace Quantra.DAL.Services
         {
             return SetTimeBasedExitStrategy(symbol, TimeBasedExitStrategy.Duration, durationMinutes);
         }
-        
+
         /// <summary>
         /// Sets a time-based exit strategy for a position at the end of the trading day
         /// </summary>
@@ -2517,7 +2517,7 @@ namespace Quantra.DAL.Services
         {
             return SetTimeBasedExitStrategy(symbol, TimeBasedExitStrategy.EndOfDay);
         }
-        
+
         /// <summary>
         /// Sets a time-based exit strategy for a position at the end of the trading week
         /// </summary>
@@ -2527,7 +2527,7 @@ namespace Quantra.DAL.Services
         {
             return SetTimeBasedExitStrategy(symbol, TimeBasedExitStrategy.EndOfWeek);
         }
-        
+
         /// <summary>
         /// Sets a time-based exit strategy for a position at a specific time of day
         /// </summary>
@@ -2538,7 +2538,7 @@ namespace Quantra.DAL.Services
         {
             return SetTimeBasedExitStrategy(symbol, TimeBasedExitStrategy.SpecificTimeOfDay, null, time);
         }
-        
+
         /// <summary>
         /// Removes a time-based exit strategy for a position
         /// </summary>
@@ -2549,26 +2549,26 @@ namespace Quantra.DAL.Services
             try
             {
                 bool removed = false;
-                
+
                 // Remove from the exit strategies dictionary
                 if (_timeBasedExitStrategies.ContainsKey(symbol))
                 {
                     _timeBasedExitStrategies.Remove(symbol);
                     removed = true;
                 }
-                
+
                 // Also remove from the basic exits dictionary for compatibility
                 if (_timeBasedExits.ContainsKey(symbol))
                 {
                     _timeBasedExits.Remove(symbol);
                     removed = true;
                 }
-                
+
                 if (removed)
                 {
                     //DatabaseMonolith.Log("Info", $"Time-based exit removed for {symbol}");
                 }
-                
+
                 return removed;
             }
             catch (Exception ex)
@@ -2589,31 +2589,31 @@ namespace Quantra.DAL.Services
                 // Set emergency stop flag and cancel any operations using the token
                 _emergencyStopActive = true;
                 _emergencyStopTokenSource.Cancel();
-                
+
                 // Stop monitoring positions
                 StopMonitoring();
-                
+
                 // Create a detailed log of all pending operations
                 StringBuilder logBuilder = new StringBuilder();
                 logBuilder.AppendLine("Emergency Stop Activated - Cancelling operations:");
-                
+
                 // Cancel all scheduled orders
                 int canceledOrderCount = 0;
                 foreach (var symbol in _scheduledOrders.Keys.ToList())
                 {
                     canceledOrderCount += _scheduledOrders[symbol].Count;
                     logBuilder.AppendLine($"  - Cancelling {_scheduledOrders[symbol].Count} pending orders for {symbol}");
-                    
+
                     // Log details of each canceled order
                     foreach (var order in _scheduledOrders[symbol])
                     {
                         logBuilder.AppendLine($"    * {order.OrderType} {order.Quantity} {order.Symbol} @ {order.Price:C2} scheduled for {order.ExecutionTime}");
                     }
-                    
+
                     _scheduledOrders[symbol].Clear();
                 }
                 _scheduledOrders.Clear();
-                
+
                 // Cancel all dollar cost averaging strategies
                 int dcaStrategiesCount = _dollarCostAveraging.Count;
                 if (dcaStrategiesCount > 0)
@@ -2626,7 +2626,7 @@ namespace Quantra.DAL.Services
                     }
                 }
                 _dollarCostAveraging.Clear();
-                
+
                 // Cancel any rebalancing operations
                 int allocationTargetsCount = _targetAllocations.Count;
                 if (allocationTargetsCount > 0)
@@ -2634,10 +2634,10 @@ namespace Quantra.DAL.Services
                     logBuilder.AppendLine($"  - Cancelling portfolio rebalancing for {allocationTargetsCount} symbols");
                 }
                 _targetAllocations.Clear();
-                
+
                 // Log all trailing stops being canceled
                 int trailingStopsCount = _trailingStops.Count;
-                if (trailingStopsCount > 0) 
+                if (trailingStopsCount > 0)
                 {
                     logBuilder.AppendLine($"  - Cancelling {trailingStopsCount} active trailing stops");
                     foreach (var symbol in _trailingStops.Keys.ToList())
@@ -2647,36 +2647,36 @@ namespace Quantra.DAL.Services
                     }
                     _trailingStops.Clear();
                 }
-                
+
                 // Log time-based exits being canceled
                 int timeBasedExitsCount = _timeBasedExits.Count;
                 if (timeBasedExitsCount > 0)
                 {
                     logBuilder.AppendLine($"  - Cancelling {timeBasedExitsCount} time-based exits");
-                    
+
                     foreach (var symbol in _timeBasedExits.Keys)
                     {
-                        string strategy = _timeBasedExitStrategies.ContainsKey(symbol) 
-                            ? $", Strategy: {_timeBasedExitStrategies[symbol].Strategy}" 
+                        string strategy = _timeBasedExitStrategies.ContainsKey(symbol)
+                            ? $", Strategy: {_timeBasedExitStrategies[symbol].Strategy}"
                             : "";
-                        
+
                         logBuilder.AppendLine($"    * {symbol}: Exit at {_timeBasedExits[symbol]}{strategy}");
                     }
-                    
+
                     _timeBasedExits.Clear();
                 }
-                
+
                 // Clear time-based exit strategies too
                 if (_timeBasedExitStrategies.Count > 0)
                 {
                     logBuilder.AppendLine($"  - Cancelling {_timeBasedExitStrategies.Count} time-based exit strategies");
                     _timeBasedExitStrategies.Clear();
                 }
-                
+
                 // Log the entire emergency stop operation
                 //DatabaseMonolith.Log("Warning", $"EMERGENCY STOP ACTIVATED - All trading halted. Cancelled {canceledOrderCount} pending orders.");
                 //DatabaseMonolith.Log("Info", logBuilder.ToString());
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -2696,10 +2696,10 @@ namespace Quantra.DAL.Services
             {
                 _emergencyStopActive = false;
                 _emergencyStopTokenSource = new CancellationTokenSource();
-                
+
                 // Restart position monitoring
                 StartMonitoring();
-                
+
                 //DatabaseMonolith.Log("Info", "Emergency stop deactivated - Trading resumed");
                 return true;
             }
@@ -2709,7 +2709,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Checks if emergency stop is currently active
         /// </summary>
@@ -2727,27 +2727,27 @@ namespace Quantra.DAL.Services
         private bool IsInEnabledMarketSession(TimeOnly time)
         {
             // Check if current time falls within any enabled session
-            if (_enabledMarketSessions.HasFlag(MarketSession.PreMarket) && 
+            if (_enabledMarketSessions.HasFlag(MarketSession.PreMarket) &&
                 (time >= _preMarketOpenTime && time < _regularMarketOpenTime))
             {
                 return true;
             }
-            
-            if (_enabledMarketSessions.HasFlag(MarketSession.Regular) && 
+
+            if (_enabledMarketSessions.HasFlag(MarketSession.Regular) &&
                 (time >= _regularMarketOpenTime && time < _regularMarketCloseTime))
             {
                 return true;
             }
-            
-            if (_enabledMarketSessions.HasFlag(MarketSession.AfterHours) && 
+
+            if (_enabledMarketSessions.HasFlag(MarketSession.AfterHours) &&
                 (time >= _regularMarketCloseTime && time < _afterHoursCloseTime))
             {
                 return true;
             }
-            
+
             return false;
         }
-        
+
         /// <summary>
         /// Sets trading hour restrictions to limit when trades can be executed
         /// </summary>
@@ -2764,14 +2764,14 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Invalid trading hours: Market close ({marketClose}) must be after market open ({marketOpen})");
                     return false;
                 }
-                
+
                 // Clear existing restrictions
                 _tradingHourRestrictions.Clear();
-                
+
                 // Add new restrictions
                 _tradingHourRestrictions.Add(marketOpen);
                 _tradingHourRestrictions.Add(marketClose);
-                
+
                 //DatabaseMonolith.Log("Info", $"Trading hour restrictions set: {marketOpen} - {marketClose}");
                 return true;
             }
@@ -2781,7 +2781,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sets which market sessions are enabled for trading
         /// </summary>
@@ -2792,7 +2792,7 @@ namespace Quantra.DAL.Services
             try
             {
                 _enabledMarketSessions = sessions;
-                
+
                 string enabledSessions = GetEnabledSessionsDescription(sessions);
                 //DatabaseMonolith.Log("Info", $"Enabled market sessions for trading: {enabledSessions}");
                 return true;
@@ -2803,7 +2803,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets which market sessions are currently enabled for trading
         /// </summary>
@@ -2812,7 +2812,7 @@ namespace Quantra.DAL.Services
         {
             return _enabledMarketSessions;
         }
-        
+
         /// <summary>
         /// Sets the time boundaries for different market sessions
         /// </summary>
@@ -2823,28 +2823,28 @@ namespace Quantra.DAL.Services
         /// <returns>True if session times were set successfully</returns>
         public bool SetMarketSessionTimes(
             TimeOnly preMarketOpenTime,
-            TimeOnly regularMarketOpenTime, 
+            TimeOnly regularMarketOpenTime,
             TimeOnly regularMarketCloseTime,
             TimeOnly afterHoursCloseTime)
         {
             try
             {
                 // Validate times
-                if (preMarketOpenTime >= regularMarketOpenTime || 
+                if (preMarketOpenTime >= regularMarketOpenTime ||
                     regularMarketOpenTime >= regularMarketCloseTime ||
                     regularMarketCloseTime >= afterHoursCloseTime)
                 {
                     //DatabaseMonolith.Log("Error", "Invalid market session times: Times must be in sequence (preMarket < regularOpen < regularClose < afterHoursClose)");
                     return false;
                 }
-                
+
                 _preMarketOpenTime = preMarketOpenTime;
                 _regularMarketOpenTime = regularMarketOpenTime;
                 _regularMarketCloseTime = regularMarketCloseTime;
                 _afterHoursCloseTime = afterHoursCloseTime;
-                
+
                 //DatabaseMonolith.Log("Info", $"Market session times set: Pre-market {preMarketOpenTime} to {regularMarketOpenTime}, " +
-                    //$"Regular {regularMarketOpenTime} to {regularMarketCloseTime}, After-hours {regularMarketCloseTime} to {afterHoursCloseTime}");
+                //$"Regular {regularMarketOpenTime} to {regularMarketCloseTime}, After-hours {regularMarketCloseTime} to {afterHoursCloseTime}");
                 return true;
             }
             catch (Exception ex)
@@ -2853,7 +2853,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets the current market session time boundaries
         /// </summary>
@@ -2862,7 +2862,7 @@ namespace Quantra.DAL.Services
         {
             return (_preMarketOpenTime, _regularMarketOpenTime, _regularMarketCloseTime, _afterHoursCloseTime);
         }
-        
+
         /// <summary>
         /// Gets a description of the enabled market sessions
         /// </summary>
@@ -2872,24 +2872,24 @@ namespace Quantra.DAL.Services
         {
             if (sessions == MarketSession.None)
                 return "None";
-            
+
             if (sessions == MarketSession.All)
                 return "All (Pre-Market, Regular, After-Hours)";
-                
+
             var enabledList = new List<string>();
-            
+
             if (sessions.HasFlag(MarketSession.PreMarket))
                 enabledList.Add("Pre-Market");
-                
+
             if (sessions.HasFlag(MarketSession.Regular))
                 enabledList.Add("Regular");
-                
+
             if (sessions.HasFlag(MarketSession.AfterHours))
                 enabledList.Add("After-Hours");
-                
+
             return string.Join(", ", enabledList);
         }
-        
+
         /// <summary>
         /// Places multiple orders as part of a multi-leg strategy
         /// </summary>
@@ -2903,19 +2903,19 @@ namespace Quantra.DAL.Services
                 {
                     return false;
                 }
-                
+
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
                     //DatabaseMonolith.Log("Warning", $"Multi-leg order rejected: Trading not allowed at this time based on market session filters. Order count: {orders.Count}");
                     return false;
                 }
-                
+
                 // Place all orders in sequence
                 foreach (var order in orders)
                 {
                     await PlaceLimitOrder(order.Symbol, order.Quantity, order.OrderType, order.Price);
-                    
+
                     // If it has stop loss/take profit, set those as well
                     if (order.StopLoss.HasValue && order.TakeProfit.HasValue)
                     {
@@ -2923,7 +2923,7 @@ namespace Quantra.DAL.Services
                         takeProfitTargets[order.Symbol] = order.TakeProfit.Value;
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Multi-leg order executed with {orders.Count} legs");
                 return true;
             }
@@ -2933,7 +2933,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Places a multi-leg strategy with strategy-specific handling
         /// </summary>
@@ -2948,28 +2948,28 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Cannot place multi-leg strategy: Strategy or legs are null or empty");
                     return false;
                 }
-                
+
                 // Check if trading is allowed based on market session and time restrictions
                 if (!IsTradingAllowed())
                 {
                     //DatabaseMonolith.Log("Warning", $"Multi-leg strategy rejected: Trading not allowed at this time based on market session filters. Strategy: {strategy.Name}");
                     return false;
                 }
-                
+
                 // Validate the strategy
                 if (!strategy.Validate())
                 {
                     //DatabaseMonolith.Log("Error", $"Multi-leg strategy validation failed: {strategy.Name} ({strategy.StrategyType})");
                     return false;
                 }
-                
+
                 // Ensure all legs have the strategy ID and IsMultiLegStrategy flag set
                 foreach (var leg in strategy.Legs)
                 {
                     leg.IsMultiLegStrategy = true;
                     leg.MultiLegStrategyId = strategy.StrategyId;
                 }
-                
+
                 // Additional strategy-specific pre-execution logic
                 switch (strategy.StrategyType)
                 {
@@ -2984,7 +2984,7 @@ namespace Quantra.DAL.Services
                         strategy.AllOrNone = true;
                         break;
                 }
-                
+
                 // If the strategy is "All or None", we need to ensure we can execute all legs
                 if (strategy.AllOrNone)
                 {
@@ -2992,9 +2992,9 @@ namespace Quantra.DAL.Services
                     // For now, we'll just log that we're running in All-or-None mode
                     //DatabaseMonolith.Log("Info", $"Executing multi-leg strategy {strategy.Name} in All-or-None mode");
                 }
-                
+
                 bool success = false;
-                
+
                 // Execute the legs based on the ExecuteSimultaneously flag
                 if (strategy.ExecuteSimultaneously)
                 {
@@ -3008,18 +3008,18 @@ namespace Quantra.DAL.Services
                     foreach (var leg in strategy.Legs.OrderBy(l => l.LegPosition))
                     {
                         await PlaceLimitOrder(leg.Symbol, leg.Quantity, leg.OrderType, leg.Price);
-                        
+
                         // Add a small delay between orders
                         await Task.Delay(500);
                     }
                     success = true;
                 }
-                
+
                 // Additional strategy-specific post-execution logic
                 if (success)
                 {
                     //DatabaseMonolith.Log("Info", $"Multi-leg strategy executed successfully: {strategy.Name} ({strategy.StrategyType}) with {strategy.Legs.Count} legs");
-                    
+
                     // For certain strategies, set up monitoring or additional management
                     switch (strategy.StrategyType)
                     {
@@ -3031,7 +3031,7 @@ namespace Quantra.DAL.Services
                             break;
                     }
                 }
-                
+
                 return success;
             }
             catch (Exception ex)
@@ -3040,7 +3040,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sets up monitoring for a multi-leg strategy
         /// </summary>
@@ -3049,11 +3049,11 @@ namespace Quantra.DAL.Services
         {
             // In a real implementation, this would set up monitoring tasks for the strategy
             // tracking overall P&L, approaching expiration dates, etc.
-            
+
             // For now, we'll just log that we're setting up monitoring
             //DatabaseMonolith.Log("Info", $"Setting up monitoring for strategy {strategy.Name} ({strategy.StrategyType})");
         }
-        
+
         /// <summary>
         /// Creates a vertical spread strategy (bull call spread or bear put spread)
         /// </summary>
@@ -3066,12 +3066,12 @@ namespace Quantra.DAL.Services
         /// <param name="totalPrice">Optional limit price for the entire spread</param>
         /// <returns>A configured vertical spread strategy</returns>
         public MultiLegStrategy CreateVerticalSpread(
-            string symbol, 
-            int quantity, 
-            bool isBullish, 
-            double lowerStrike, 
-            double upperStrike, 
-            DateTime expiration, 
+            string symbol,
+            int quantity,
+            bool isBullish,
+            double lowerStrike,
+            double upperStrike,
+            DateTime expiration,
             double? totalPrice = null)
         {
             try
@@ -3082,7 +3082,7 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Invalid parameters for vertical spread");
                     return null;
                 }
-                
+
                 var strategy = new MultiLegStrategy
                 {
                     Name = isBullish ? $"{symbol} Bull Call Spread" : $"{symbol} Bear Put Spread",
@@ -3091,14 +3091,14 @@ namespace Quantra.DAL.Services
                     ExecuteSimultaneously = true,
                     RiskLevel = 4 // Moderate risk
                 };
-                
+
                 if (isBullish) // Bull Call Spread
                 {
                     // For bull call spread: Buy lower strike call, sell higher strike call
                     // Get current market prices (in a real implementation)
                     double lowerCallPrice = GetEstimatedOptionPrice(symbol, "CALL", lowerStrike, expiration);
                     double upperCallPrice = GetEstimatedOptionPrice(symbol, "CALL", upperStrike, expiration);
-                    
+
                     // First leg: Buy the lower strike call
                     var leg1 = new ScheduledOrder
                     {
@@ -3115,7 +3115,7 @@ namespace Quantra.DAL.Services
                         OptionType = "CALL",
                         IsOption = true
                     };
-                    
+
                     // Second leg: Sell the higher strike call
                     var leg2 = new ScheduledOrder
                     {
@@ -3132,10 +3132,10 @@ namespace Quantra.DAL.Services
                         OptionType = "CALL",
                         IsOption = true
                     };
-                    
+
                     strategy.Legs.Add(leg1);
                     strategy.Legs.Add(leg2);
-                    
+
                     // Calculate maximum profit and loss
                     strategy.MaximumLoss = (lowerCallPrice - upperCallPrice) * quantity * 100; // Net debit paid
                     strategy.MaximumProfit = (upperStrike - lowerStrike - (lowerCallPrice - upperCallPrice)) * quantity * 100;
@@ -3146,7 +3146,7 @@ namespace Quantra.DAL.Services
                     // Get current market prices (in a real implementation)
                     double lowerPutPrice = GetEstimatedOptionPrice(symbol, "PUT", lowerStrike, expiration);
                     double upperPutPrice = GetEstimatedOptionPrice(symbol, "PUT", upperStrike, expiration);
-                    
+
                     // First leg: Buy the higher strike put
                     var leg1 = new ScheduledOrder
                     {
@@ -3163,7 +3163,7 @@ namespace Quantra.DAL.Services
                         OptionType = "PUT",
                         IsOption = true
                     };
-                    
+
                     // Second leg: Sell the lower strike put
                     var leg2 = new ScheduledOrder
                     {
@@ -3180,15 +3180,15 @@ namespace Quantra.DAL.Services
                         OptionType = "PUT",
                         IsOption = true
                     };
-                    
+
                     strategy.Legs.Add(leg1);
                     strategy.Legs.Add(leg2);
-                    
+
                     // Calculate maximum profit and loss
                     strategy.MaximumLoss = (upperPutPrice - lowerPutPrice) * quantity * 100; // Net debit paid
                     strategy.MaximumProfit = (upperStrike - lowerStrike - (upperPutPrice - lowerPutPrice)) * quantity * 100;
                 }
-                
+
                 // If a total price for the spread was specified, adjust the individual leg prices
                 if (totalPrice.HasValue)
                 {
@@ -3202,7 +3202,7 @@ namespace Quantra.DAL.Services
                         }
                     }
                 }
-                
+
                 return strategy;
             }
             catch (Exception ex)
@@ -3211,7 +3211,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Creates a straddle strategy (buying a call and put at the same strike)
         /// </summary>
@@ -3230,7 +3230,7 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Invalid parameters for straddle");
                     return null;
                 }
-                
+
                 var strategy = new MultiLegStrategy
                 {
                     Name = $"{symbol} {strikePrice} Straddle",
@@ -3239,11 +3239,11 @@ namespace Quantra.DAL.Services
                     ExecuteSimultaneously = true,
                     RiskLevel = 6 // Higher risk due to premium paid for both options
                 };
-                
+
                 // Get current market prices (in a real implementation)
                 double callPrice = GetEstimatedOptionPrice(symbol, "CALL", strikePrice, expiration);
                 double putPrice = GetEstimatedOptionPrice(symbol, "PUT", strikePrice, expiration);
-                
+
                 // First leg: Buy the call
                 var callLeg = new ScheduledOrder
                 {
@@ -3260,7 +3260,7 @@ namespace Quantra.DAL.Services
                     OptionType = "CALL",
                     IsOption = true
                 };
-                
+
                 // Second leg: Buy the put
                 var putLeg = new ScheduledOrder
                 {
@@ -3277,14 +3277,14 @@ namespace Quantra.DAL.Services
                     OptionType = "PUT",
                     IsOption = true
                 };
-                
+
                 strategy.Legs.Add(callLeg);
                 strategy.Legs.Add(putLeg);
-                
+
                 // Calculate maximum loss (total premium paid)
                 strategy.MaximumLoss = (callPrice + putPrice) * quantity * 100;
                 strategy.MaximumProfit = double.PositiveInfinity; // Theoretically unlimited profit potential
-                
+
                 return strategy;
             }
             catch (Exception ex)
@@ -3293,7 +3293,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Creates a pairs trade strategy (long one security, short a correlated one)
         /// </summary>
@@ -3304,22 +3304,22 @@ namespace Quantra.DAL.Services
         /// <param name="correlation">Correlation coefficient between the securities</param>
         /// <returns>A configured pairs trade strategy</returns>
         public MultiLegStrategy CreatePairsTrade(
-            string longSymbol, 
-            string shortSymbol, 
-            int longQuantity, 
-            int shortQuantity, 
+            string longSymbol,
+            string shortSymbol,
+            int longQuantity,
+            int shortQuantity,
             double correlation)
         {
             try
             {
                 // Validate inputs
-                if (string.IsNullOrEmpty(longSymbol) || string.IsNullOrEmpty(shortSymbol) || 
+                if (string.IsNullOrEmpty(longSymbol) || string.IsNullOrEmpty(shortSymbol) ||
                     longQuantity <= 0 || shortQuantity <= 0)
                 {
                     //DatabaseMonolith.Log("Error", "Invalid parameters for pairs trade");
                     return null;
                 }
-                
+
                 var strategy = new MultiLegStrategy
                 {
                     Name = $"{longSymbol}/{shortSymbol} Pairs Trade",
@@ -3328,11 +3328,11 @@ namespace Quantra.DAL.Services
                     ExecuteSimultaneously = false, // Often better to execute sequentially to avoid market impact
                     RiskLevel = 5 // Moderate risk
                 };
-                
+
                 // Get market prices (in a real implementation)
                 double longPrice = GetMarketPrice(longSymbol).Result;
                 double shortPrice = GetMarketPrice(shortSymbol).Result;
-                
+
                 // First leg: Buy the first symbol
                 var longLeg = new ScheduledOrder
                 {
@@ -3346,7 +3346,7 @@ namespace Quantra.DAL.Services
                     LegPosition = 1,
                     IsOption = false
                 };
-                
+
                 // Second leg: Short the second symbol
                 var shortLeg = new ScheduledOrder
                 {
@@ -3360,14 +3360,14 @@ namespace Quantra.DAL.Services
                     LegPosition = 2,
                     IsOption = false
                 };
-                
+
                 strategy.Legs.Add(longLeg);
                 strategy.Legs.Add(shortLeg);
-                
+
                 // Add correlation information to strategy notes
                 strategy.Notes = $"Correlation: {correlation:F2}. Long: {longSymbol} ({longQuantity} shares), " +
                                  $"Short: {shortSymbol} ({shortQuantity} shares).";
-                
+
                 return strategy;
             }
             catch (Exception ex)
@@ -3376,7 +3376,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Creates a basket order strategy (multiple securities traded together)
         /// </summary>
@@ -3386,8 +3386,8 @@ namespace Quantra.DAL.Services
         /// <param name="weights">Optional portfolio weights</param>
         /// <returns>A configured basket order strategy</returns>
         public MultiLegStrategy CreateBasketOrder(
-            List<string> symbols, 
-            List<int> quantities, 
+            List<string> symbols,
+            List<int> quantities,
             List<string> orderTypes,
             List<double> weights = null)
         {
@@ -3400,7 +3400,7 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Invalid parameters for basket order");
                     return null;
                 }
-                
+
                 var strategy = new MultiLegStrategy
                 {
                     Name = "Basket Order",
@@ -3409,16 +3409,16 @@ namespace Quantra.DAL.Services
                     ExecuteSimultaneously = false, // Sequential execution to minimize market impact
                     RiskLevel = 3 // Lower risk due to diversification
                 };
-                
+
                 // Build description of the basket
                 StringBuilder descBuilder = new StringBuilder();
                 descBuilder.AppendLine("Basket composition:");
-                
+
                 // Add each security to the basket
                 for (int i = 0; i < symbols.Count; i++)
                 {
                     double price = GetMarketPrice(symbols[i]).Result;
-                    
+
                     var order = new ScheduledOrder
                     {
                         Symbol = symbols[i],
@@ -3431,22 +3431,22 @@ namespace Quantra.DAL.Services
                         LegPosition = i + 1,
                         IsOption = false
                     };
-                    
+
                     strategy.Legs.Add(order);
-                    
+
                     // Add description
                     string weightStr = weights != null && i < weights.Count ? $" (Weight: {weights[i]:P2})" : "";
                     descBuilder.AppendLine($"- {orderTypes[i]} {quantities[i]} {symbols[i]} @ {price:C2}{weightStr}");
                 }
-                
+
                 strategy.Notes = descBuilder.ToString();
-                
+
                 // If this is a rebalance, note that in the name
                 if (weights != null)
                 {
                     strategy.Name = "Portfolio Rebalance";
                 }
-                
+
                 return strategy;
             }
             catch (Exception ex)
@@ -3455,7 +3455,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Validates a multi-leg strategy before execution
         /// </summary>
@@ -3470,38 +3470,38 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", "Cannot validate null strategy");
                     return false;
                 }
-                
+
                 // Check if trading is allowed
                 if (!IsTradingAllowed())
                 {
                     //DatabaseMonolith.Log("Warning", $"Strategy validation failed: Trading not allowed at this time");
                     return false;
                 }
-                
+
                 // Check legs existence
                 if (strategy.Legs == null || strategy.Legs.Count == 0)
                 {
                     //DatabaseMonolith.Log("Error", "Strategy validation failed: No legs defined");
                     return false;
                 }
-                
+
                 // Risk check
                 bool isHighRisk = strategy.RiskLevel >= 8;
                 if (isHighRisk && riskMode != RiskMode.Aggressive)
                 {
                     //DatabaseMonolith.Log("Warning", 
-                        //$"Strategy validation failed: Risk level {strategy.RiskLevel} exceeds current risk mode {riskMode}");
+                    //$"Strategy validation failed: Risk level {strategy.RiskLevel} exceeds current risk mode {riskMode}");
                     return false;
                 }
-                
+
                 // Perform strategy-specific validation
                 if (!strategy.Validate())
                 {
                     //DatabaseMonolith.Log("Error", 
-                        //$"Strategy validation failed: Failed strategy-specific validation for {strategy.StrategyType}");
+                    //$"Strategy validation failed: Failed strategy-specific validation for {strategy.StrategyType}");
                     return false;
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -3510,7 +3510,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets an estimated option price (simplified model for demonstration)
         /// </summary>
@@ -3525,20 +3525,20 @@ namespace Quantra.DAL.Services
             {
                 // This is a very simplified option pricing model for demonstration
                 // In reality, you'd use a real options API or Black-Scholes model
-                
+
                 // Get underlying price
                 double underlyingPrice = GetMarketPrice(symbol).Result;
-                
+
                 // Calculate days to expiration
                 double daysToExpiration = (expiration - DateTime.Now).TotalDays;
                 if (daysToExpiration <= 0) daysToExpiration = 1; // Avoid division by zero
-                
+
                 // Simple volatility estimate (would use historical volatility in reality)
                 double volatility = 0.3; // 30% annual volatility
-                
+
                 // Simple time decay factor
                 double timeFactor = Math.Sqrt(daysToExpiration / 365.0);
-                
+
                 // Intrinsic value
                 double intrinsicValue = 0;
                 if (optionType == "CALL")
@@ -3549,20 +3549,20 @@ namespace Quantra.DAL.Services
                 {
                     intrinsicValue = Math.Max(0, strikePrice - underlyingPrice);
                 }
-                
+
                 // Time value (very simplified)
                 double timeValue = underlyingPrice * volatility * timeFactor;
-                
+
                 // Adjust time value based on how far in/out of the money
                 double moneyness = Math.Abs(1 - strikePrice / underlyingPrice);
                 timeValue *= Math.Exp(-2 * moneyness); // Reduce time value for deep ITM/OTM options
-                
+
                 // Total estimated price
                 double estimatedPrice = intrinsicValue + timeValue;
-                
+
                 // Minimum price
                 double minimumPrice = 0.05;
-                
+
                 return Math.Max(minimumPrice, Math.Round(estimatedPrice, 2));
             }
             catch
@@ -3571,7 +3571,7 @@ namespace Quantra.DAL.Services
                 return 1.00;
             }
         }
-        
+
         /// <summary>
         /// Calculates Greek metrics for an option position including Theta
         /// </summary>
@@ -3586,14 +3586,14 @@ namespace Quantra.DAL.Services
             try
             {
                 var greekEngine = new GreekCalculationEngine();
-                
+
                 // Get underlying price
                 double underlyingPrice = await GetMarketPrice(symbol);
-                
+
                 // Calculate days to expiration
                 double daysToExpiration = (expiration - DateTime.Now).TotalDays;
                 if (daysToExpiration <= 0) daysToExpiration = 1; // Avoid division by zero
-                
+
                 // Get current market conditions
                 var marketConditions = new MarketConditions
                 {
@@ -3602,7 +3602,7 @@ namespace Quantra.DAL.Services
                     MarketTrend = 0.0,
                     EconomicGrowth = 0.0
                 };
-                
+
                 // Create position for Greek calculation
                 var position = new Position
                 {
@@ -3616,19 +3616,19 @@ namespace Quantra.DAL.Services
                     Quantity = quantity,
                     OptionPrice = GetEstimatedOptionPrice(symbol, optionType, strikePrice, expiration)
                 };
-                
+
                 // Calculate all Greeks including Theta
                 var greeks = greekEngine.CalculateGreeks(position, marketConditions);
-                
+
                 //DatabaseMonolith.Log("Info", $"Option Greeks calculated for {symbol} {optionType} {strikePrice}: " +
-                    //$"Theta={greeks.Theta:F4} (time decay per day), Delta={greeks.Delta:F4}, Gamma={greeks.Gamma:F4}");
-                
+                //$"Theta={greeks.Theta:F4} (time decay per day), Delta={greeks.Delta:F4}, Gamma={greeks.Gamma:F4}");
+
                 return greeks;
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Warning", $"Error calculating option Greeks for {symbol}", ex.ToString());
-                
+
                 // Return default Greeks on error
                 return new GreekMetrics
                 {
@@ -3640,7 +3640,7 @@ namespace Quantra.DAL.Services
                 };
             }
         }
-        
+
         /// <summary>
         /// Analyzes time decay for option positions and provides trading recommendations
         /// </summary>
@@ -3656,14 +3656,14 @@ namespace Quantra.DAL.Services
                 var greeksTask = GetOptionGreeks(symbol, optionType, strikePrice, expiration, 1);
                 var shortGreeksTask = GetOptionGreeks(symbol, optionType, strikePrice, expiration, -1);
                 await Task.WhenAll(greeksTask, shortGreeksTask);
-                
+
                 var greeks = greeksTask.Result;
                 var shortGreeks = shortGreeksTask.Result;
-                
+
                 double daysToExpiration = (expiration - DateTime.Now).TotalDays;
                 double weeklyDecay = greeks.Theta * 7; // Weekly time decay
                 double totalDecay = greeks.Theta * daysToExpiration; // Total decay to expiration
-                
+
                 var analysis = new StringBuilder();
                 analysis.AppendLine($"=== THETA ANALYSIS FOR {symbol} {optionType} ${strikePrice} ===");
                 analysis.AppendLine($"Days to Expiration: {daysToExpiration:F0}");
@@ -3671,22 +3671,22 @@ namespace Quantra.DAL.Services
                 analysis.AppendLine($"Weekly Time Decay: ${Math.Abs(weeklyDecay):F2}");
                 analysis.AppendLine($"Total Decay to Expiration: ${Math.Abs(totalDecay):F2}");
                 analysis.AppendLine();
-                
+
                 // Long position analysis
                 analysis.AppendLine("LONG POSITION IMPACT:");
                 analysis.AppendLine($"• Daily P&L from time decay: ${greeks.Theta:F2}");
                 analysis.AppendLine($"• Weekly P&L from time decay: ${weeklyDecay:F2}");
-                
+
                 // Short position analysis  
                 analysis.AppendLine();
                 analysis.AppendLine("SHORT POSITION IMPACT:");
                 analysis.AppendLine($"• Daily P&L from time decay: ${shortGreeks.Theta:F2}");
                 analysis.AppendLine($"• Weekly P&L from time decay: ${shortGreeks.Theta * 7:F2}");
                 analysis.AppendLine();
-                
+
                 // Trading recommendations based on Theta
                 analysis.AppendLine("THETA TRADING RECOMMENDATIONS:");
-                
+
                 if (daysToExpiration < 30)
                 {
                     analysis.AppendLine("⚠️  HIGH TIME DECAY ZONE (< 30 days)");
@@ -3708,7 +3708,7 @@ namespace Quantra.DAL.Services
                     analysis.AppendLine("• Suitable for buying options with directional bias");
                     analysis.AppendLine("• Focus on delta and gamma rather than theta");
                 }
-                
+
                 // Additional theta-specific insights
                 analysis.AppendLine();
                 if (Math.Abs(greeks.Theta) > 0.05)
@@ -3719,7 +3719,7 @@ namespace Quantra.DAL.Services
                 {
                     analysis.AppendLine("❄️  LOW THETA: Minimal time decay - suitable for directional plays");
                 }
-                
+
                 return analysis.ToString();
             }
             catch (Exception ex)
@@ -3728,7 +3728,7 @@ namespace Quantra.DAL.Services
                 return $"Error analyzing time decay: {ex.Message}";
             }
         }
-        
+
         /// <summary>
         /// Splits a large order into smaller chunks to minimize market impact
         /// </summary>
@@ -3742,12 +3742,12 @@ namespace Quantra.DAL.Services
         public bool SplitLargeOrder(string symbol, int quantity, string orderType, double price, int chunks, int intervalMinutes)
         {
             // Call the enhanced version with default parameters
-            return SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes, 
-                priceVariancePercent: 0, 
-                randomizeIntervals: false, 
+            return SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes,
+                priceVariancePercent: 0,
+                randomizeIntervals: false,
                 distribution: OrderDistributionType.Equal);
         }
-        
+
         /// <summary>
         /// Enhanced version that splits a large order into smaller chunks with additional options to minimize market impact
         /// </summary>
@@ -3772,30 +3772,30 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
                     return false;
                 }
-                
+
                 // Ensure price variance is within a reasonable range (0-5%)
                 priceVariancePercent = Math.Max(0, Math.Min(5, priceVariancePercent));
-                
+
                 // Generate a unique ID for this group of split orders
                 string splitOrderGroupId = $"{symbol}-{Guid.NewGuid():N}";
-                
+
                 // Calculate order quantities based on distribution type
                 List<int> chunkSizes = CalculateChunkSizes(quantity, chunks, distribution);
-                
+
                 // Create a random number generator for variance calculations
                 Random random = new Random();
-                
+
                 // Calculate base intervals based on randomization setting
                 List<int> intervals = CalculateIntervals(chunks, intervalMinutes, randomizeIntervals);
-                
+
                 // Keep track of cumulative time for scheduling
                 int cumulativeMinutes = 0;
-                
+
                 // Schedule each chunk
                 for (int i = 0; i < chunks; i++)
                 {
                     int chunkShares = chunkSizes[i];
-                    
+
                     // Apply price variance if specified
                     double chunkPrice = price;
                     if (priceVariancePercent > 0)
@@ -3804,10 +3804,10 @@ namespace Quantra.DAL.Services
                         double varianceFactor = 1.0 + (random.NextDouble() * 2 - 1) * priceVariancePercent / 100.0;
                         chunkPrice = Math.Round(price * varianceFactor, 2);
                     }
-                    
+
                     // Add interval for this chunk to cumulative time
                     cumulativeMinutes += intervals[i];
-                    
+
                     // Create the scheduled order
                     var order = new ScheduledOrder
                     {
@@ -3821,7 +3821,7 @@ namespace Quantra.DAL.Services
                         SplitOrderSequence = i + 1,
                         SplitOrderTotalChunks = chunks
                     };
-                    
+
                     // Add to scheduled orders
                     if (!_scheduledOrders.ContainsKey(symbol))
                     {
@@ -3829,16 +3829,16 @@ namespace Quantra.DAL.Services
                     }
                     _scheduledOrders[symbol].Add(order);
                 }
-                
+
                 // Log details of the split order
                 string distributionName = distribution.ToString();
                 string intervalType = randomizeIntervals ? "randomized" : "fixed";
                 string priceVariance = priceVariancePercent > 0 ? $" with price variance of ±{priceVariancePercent:F1}%" : "";
-                
+
                 //DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
-                    //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
-                    //$"Group ID: {splitOrderGroupId}");
-                
+                //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
+                //$"Group ID: {splitOrderGroupId}");
+
                 return true;
             }
             catch (Exception ex)
@@ -3847,64 +3847,64 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Calculates the size of each chunk based on the distribution type
         /// </summary>
         private List<int> CalculateChunkSizes(int quantity, int chunks, OrderDistributionType distribution)
         {
             List<int> chunkSizes = new List<int>();
-            
+
             switch (distribution)
             {
                 case OrderDistributionType.FrontLoaded:
                     // Front-loaded: Larger chunks at the beginning, tapering off
                     double totalWeight = chunks * (chunks + 1) / 2.0; // Sum of 1 to chunks
-                    
+
                     for (int i = chunks; i >= 1; i--)
                     {
                         int chunkSize = (int)Math.Round(i / totalWeight * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.BackLoaded:
                     // Back-loaded: Smaller chunks at the beginning, larger at the end
                     totalWeight = chunks * (chunks + 1) / 2.0; // Sum of 1 to chunks
-                    
+
                     for (int i = 1; i <= chunks; i++)
                     {
                         int chunkSize = (int)Math.Round(i / totalWeight * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.Normal:
                     // Normal (bell curve): Middle chunks are larger
                     double mean = (chunks - 1) / 2.0;
                     double stdDev = chunks / 6.0; // ~99% within the range
                     double[] weights = new double[chunks];
                     double weightSum = 0;
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         weights[i] = Math.Exp(-0.5 * Math.Pow((i - mean) / stdDev, 2));
                         weightSum += weights[i];
                     }
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         int chunkSize = (int)Math.Round(weights[i] / weightSum * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.Equal:
                 default:
                     // Equal distribution (with remainder added to first chunk)
                     int sharesPerChunk = quantity / chunks;
                     int remainder = quantity % chunks;
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         int chunkSize = sharesPerChunk;
@@ -3916,7 +3916,7 @@ namespace Quantra.DAL.Services
                     }
                     break;
             }
-            
+
             // Ensure we distribute exactly the requested quantity
             int totalAllocated = chunkSizes.Sum();
             if (totalAllocated != quantity)
@@ -3924,10 +3924,10 @@ namespace Quantra.DAL.Services
                 int diff = quantity - totalAllocated;
                 chunkSizes[0] += diff;
             }
-            
+
             return chunkSizes;
         }
-        
+
         /// <summary>
         /// Calculates the time intervals between chunks
         /// </summary>
@@ -3935,7 +3935,7 @@ namespace Quantra.DAL.Services
         {
             List<int> intervals = new List<int>();
             Random random = new Random();
-            
+
             for (int i = 0; i < chunks; i++)
             {
                 if (i == 0)
@@ -3956,10 +3956,10 @@ namespace Quantra.DAL.Services
                     intervals.Add(baseIntervalMinutes);
                 }
             }
-            
+
             return intervals;
         }
-        
+
         /// <summary>
         /// Cancels all remaining chunks of a split order group
         /// </summary>
@@ -3970,13 +3970,13 @@ namespace Quantra.DAL.Services
             try
             {
                 int cancelCount = 0;
-                
+
                 foreach (var symbol in _scheduledOrders.Keys.ToList())
                 {
                     var ordersToRemove = _scheduledOrders[symbol]
                         .Where(o => o.IsSplitOrder && o.SplitOrderGroupId == splitOrderGroupId)
                         .ToList();
-                    
+
                     if (ordersToRemove.Any())
                     {
                         foreach (var order in ordersToRemove)
@@ -3984,7 +3984,7 @@ namespace Quantra.DAL.Services
                             _scheduledOrders[symbol].Remove(order);
                             cancelCount++;
                         }
-                        
+
                         // Clean up if no orders left for this symbol
                         if (_scheduledOrders[symbol].Count == 0)
                         {
@@ -3992,12 +3992,12 @@ namespace Quantra.DAL.Services
                         }
                     }
                 }
-                
+
                 if (cancelCount > 0)
                 {
                     //DatabaseMonolith.Log("Info", $"Cancelled {cancelCount} remaining chunks of split order group {splitOrderGroupId}");
                 }
-                
+
                 return cancelCount;
             }
             catch (Exception ex)
@@ -4006,9 +4006,9 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
-        
 
-        
+
+
         /// <summary>
         /// Gets a list of all symbols with active trailing stops
         /// </summary>
@@ -4017,7 +4017,7 @@ namespace Quantra.DAL.Services
         {
             return _trailingStops.Keys.ToList();
         }
-        
+
         /// <summary>
         /// Removes a trailing stop for a symbol
         /// </summary>
@@ -4033,7 +4033,7 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Info", $"Trailing stop removed for {symbol}");
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -4042,7 +4042,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Checks if emergency stop is currently active
         /// </summary>
@@ -4130,7 +4130,7 @@ namespace Quantra.DAL.Services
                 // Map the timeRange to Yahoo parameters
                 string range = "1mo";
                 string interval = "1d";
-                
+
                 switch (timeRange)
                 {
                     case "1day":
@@ -4154,7 +4154,7 @@ namespace Quantra.DAL.Services
                         interval = "1wk";
                         break;
                 }
-                
+
                 // Use the HistoricalDataService to get the data
                 var historicalPrices = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
                 // Await the conversion to StockData, since ConvertToStockData is async and returns Task<StockData>
@@ -4327,7 +4327,7 @@ namespace Quantra.DAL.Services
             var middleBand = new List<double>();
             var upperBand = new List<double>();
             var lowerBand = new List<double>();
-            
+
             // Add empty values for initial periods where we can't calculate
             for (int i = 0; i < period - 1; i++)
             {
@@ -4353,21 +4353,21 @@ namespace Quantra.DAL.Services
         private List<double> CalculateRSIForChart(List<double> prices, int period)
         {
             var rsiValues = new List<double>();
-            
+
             // Add empty values for initial periods where we can't calculate
             for (int i = 0; i < period; i++)
             {
                 rsiValues.Add(double.NaN);
             }
-            
+
             if (prices.Count <= period)
             {
                 return rsiValues;
             }
-            
+
             List<double> gains = new List<double>();
             List<double> losses = new List<double>();
-            
+
             // Calculate price changes
             for (int i = 1; i < prices.Count; i++)
             {
@@ -4375,27 +4375,27 @@ namespace Quantra.DAL.Services
                 gains.Add(change > 0 ? change : 0);
                 losses.Add(change < 0 ? -change : 0);
             }
-            
+
             // Calculate initial average gain and loss
             double avgGain = gains.Take(period).Average();
             double avgLoss = losses.Take(period).Average();
-            
+
             // Calculate first RSI
             double rs = avgLoss == 0 ? 100 : avgGain / avgLoss;
             double rsi = 100 - 100 / (1 + rs);
             rsiValues.Add(rsi);
-            
+
             // Calculate remaining RSI values
             for (int i = period + 1; i < prices.Count; i++)
             {
                 avgGain = (avgGain * (period - 1) + gains[i - 1]) / period;
                 avgLoss = (avgLoss * (period - 1) + losses[i - 1]) / period;
-                
+
                 rs = avgLoss == 0 ? 100 : avgGain / avgLoss;
                 rsi = 100 - 100 / (1 + rs);
                 rsiValues.Add(rsi);
             }
-            
+
             return rsiValues;
         }
 
@@ -4408,7 +4408,7 @@ namespace Quantra.DAL.Services
             // Placeholder implementation - would return actual market conditions
             return new Quantra.Models.MarketConditions();
         }
-        
+
         /// <summary>
         /// Updates market condition indicators based on latest data
         /// </summary>
@@ -4426,7 +4426,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Failed to update market conditions", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Schedules an order as part of a dollar-cost averaging strategy
         /// </summary>
@@ -4448,15 +4448,15 @@ namespace Quantra.DAL.Services
                     ExecutionTime = executionTime,
                     IsDollarCostAveraging = true
                 };
-                
+
                 // Add to scheduled orders
                 if (!_scheduledOrders.ContainsKey(symbol))
                 {
                     _scheduledOrders[symbol] = new List<ScheduledOrder>();
                 }
-                
+
                 _scheduledOrders[symbol].Add(order);
-                
+
                 //DatabaseMonolith.Log("Info", $"Scheduled DCA order for {quantity} shares of {symbol} at {executionTime:g}");
                 return true;
             }
@@ -4466,7 +4466,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Cancels all remaining orders in a DCA strategy
         /// </summary>
@@ -4480,10 +4480,10 @@ namespace Quantra.DAL.Services
                 {
                     return 0;
                 }
-                
+
                 // Remove the strategy
                 _dcaStrategies.Remove(strategyId);
-                
+
                 // Find and remove all scheduled orders for this strategy
                 int removedCount = 0;
                 if (_scheduledOrders.TryGetValue(strategy.Symbol, out var orders))
@@ -4495,14 +4495,14 @@ namespace Quantra.DAL.Services
                         orders.Remove(order);
                         removedCount++;
                     }
-                    
+
                     // If no orders left for this symbol, remove the symbol key
                     if (orders.Count == 0)
                     {
                         _scheduledOrders.Remove(strategy.Symbol);
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Canceled DCA strategy for {strategy.Symbol}, removed {removedCount} scheduled orders");
                 return removedCount;
             }
@@ -4526,10 +4526,10 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Warning", $"Rebalancing profile not found: {profileId}");
                 return false;
             }
-            
+
             return await RebalancePortfolioWithProfile(profile);
         }
-        
+
 
         /// <summary>
         /// Gets trailing stop information for a symbol
@@ -4540,13 +4540,13 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrEmpty(symbol))
                 return null;
-                
+
             if (_trailingStops.TryGetValue(symbol, out var stopInfo))
                 return stopInfo;
-                
+
             return null;
         }
-        
+
         /// <summary>
         /// Set time-based exit for a symbol
         /// </summary>
@@ -4559,14 +4559,14 @@ namespace Quantra.DAL.Services
             {
                 if (string.IsNullOrEmpty(symbol) || exitTime <= DateTime.Now)
                     return false;
-                
+
                 _timeBasedExits[symbol] = exitTime;
-                _timeBasedExitStrategies[symbol] = new TimeBasedExit 
-                { 
+                _timeBasedExitStrategies[symbol] = new TimeBasedExit
+                {
                     ExitTime = exitTime,
                     Strategy = TimeBasedExitStrategy.Custom
                 };
-                
+
                 //DatabaseMonolith.Log("Info", $"Time-based exit set for {symbol} at {exitTime:g}");
                 return true;
             }
@@ -4588,7 +4588,7 @@ namespace Quantra.DAL.Services
             var stopInfo = GetTrailingStopInfo(symbol);
             if (stopInfo == null)
                 return false;
-                
+
             return currentPrice <= stopInfo.CurrentStopPrice;
         }
 
@@ -4608,14 +4608,14 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Warning", $"Order rejected: Emergency stop is active. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
                 throw new InvalidOperationException("Cannot place order: Emergency stop is active");
             }
-            
+
             // Check if trading is allowed based on market session and time restrictions
             if (!IsTradingAllowed())
             {
                 //DatabaseMonolith.Log("Warning", $"Order rejected: Trading not allowed at this time based on market session filters. {orderType} {quantity} {symbol} @ {limitPrice:C2}");
                 throw new InvalidOperationException("Cannot place order: Trading not allowed at this time");
             }
-            
+
             if (tradingMode == TradingMode.Paper)
             {
                 // Simulate in local paper portfolio

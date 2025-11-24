@@ -90,7 +90,7 @@ namespace Quantra.DAL.Services
                 if (cachedData != null && cachedData.Count > 0)
                 {
                     //DatabaseMonolith.Log("Info", $"Retrieved stock data for {symbol} from cache");
-                    
+
                     // Check if we should perform incremental update in background
                     var cacheInfo = GetCacheInfo(symbol, range, interval);
                     if (cacheInfo != null && ShouldPerformIncrementalUpdate(cacheInfo))
@@ -98,14 +98,14 @@ namespace Quantra.DAL.Services
                         // Perform incremental update in background without blocking
                         _ = Task.Run(async () => await PerformIncrementalUpdateAsync(symbol, range, interval, cachedData));
                     }
-                    
+
                     return cachedData;
                 }
             }
 
             // If we don't have cached data or force refresh is true, get from API
             var freshData = await _historicalDataService.GetHistoricalPrices(symbol, range, interval);
-            
+
             // Cache the new data if we received it
             if (freshData != null && freshData.Count > 0)
             {
@@ -116,7 +116,7 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Warning", $"Failed to fetch stock data for {symbol}");
             }
-            
+
             return freshData;
         }
 
@@ -144,38 +144,38 @@ namespace Quantra.DAL.Services
                 {
                     // Query the cache using LINQ and EF Core
                     var cacheEntry = dbContext.StockDataCache
-                     .Where(c => c.Symbol == symbol 
-                    && c.TimeRange == range 
+                     .Where(c => c.Symbol == symbol
+                    && c.TimeRange == range
                     && c.CachedAt > expiryTime)
                       .OrderByDescending(c => c.CachedAt)
                               .FirstOrDefault();
 
-                   if (cacheEntry != null)
-               {
-                   var storedData = cacheEntry.Data;
-                 string jsonData;
-  
- // Check if data is compressed and decompress if needed
-     if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
-       {
-  jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
-     }
-   else
-           {
-       jsonData = storedData;
-       }
-         
-   return Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
-          }
-           
-         return null;
-    }
-       }
+                    if (cacheEntry != null)
+                    {
+                        var storedData = cacheEntry.Data;
+                        string jsonData;
+
+                        // Check if data is compressed and decompress if needed
+                        if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                        {
+                            jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                        }
+                        else
+                        {
+                            jsonData = storedData;
+                        }
+
+                        return Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                    }
+
+                    return null;
+                }
+            }
             catch (Exception ex)
-       {
-           _loggingService.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
-         return null;
-    }
+            {
+                _loggingService.Log("Error", $"Error retrieving cached stock data for {symbol}", ex.ToString());
+                return null;
+            }
         }
 
         /// <summary>
@@ -187,46 +187,46 @@ namespace Quantra.DAL.Services
         /// <param name="data">Historical price data to cache</param>
         private void CacheStockData(string symbol, string range, string interval, List<HistoricalPrice> data)
         {
-     try
+            try
             {
-       // Serialize data to JSON and compress it
-        var jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(data);
-    var compressedData = Quantra.Utilities.CompressionHelper.CompressString(jsonData);
+                // Serialize data to JSON and compress it
+                var jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                var compressedData = Quantra.Utilities.CompressionHelper.CompressString(jsonData);
 
-           // Use Entity Framework Core with SQL Server
-   var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-     optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-    using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-    {
-           // Check if cache entry already exists
-       var existing = dbContext.StockDataCache
-      .FirstOrDefault(c => c.Symbol == symbol && c.TimeRange == range);
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Check if cache entry already exists
+                    var existing = dbContext.StockDataCache
+                   .FirstOrDefault(c => c.Symbol == symbol && c.TimeRange == range);
 
-           if (existing != null)
-        {
-        // Update existing entry
-                 existing.Data = compressedData;
-       existing.CachedAt = DateTime.Now;
-       }
-  else
-      {
-       // Create new entry
-   dbContext.StockDataCache.Add(new StockDataCache
-       {
-   Symbol = symbol,
-       TimeRange = range,
-           Data = compressedData,
-         CachedAt = DateTime.Now
-      });
-     }
+                    if (existing != null)
+                    {
+                        // Update existing entry
+                        existing.Data = compressedData;
+                        existing.CachedAt = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Create new entry
+                        dbContext.StockDataCache.Add(new StockDataCache
+                        {
+                            Symbol = symbol,
+                            TimeRange = range,
+                            Data = compressedData,
+                            CachedAt = DateTime.Now
+                        });
+                    }
 
-     dbContext.SaveChanges();
-          }
-   }
- catch (Exception ex)
-    {
-        _loggingService.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
+                    dbContext.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Error caching stock data for {symbol}", ex.ToString());
             }
         }
 
@@ -234,90 +234,90 @@ namespace Quantra.DAL.Services
         /// Checks if data exists for a symbol in the cache
         /// </summary>
         /// <param name="symbol">Stock symbol to check</param>
-    /// <returns>True if cache contains data for the symbol</returns>
+        /// <returns>True if cache contains data for the symbol</returns>
         public bool HasCachedData(string symbol)
         {
-  if (string.IsNullOrEmpty(symbol))
+            if (string.IsNullOrEmpty(symbol))
             {
-          return false;
+                return false;
             }
 
-       try
-     {
-         // Use Entity Framework Core with SQL Server
-  var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-     optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
                 using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-       {
-  // Query the cache using LINQ and EF Core
-   return dbContext.StockDataCache.Any(c => c.Symbol == symbol);
-      }
-          }
+                {
+                    // Query the cache using LINQ and EF Core
+                    return dbContext.StockDataCache.Any(c => c.Symbol == symbol);
+                }
+            }
             catch (Exception ex)
             {
-      _loggingService.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
-          return false;
-       }
+                _loggingService.Log("Error", $"Error checking cached data for {symbol}", ex.ToString());
+                return false;
+            }
         }
 
         /// <summary>
-      /// Gets cache information for a specific symbol and time range
+        /// Gets cache information for a specific symbol and time range
         /// </summary>
-  /// <param name="symbol">Stock symbol</param>
+        /// <param name="symbol">Stock symbol</param>
         /// <param name="range">Time range</param>
         /// <param name="interval">Data interval</param>
-/// <returns>Cache information including timestamp and data count</returns>
+        /// <returns>Cache information including timestamp and data count</returns>
         private CacheInfo GetCacheInfo(string symbol, string range, string interval)
-  {
+        {
             try
             {
-    // Use Entity Framework Core with SQL Server
-        var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-             using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-     {
-        // Query the cache using LINQ and EF Core
-            var cacheEntry = dbContext.StockDataCache
-  .Where(c => c.Symbol == symbol && c.TimeRange == range)
-                  .OrderByDescending(c => c.CachedAt)
-              .FirstOrDefault();
-
-           if (cacheEntry != null)
-     {
-         var storedData = cacheEntry.Data;
-           string jsonData;
-
-                 // Check if data is compressed and decompress if needed
-      if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
-    {
-  jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
-        }
-       else
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-        jsonData = storedData;
-     }
+                    // Query the cache using LINQ and EF Core
+                    var cacheEntry = dbContext.StockDataCache
+          .Where(c => c.Symbol == symbol && c.TimeRange == range)
+                          .OrderByDescending(c => c.CachedAt)
+                      .FirstOrDefault();
 
-         var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                    if (cacheEntry != null)
+                    {
+                        var storedData = cacheEntry.Data;
+                        string jsonData;
 
-    return new CacheInfo
-                {
-        CacheTime = cacheEntry.CachedAt,
-                DataCount = prices?.Count ?? 0,
-       Symbol = symbol,
-    TimeRange = range,
-            Interval = interval
-       };
-         }
-        }
-       }
-catch (Exception ex)
-         {
-   _loggingService.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
+                        // Check if data is compressed and decompress if needed
+                        if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                        {
+                            jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                        }
+                        else
+                        {
+                            jsonData = storedData;
+                        }
+
+                        var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+
+                        return new CacheInfo
+                        {
+                            CacheTime = cacheEntry.CachedAt,
+                            DataCount = prices?.Count ?? 0,
+                            Symbol = symbol,
+                            TimeRange = range,
+                            Interval = interval
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Error getting cache info for {symbol}", ex.ToString());
             }
 
-       return null;
+            return null;
         }
 
         /// <summary>
@@ -328,10 +328,10 @@ catch (Exception ex)
         private bool ShouldPerformIncrementalUpdate(CacheInfo cacheInfo)
         {
             if (cacheInfo == null) return false;
-            
+
             var settings = _userSettingsService.GetUserSettings();
             var cacheDurationMinutes = settings.CacheDurationMinutes;
-            
+
             // If cache is more than half expired, perform incremental update
             var halfExpiry = DateTime.Now.AddMinutes(-cacheDurationMinutes / 2);
             return cacheInfo.CacheTime < halfExpiry;
@@ -349,20 +349,20 @@ catch (Exception ex)
             try
             {
                 //DatabaseMonolith.Log("Debug", $"Performing incremental update for {symbol}");
-                
+
                 // For daily data, fetch only last few days to update recent prices
                 string incrementalRange = interval == "1d" ? "5d" : range;
-                
+
                 var recentData = await _historicalDataService.GetHistoricalPrices(symbol, incrementalRange, interval);
-                
+
                 if (recentData != null && recentData.Count > 0 && existingData != null)
                 {
                     // Merge new data with existing data
                     var mergedData = MergeHistoricalData(existingData, recentData);
-                    
+
                     // Update cache with merged data
                     CacheStockData(symbol, range, interval, mergedData);
-                    
+
                     //DatabaseMonolith.Log("Info", $"Incremental update completed for {symbol}. Added {recentData.Count} recent records");
                 }
             }
@@ -382,7 +382,7 @@ catch (Exception ex)
         {
             // Create a dictionary for efficient lookups
             var mergedDict = existingData.ToDictionary(p => p.Date.Date, p => p);
-            
+
             foreach (var newPrice in newData)
             {
                 // Check if this date already exists in the dictionary
@@ -397,7 +397,7 @@ catch (Exception ex)
                     mergedDict[newPrice.Date.Date] = newPrice;
                 }
             }
-            
+
             // Convert dictionary back to a list, sort by date, and return
             return mergedDict.Values.OrderBy(p => p.Date).ToList();
         }
@@ -409,159 +409,159 @@ catch (Exception ex)
         /// <returns>Number of entries cleared</returns>
         public int ClearExpiredCache(int maxAgeMinutes = 60)
         {
- try
+            try
             {
-     var expiryTime = DateTime.Now.AddMinutes(-maxAgeMinutes);
-                
-           // Use Entity Framework Core with SQL Server
-    var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-      optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                var expiryTime = DateTime.Now.AddMinutes(-maxAgeMinutes);
+
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
                 using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-      {
-         // Find all expired entries
-  var expiredEntries = dbContext.StockDataCache
-      .Where(c => c.CachedAt < expiryTime)
-            .ToList();
+                {
+                    // Find all expired entries
+                    var expiredEntries = dbContext.StockDataCache
+                        .Where(c => c.CachedAt < expiryTime)
+                              .ToList();
 
-           var count = expiredEntries.Count;
- 
-            // Remove expired entries
-         dbContext.StockDataCache.RemoveRange(expiredEntries);
-          dbContext.SaveChanges();
-    
-          _loggingService.Log("Info", $"Cleared {count} expired cache entries");
-      return count;
-          }
-        }
+                    var count = expiredEntries.Count;
+
+                    // Remove expired entries
+                    dbContext.StockDataCache.RemoveRange(expiredEntries);
+                    dbContext.SaveChanges();
+
+                    _loggingService.Log("Info", $"Cleared {count} expired cache entries");
+                    return count;
+                }
+            }
             catch (Exception ex)
             {
-       _loggingService.Log("Error", "Error clearing expired cache", ex.ToString());
-            return 0;
+                _loggingService.Log("Error", "Error clearing expired cache", ex.ToString());
+                return 0;
             }
         }
 
         /// <summary>
-      /// Deletes all cached data for a specific symbol.
+        /// Deletes all cached data for a specific symbol.
         /// </summary>
-    /// <param name="symbol">The stock symbol for which to delete cached data.</param>
+        /// <param name="symbol">The stock symbol for which to delete cached data.</param>
         /// <returns>The number of cache entries deleted.</returns>
-  public int DeleteCachedDataForSymbol(string symbol)
-      {
-      if (string.IsNullOrEmpty(symbol))
-  {
-       _loggingService.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
-     return 0;
+        public int DeleteCachedDataForSymbol(string symbol)
+        {
+            if (string.IsNullOrEmpty(symbol))
+            {
+                _loggingService.Log("Warning", "DeleteCachedDataForSymbol called with null or empty symbol.");
+                return 0;
             }
 
- try
- {
-       // Use Entity Framework Core with SQL Server
-           var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
- optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-        using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-     {
-      // Find all cache entries for the symbol
-     var entriesToDelete = dbContext.StockDataCache
-         .Where(c => c.Symbol == symbol)
-      .ToList();
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Find all cache entries for the symbol
+                    var entriesToDelete = dbContext.StockDataCache
+                        .Where(c => c.Symbol == symbol)
+                     .ToList();
 
-     var count = entriesToDelete.Count;
+                    var count = entriesToDelete.Count;
 
-// Remove the entries
-        dbContext.StockDataCache.RemoveRange(entriesToDelete);
-     dbContext.SaveChanges();
+                    // Remove the entries
+                    dbContext.StockDataCache.RemoveRange(entriesToDelete);
+                    dbContext.SaveChanges();
 
-        _loggingService.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
-    return count;
-     }
- }
- catch (Exception ex)
-     {
-       _loggingService.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
-return 0;
-    }
+                    _loggingService.Log("Info", $"Deleted {count} cache entries for symbol {symbol}");
+                    return count;
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Error deleting cached data for symbol {symbol}", ex.ToString());
+                return 0;
+            }
         }
 
         /// <summary>
         /// Returns a list of all cached stocks (latest data for each symbol, with all indicators)
         /// </summary>
         /// <remarks>
-     /// NOTE: This method requires QuoteDataCache table which is not yet implemented in EF Core.
+        /// NOTE: This method requires QuoteDataCache table which is not yet implemented in EF Core.
         /// Currently returns data from StockDataCache only.
         /// </remarks>
         public List<QuoteData> GetAllCachedStocks()
         {
-          var stocks = new List<QuoteData>();
-  try
-  {
-     // Use Entity Framework Core with SQL Server
-     var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-     optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            var stocks = new List<QuoteData>();
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-         using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-     {
-     // Get unique symbols from StockDataCache
-             var symbols = dbContext.StockDataCache
-               .Select(c => c.Symbol)
-             .Distinct()
-    .ToList();
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get unique symbols from StockDataCache
+                    var symbols = dbContext.StockDataCache
+                      .Select(c => c.Symbol)
+                    .Distinct()
+           .ToList();
 
-   foreach (var symbol in symbols)
-    {
-  // Get the latest cache entry for each symbol
-           var latest = dbContext.StockDataCache
-   .Where(c => c.Symbol == symbol)
-    .OrderByDescending(c => c.CachedAt)
-                .FirstOrDefault();
+                    foreach (var symbol in symbols)
+                    {
+                        // Get the latest cache entry for each symbol
+                        var latest = dbContext.StockDataCache
+                .Where(c => c.Symbol == symbol)
+                 .OrderByDescending(c => c.CachedAt)
+                             .FirstOrDefault();
 
-  if (latest != null)
-     {
-      var storedData = latest.Data;
-     string jsonData;
-      
-      // Check if data is compressed and decompress if needed
-            if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
-   {
-        jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
- }
-    else
-     {
-       jsonData = storedData;
-     }
-   
-         var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
-  if (prices != null && prices.Count > 0)
-         {
-  var last = prices.Last();
-          stocks.Add(new QuoteData
- {
-       Symbol = symbol,
-     Price = last.Close,
-  Timestamp = last.Date,
-    // Other fields will be default values
-              Change = 0,
-         ChangePercent = 0,
-            DayHigh = 0,
-                DayLow = 0,
-         MarketCap = 0,
-  Volume = 0,
-       RSI = 0,
-     PERatio = 0,
-             Date = last.Date,
-     LastUpdated = DateTime.Now,
-               LastAccessed = DateTime.Now
-         });
-          }
- }
-     }
+                        if (latest != null)
+                        {
+                            var storedData = latest.Data;
+                            string jsonData;
+
+                            // Check if data is compressed and decompress if needed
+                            if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                            {
+                                jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                            }
+                            else
+                            {
+                                jsonData = storedData;
+                            }
+
+                            var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                            if (prices != null && prices.Count > 0)
+                            {
+                                var last = prices.Last();
+                                stocks.Add(new QuoteData
+                                {
+                                    Symbol = symbol,
+                                    Price = last.Close,
+                                    Timestamp = last.Date,
+                                    // Other fields will be default values
+                                    Change = 0,
+                                    ChangePercent = 0,
+                                    DayHigh = 0,
+                                    DayLow = 0,
+                                    MarketCap = 0,
+                                    Volume = 0,
+                                    RSI = 0,
+                                    PERatio = 0,
+                                    Date = last.Date,
+                                    LastUpdated = DateTime.Now,
+                                    LastAccessed = DateTime.Now
+                                });
+                            }
+                        }
+                    }
                 }
-     }
+            }
             catch (Exception ex)
-     {
-      _loggingService.Log("Error", "Error retrieving all cached stocks", ex.ToString());
-        }
+            {
+                _loggingService.Log("Error", "Error retrieving all cached stocks", ex.ToString());
+            }
             return stocks;
         }
 
@@ -569,78 +569,78 @@ return 0;
         /// Returns cached stock data for a specific symbol (complete data with all indicators) - Async version
         /// </summary>
         public async Task<QuoteData?> GetCachedStockAsync(string symbol)
-     {
-       return await Task.Run(() => GetCachedStock(symbol)).ConfigureAwait(false);
+        {
+            return await Task.Run(() => GetCachedStock(symbol)).ConfigureAwait(false);
         }
 
         /// <summary>
-  /// Returns cached stock data for a specific symbol (complete data with all indicators)
-/// </summary>
-  /// <remarks>
+        /// Returns cached stock data for a specific symbol (complete data with all indicators)
+        /// </summary>
+        /// <remarks>
         /// NOTE: This method requires QuoteDataCache table which is not yet implemented in EF Core.
-    /// Currently returns data from StockDataCache only.
+        /// Currently returns data from StockDataCache only.
         /// </remarks>
         public QuoteData? GetCachedStock(string symbol)
         {
-     try
+            try
             {
-        // Use Entity Framework Core with SQL Server
-    var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-             optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-      using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-            {
-            // Get the latest cache entry for the symbol
-         var latest = dbContext.StockDataCache
-  .Where(c => c.Symbol == symbol)
-         .OrderByDescending(c => c.CachedAt)
-    .FirstOrDefault();
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get the latest cache entry for the symbol
+                    var latest = dbContext.StockDataCache
+             .Where(c => c.Symbol == symbol)
+                    .OrderByDescending(c => c.CachedAt)
+               .FirstOrDefault();
 
-          if (latest != null)
-              {
-   var storedData = latest.Data;
-   string jsonData;
- 
-  // Check if data is compressed and decompress if needed
-   if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
-          {
-           jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
-        }
-         else
-  {
-          jsonData = storedData;
-          }
-      
-        var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
-             if (prices != null && prices.Count > 0)
-      {
-   var last = prices.Last();
-   return new QuoteData
-             {
-             Symbol = symbol,
-     Price = last.Close,
-     Timestamp = last.Date,
-              // Other fields will be default values
-  Change = 0,
-                ChangePercent = 0,
-            DayHigh = 0,
-                 DayLow = 0,
-          MarketCap = 0,
-      Volume = 0,
-      RSI = 0,
-       PERatio = 0,
-  Date = last.Date,
-      LastUpdated = DateTime.Now,
-     LastAccessed = DateTime.Now
-   };
-          }
- }
-    }
+                    if (latest != null)
+                    {
+                        var storedData = latest.Data;
+                        string jsonData;
+
+                        // Check if data is compressed and decompress if needed
+                        if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                        {
+                            jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                        }
+                        else
+                        {
+                            jsonData = storedData;
+                        }
+
+                        var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                        if (prices != null && prices.Count > 0)
+                        {
+                            var last = prices.Last();
+                            return new QuoteData
+                            {
+                                Symbol = symbol,
+                                Price = last.Close,
+                                Timestamp = last.Date,
+                                // Other fields will be default values
+                                Change = 0,
+                                ChangePercent = 0,
+                                DayHigh = 0,
+                                DayLow = 0,
+                                MarketCap = 0,
+                                Volume = 0,
+                                RSI = 0,
+                                PERatio = 0,
+                                Date = last.Date,
+                                LastUpdated = DateTime.Now,
+                                LastAccessed = DateTime.Now
+                            };
+                        }
+                    }
+                }
             }
             catch (Exception ex)
-     {
-      _loggingService.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
-   }
+            {
+                _loggingService.Log("Error", $"Error retrieving cached stock for {symbol}", ex.ToString());
+            }
             return null;
         }
 
@@ -650,24 +650,24 @@ return 0;
         public async Task CacheQuoteDataAsync(QuoteData quoteData)
         {
             await Task.Run(() => CacheQuoteData(quoteData)).ConfigureAwait(false);
-   }
+        }
 
         /// <summary>
-  /// Caches QuoteData
-/// </summary>
+        /// Caches QuoteData
+        /// </summary>
         /// <remarks>
         /// NOTE: This method requires QuoteDataCache table which is not yet implemented in EF Core.
-    /// Currently stores data in StockDataCache only.
+        /// Currently stores data in StockDataCache only.
         /// </remarks>
-  public void CacheQuoteData(QuoteData quoteData)
+        public void CacheQuoteData(QuoteData quoteData)
         {
-if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
-            return;
+            if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
+                return;
 
-     try
+            try
             {
-         // Cache as historical data in StockDataCache
-      var priceList = new List<HistoricalPrice>
+                // Cache as historical data in StockDataCache
+                var priceList = new List<HistoricalPrice>
     {
             new HistoricalPrice
       {
@@ -679,22 +679,22 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
        Volume = (long)quoteData.Volume
     }
      };
-         
-    CacheStockData(quoteData.Symbol, "1mo", "1d", priceList);
-     }
-      catch (Exception ex)
-          {
+
+                CacheStockData(quoteData.Symbol, "1mo", "1d", priceList);
+            }
+            catch (Exception ex)
+            {
                 _loggingService.Log("Error", $"Failed to cache QuoteData for {quoteData.Symbol}", ex.ToString());
-    }
-    }
+            }
+        }
 
         // IStockDataCacheService implementation
-        
+
         public async Task<List<HistoricalPrice>> GetStockDataAsync(string symbol, string timeframe = "1mo", string interval = "1d", bool forceRefresh = false)
         {
             return await GetStockData(symbol, timeframe, interval, forceRefresh);
         }
-        
+
         public async Task<QuoteData> GetQuoteDataAsync(string symbol, bool forceRefresh = false)
         {
             if (forceRefresh || !HasCachedData(symbol))
@@ -704,28 +704,28 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
                 var cachedData = GetCachedStock(symbol);
                 return await Task.FromResult(cachedData);
             }
-            
+
             return await Task.FromResult(GetCachedStock(symbol));
         }
-        
+
         public async Task<Dictionary<string, List<double>>> GetIndicatorDataAsync(
-            string symbol, 
-            string indicatorType, 
-            string timeframe = "1mo", 
-            string interval = "1d", 
+            string symbol,
+            string indicatorType,
+            string timeframe = "1mo",
+            string interval = "1d",
             bool forceRefresh = false)
         {
             // This is a placeholder implementation
             // In a real implementation, we would calculate the indicator or retrieve it from cache
             return await Task.FromResult(new Dictionary<string, List<double>>());
         }
-        
+
         public async Task<bool> ClearCacheForSymbolAsync(string symbol)
         {
             int deletedCount = DeleteCachedDataForSymbol(symbol);
             return await Task.FromResult(deletedCount > 0);
         }
-        
+
         /// <summary>
         /// Performs background preloading for frequently accessed symbols
         /// </summary>
@@ -745,11 +745,11 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
             {
                 var batch = symbols.Skip(i).Take(batchSize);
                 var tasks = batch.Select(symbol => PreloadSingleSymbolAsync(symbol, timeRange, interval));
-                
+
                 try
                 {
                     await Task.WhenAll(tasks);
-                    
+
                     // Small delay between batches to be respectful to API limits
                     if (i + batchSize < symbols.Count)
                     {
@@ -785,7 +785,7 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
 
                 // Fetch data in background (don't force refresh to respect existing cache)
                 await GetStockData(symbol, timeRange, interval, forceRefresh: false);
-                
+
                 //DatabaseMonolith.Log("Debug", $"Preloaded data for {symbol}");
             }
             catch (Exception ex)
@@ -798,73 +798,73 @@ if (quoteData == null || string.IsNullOrEmpty(quoteData.Symbol))
         /// Gets a list of frequently accessed symbols based on cache access patterns
         /// </summary>
         /// <param name="maxCount">Maximum number of symbols to return</param>
- /// <returns>List of frequently accessed symbols</returns>
-    public List<string> GetFrequentlyAccessedSymbols(int maxCount = 10)
- {
- var symbols = new List<string>();
-            
-          try
-            {
-      var recentThreshold = DateTime.Now.AddDays(-7); // Last week
-        
-                // Use Entity Framework Core with SQL Server
-             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+        /// <returns>List of frequently accessed symbols</returns>
+        public List<string> GetFrequentlyAccessedSymbols(int maxCount = 10)
+        {
+            var symbols = new List<string>();
 
-      using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-   {
-      // Get symbols ordered by most recent cache time (proxy for frequency)
-  symbols = dbContext.StockDataCache
-        .Where(c => c.CachedAt > recentThreshold)
- .GroupBy(c => c.Symbol)
-            .Select(g => new 
-          { 
-            Symbol = g.Key, 
-              AccessCount = g.Count(),
-     LastAccess = g.Max(c => c.CachedAt)
-      })
-              .OrderByDescending(x => x.AccessCount)
-      .ThenByDescending(x => x.LastAccess)
- .Take(maxCount)
-    .Select(x => x.Symbol)
-         .ToList();
-     }
-      }
-       catch (Exception ex)
- {
-     _loggingService.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
-       }
-          
- return symbols;
-      }
-   
+            try
+            {
+                var recentThreshold = DateTime.Now.AddDays(-7); // Last week
+
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get symbols ordered by most recent cache time (proxy for frequency)
+                    symbols = dbContext.StockDataCache
+                          .Where(c => c.CachedAt > recentThreshold)
+                   .GroupBy(c => c.Symbol)
+                              .Select(g => new
+                              {
+                                  Symbol = g.Key,
+                                  AccessCount = g.Count(),
+                                  LastAccess = g.Max(c => c.CachedAt)
+                              })
+                                .OrderByDescending(x => x.AccessCount)
+                        .ThenByDescending(x => x.LastAccess)
+                   .Take(maxCount)
+                      .Select(x => x.Symbol)
+                           .ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Error getting frequently accessed symbols", ex.ToString());
+            }
+
+            return symbols;
+        }
+
         public async Task<bool> ClearAllCacheAsync()
         {
-try
- {
-        // Use Entity Framework Core with SQL Server
-      var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-       optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
-         using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-        {
-        // Get all cache entries
-       var allEntries = dbContext.StockDataCache.ToList();
-        var count = allEntries.Count;
-          
-  // Remove all entries
-   dbContext.StockDataCache.RemoveRange(allEntries);
-     dbContext.SaveChanges();
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get all cache entries
+                    var allEntries = dbContext.StockDataCache.ToList();
+                    var count = allEntries.Count;
 
-            _loggingService.Log("Info", $"Cleared {count} cache entries");
-      return await Task.FromResult(true);
-     }
-             }
-     catch (Exception ex)
-{
-     _loggingService.Log("Error", "Failed to clear cache", ex.ToString());
-      return await Task.FromResult(false);
-}
-}
+                    // Remove all entries
+                    dbContext.StockDataCache.RemoveRange(allEntries);
+                    dbContext.SaveChanges();
+
+                    _loggingService.Log("Info", $"Cleared {count} cache entries");
+                    return await Task.FromResult(true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Failed to clear cache", ex.ToString());
+                return await Task.FromResult(false);
+            }
+        }
     }
 }

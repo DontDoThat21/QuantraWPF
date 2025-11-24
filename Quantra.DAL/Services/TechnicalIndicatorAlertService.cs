@@ -42,10 +42,10 @@ namespace Quantra.DAL.Services
                     // Trigger the alert
                     alert.IsTriggered = true;
                     alert.TriggeredDate = DateTime.Now;
-                    
+
                     // Update the condition description for better readability
                     alert.Condition = $"{alert.IndicatorName} {GetOperatorDisplayString(alert.ComparisonOperator)} {alert.ThresholdValue:F2}";
-                    
+
                     return true;
                 }
 

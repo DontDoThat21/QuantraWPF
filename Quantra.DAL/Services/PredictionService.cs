@@ -12,7 +12,7 @@ namespace Quantra.DAL.Services
     {
         private const string PythonScript = "python/stock_predictor.py";
         private const string PythonExecutable = "python";
-        
+
         /// <summary>
         /// Predicts future stock price movement using random forest model
         /// </summary>
@@ -21,7 +21,8 @@ namespace Quantra.DAL.Services
             try
             {
                 // Prepare input data
-                var inputData = historicalData.Select(h => new {
+                var inputData = historicalData.Select(h => new
+                {
                     date = h.Date.ToString("yyyy-MM-dd"),
                     open = h.Open,
                     high = h.High,
@@ -29,16 +30,16 @@ namespace Quantra.DAL.Services
                     close = h.Close,
                     volume = h.Volume
                 }).ToList();
-                
+
                 // Create temporary files for input/output
                 string tempInput = Path.GetTempFileName();
                 string tempOutput = Path.GetTempFileName();
-                
+
                 try
                 {
                     // Write input data to temp file
                     await File.WriteAllTextAsync(tempInput, JsonSerializer.Serialize(inputData));
-                    
+
                     // Create process to run Python script
                     var startInfo = new ProcessStartInfo
                     {
@@ -49,22 +50,22 @@ namespace Quantra.DAL.Services
                         RedirectStandardError = true,
                         CreateNoWindow = true
                     };
-                    
+
                     // Run prediction script
                     using var process = Process.Start(startInfo);
                     string output = await process.StandardOutput.ReadToEndAsync();
                     string error = await process.StandardError.ReadToEndAsync();
                     await process.WaitForExitAsync();
-                    
+
                     if (process.ExitCode != 0)
                     {
                         throw new Exception($"Python prediction failed: {error}");
                     }
-                    
+
                     // Read prediction results
                     var jsonResult = await File.ReadAllTextAsync(tempOutput);
                     var result = JsonSerializer.Deserialize<PredictionResult>(jsonResult);
-                    
+
                     // Convert to PredictionModel
                     return new PredictionModel
                     {
@@ -98,7 +99,7 @@ namespace Quantra.DAL.Services
                 throw;
             }
         }
-        
+
         private class PredictionResult
         {
             public string action { get; set; }
@@ -110,7 +111,7 @@ namespace Quantra.DAL.Services
             public Dictionary<string, double> featureWeights { get; set; }
         }
     }
-    
+
     public class StockDataPoint
     {
         public DateTime Date { get; set; }

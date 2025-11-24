@@ -18,7 +18,7 @@ namespace Quantra.DAL.Services
             // Make sure cross-cutting concerns are initialized
             CrossCuttingRegistry.Initialize();
         }
-        
+
         /// <summary>
         /// Logs a message with the specified level.
         /// </summary>
@@ -28,7 +28,7 @@ namespace Quantra.DAL.Services
             ILogger logger = Quantra.CrossCutting.Logging.Log.ForContext("Legacy");
             string sanitizedMessage = Security.SanitizeLogMessage(message);
             string sanitizedDetails = Security.SanitizeLogMessage(details);
-            
+
             switch (level?.ToLowerInvariant())
             {
                 case "trace":
@@ -57,7 +57,7 @@ namespace Quantra.DAL.Services
                     logger.Information(sanitizedMessage);
                     break;
             }
-            
+
             // Log details if provided
             if (!string.IsNullOrEmpty(sanitizedDetails))
             {
@@ -68,16 +68,16 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Logs an error with automatic file and method context using reflection/stack trace.
         /// </summary>
-        public void LogErrorWithContext(Exception ex, string message = null, string details = null, 
-            [CallerMemberName] string memberName = "", 
-            [CallerFilePath] string sourceFilePath = "", 
+        public void LogErrorWithContext(Exception ex, string message = null, string details = null,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string sourceFilePath = "",
             [CallerLineNumber] int sourceLineNumber = 0)
         {
             // Use the new logging system with better context handling
             string errorMessage = message ?? ex.Message;
             string sanitizedMessage = Security.SanitizeLogMessage(errorMessage);
             string sanitizedDetails = Security.SanitizeLogMessage(details);
-            
+
             // Extract class name from file path
             string className = Path.GetFileNameWithoutExtension(sourceFilePath);
             Type type = Type.GetType(className) ?? typeof(LoggingService);
@@ -85,15 +85,15 @@ namespace Quantra.DAL.Services
                           .ForContext("MemberName", memberName)
                           .ForContext("FilePath", sourceFilePath)
                           .ForContext("LineNumber", sourceLineNumber);
-            
+
             if (!string.IsNullOrEmpty(sanitizedDetails))
             {
                 logger = logger.ForContext("Details", sanitizedDetails);
             }
-            
+
             logger.Error(ex, sanitizedMessage);
         }
-        
+
         /// <summary>
         /// Logs an informational message.
         /// </summary>
@@ -108,7 +108,7 @@ namespace Quantra.DAL.Services
                 Log("Info", message);
             }
         }
-        
+
         /// <summary>
         /// Logs a warning message.
         /// </summary>
@@ -123,7 +123,7 @@ namespace Quantra.DAL.Services
                 Log("Warning", message);
             }
         }
-        
+
         /// <summary>
         /// Logs a debug message.
         /// </summary>
@@ -138,7 +138,7 @@ namespace Quantra.DAL.Services
                 Log("Debug", message);
             }
         }
-        
+
         /// <summary>
         /// Logs an error message with optional exception details.
         /// </summary>

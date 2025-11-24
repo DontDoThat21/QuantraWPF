@@ -15,8 +15,8 @@ namespace Quantra.DAL.Services
         private readonly UserSettingsService _userSettingsService;
 
         public TradingService(
-            EmailService emailService, 
-            NotificationService notificationService, 
+            EmailService emailService,
+            NotificationService notificationService,
             SmsService smsService,
             TradeRecordService tradeRecordService,
             UserSettingsService userSettingsService
@@ -27,7 +27,7 @@ namespace Quantra.DAL.Services
             _smsService = smsService ?? throw new ArgumentNullException(nameof(smsService));
             _tradeRecordService = tradeRecordService ?? throw new ArgumentNullException(nameof(tradeRecordService));
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
-            
+
             // Load user settings for notification preferences
             _userSettings = _userSettingsService.GetUserSettings();
         }
@@ -58,7 +58,7 @@ namespace Quantra.DAL.Services
 
                 // Save to database using Entity Framework Core
                 await _tradeRecordService.SaveTradeRecordAsync(trade);
-                
+
                 // Display in-app notification if enabled
                 if (_userSettings.EnableTradeNotifications)
                 {
@@ -74,7 +74,7 @@ namespace Quantra.DAL.Services
                         $"Trade Details:\nSymbol: {symbol}\nAction: {action}\nQuantity: {trade.Quantity}\nPrice: {price:C}\nTarget: {targetPrice:C}\nTime: {trade.ExecutionTime}"
                     );
                 }
-                
+
                 // Send SMS notification if enabled
                 if (_userSettings.EnableSmsAlerts && _userSettings.EnableTradeNotifications && !string.IsNullOrEmpty(_userSettings.AlertPhoneNumber))
                 {

@@ -13,12 +13,12 @@ namespace Quantra.DAL.Services
     public class AnalystConsensusReportService : IAnalystConsensusReportService
     {
         private readonly IAnalystRatingService _analystRatingService;
-        
+
         public AnalystConsensusReportService(IAnalystRatingService analystRatingService)
         {
             _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
         }
-        
+
         /// <summary>
         /// Generates a detailed consensus report for a symbol
         /// </summary>
@@ -28,13 +28,13 @@ namespace Quantra.DAL.Services
             {
                 // Get current consensus
                 var currentConsensus = await _analystRatingService.GetAggregatedRatingsAsync(symbol);
-                
+
                 // Get historical data
                 var historyData = await _analystRatingService.GetConsensusHistoryAsync(symbol, historyDays);
-                
+
                 // Get recent ratings
                 var recentRatings = await _analystRatingService.GetRecentRatingsAsync(symbol, 50);
-                
+
                 var report = new ConsensusReport
                 {
                     Symbol = symbol,
@@ -42,12 +42,12 @@ namespace Quantra.DAL.Services
                     CurrentConsensus = currentConsensus,
                     ReportPeriodDays = historyDays
                 };
-                
+
                 if (historyData.Any())
                 {
                     // Calculate consensus change stats
                     var oldestData = historyData.OrderBy(h => h.LastUpdated).FirstOrDefault();
-                    
+
                     if (oldestData != null)
                     {
                         report.ConsensusChangeStats = new ConsensusChangeStats
@@ -64,17 +64,17 @@ namespace Quantra.DAL.Services
                             SellCountChange = currentConsensus.SellCount - oldestData.SellCount
                         };
                     }
-                    
+
                     // Calculate rating distribution trends
                     report.RatingDistributionTrend = CalculateRatingDistributionTrend(historyData);
                 }
-                
+
                 // Calculate analyst influence scores
                 report.AnalystInfluenceScores = CalculateAnalystInfluence(recentRatings);
-                
+
                 // Identify significant changes
                 report.SignificantChanges = IdentifySignificantChanges(recentRatings, historyDays);
-                
+
                 return report;
             }
             catch (Exception ex)
@@ -83,7 +83,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Calculates trends in rating distribution over time
         /// </summary>
@@ -91,9 +91,9 @@ namespace Quantra.DAL.Services
         {
             if (historyData == null || !historyData.Any())
                 return null;
-                
+
             // Group data by week for trend analysis
-            var weeklyData = historyData.GroupBy(h => 
+            var weeklyData = historyData.GroupBy(h =>
                 new { h.LastUpdated.Year, Week = GetWeekNumber(h.LastUpdated) })
                 .Select(g => new
                 {
@@ -106,7 +106,7 @@ namespace Quantra.DAL.Services
                 })
                 .OrderBy(w => w.MidDate)
                 .ToList();
-                
+
             var trend = new RatingDistributionTrend
             {
                 WeeklyLabels = weeklyData.Select(w => w.YearWeek).ToList(),
@@ -115,10 +115,10 @@ namespace Quantra.DAL.Services
                 SellCountTrend = weeklyData.Select(w => w.AvgSellCount).ToList(),
                 ConsensusScoreTrend = weeklyData.Select(w => w.AvgConsensusScore).ToList()
             };
-            
+
             return trend;
         }
-        
+
         /// <summary>
         /// Gets the ISO week number for a date
         /// </summary>
@@ -127,7 +127,7 @@ namespace Quantra.DAL.Services
             var day = (int)date.DayOfWeek;
             return (date.DayOfYear - day + 10) / 7;
         }
-        
+
         /// <summary>
         /// Calculates influence scores for analysts based on their ratings
         /// </summary>
@@ -135,7 +135,7 @@ namespace Quantra.DAL.Services
         {
             if (ratings == null || ratings.Count == 0)
                 return new List<AnalystInfluenceScore>();
-                
+
             // Group ratings by analyst
             var analystGroups = ratings
                 .GroupBy(r => r.AnalystName)
@@ -151,10 +151,10 @@ namespace Quantra.DAL.Services
                 })
                 .OrderByDescending(a => a.InfluenceScore)
                 .ToList();
-                
+
             return analystGroups;
         }
-        
+
         /// <summary>
         /// Identifies significant changes in ratings within the specified timeframe
         /// </summary>
@@ -162,12 +162,12 @@ namespace Quantra.DAL.Services
         {
             if (ratings == null || ratings.Count == 0)
                 return new List<SignificantChange>();
-                
+
             var dateThreshold = DateTime.Now.AddDays(-days);
             var recentRatings = ratings.Where(r => r.RatingDate >= dateThreshold).ToList();
-            
+
             var changes = new List<SignificantChange>();
-            
+
             // Find significant upgrades
             var significantUpgrades = recentRatings
                 .Where(r => r.ChangeType == RatingChangeType.Upgrade && r.SentimentScore > 0.5)
@@ -185,9 +185,9 @@ namespace Quantra.DAL.Services
                     SentimentShift = r.SentimentScore - AnalystRating.GetSentimentScoreFromRating(r.PreviousRating)
                 })
                 .ToList();
-                
+
             changes.AddRange(significantUpgrades);
-            
+
             // Find significant downgrades
             var significantDowngrades = recentRatings
                 .Where(r => r.ChangeType == RatingChangeType.Downgrade && r.SentimentScore < -0.3)
@@ -205,12 +205,12 @@ namespace Quantra.DAL.Services
                     SentimentShift = r.SentimentScore - AnalystRating.GetSentimentScoreFromRating(r.PreviousRating)
                 })
                 .ToList();
-                
+
             changes.AddRange(significantDowngrades);
-            
+
             // Find significant price target changes
             var significantPriceTargetChanges = recentRatings
-                .Where(r => r.PriceTarget > 0 && r.PreviousPriceTarget > 0 && 
+                .Where(r => r.PriceTarget > 0 && r.PreviousPriceTarget > 0 &&
                       Math.Abs(r.PriceTarget - r.PreviousPriceTarget) / r.PreviousPriceTarget > 0.15) // >15% change
                 .OrderByDescending(r => r.RatingDate)
                 .Take(5)
@@ -227,15 +227,15 @@ namespace Quantra.DAL.Services
                     PriceTargetChangePercent = (r.PriceTarget - r.PreviousPriceTarget) / r.PreviousPriceTarget * 100
                 })
                 .ToList();
-                
+
             changes.AddRange(significantPriceTargetChanges);
-            
+
             return changes.OrderByDescending(c => c.Date).ToList();
         }
     }
-    
+
     #region Report Models
-    
+
     /// <summary>
     /// Comprehensive report on analyst consensus
     /// </summary>
@@ -249,7 +249,7 @@ namespace Quantra.DAL.Services
         public RatingDistributionTrend RatingDistributionTrend { get; set; }
         public List<AnalystInfluenceScore> AnalystInfluenceScores { get; set; } = new List<AnalystInfluenceScore>();
         public List<SignificantChange> SignificantChanges { get; set; } = new List<SignificantChange>();
-        
+
         /// <summary>
         /// Gets a summary of the consensus report
         /// </summary>
@@ -257,7 +257,7 @@ namespace Quantra.DAL.Services
         {
             if (CurrentConsensus == null)
                 return "No consensus data available";
-                
+
             string changeDescription = "unchanged";
             if (ConsensusChangeStats != null)
             {
@@ -266,15 +266,15 @@ namespace Quantra.DAL.Services
                 else if (ConsensusChangeStats.ScoreChange < -0.1)
                     changeDescription = "deteriorated";
             }
-            
+
             string upgradesToReport = SignificantChanges
                 .Where(c => c.ChangeType == "Significant Upgrade")
                 .Count().ToString();
-                
+
             string downgradesToReport = SignificantChanges
                 .Where(c => c.ChangeType == "Significant Downgrade")
                 .Count().ToString();
-            
+
             return $"Analyst consensus for {Symbol} is {CurrentConsensus.ConsensusRating} (Score: {CurrentConsensus.ConsensusScore:F2}). " +
                    $"Consensus has {changeDescription} over the last {ReportPeriodDays} days. " +
                    $"Current breakdown: {CurrentConsensus.BuyCount} Buy, {CurrentConsensus.HoldCount} Hold, {CurrentConsensus.SellCount} Sell. " +
@@ -282,7 +282,7 @@ namespace Quantra.DAL.Services
                    $"Significant changes: {upgradesToReport} upgrades, {downgradesToReport} downgrades.";
         }
     }
-    
+
     /// <summary>
     /// Statistics about changes in consensus over time
     /// </summary>
@@ -299,7 +299,7 @@ namespace Quantra.DAL.Services
         public int HoldCountChange { get; set; }
         public int SellCountChange { get; set; }
     }
-    
+
     /// <summary>
     /// Trends in rating distribution over time
     /// </summary>
@@ -311,7 +311,7 @@ namespace Quantra.DAL.Services
         public List<double> SellCountTrend { get; set; } = new List<double>();
         public List<double> ConsensusScoreTrend { get; set; } = new List<double>();
     }
-    
+
     /// <summary>
     /// Measures an analyst's influence based on activity and recency
     /// </summary>
@@ -324,7 +324,7 @@ namespace Quantra.DAL.Services
         public double AverageScore { get; set; }
         public double InfluenceScore { get; set; }
     }
-    
+
     /// <summary>
     /// Details about a significant rating change
     /// </summary>
@@ -340,6 +340,6 @@ namespace Quantra.DAL.Services
         public double SentimentShift { get; set; }
         public double PriceTargetChangePercent { get; set; }
     }
-    
+
     #endregion
 }

@@ -216,10 +216,10 @@ namespace Quantra.DAL.Services
             // For mock service, just return random values in a reasonable range for ATR
             var result = new List<double>();
             int size = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             // First value is NaN since we don't have previous close
             result.Add(double.NaN);
-            
+
             // Generate remaining values
             for (int i = 1; i < size; i++)
             {
@@ -228,7 +228,7 @@ namespace Quantra.DAL.Services
                 double atr = basePrice * (_random.NextDouble() * 0.03 + 0.01); // 1-4% of price
                 result.Add(atr);
             }
-            
+
             return result;
         }
 
@@ -245,21 +245,21 @@ namespace Quantra.DAL.Services
             // For mock service, just return random values in the typical ADX range (0-100)
             var result = new List<double>();
             int size = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             // ADX typically needs 2*period data points to start generating values
             for (int i = 0; i < Math.Min(period * 2, size); i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             // Generate remaining values
             for (int i = Math.Min(period * 2, size); i < size; i++)
             {
                 // ADX values are between 0-100, typically 10-50
-                double adxValue = _random.NextDouble() * 40 + 10; 
+                double adxValue = _random.NextDouble() * 40 + 10;
                 result.Add(adxValue);
             }
-            
+
             return result;
         }
 
@@ -273,21 +273,21 @@ namespace Quantra.DAL.Services
         {
             // For mock service, just return random values in a reasonable range for ROC
             var result = new List<double>();
-            
+
             // ROC needs at least 'period' number of values to start calculating
             for (int i = 0; i < Math.Min(period, prices.Count); i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             // Generate remaining values
             for (int i = period; i < prices.Count; i++)
             {
                 // ROC is typically between -20% and +20%
-                double rocValue = _random.NextDouble() * 40 - 20; 
+                double rocValue = _random.NextDouble() * 40 - 20;
                 result.Add(rocValue);
             }
-            
+
             return result;
         }
 
@@ -306,13 +306,13 @@ namespace Quantra.DAL.Services
             // For mock service, just return random values in the Ultimate Oscillator range (0-100)
             var result = new List<double>();
             int size = Math.Min(Math.Min(highPrices.Count, lowPrices.Count), closePrices.Count);
-            
+
             // Ultimate Oscillator needs at least period3 data points to start generating values
             for (int i = 0; i < Math.Min(period3, size); i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             // Generate remaining values
             for (int i = period3; i < size; i++)
             {
@@ -320,7 +320,7 @@ namespace Quantra.DAL.Services
                 double uoValue = _random.NextDouble() * 40 + 30;
                 result.Add(uoValue);
             }
-            
+
             return result;
         }
     }

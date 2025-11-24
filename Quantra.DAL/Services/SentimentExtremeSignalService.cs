@@ -50,60 +50,60 @@ namespace Quantra.DAL.Services
         /// <param name="autoExecuteTrade">Whether to automatically execute the trade</param>
         /// <returns>A signal model if sentiment extreme is detected, otherwise null</returns>
         public async Task<SentimentExtremeSignalModel> AnalyzeAndGenerateSignalAsync(
-            string symbol, 
+            string symbol,
             bool autoExecuteTrade = false)
         {
             try
             {
                 // 1. Gather sentiment data from all sources
                 var sentimentData = await GatherSentimentDataAsync(symbol);
-                
+
                 if (!sentimentData.Any())
                 {
                     //DatabaseMonolith.Log("Info", $"No sentiment data available for {symbol}");
                     return null;
                 }
-                
+
                 // 2. Check for sentiment extremes
                 var extremeSentimentSources = sentimentData
                     .Where(s => Math.Abs(s.Value) >= _extremeSentimentThreshold)
                     .ToDictionary(s => s.Key, s => s.Value);
-                
+
                 // 3. If not enough sources show extreme sentiment, exit
                 if (extremeSentimentSources.Count < _significantSourcesThreshold)
                 {
                     return null;
                 }
-                
+
                 // 4. Determine direction (positive/negative sentiment)
                 bool isPositiveSentiment = extremeSentimentSources.Values.Average() > 0;
                 string action = isPositiveSentiment ? "BUY" : "SELL";
-                
+
                 // 5. Calculate average strength of sentiment from extreme sources
                 double averageExtremeSentiment = extremeSentimentSources.Values.Average();
-                
+
                 // 6. Calculate confidence level
                 double confidenceLevel = CalculateConfidenceLevel(extremeSentimentSources, sentimentData);
-                
+
                 // 7. If confidence level is too low, exit
                 if (confidenceLevel < _minimumConfidenceLevel)
                 {
                     return null;
                 }
-                
+
                 // 8. Get current price and calculate target price
                 double currentPrice = await GetCurrentPriceAsync(symbol);
                 double targetPrice = CalculateTargetPrice(currentPrice, averageExtremeSentiment);
-                
+
                 // 9. Calculate potential return
                 double potentialReturn = Math.Abs((targetPrice - currentPrice) / currentPrice * 100.0);
-                
+
                 // 10. If potential return is too low, exit
                 if (potentialReturn < _minimumPotentialReturn)
                 {
                     return null;
                 }
-                
+
                 // 11. Generate signal model
                 var signal = new SentimentExtremeSignalModel
                 {
@@ -118,10 +118,10 @@ namespace Quantra.DAL.Services
                     ContributingSources = extremeSentimentSources.Keys.ToList(),
                     SignalReason = $"Extreme {(isPositiveSentiment ? "positive" : "negative")} sentiment detected across multiple sources"
                 };
-                
+
                 // 12. Create alert
                 CreateSignalAlert(signal);
-                
+
                 // 13. Execute trade if requested
                 if (autoExecuteTrade && _tradingService != null)
                 {
@@ -131,17 +131,17 @@ namespace Quantra.DAL.Services
                         currentPrice,
                         targetPrice
                     );
-                    
+
                     signal.IsActedUpon = success;
-                    
+
                     // Log trade execution result
                     //DatabaseMonolith.Log(
-                        //success ? "Info" : "Warning",
-                        //$"Automated trade execution for sentiment extreme signal on {symbol}",
-                        //$"Action: {action}, Result: {(success ? "Success" : "Failed")}"
+                    //success ? "Info" : "Warning",
+                    //$"Automated trade execution for sentiment extreme signal on {symbol}",
+                    //$"Action: {action}, Result: {(success ? "Success" : "Failed")}"
                     //);
                 }
-                
+
                 return signal;
             }
             catch (Exception ex)
@@ -150,7 +150,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Runs sentiment extreme analysis on a list of symbols and returns signals that meet the criteria
         /// </summary>
@@ -158,11 +158,11 @@ namespace Quantra.DAL.Services
         /// <param name="autoExecuteTrades">Whether to automatically execute trades for signals</param>
         /// <returns>List of generated signals</returns>
         public async Task<List<SentimentExtremeSignalModel>> AnalyzeBatchForSignalsAsync(
-            List<string> symbols, 
+            List<string> symbols,
             bool autoExecuteTrades = false)
         {
             var signals = new List<SentimentExtremeSignalModel>();
-            
+
             foreach (var symbol in symbols)
             {
                 try
@@ -178,37 +178,37 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Error processing sentiment extreme analysis for {symbol}", ex.ToString());
                 }
             }
-            
+
             return signals;
         }
 
         #region Helper Methods
-        
+
         /// <summary>
         /// Gathers sentiment data from all available sources
         /// </summary>
         private async Task<Dictionary<string, double>> GatherSentimentDataAsync(string symbol)
         {
             var sentimentData = new Dictionary<string, double>();
-            
+
             try
             {
                 // Get news sentiment
                 double newsSentiment = await _financialNewsSentimentService.GetSymbolSentimentAsync(symbol);
                 sentimentData["News"] = newsSentiment;
-                
+
                 // Get Twitter sentiment
                 double twitterSentiment = await _twitterSentimentService.GetSymbolSentimentAsync(symbol);
                 sentimentData["Twitter"] = twitterSentiment;
-                
+
                 // Get analyst sentiment
                 double analystSentiment = await _analystRatingService.GetAnalystSentimentAsync(symbol);
                 sentimentData["AnalystRatings"] = analystSentiment;
-                
+
                 // Get insider trading sentiment
                 double insiderSentiment = await _insiderTradingService.GetInsiderSentimentAsync(symbol);
                 sentimentData["InsiderTrading"] = insiderSentiment;
-                
+
                 // Remove any that failed or returned 0
                 sentimentData = sentimentData
                     .Where(s => Math.Abs(s.Value) > 0.01) // Filter out zero/near-zero values
@@ -218,21 +218,21 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Error gathering sentiment data for {symbol}", ex.ToString());
             }
-            
+
             return sentimentData;
         }
-        
+
         /// <summary>
         /// Calculates the confidence level for a sentiment extreme signal
         /// </summary>
         private double CalculateConfidenceLevel(
-            Dictionary<string, double> extremeSources, 
+            Dictionary<string, double> extremeSources,
             Dictionary<string, double> allSources)
         {
             // Factors affecting confidence:
             // 1. Number of sources showing extreme sentiment relative to all sources
             double sourceRatio = (double)extremeSources.Count / allSources.Count;
-            
+
             // 2. Agreement level among extreme sources (standard deviation)
             double avgSentiment = extremeSources.Values.Average();
             double standardDeviation = Math.Sqrt(
@@ -240,18 +240,18 @@ namespace Quantra.DAL.Services
             );
             // Convert standard deviation to a normalized value (0-1 where 0 is perfect agreement)
             double agreementScore = Math.Max(0, 1 - standardDeviation * 2);
-            
+
             // 3. Strength of sentiment (how extreme is it)
             double avgStrength = extremeSources.Values.Average(v => Math.Abs(v));
             double strengthScore = Math.Min(1, avgStrength / 0.8); // Normalize to 0-1, max at 0.8
-            
+
             // Weighted factors for final confidence
             double confidence = sourceRatio * 0.4 + agreementScore * 0.3 + strengthScore * 0.3;
-            
+
             // Ensure it's in the range 0-1
             return Math.Max(0, Math.Min(1, confidence));
         }
-        
+
         /// <summary>
         /// Gets the current price for a symbol
         /// </summary>
@@ -262,7 +262,7 @@ namespace Quantra.DAL.Services
             Random random = new Random();
             return 100.0 + random.NextDouble() * 50.0;
         }
-        
+
         /// <summary>
         /// Calculates target price based on current price and sentiment strength
         /// </summary>
@@ -271,14 +271,14 @@ namespace Quantra.DAL.Services
             // Calculate expected move based on sentiment strength
             // Stronger sentiment scores predict larger price movements
             double movePercentage = Math.Abs(sentimentScore) * 15.0; // Up to 15% move for max sentiment
-            
+
             // Direction depends on sentiment sign
             double moveDirection = sentimentScore > 0 ? 1 : -1;
-            
+
             // Calculate target
             return currentPrice * (1 + movePercentage / 100.0 * moveDirection);
         }
-        
+
         /// <summary>
         /// Creates an alert from a sentiment extreme signal
         /// </summary>
@@ -306,7 +306,7 @@ namespace Quantra.DAL.Services
             // Emit global alert
             Alerting.EmitGlobalAlert(alert);
         }
-        
+
         /// <summary>
         /// Calculates alert priority based on signal parameters
         /// </summary>
@@ -320,7 +320,7 @@ namespace Quantra.DAL.Services
             else
                 return 3;
         }
-        
+
         #endregion
     }
 }

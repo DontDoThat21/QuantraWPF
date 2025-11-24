@@ -16,7 +16,7 @@ namespace Quantra.DAL.Services
         private readonly string _customBenchmarksFilePath;
         private readonly HistoricalDataService _historicalDataService;
         private List<CustomBenchmark> _customBenchmarks;
-        
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -24,24 +24,24 @@ namespace Quantra.DAL.Services
         public CustomBenchmarkService(HistoricalDataService historicalDataService)
         {
             _historicalDataService = historicalDataService;
-            
+
             // Define path for storing custom benchmarks
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string appFolder = Path.Combine(appDataPath, "Quantra");
-            
+
             // Create directory if it doesn't exist
             if (!Directory.Exists(appFolder))
                 Directory.CreateDirectory(appFolder);
-                
+
             _customBenchmarksFilePath = Path.Combine(appFolder, "custom_benchmarks.json");
-            
+
             // Initialize benchmarks list
             _customBenchmarks = new List<CustomBenchmark>();
-            
+
             // Load any existing custom benchmarks
             LoadCustomBenchmarks();
         }
-        
+
         /// <summary>
         /// Get all custom benchmarks
         /// </summary>
@@ -50,7 +50,7 @@ namespace Quantra.DAL.Services
         {
             return _customBenchmarks;
         }
-        
+
         /// <summary>
         /// Get a custom benchmark by ID
         /// </summary>
@@ -60,7 +60,7 @@ namespace Quantra.DAL.Services
         {
             return _customBenchmarks.FirstOrDefault(b => b.Id == id);
         }
-        
+
         /// <summary>
         /// Save a custom benchmark
         /// </summary>
@@ -72,17 +72,17 @@ namespace Quantra.DAL.Services
             {
                 if (benchmark == null)
                     return false;
-                    
+
                 // Validate benchmark
                 if (!benchmark.Validate(out string errorMessage))
                 {
                     //DatabaseMonolith.Log("Error", $"Invalid custom benchmark: {errorMessage}");
                     return false;
                 }
-                
+
                 // Update modified date
                 benchmark.ModifiedDate = DateTime.Now;
-                
+
                 // Check if this is an update to an existing benchmark
                 int existingIndex = _customBenchmarks.FindIndex(b => b.Id == benchmark.Id);
                 if (existingIndex >= 0)
@@ -93,7 +93,7 @@ namespace Quantra.DAL.Services
                 {
                     _customBenchmarks.Add(benchmark);
                 }
-                
+
                 // Save to file
                 return SaveCustomBenchmarksToFile();
             }
@@ -103,7 +103,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Delete a custom benchmark
         /// </summary>
@@ -115,10 +115,10 @@ namespace Quantra.DAL.Services
             {
                 int initialCount = _customBenchmarks.Count;
                 _customBenchmarks.RemoveAll(b => b.Id == id);
-                
+
                 if (_customBenchmarks.Count == initialCount)
                     return false; // Nothing was removed
-                
+
                 // Save to file
                 return SaveCustomBenchmarksToFile();
             }
@@ -128,7 +128,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Calculate historical data for a custom benchmark
         /// </summary>
@@ -141,23 +141,23 @@ namespace Quantra.DAL.Services
         {
             if (benchmark == null || benchmark.Components.Count == 0)
                 return null;
-                
+
             try
             {
                 // Dictionary to store component historical data
                 var componentData = new Dictionary<string, List<HistoricalPrice>>();
-                
+
                 // Load historical data for each component
                 foreach (var component in benchmark.Components)
                 {
                     var data = await _historicalDataService.GetComprehensiveHistoricalData(component.Symbol);
-                    
+
                     // Filter to the required date range
                     var filteredData = data
                         .Where(h => h.Date >= startDate && h.Date <= endDate)
                         .OrderBy(h => h.Date)
                         .ToList();
-                        
+
                     if (filteredData.Count > 0)
                     {
                         componentData[component.Symbol] = filteredData;
@@ -167,22 +167,22 @@ namespace Quantra.DAL.Services
                         //DatabaseMonolith.Log("Warning", $"No historical data for {component.Symbol} in date range {startDate} to {endDate}");
                     }
                 }
-                
+
                 // If no data was loaded, return null
                 if (componentData.Count == 0)
                     return null;
-                    
+
                 // Find the date range where all components have data
                 DateTime commonStartDate = componentData.Values.Max(data => data.First().Date);
                 DateTime commonEndDate = componentData.Values.Min(data => data.Last().Date);
-                
+
                 // If the common date range is invalid, return null
                 if (commonStartDate > commonEndDate)
                 {
                     //DatabaseMonolith.Log("Warning", "No overlapping date range for custom benchmark components");
                     return null;
                 }
-                
+
                 // Create a list of dates in the common range
                 List<DateTime> commonDates = new List<DateTime>();
                 for (DateTime date = commonStartDate; date <= commonEndDate; date = date.AddDays(1))
@@ -193,23 +193,23 @@ namespace Quantra.DAL.Services
                         commonDates.Add(date);
                     }
                 }
-                
+
                 // Filter all component data to only include the common dates
                 var alignedData = new Dictionary<string, Dictionary<DateTime, HistoricalPrice>>();
                 foreach (var kvp in componentData)
                 {
                     alignedData[kvp.Key] = kvp.Value.ToDictionary(h => h.Date.Date, h => h);
                 }
-                
+
                 // Create the composite historical data
                 var compositeData = new List<HistoricalPrice>();
                 foreach (DateTime date in commonDates)
                 {
                     // Check if all components have data for this date
                     bool allComponentsHaveData = benchmark.Components
-                        .All(c => componentData.ContainsKey(c.Symbol) && 
+                        .All(c => componentData.ContainsKey(c.Symbol) &&
                                  alignedData[c.Symbol].ContainsKey(date));
-                    
+
                     if (allComponentsHaveData)
                     {
                         // Create a weighted average of component data for this date
@@ -218,7 +218,7 @@ namespace Quantra.DAL.Services
                         double weightedLow = 0;
                         double weightedClose = 0;
                         long weightedVolume = 0;
-                        
+
                         foreach (var component in benchmark.Components)
                         {
                             var price = alignedData[component.Symbol][date];
@@ -228,7 +228,7 @@ namespace Quantra.DAL.Services
                             weightedClose += price.Close * component.Weight;
                             weightedVolume += (long)(price.Volume * component.Weight);
                         }
-                        
+
                         compositeData.Add(new HistoricalPrice
                         {
                             Date = date,
@@ -241,11 +241,11 @@ namespace Quantra.DAL.Services
                         });
                     }
                 }
-                
+
                 // If no composite data could be created, return null
                 if (compositeData.Count == 0)
                     return null;
-                
+
                 // Create benchmark comparison data
                 var benchmarkData = new BenchmarkComparisonData
                 {
@@ -254,16 +254,16 @@ namespace Quantra.DAL.Services
                     HistoricalData = compositeData,
                     Dates = compositeData.Select(h => h.Date).ToList()
                 };
-                
+
                 // Calculate normalized returns (starting at 1.0)
                 double initialPrice = compositeData.First().Close;
                 benchmarkData.NormalizedReturns = compositeData
                     .Select(h => h.Close / initialPrice)
                     .ToList();
-                
+
                 // Calculate performance metrics
                 CalculatePerformanceMetrics(benchmarkData, compositeData);
-                
+
                 return benchmarkData;
             }
             catch (Exception ex)
@@ -272,7 +272,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Calculate performance metrics for a benchmark
         /// </summary>
@@ -280,64 +280,64 @@ namespace Quantra.DAL.Services
         {
             // Calculate total return
             benchmarkData.TotalReturn = historicalData.Last().Close / historicalData.First().Close - 1;
-            
+
             // Calculate drawdown
             double peak = historicalData.First().Close;
             double maxDrawdown = 0;
             List<double> dailyReturns = new List<double>();
             List<double> downsideReturns = new List<double>();
-            
+
             for (int i = 1; i < historicalData.Count; i++)
             {
                 if (historicalData[i].Close > peak)
                 {
                     peak = historicalData[i].Close;
                 }
-                
+
                 double drawdown = (peak - historicalData[i].Close) / peak;
                 if (drawdown > maxDrawdown)
                 {
                     maxDrawdown = drawdown;
                 }
-                
+
                 // Calculate daily returns
                 double dailyReturn = (historicalData[i].Close - historicalData[i - 1].Close) / historicalData[i - 1].Close;
                 dailyReturns.Add(dailyReturn);
-                
+
                 if (dailyReturn < 0)
                 {
                     downsideReturns.Add(dailyReturn);
                 }
             }
-            
+
             benchmarkData.MaxDrawdown = maxDrawdown;
             benchmarkData.Volatility = CalculateStandardDeviation(dailyReturns);
-            
+
             // Calculate CAGR
             double totalDays = (historicalData.Last().Date - historicalData.First().Date).TotalDays;
             if (totalDays > 0)
             {
                 benchmarkData.CAGR = Math.Pow(1 + benchmarkData.TotalReturn, 365.0 / totalDays) - 1;
             }
-            
+
             // Calculate Sharpe, Sortino, and Calmar ratios
             double averageReturn = dailyReturns.Count > 0 ? dailyReturns.Average() : 0;
             double riskFreeRate = 0.0; // Simplified assumption
-            
-            benchmarkData.SharpeRatio = benchmarkData.Volatility > 0 ? 
+
+            benchmarkData.SharpeRatio = benchmarkData.Volatility > 0 ?
                 (averageReturn - riskFreeRate) / benchmarkData.Volatility * Math.Sqrt(252) : 0;
-            
+
             double downsideDeviation = CalculateStandardDeviation(downsideReturns);
-            benchmarkData.SortinoRatio = downsideDeviation > 0 ? 
+            benchmarkData.SortinoRatio = downsideDeviation > 0 ?
                 (averageReturn - riskFreeRate) / downsideDeviation * Math.Sqrt(252) : 0;
-            
-            benchmarkData.CalmarRatio = benchmarkData.MaxDrawdown > 0 ? 
+
+            benchmarkData.CalmarRatio = benchmarkData.MaxDrawdown > 0 ?
                 benchmarkData.CAGR / benchmarkData.MaxDrawdown : 0;
-                
+
             benchmarkData.InformationRatio = benchmarkData.Volatility > 0 ?
                 (averageReturn - riskFreeRate) / benchmarkData.Volatility * Math.Sqrt(252) : 0;
         }
-        
+
         /// <summary>
         /// Calculate standard deviation of a list of values
         /// </summary>
@@ -345,12 +345,12 @@ namespace Quantra.DAL.Services
         {
             if (values == null || values.Count <= 1)
                 return 0;
-                
+
             double avg = values.Average();
             double sumOfSquaresOfDifferences = values.Sum(val => Math.Pow(val - avg, 2));
             return Math.Sqrt(sumOfSquaresOfDifferences / (values.Count - 1));
         }
-        
+
         /// <summary>
         /// Load custom benchmarks from file
         /// </summary>
@@ -378,12 +378,12 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", "Failed to load custom benchmarks", ex.ToString());
                 _customBenchmarks = new List<CustomBenchmark>();
-                
+
                 // Create sample benchmarks if loading failed
                 CreateSampleBenchmarks();
             }
         }
-        
+
         /// <summary>
         /// Create sample benchmarks for testing
         /// </summary>
@@ -395,7 +395,7 @@ namespace Quantra.DAL.Services
                 var balanced = new CustomBenchmark("Balanced Portfolio", "60% SPY / 40% IEF balanced portfolio");
                 balanced.AddComponent("SPY", "S&P 500", 0.6);
                 balanced.AddComponent("IEF", "7-10 Year Treasury Bond", 0.4);
-                
+
                 // Validate balanced benchmark before saving
                 if (!balanced.Validate(out string balancedError))
                 {
@@ -405,13 +405,13 @@ namespace Quantra.DAL.Services
                 {
                     //DatabaseMonolith.Log("Debug", $"Created balanced benchmark: Name='{balanced.Name}', DisplaySymbol='{balanced.DisplaySymbol}'");
                 }
-                
+
                 // Create a Technology focused portfolio
                 var tech = new CustomBenchmark("Tech Portfolio", "Technology-focused portfolio");
                 tech.AddComponent("QQQ", "NASDAQ-100", 0.5);
                 tech.AddComponent("XLK", "Technology Sector SPDR", 0.3);
                 tech.AddComponent("VGT", "Vanguard Information Technology", 0.2);
-                
+
                 // Validate tech benchmark before saving
                 if (!tech.Validate(out string techError))
                 {
@@ -421,11 +421,11 @@ namespace Quantra.DAL.Services
                 {
                     //DatabaseMonolith.Log("Debug", $"Created tech benchmark: Name='{tech.Name}', DisplaySymbol='{tech.DisplaySymbol}'");
                 }
-                
+
                 // Save sample benchmarks
                 SaveCustomBenchmark(balanced);
                 SaveCustomBenchmark(tech);
-                
+
                 //DatabaseMonolith.Log("Info", "Created sample custom benchmarks");
             }
             catch (Exception ex)
@@ -433,7 +433,7 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", "Failed to create sample benchmarks", ex.ToString());
             }
         }
-        
+
         /// <summary>
         /// Save custom benchmarks to file
         /// </summary>

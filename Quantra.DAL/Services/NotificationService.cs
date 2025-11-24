@@ -12,10 +12,10 @@ namespace Quantra.DAL.Services
         private readonly IAudioService _audioService;
         private readonly UserSettings _userSettings;
         private readonly ISettingsService _settingsService;
-        
+
         public delegate void ShowNotificationHandler(string message, NotificationIcon icon, string iconColorHex);
         public event ShowNotificationHandler OnShowNotification;
-        
+
         public delegate void ShowCustomNotificationHandler(string message, string visualType, string backgroundColorHex, double duration);
         public event ShowCustomNotificationHandler OnShowCustomNotification;
 
@@ -52,19 +52,19 @@ namespace Quantra.DAL.Services
         {
             OnShowNotification?.Invoke(message, NotificationIcon.Info, "#2196F3"); // blue
         }
-        
+
         public void ShowTradeNotification(TradeRecord trade)
         {
             if (trade == null) return;
 
             string message = $"Trade Executed: {trade.Action} {trade.Symbol}\n" +
-                            $"Quantity: {trade.Quantity}\n" + 
+                            $"Quantity: {trade.Quantity}\n" +
                             $"Price: ${trade.Price:F2}\n" +
-                            $"Target: ${trade.TargetPrice:F2}\n" + 
+                            $"Target: ${trade.TargetPrice:F2}\n" +
                             $"Time: {trade.ExecutionTime:g}";
-            
+
             OnShowNotification?.Invoke(message, NotificationIcon.TrendingUp, "#00C853");
-            
+
             try
             {
                 var settings = _settingsService.GetDefaultSettingsProfile();
@@ -90,26 +90,26 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", $"Failed to send push notification for trade: {ex.Message}", ex.ToString());
             }
         }
-        
+
         public void ShowAlertNotification(AlertModel alert)
         {
             if (alert == null)
                 return;
-                
+
             if (_audioService != null && _userSettings.EnableAlertSounds && alert.EnableSound)
             {
                 _audioService.PlayAlertSound(alert);
             }
-            
+
             string message = $"Alert Triggered: {alert.Name}\n" +
                             $"Symbol: {alert.Symbol}\n" +
                             $"Condition: {alert.Condition}\n" +
                             $"Time: {DateTime.Now:g}";
-            
+
             if (_userSettings.EnableVisualIndicators)
             {
                 string visualType = alert.VisualIndicatorType.ToString();
-                
+
                 string backgroundColorHex;
                 if (!string.IsNullOrEmpty(alert.VisualIndicatorColor))
                 {
@@ -125,7 +125,7 @@ namespace Quantra.DAL.Services
                         _ => "#FFA000" // orange
                     };
                 }
-                
+
                 OnShowCustomNotification?.Invoke(message, visualType, backgroundColorHex, _userSettings.VisualIndicatorDuration);
             }
             else
@@ -137,14 +137,14 @@ namespace Quantra.DAL.Services
                     AlertCategory.TechnicalIndicator => NotificationIcon.Calculator,
                     _ => NotificationIcon.Warning
                 };
-                
+
                 string iconColorHex = alert.Priority switch
                 {
                     1 => "#FF1744", // red high priority
                     3 => "#2196F3", // blue low priority
                     _ => "#FFA000"  // orange medium/default
                 };
-                
+
                 OnShowNotification?.Invoke(message, icon, iconColorHex);
             }
         }

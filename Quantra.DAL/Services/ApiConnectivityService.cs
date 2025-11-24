@@ -19,15 +19,15 @@ namespace Quantra.DAL.Services
         {
             _httpClient = new HttpClient();
             _httpClient.Timeout = TimeSpan.FromSeconds(5); // Short timeout to detect issues quickly
-            
+
             _lastSuccessfulConnections = new Dictionary<string, DateTime?>();
-            
+
             // Define endpoints to monitor
             _endpoints = new List<ApiEndpoint>
             {
-                new ApiEndpoint 
-                { 
-                    Name = "Alpha Vantage API", 
+                new ApiEndpoint
+                {
+                    Name = "Alpha Vantage API",
                     Url = "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=IBM&interval=5min&apikey=demo"
                 },
                 new ApiEndpoint
@@ -37,7 +37,7 @@ namespace Quantra.DAL.Services
                 }
                 // Add other APIs as needed
             };
-            
+
             // Initialize the last successful connections
             foreach (var endpoint in _endpoints)
             {
@@ -57,7 +57,7 @@ namespace Quantra.DAL.Services
                     var start = DateTime.Now;
                     var response = await _httpClient.GetAsync(endpoint.Url);
                     var elapsed = (DateTime.Now - start).TotalMilliseconds;
-                    
+
                     if (response.IsSuccessStatusCode)
                     {
                         // Update the last successful connection time
@@ -90,7 +90,7 @@ namespace Quantra.DAL.Services
                     };
                 }
             }
-            
+
             // If we get here, all endpoints are working
             return new ApiConnectivityStatus
             {
@@ -101,7 +101,7 @@ namespace Quantra.DAL.Services
                 ResponseTimeMs = 0
             };
         }
-        
+
         private class ApiEndpoint
         {
             public string Name { get; set; }

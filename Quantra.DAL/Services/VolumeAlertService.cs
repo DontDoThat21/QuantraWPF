@@ -95,7 +95,7 @@ namespace Quantra.DAL.Services
                     // Trigger the alert
                     alert.IsTriggered = true;
                     alert.TriggeredDate = DateTime.Now;
-                    
+
                     // Add details about the volume spike to the notes
                     if (string.IsNullOrEmpty(alert.Notes))
                     {
@@ -108,7 +108,7 @@ namespace Quantra.DAL.Services
 
                     // Format the condition description for better readability
                     alert.Condition = $"{alert.IndicatorName} {TechnicalIndicatorAlertService.GetOperatorDisplayString(alert.ComparisonOperator)} {alert.ThresholdValue:F2}";
-                    
+
                     return true;
                 }
 
@@ -183,7 +183,7 @@ namespace Quantra.DAL.Services
             {
                 // Get historical data for the past 20 days
                 var historicalData = await _historicalDataService.GetHistoricalPrices(symbol, "1mo", "1d");
-                
+
                 if (historicalData == null || historicalData.Count < 2)
                 {
                     return 1.0; // Default if not enough data
@@ -192,22 +192,22 @@ namespace Quantra.DAL.Services
                 // Calculate average volume (excluding today)
                 double sumVolume = 0;
                 int count = 0;
-                
+
                 // Skip the most recent day (today/yesterday depending on time)
                 for (int i = 1; i < Math.Min(21, historicalData.Count); i++)
                 {
                     sumVolume += historicalData[i].Volume;
                     count++;
                 }
-                
+
                 if (count == 0 || sumVolume == 0)
                 {
                     return 1.0; // Default if no volume data
                 }
-                
+
                 double avgVolume = sumVolume / count;
                 double currentVolume = historicalData.First().Volume;
-                
+
                 return currentVolume / avgVolume;
             }
             catch (Exception ex)

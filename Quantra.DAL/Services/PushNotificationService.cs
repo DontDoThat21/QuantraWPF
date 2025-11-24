@@ -15,14 +15,14 @@ namespace Quantra.DAL.Services
         // These should be moved to configuration
         private const string PushApiEndpoint = "https://api.push-service.com/notifications";
         private const string ApiKey = "your-push-api-key";
-        
+
         // In-memory store for registered devices (should be replaced with persistent storage)
         private static readonly Dictionary<string, List<DeviceRegistration>> _userDevices = new Dictionary<string, List<DeviceRegistration>>();
-        
+
         private string GetPushAuthToken()
         {
             // Get this from secure configuration or environment variables
-            return Environment.GetEnvironmentVariable("PUSH_AUTH_TOKEN") 
+            return Environment.GetEnvironmentVariable("PUSH_AUTH_TOKEN")
                 ?? "your-push-api-token";
         }
 
@@ -32,16 +32,16 @@ namespace Quantra.DAL.Services
             {
                 // Log device registration
                 //DatabaseMonolith.Log("Info", $"Registering device {deviceToken} for user {userId}", $"Device type: {deviceType}");
-                
+
                 // Store device information (would be in a database in production)
                 if (!_userDevices.ContainsKey(userId))
                 {
                     _userDevices[userId] = new List<DeviceRegistration>();
                 }
-                
+
                 // Remove existing registration for this device if it exists
                 _userDevices[userId].RemoveAll(d => d.DeviceToken == deviceToken);
-                
+
                 // Add new registration
                 _userDevices[userId].Add(new DeviceRegistration
                 {
@@ -50,10 +50,10 @@ namespace Quantra.DAL.Services
                     UserId = userId,
                     RegisteredAt = DateTime.Now
                 });
-                
+
                 // Simulate API call latency
                 await Task.Delay(100);
-                
+
                 // TODO: Implement actual device registration with a push notification service provider
             }
             catch (Exception ex)
@@ -69,16 +69,16 @@ namespace Quantra.DAL.Services
             {
                 // Log device unregistration
                 //DatabaseMonolith.Log("Info", $"Unregistering device {deviceToken}");
-                
+
                 // Remove device from in-memory store
                 foreach (var userId in _userDevices.Keys)
                 {
                     _userDevices[userId].RemoveAll(d => d.DeviceToken == deviceToken);
                 }
-                
+
                 // Simulate API call latency
                 await Task.Delay(100);
-                
+
                 // TODO: Implement actual device unregistration with a push notification service provider
             }
             catch (Exception ex)
@@ -94,9 +94,9 @@ namespace Quantra.DAL.Services
             {
                 // Log notification
                 //DatabaseMonolith.Log("Info", $"Push notification would be sent to device {deviceToken}", $"Title: {title}, Message: {message}");
-                
+
                 // Create notification payload
-                var notificationPayload = new 
+                var notificationPayload = new
                 {
                     Title = title,
                     Body = message,
@@ -104,13 +104,13 @@ namespace Quantra.DAL.Services
                     Badge = 1,
                     Sound = "default"
                 };
-                
+
                 // Serialize payload
                 string jsonPayload = JsonConvert.SerializeObject(notificationPayload);
-                
+
                 // Simulate API call latency
                 await Task.Delay(100);
-                
+
                 // TODO: Implement actual push notification sending with a service provider
                 // This would typically use a library or service such as Firebase Cloud Messaging,
                 // Azure Notification Hubs, OneSignal, etc.
@@ -128,14 +128,14 @@ namespace Quantra.DAL.Services
             {
                 throw new ArgumentNullException(nameof(userId));
             }
-            
+
             if (!_userDevices.ContainsKey(userId) || _userDevices[userId].Count == 0)
             {
                 // No registered devices for this user
                 //DatabaseMonolith.Log("Warning", $"No registered devices found for user {userId}");
                 return;
             }
-            
+
             // Send to all user's devices
             foreach (var device in _userDevices[userId])
             {
@@ -149,11 +149,11 @@ namespace Quantra.DAL.Services
             {
                 throw new ArgumentNullException(nameof(alert));
             }
-            
+
             // Prepare notification message
             string title = $"Quantra Alert: {alert.Name}";
             string message = $"{alert.Symbol}: {alert.Condition}";
-            
+
             // Create alert-specific payload
             var payload = new
             {
@@ -163,7 +163,7 @@ namespace Quantra.DAL.Services
                 alert.Symbol,
                 Timestamp = DateTime.Now
             };
-            
+
             // Send the notification
             await SendNotificationToUserAsync(userId, title, message, payload);
         }

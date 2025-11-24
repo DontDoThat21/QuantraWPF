@@ -149,7 +149,7 @@ namespace Quantra.DAL.Services
                 bool migrated = false;
 
                 // Migrate Alpha Vantage API Key if not already in configuration
-                if (legacySettings.TryGetValue("AlphaVantageApiKey", out var alphaVantageKey) 
+                if (legacySettings.TryGetValue("AlphaVantageApiKey", out var alphaVantageKey)
                     && !string.IsNullOrWhiteSpace(alphaVantageKey)
                     && string.IsNullOrWhiteSpace(AlphaVantageApiKey))
                 {
@@ -158,7 +158,7 @@ namespace Quantra.DAL.Services
                 }
 
                 // Migrate News API Key if present
-                if (legacySettings.TryGetValue("NewsApiKey", out var newsKey) 
+                if (legacySettings.TryGetValue("NewsApiKey", out var newsKey)
                     && !string.IsNullOrWhiteSpace(newsKey)
                     && string.IsNullOrWhiteSpace(NewsApiKey))
                 {
@@ -167,7 +167,7 @@ namespace Quantra.DAL.Services
                 }
 
                 // Migrate OpenAI API Key if present
-                if (legacySettings.TryGetValue("OpenAiApiKey", out var openAiKey) 
+                if (legacySettings.TryGetValue("OpenAiApiKey", out var openAiKey)
                     && !string.IsNullOrWhiteSpace(openAiKey)
                     && string.IsNullOrWhiteSpace(OpenAiApiKey))
                 {
@@ -177,7 +177,7 @@ namespace Quantra.DAL.Services
 
                 if (migrated)
                 {
-                    _loggingService.Log("Info", 
+                    _loggingService.Log("Info",
                         $"Successfully migrated API keys from {LEGACY_SETTINGS_FILE}. " +
                         "Consider adding these to appsettings.json or environment variables for better security.");
                 }

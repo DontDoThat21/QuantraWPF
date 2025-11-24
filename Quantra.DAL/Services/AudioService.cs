@@ -19,10 +19,10 @@ namespace Quantra.DAL.Services
         {
             _userSettings = userSettings ?? throw new ArgumentNullException(nameof(userSettings));
             _soundPlayer = new SoundPlayer();
-            
+
             // Set the path to the sounds folder
             _soundsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Sounds");
-            
+
             // Create the sounds directory if it doesn't exist
             if (!Directory.Exists(_soundsFolder))
             {
@@ -47,7 +47,7 @@ namespace Quantra.DAL.Services
             try
             {
                 string soundPath = Path.Combine(_soundsFolder, fileName);
-                
+
                 if (File.Exists(soundPath))
                 {
                     _soundPlayer.SoundLocation = soundPath;
@@ -71,7 +71,7 @@ namespace Quantra.DAL.Services
                 return;
 
             string soundFile = alert.SoundFileName;
-            
+
             // If no specific sound is set for this alert, use the default based on category
             if (string.IsNullOrEmpty(soundFile))
             {

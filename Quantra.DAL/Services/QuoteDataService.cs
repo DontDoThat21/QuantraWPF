@@ -14,7 +14,7 @@ namespace Quantra.DAL.Services
         private AlphaVantageService _alphaVantageService;
         private LoggingService _loggingService;
 
-        public QuoteDataService(AlphaVantageService alphaVantageService, LoggingService loggingService) 
+        public QuoteDataService(AlphaVantageService alphaVantageService, LoggingService loggingService)
         {
             _alphaVantageService = alphaVantageService;
             _loggingService = loggingService;
@@ -29,7 +29,7 @@ namespace Quantra.DAL.Services
         public async Task<List<QuoteData>> GetLatestQuoteData(IEnumerable<string> symbols)
         {
             var quoteDataList = new List<QuoteData>();
- 
+
             try
             {
                 // Create DbContext using SQL Server configuration

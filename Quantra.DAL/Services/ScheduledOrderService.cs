@@ -24,9 +24,9 @@ namespace Quantra.DAL.Services
         public bool SplitLargeOrder(string symbol, int quantity, string orderType, double price, int chunks, int intervalMinutes)
         {
             // Call the enhanced version with default parameters
-            return SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes, 
-                priceVariancePercent: 0, 
-                randomizeIntervals: false, 
+            return SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes,
+                priceVariancePercent: 0,
+                randomizeIntervals: false,
                 distribution: OrderDistributionType.Equal);
         }
 
@@ -44,33 +44,33 @@ namespace Quantra.DAL.Services
                     //DatabaseMonolith.Log("Error", $"Invalid parameters for split order: Symbol={symbol}, Quantity={quantity}, Chunks={chunks}");
                     return false;
                 }
-                
+
                 // Ensure price variance is within a reasonable range (0-5%)
                 priceVariancePercent = Math.Max(0, Math.Min(5, priceVariancePercent));
-                
+
                 // Generate a unique ID for this group of split orders
                 string splitOrderGroupId = $"{symbol}-{Guid.NewGuid():N}";
-                
+
                 // Calculate order quantities based on distribution type
                 List<int> chunkSizes = CalculateChunkSizes(quantity, chunks, distribution);
-                
+
                 // Calculate base intervals based on randomization setting
                 List<int> intervals = CalculateIntervals(chunks, intervalMinutes, randomizeIntervals);
-                
+
                 // Keep track of cumulative time for scheduling
                 int cumulativeMinutes = 0;
-                
+
                 // Schedule each chunk
                 for (int i = 0; i < chunks; i++)
                 {
                     int chunkShares = chunkSizes[i];
-                    
+
                     // Apply price variance if specified
                     double chunkPrice = GenerateRandomPriceVariance(price, priceVariancePercent);
-                    
+
                     // Add interval for this chunk to cumulative time
                     cumulativeMinutes += intervals[i];
-                    
+
                     // Create the scheduled order
                     var order = new ScheduledOrder
                     {
@@ -84,7 +84,7 @@ namespace Quantra.DAL.Services
                         SplitOrderSequence = i + 1,
                         SplitOrderTotalChunks = chunks
                     };
-                    
+
                     // Add to scheduled orders
                     if (!_scheduledOrders.ContainsKey(symbol))
                     {
@@ -92,16 +92,16 @@ namespace Quantra.DAL.Services
                     }
                     _scheduledOrders[symbol].Add(order);
                 }
-                
+
                 // Log details of the split order
                 string distributionName = distribution.ToString();
                 string intervalType = randomizeIntervals ? "randomized" : "fixed";
                 string priceVariance = priceVariancePercent > 0 ? $" with price variance of ±{priceVariancePercent:F1}%" : "";
-                
+
                 //DatabaseMonolith.Log("Info", $"Enhanced order split for {symbol}: {quantity} {orderType} shares into {chunks} chunks " +
-                    //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
-                    //$"Group ID: {splitOrderGroupId}");
-                
+                //$"using {distributionName} distribution, {intervalType} intervals{priceVariance}. " +
+                //$"Group ID: {splitOrderGroupId}");
+
                 return true;
             }
             catch (Exception ex)
@@ -120,26 +120,26 @@ namespace Quantra.DAL.Services
             {
                 int cancelledCount = 0;
                 var symbolsToCheck = _scheduledOrders.Keys.ToList();
-                
+
                 foreach (var symbol in symbolsToCheck)
                 {
                     var ordersToRemove = _scheduledOrders[symbol]
                         .Where(o => o.IsSplitOrder && o.SplitOrderGroupId == splitOrderGroupId)
                         .ToList();
-                    
+
                     foreach (var order in ordersToRemove)
                     {
                         _scheduledOrders[symbol].Remove(order);
                         cancelledCount++;
                     }
-                    
+
                     // Clean up empty symbol entries
                     if (_scheduledOrders[symbol].Count == 0)
                     {
                         _scheduledOrders.Remove(symbol);
                     }
                 }
-                
+
                 //DatabaseMonolith.Log("Info", $"Cancelled {cancelledCount} remaining chunks from split order group {splitOrderGroupId}");
                 return cancelledCount;
             }
@@ -175,31 +175,31 @@ namespace Quantra.DAL.Services
             {
                 var now = DateTime.Now;
                 var symbolsToCheck = _scheduledOrders.Keys.ToList();
-                
+
                 foreach (var symbol in symbolsToCheck)
                 {
                     var ordersToExecute = _scheduledOrders[symbol]
                         .Where(o => o.ExecutionTime <= now)
                         .ToList();
-                    
+
                     foreach (var order in ordersToExecute)
                     {
                         try
                         {
                             // Execute the order through the order service
                             bool success = await _orderService.PlaceLimitOrder(order.Symbol, order.Quantity, order.OrderType, order.Price);
-                            
+
                             if (success)
                             {
                                 //DatabaseMonolith.Log("Info", $"Executed scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
-                                
+
                                 // Remove the executed order
                                 _scheduledOrders[symbol].Remove(order);
                             }
                             else
                             {
                                 //DatabaseMonolith.Log("Warning", $"Failed to execute scheduled order: {order.OrderType} {order.Quantity} {order.Symbol} at {order.Price:C2}");
-                                
+
                                 // Reschedule for 1 minute later
                                 order.ExecutionTime = now.AddMinutes(1);
                             }
@@ -207,12 +207,12 @@ namespace Quantra.DAL.Services
                         catch (Exception ex)
                         {
                             //DatabaseMonolith.Log("Error", $"Error executing scheduled order for {order.Symbol}", ex.ToString());
-                            
+
                             // Reschedule for 5 minutes later on error
                             order.ExecutionTime = now.AddMinutes(5);
                         }
                     }
-                    
+
                     // Clean up empty symbol entries
                     if (_scheduledOrders[symbol].Count == 0)
                     {
@@ -269,16 +269,16 @@ namespace Quantra.DAL.Services
                 if (orderToRemove != null)
                 {
                     _scheduledOrders[symbol].Remove(orderToRemove);
-                    
+
                     // Clean up empty symbol entries
                     if (_scheduledOrders[symbol].Count == 0)
                     {
                         _scheduledOrders.Remove(symbol);
                     }
-                    
+
                     return true;
                 }
-                
+
                 return false;
             }
             catch (Exception ex)
@@ -294,57 +294,57 @@ namespace Quantra.DAL.Services
         public List<int> CalculateChunkSizes(int quantity, int chunks, OrderDistributionType distribution)
         {
             List<int> chunkSizes = new List<int>();
-            
+
             switch (distribution)
             {
                 case OrderDistributionType.FrontLoaded:
                     // Front-loaded: Larger chunks at the beginning, tapering off
                     double totalWeight = chunks * (chunks + 1) / 2.0; // Sum of 1 to chunks
-                    
+
                     for (int i = chunks; i >= 1; i--)
                     {
                         int chunkSize = (int)Math.Round(i / totalWeight * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.BackLoaded:
                     // Back-loaded: Smaller chunks at the beginning, larger at the end
                     totalWeight = chunks * (chunks + 1) / 2.0; // Sum of 1 to chunks
-                    
+
                     for (int i = 1; i <= chunks; i++)
                     {
                         int chunkSize = (int)Math.Round(i / totalWeight * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.Normal:
                     // Normal (bell curve): Middle chunks are larger
                     double mean = (chunks - 1) / 2.0;
                     double stdDev = chunks / 6.0; // ~99% within the range
                     double[] weights = new double[chunks];
                     double weightSum = 0;
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         weights[i] = Math.Exp(-0.5 * Math.Pow((i - mean) / stdDev, 2));
                         weightSum += weights[i];
                     }
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         int chunkSize = (int)Math.Round(weights[i] / weightSum * quantity);
                         chunkSizes.Add(chunkSize);
                     }
                     break;
-                    
+
                 case OrderDistributionType.Equal:
                 default:
                     // Equal distribution (with remainder added to first chunk)
                     int sharesPerChunk = quantity / chunks;
                     int remainder = quantity % chunks;
-                    
+
                     for (int i = 0; i < chunks; i++)
                     {
                         int chunkSize = sharesPerChunk;
@@ -356,7 +356,7 @@ namespace Quantra.DAL.Services
                     }
                     break;
             }
-            
+
             // Ensure we distribute exactly the requested quantity
             int totalAllocated = chunkSizes.Sum();
             if (totalAllocated != quantity)
@@ -364,7 +364,7 @@ namespace Quantra.DAL.Services
                 int diff = quantity - totalAllocated;
                 chunkSizes[0] += diff;
             }
-            
+
             return chunkSizes;
         }
 
@@ -407,7 +407,7 @@ namespace Quantra.DAL.Services
         private List<int> CalculateIntervals(int chunks, int baseIntervalMinutes, bool randomize)
         {
             List<int> intervals = new List<int>();
-            
+
             for (int i = 0; i < chunks; i++)
             {
                 if (i == 0)
@@ -420,7 +420,7 @@ namespace Quantra.DAL.Services
                     intervals.Add(CalculateRandomizedInterval(baseIntervalMinutes, randomize));
                 }
             }
-            
+
             return intervals;
         }
 

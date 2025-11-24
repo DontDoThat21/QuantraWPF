@@ -24,15 +24,15 @@ namespace Quantra.DAL.Services
         private readonly UserSettings _userSettings;
         private readonly IAlertPublisher _alertPublisher;
         private readonly LoggingService _loggingService;
-        
+
         // Cache for ratings to reduce API calls
-        private readonly ConcurrentDictionary<string, (List<AnalystRating> Ratings, DateTime Timestamp)> _ratingsCache = 
+        private readonly ConcurrentDictionary<string, (List<AnalystRating> Ratings, DateTime Timestamp)> _ratingsCache =
             new ConcurrentDictionary<string, (List<AnalystRating>, DateTime)>();
-            
+
         // Cache for aggregates to reduce recalculations
-        private readonly ConcurrentDictionary<string, (AnalystRatingAggregate Aggregate, DateTime Timestamp)> _aggregateCache = 
+        private readonly ConcurrentDictionary<string, (AnalystRatingAggregate Aggregate, DateTime Timestamp)> _aggregateCache =
             new ConcurrentDictionary<string, (AnalystRatingAggregate, DateTime)>();
-            
+
         // Cache for historical consensus data to reduce DB calls
         private readonly ConcurrentDictionary<string, (List<AnalystRatingAggregate> History, DateTime Timestamp)> _consensusHistoryCache =
             new ConcurrentDictionary<string, (List<AnalystRatingAggregate>, DateTime)>();
@@ -49,7 +49,7 @@ namespace Quantra.DAL.Services
             _loggingService = loggingService;
 
         }
-        
+
         /// <summary>
         /// Gets the API key from settings or environment variables
         /// </summary>
@@ -61,7 +61,7 @@ namespace Quantra.DAL.Services
                 string key = Environment.GetEnvironmentVariable("FINANCIAL_API_KEY");
                 if (!string.IsNullOrEmpty(key))
                     return key;
-                
+
                 // Since FinancialApiKey was removed, return fallback
                 //DatabaseMonolith.Log("Info", "FinancialApiKey not configured, using fallback for synthetic data generation");
                 return "YOUR_API_KEY";
@@ -72,7 +72,7 @@ namespace Quantra.DAL.Services
                 return "YOUR_API_KEY"; // Fallback
             }
         }
-        
+
         /// <summary>
         /// Retrieves recent analyst ratings for a stock symbol
         /// </summary>
@@ -90,15 +90,15 @@ namespace Quantra.DAL.Services
                     return cachedData.Ratings.OrderByDescending(r => r.RatingDate).Take(count).ToList();
                 }
             }
-            
+
             var ratings = new List<AnalystRating>();
-            
+
             try
             {
                 // In a real API implementation, replace this with actual API call
                 // For now, generate synthetic data for demonstration purposes
                 ratings = GenerateSyntheticRatingData(symbol);
-                
+
                 // In a real implementation, this would parse API response:
                 /*
                 string url = $"https://financial-api.example.com/analyst-ratings/{symbol}?apiKey={_apiKey}";
@@ -113,7 +113,7 @@ namespace Quantra.DAL.Services
                 var ratingsData = JsonSerializer.Deserialize<List<AnalystRating>>(json);
                 ratings.AddRange(ratingsData);
                 */
-                
+
                 // Cache the results
                 _ratingsCache[cacheKey] = (ratings, DateTime.Now);
             }
@@ -121,10 +121,10 @@ namespace Quantra.DAL.Services
             {
                 //DatabaseMonolith.Log("Error", $"Error fetching analyst ratings for {symbol}", ex.ToString());
             }
-            
+
             return ratings.OrderByDescending(r => r.RatingDate).Take(count).ToList();
         }
-        
+
         /// <summary>
         /// Gets aggregated analyst rating data for a symbol
         /// </summary>
@@ -142,26 +142,26 @@ namespace Quantra.DAL.Services
                     return cachedData.Aggregate;
                 }
             }
-            
+
             // Fetch recent ratings
             var ratings = await GetRecentRatingsAsync(symbol, 50); // Get more ratings for better aggregation
-            
+
             // Create aggregate
             var aggregate = new AnalystRatingAggregate
             {
                 Symbol = symbol,
                 Ratings = ratings
             };
-            
+
             // Calculate aggregates
             aggregate.RecalculateAggregates();
-            
+
             // Cache the result
             _aggregateCache[cacheKey] = (aggregate, DateTime.Now);
-            
+
             return aggregate;
         }
-        
+
         /// <summary>
         /// Gets a sentiment score based on analyst ratings for a symbol (-1.0 to 1.0)
         /// </summary>
@@ -170,21 +170,21 @@ namespace Quantra.DAL.Services
             var aggregate = await GetAggregatedRatingsAsync(symbol);
             return aggregate.ConsensusScore;
         }
-        
+
         /// <summary>
         /// Detects changes in analyst ratings since a specified date
         /// </summary>
         public async Task<List<AnalystRating>> GetRatingChangesAsync(string symbol, DateTime since)
         {
             var ratings = await GetRecentRatingsAsync(symbol, 50);
-            
+
             // Filter for changes since the specified date
-            var changes = ratings.Where(r => 
-                r.RatingDate >= since && 
-                (r.ChangeType == RatingChangeType.Upgrade || 
+            var changes = ratings.Where(r =>
+                r.RatingDate >= since &&
+                (r.ChangeType == RatingChangeType.Upgrade ||
                  r.ChangeType == RatingChangeType.Downgrade ||
                  r.ChangeType == RatingChangeType.Initiation)).ToList();
-            
+
             return changes;
         }
 
@@ -197,46 +197,46 @@ namespace Quantra.DAL.Services
             {
                 // Get current aggregate
                 var currentAggregate = await GetAggregatedRatingsAsync(symbol);
-                
+
                 // Get historical consensus data
                 var historyData = await GetConsensusHistoryAsync(symbol, days);
-                
+
                 if (historyData.Count == 0)
                 {
                     // No history available, return current aggregate
                     currentAggregate.ConsensusTrend = "No historical data";
                     return currentAggregate;
                 }
-                
+
                 // Get oldest data point for comparison
                 var oldestData = historyData.OrderBy(h => h.LastUpdated).FirstOrDefault();
-                
+
                 if (oldestData != null)
                 {
                     // Store the previous consensus data for comparison
                     currentAggregate.PreviousConsensusScore = oldestData.ConsensusScore;
                     currentAggregate.PreviousConsensusRating = oldestData.ConsensusRating;
-                    
+
                     // Calculate the consensus trend
                     double scoreDelta = currentAggregate.ConsensusScore - oldestData.ConsensusScore;
-                    
+
                     if (Math.Abs(scoreDelta) < 0.1)
                         currentAggregate.ConsensusTrend = "Stable";
                     else if (scoreDelta > 0)
                         currentAggregate.ConsensusTrend = "Improving";
                     else
                         currentAggregate.ConsensusTrend = "Deteriorating";
-                    
+
                     // Calculate ratings strength index based on historical data
                     int totalUpgrades = historyData.Sum(h => h.UpgradeCount);
                     int totalDowngrades = historyData.Sum(h => h.DowngradeCount);
-                    
+
                     if (totalUpgrades + totalDowngrades > 0)
                     {
                         currentAggregate.RatingsStrengthIndex = ((double)totalUpgrades - totalDowngrades) / (totalUpgrades + totalDowngrades);
                     }
                 }
-                
+
                 return currentAggregate;
             }
             catch (Exception ex)
@@ -245,7 +245,7 @@ namespace Quantra.DAL.Services
                 return await GetAggregatedRatingsAsync(symbol); // Return current aggregate on error
             }
         }
-        
+
         /// <summary>
         /// Gets historical analyst consensus data for trend analysis
         /// </summary>
@@ -263,13 +263,13 @@ namespace Quantra.DAL.Services
                     return cachedData.History;
                 }
             }
-            
+
             // Not in cache or cache expired, get from database
             var historyData = GetConsensusHistory(symbol, days);
 
             // Cache the results
             _consensusHistoryCache[cacheKey] = (historyData, DateTime.Now);
-            
+
             return historyData;
         }
 
@@ -282,15 +282,15 @@ namespace Quantra.DAL.Services
             {
                 // First get traditional analyst rating sentiment as a baseline
                 double ratingSentiment = await GetRatingSentimentAsync(symbol);
-                
+
                 // Get recent analyst ratings to provide context for AI analysis
                 var recentRatings = await GetRecentRatingsAsync(symbol, 10);
-                
+
                 // Check if we have any API key for AI integration
                 string aiApiKey = null;
                 try
                 {
-                    aiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
+                    aiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
                         ?? Environment.GetEnvironmentVariable("CHATGPT_API_KEY")
                         ?? Quantra.DAL.Utilities.Utilities.GetOpenAiApiKey();
                 }
@@ -298,19 +298,19 @@ namespace Quantra.DAL.Services
                 {
                     // API key not found in settings, will fall back to traditional sentiment
                 }
-                
+
                 if (string.IsNullOrEmpty(aiApiKey) || aiApiKey == "YOUR_API_KEY")
                 {
                     //DatabaseMonolith.Log("Warning", $"No AI API key configured for enhanced analyst sentiment analysis of {symbol}. Using traditional rating sentiment.");
                     return ratingSentiment;
                 }
-                
+
                 // Prepare data for AI analysis
                 var analysisContext = PrepareAnalystContextForAI(symbol, recentRatings, ratingSentiment);
-                
+
                 // Call AI service for enhanced sentiment analysis
                 double aiSentiment = await CallAIForAnalystSentiment(symbol, analysisContext, aiApiKey);
-                
+
                 // Return AI sentiment if available, otherwise fall back to rating sentiment
                 return aiSentiment != 0 ? aiSentiment : ratingSentiment;
             }
@@ -321,7 +321,7 @@ namespace Quantra.DAL.Services
                 return await GetRatingSentimentAsync(symbol);
             }
         }
-        
+
         /// <summary>
         /// Refreshes rating data for a symbol
         /// </summary>
@@ -331,7 +331,7 @@ namespace Quantra.DAL.Services
             {
                 // Clear cached data for this symbol
                 ClearCache(symbol);
-                
+
                 // Fetch fresh data
                 var ratings = await GetRecentRatingsAsync(symbol);
                 var aggregate = await GetAggregatedRatingsAsync(symbol);
@@ -339,13 +339,13 @@ namespace Quantra.DAL.Services
                 // Save data to database for historical tracking
                 SaveAnalystRatings(symbol, ratings);
                 SaveConsensusHistory(aggregate);
-                
+
                 // Check for significant changes and create alerts if needed
                 await CheckForSignificantChanges(symbol, ratings);
-                
+
                 // Analyze trends based on historical data
                 await AnalyzeConsensusHistoryAsync(symbol);
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -354,7 +354,7 @@ namespace Quantra.DAL.Services
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Clears cached rating data
         /// </summary>
@@ -371,12 +371,12 @@ namespace Quantra.DAL.Services
                 // Clear specific symbol cache
                 string ratingsCacheKey = $"ratings_{symbol.ToLower()}";
                 string aggregateCacheKey = $"aggregate_{symbol.ToLower()}";
-                
+
                 _ratingsCache.TryRemove(ratingsCacheKey, out _);
                 _aggregateCache.TryRemove(aggregateCacheKey, out _);
             }
         }
-        
+
         /// <summary>
         /// Checks for significant changes in analyst ratings and creates alerts
         /// </summary>
@@ -384,22 +384,22 @@ namespace Quantra.DAL.Services
         {
             if (ratings == null || ratings.Count == 0)
                 return;
-                
+
             // Look for recent changes (last 24 hours)
-            var recentChanges = ratings.Where(r => 
-                r.RatingDate >= DateTime.Now.AddHours(-24) && 
-                (r.ChangeType == RatingChangeType.Upgrade || 
+            var recentChanges = ratings.Where(r =>
+                r.RatingDate >= DateTime.Now.AddHours(-24) &&
+                (r.ChangeType == RatingChangeType.Upgrade ||
                  r.ChangeType == RatingChangeType.Downgrade ||
                  r.ChangeType == RatingChangeType.Initiation ||
                  r.ChangeType == RatingChangeType.PriceTargetChange))
                 .ToList();
-                
+
             // Group by analyst to aggregate multiple changes
             var analystChanges = recentChanges
                 .GroupBy(r => r.AnalystName)
                 .Select(g => g.OrderByDescending(r => r.RatingDate).First())
                 .ToList();
-                
+
             foreach (var change in analystChanges)
             {
                 // Create alerts for significant rating changes
@@ -407,52 +407,52 @@ namespace Quantra.DAL.Services
                 string condition = string.Empty;
                 int priority = 2; // Medium by default
                 AlertCategory category = AlertCategory.Standard;
-                
+
                 switch (change.ChangeType)
                 {
                     case RatingChangeType.Upgrade:
                         alertMessage = $"{change.AnalystName} upgraded {symbol} from {change.PreviousRating} to {change.Rating}";
                         condition = $"Rating Upgrade: {change.PreviousRating} → {change.Rating}";
                         category = AlertCategory.Opportunity;
-                        
+
                         // Higher priority for stronger upgrades
                         if (change.SentimentScore > 0.5)
                             priority = 1; // High priority
                         break;
-                        
+
                     case RatingChangeType.Downgrade:
                         alertMessage = $"{change.AnalystName} downgraded {symbol} from {change.PreviousRating} to {change.Rating}";
                         condition = $"Rating Downgrade: {change.PreviousRating} → {change.Rating}";
-                        
+
                         // Higher priority for stronger downgrades
                         if (change.SentimentScore < -0.5)
                             priority = 1; // High priority
                         break;
-                        
+
                     case RatingChangeType.Initiation:
                         alertMessage = $"{change.AnalystName} initiated coverage on {symbol} with {change.Rating}";
                         condition = $"New Coverage: {change.Rating}";
-                        
+
                         // Higher priority for strong initial ratings
                         if (Math.Abs(change.SentimentScore) > 0.5)
                             priority = 1;
                         break;
-                        
+
                     case RatingChangeType.PriceTargetChange:
                         if (change.PriceTarget > 0 && change.PreviousPriceTarget > 0)
                         {
                             double pctChange = (change.PriceTarget - change.PreviousPriceTarget) / change.PreviousPriceTarget * 100;
-                            
+
                             // Only alert if change is significant (>5%)
                             if (Math.Abs(pctChange) >= 5)
                             {
                                 string direction = pctChange > 0 ? "raised" : "lowered";
                                 alertMessage = $"{change.AnalystName} {direction} {symbol} price target from ${change.PreviousPriceTarget:F2} to ${change.PriceTarget:F2} ({(pctChange > 0 ? "+" : "")}{pctChange:F1}%)";
                                 condition = $"Price Target Change: {(pctChange > 0 ? "+" : "")}{pctChange:F1}%";
-                                
+
                                 if (pctChange > 0)
                                     category = AlertCategory.Opportunity;
-                                    
+
                                 // Higher priority for larger changes
                                 if (Math.Abs(pctChange) > 15)
                                     priority = 1;
@@ -465,38 +465,38 @@ namespace Quantra.DAL.Services
                         }
                         break;
                 }
-                
+
                 if (!string.IsNullOrEmpty(alertMessage))
                 {
                     // Add price target info if available and not already a price target change
                     if (change.ChangeType != RatingChangeType.PriceTargetChange && change.PriceTarget > 0)
                     {
                         string priceTargetInfo = $"PT: ${change.PriceTarget:F2}";
-                        
+
                         if (change.PreviousPriceTarget > 0)
                         {
                             double pctChange = (change.PriceTarget - change.PreviousPriceTarget) / change.PreviousPriceTarget * 100;
                             string direction = pctChange >= 0 ? "↑" : "↓";
                             priceTargetInfo += $" ({direction}{Math.Abs(pctChange):F1}%)";
                         }
-                        
+
                         alertMessage += $" with {priceTargetInfo}";
                     }
-                    
+
                     // Calculate importance based on analyst firm's historical impact
                     string analystImportance = "Standard";
                     string additionalNotes = string.Empty;
-                    
+
                     var analystFirmStats = await GetAnalystFirmStatistics(change.AnalystName);
                     if (analystFirmStats != null)
                     {
-                        analystImportance = analystFirmStats.AccuracyRating >= 0.7 ? "High Impact" : 
+                        analystImportance = analystFirmStats.AccuracyRating >= 0.7 ? "High Impact" :
                                           analystFirmStats.AccuracyRating >= 0.5 ? "Medium Impact" : "Low Impact";
-                         
+
                         additionalNotes = $"Analyst: {change.AnalystName} ({analystImportance})\n" +
                                         $"Historical Accuracy: {analystFirmStats.AccuracyRating:P1}\n" +
                                         $"Date: {change.RatingDate}";
-                                        
+
                         // Adjust priority based on analyst importance
                         if (analystFirmStats.AccuracyRating >= 0.7 && priority > 1)
                             priority = priority - 1;
@@ -505,7 +505,7 @@ namespace Quantra.DAL.Services
                     {
                         additionalNotes = $"Analyst: {change.AnalystName}\nDate: {change.RatingDate}";
                     }
-                    
+
                     // Create the alert
                     var alert = new AlertModel
                     {
@@ -519,7 +519,7 @@ namespace Quantra.DAL.Services
                         CreatedDate = DateTime.Now,
                         Notes = additionalNotes
                     };
-                    
+
                     // Publish via DI publisher if available; otherwise fallback to AlertManager
                     if (_alertPublisher != null)
                     {
@@ -531,11 +531,11 @@ namespace Quantra.DAL.Services
                     }
                 }
             }
-            
+
             // Check for trend of multiple analysts making similar changes (consensus shift)
             int upgradeCount = recentChanges.Count(r => r.ChangeType == RatingChangeType.Upgrade);
             int downgradeCount = recentChanges.Count(r => r.ChangeType == RatingChangeType.Downgrade);
-            
+
             if (upgradeCount >= 2 && upgradeCount > downgradeCount * 2)
             {
                 var alert = new AlertModel
@@ -568,7 +568,7 @@ namespace Quantra.DAL.Services
                 };
                 if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
             }
-            
+
             // Check for consensus change
             await CheckConsensusChange(symbol);
         }
@@ -580,10 +580,10 @@ namespace Quantra.DAL.Services
         {
             // In a real implementation, this would query a database of historical analyst predictions
             // and their accuracy. For the demo, we'll return synthetic data.
-            
+
             // This would typically be sourced from a database of historical performance
             var random = new Random(analystName.GetHashCode());
-            
+
             return new AnalystFirmStatistics
             {
                 AnalystName = analystName,
@@ -594,7 +594,7 @@ namespace Quantra.DAL.Services
                 DowngradeSuccessRate = 0.4 + random.NextDouble() * 0.5
             };
         }
-        
+
         /// <summary>
         /// Checks for changes in the overall analyst consensus and creates alerts
         /// </summary>
@@ -605,16 +605,16 @@ namespace Quantra.DAL.Services
                 var currentAggregate = await GetAggregatedRatingsAsync(symbol);
                 var historyAnalysis = await AnalyzeConsensusHistoryAsync(symbol);
                 var previousConsensus = GetPreviousConsensus(symbol);
-                
+
                 if (previousConsensus != null)
                 {
                     if (previousConsensus.ConsensusRating != currentAggregate.ConsensusRating)
                     {
                         string alertMessage = $"Analyst consensus for {symbol} changed from {previousConsensus.ConsensusRating} to {currentAggregate.ConsensusRating}";
-                        
+
                         AlertCategory category = AlertCategory.Standard;
                         int priority = 2;
-                        
+
                         if (previousConsensus.ConsensusRating == "Hold" && currentAggregate.ConsensusRating == "Buy" ||
                             previousConsensus.ConsensusRating == "Sell" && currentAggregate.ConsensusRating == "Hold")
                         {
@@ -626,7 +626,7 @@ namespace Quantra.DAL.Services
                         {
                             priority = 1;
                         }
-                        
+
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -645,10 +645,10 @@ namespace Quantra.DAL.Services
                     {
                         string direction = currentAggregate.ConsensusScore > previousConsensus.ConsensusScore ? "strengthened" : "weakened";
                         string alertMessage = $"Analyst consensus for {symbol} has significantly {direction} while remaining at {currentAggregate.ConsensusRating}";
-                        
+
                         AlertCategory category = direction == "strengthened" ? AlertCategory.Opportunity : AlertCategory.Standard;
                         int priority = 2;
-                        
+
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -663,16 +663,16 @@ namespace Quantra.DAL.Services
                         };
                         if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
                     }
-                    else if (previousConsensus.AveragePriceTarget > 0 && 
+                    else if (previousConsensus.AveragePriceTarget > 0 &&
                              Math.Abs(currentAggregate.AveragePriceTarget - previousConsensus.AveragePriceTarget) / previousConsensus.AveragePriceTarget > 0.05)
                     {
                         double pctChange = (currentAggregate.AveragePriceTarget - previousConsensus.AveragePriceTarget) / previousConsensus.AveragePriceTarget * 100;
                         string direction = pctChange > 0 ? "increased" : "decreased";
-                        
+
                         string alertMessage = $"Average price target for {symbol} has {direction} by {Math.Abs(pctChange):F1}%";
-                        
+
                         AlertCategory category = pctChange > 0 ? AlertCategory.Opportunity : AlertCategory.Standard;
-                        
+
                         var alert = new AlertModel
                         {
                             Name = alertMessage,
@@ -688,7 +688,7 @@ namespace Quantra.DAL.Services
                         if (_alertPublisher != null) _alertPublisher.EmitGlobalAlert(alert); else Alerting.EmitGlobalAlert(alert);
                     }
                 }
-                
+
                 StorePreviousConsensus(symbol, currentAggregate);
             }
             catch (Exception ex)
@@ -696,26 +696,26 @@ namespace Quantra.DAL.Services
                 //DatabaseMonolith.Log("Error", $"Error checking consensus change for {symbol}", ex.ToString());
             }
         }
-        
+
         // For demonstration - this would typically use a database
-        private static readonly ConcurrentDictionary<string, AnalystRatingAggregate> _previousConsensusData = 
+        private static readonly ConcurrentDictionary<string, AnalystRatingAggregate> _previousConsensusData =
             new ConcurrentDictionary<string, AnalystRatingAggregate>();
-            
+
         private AnalystRatingAggregate GetPreviousConsensus(string symbol)
         {
             string key = symbol.ToLower();
             if (_previousConsensusData.TryGetValue(key, out var aggregate))
                 return aggregate;
-                
+
             return null;
         }
-        
+
         private void StorePreviousConsensus(string symbol, AnalystRatingAggregate aggregate)
         {
             string key = symbol.ToLower();
             _previousConsensusData[key] = aggregate;
         }
-        
+
         /// <summary>
         /// Prepares analyst context data for AI analysis
         /// </summary>
@@ -725,7 +725,7 @@ namespace Quantra.DAL.Services
             context.AppendLine($"Stock Symbol: {symbol}");
             context.AppendLine($"Traditional Rating Sentiment: {ratingSentiment:F2}");
             context.AppendLine($"Recent Analyst Ratings ({recentRatings.Count} ratings):");
-            
+
             foreach (var rating in recentRatings.Take(5)) // Limit to most recent 5 for context size
             {
                 context.AppendLine($"- {rating.AnalystName}: {rating.Rating}");
@@ -735,10 +735,10 @@ namespace Quantra.DAL.Services
                     context.AppendLine($"  Previous: {rating.PreviousRating} ({rating.ChangeType})");
                 context.AppendLine($"  Date: {rating.RatingDate:yyyy-MM-dd}");
             }
-            
+
             return context.ToString();
         }
-        
+
         /// <summary>
         /// Calls AI service for enhanced analyst sentiment analysis
         /// </summary>
@@ -765,7 +765,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                 {
                     httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
                     httpClient.Timeout = TimeSpan.FromSeconds(30);
-                    
+
                     var requestBody = new
                     {
                         model = "gpt-3.5-turbo",
@@ -777,12 +777,12 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                         max_tokens = 10,
                         temperature = 0.3 // Lower temperature for more consistent results
                     };
-                    
+
                     string json = JsonSerializer.Serialize(requestBody);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
-                    
+
                     var response = await httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content);
-                    
+
                     if (response.IsSuccessStatusCode)
                     {
                         string responseJson = await response.Content.ReadAsStringAsync();
@@ -792,7 +792,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                             if (choices.GetArrayLength() > 0)
                             {
                                 var messageContent = choices[0].GetProperty("message").GetProperty("content").GetString();
-                                
+
                                 // Parse the AI response to extract sentiment score
                                 if (double.TryParse(messageContent?.Trim(), out double sentiment))
                                 {
@@ -814,10 +814,10 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
             {
                 //DatabaseMonolith.Log("Error", $"Error calling AI service for analyst sentiment of {symbol}", ex.ToString());
             }
-            
+
             return 0; // Return 0 if AI call fails
         }
-        
+
         /// <summary>
         /// Generates synthetic rating data for demonstration purposes
         /// </summary>
@@ -825,46 +825,46 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
         {
             // This method creates synthetic data for demonstration
             // In production, this would be replaced with real API calls
-            
+
             var random = new Random(symbol.GetHashCode()); // Use symbol as seed for consistency
-            
-            var analystFirms = new[] 
+
+            var analystFirms = new[]
             {
-                "Morgan Stanley", "Goldman Sachs", "JP Morgan", "Bank of America", 
+                "Morgan Stanley", "Goldman Sachs", "JP Morgan", "Bank of America",
                 "Credit Suisse", "Barclays", "UBS", "Wells Fargo", "Citi", "Deutsche Bank"
             };
-            
-            var ratingTypes = new[] 
+
+            var ratingTypes = new[]
             {
-                "Buy", "Hold", "Sell", "Overweight", "Underweight", "Neutral", 
+                "Buy", "Hold", "Sell", "Overweight", "Underweight", "Neutral",
                 "Outperform", "Market Perform", "Strong Buy"
             };
-            
+
             var ratings = new List<AnalystRating>();
-            
+
             // Generate 15 synthetic ratings
             for (int i = 0; i < 15; i++)
             {
                 // Random firm
                 string firm = analystFirms[random.Next(analystFirms.Length)];
-                
+
                 // Rating
                 string currentRating = ratingTypes[random.Next(ratingTypes.Length)]
                     .Replace("Buy", "Strong Buy") // Promote some Buys to Strong Buy for variety
                     .Replace("Sell", "Strong Sell"); // Promote some Sells to Strong Sell
-                
+
                 // Random date in last 90 days
                 DateTime ratingDate = DateTime.Now.AddDays(-random.Next(90));
-                
+
                 // Price target - reasonable range based on symbol
                 double basePrice = 50.0 + symbol.Length * 10; // Just a synthetic formula
                 double priceTarget = basePrice * (0.8 + random.NextDouble() * 0.4); // +/- 20%
-                
+
                 // Previous price target and rating
                 string previousRating = null;
                 double previousPriceTarget = 0;
                 RatingChangeType changeType;
-                
+
                 int changeTypeRandom = random.Next(100);
                 if (changeTypeRandom < 10) // 10% chance of initiation
                 {
@@ -892,7 +892,7 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                     previousRating = currentRating;
                     previousPriceTarget = priceTarget * (0.95 + random.NextDouble() * 0.1); // Small change
                 }
-                
+
                 var rating = new AnalystRating
                 {
                     Id = i + 1,
@@ -905,21 +905,21 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                     RatingDate = ratingDate,
                     ChangeType = changeType
                 };
-                
+
                 ratings.Add(rating);
             }
-            
+
             // Add one very recent rating to trigger alerts in demo
             if (ratings.Count > 0)
             {
                 var lastRating = ratings[0].Clone();
                 lastRating.RatingDate = DateTime.Now.AddHours(-2); // 2 hours ago
-                
+
                 // Make it an upgrade or downgrade
                 bool isUpgrade = random.Next(2) == 0;
                 lastRating.ChangeType = isUpgrade ? RatingChangeType.Upgrade : RatingChangeType.Downgrade;
                 lastRating.PreviousRating = lastRating.Rating;
-                
+
                 if (isUpgrade)
                 {
                     lastRating.Rating = "Buy";
@@ -930,10 +930,10 @@ Respond with only a decimal number between -1.0 and 1.0 representing the overall
                     lastRating.Rating = "Sell";
                     lastRating.PriceTarget *= 0.9;
                 }
-                
+
                 ratings.Add(lastRating);
             }
-            
+
             return ratings.OrderByDescending(r => r.RatingDate).ToList();
         }
 

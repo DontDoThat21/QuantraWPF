@@ -48,7 +48,7 @@ namespace Quantra.DAL.Services
 
             string subject = $"Quantra Alert: {alert.Name} [{alert.Category}]";
             string body = $"Alert Name: {alert.Name}\nSymbol: {alert.Symbol}\nCondition: {alert.Condition}\nType: {alert.AlertType}\nPriority: {alert.Priority}\nNotes: {alert.Notes}\nCreated: {alert.CreatedDate}\n";
-            
+
             // Add technical indicator specific details if applicable
             if (alert.Category == AlertCategory.TechnicalIndicator && alert.CurrentIndicatorValue > 0)
             {
@@ -57,7 +57,7 @@ namespace Quantra.DAL.Services
                 body += $"Current Value: {alert.CurrentIndicatorValue}\n";
                 body += $"Operator: {alert.ComparisonOperator}\n";
             }
-            
+
             SendEmail(settings.AlertEmail, subject, body);
         }
     }

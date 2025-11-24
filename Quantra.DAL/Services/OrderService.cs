@@ -80,40 +80,40 @@ namespace Quantra.DAL.Services
             // In a real app, this would load from database
             // For now, we'll just use some sample data
             var orderHistory = new ObservableCollection<OrderModel>();
-            
+
             // Add some sample orders for demonstration
-            orderHistory.Add(new OrderModel 
-            { 
-                Symbol = "AAPL", 
-                OrderType = "BUY", 
-                Quantity = 100, 
-                Price = 182.50, 
-                IsPaperTrade = true, 
-                Status = "Executed", 
+            orderHistory.Add(new OrderModel
+            {
+                Symbol = "AAPL",
+                OrderType = "BUY",
+                Quantity = 100,
+                Price = 182.50,
+                IsPaperTrade = true,
+                Status = "Executed",
                 Timestamp = DateTime.Now.AddDays(-3),
                 PredictionSource = ""
             });
-            
-            orderHistory.Add(new OrderModel 
-            { 
-                Symbol = "MSFT", 
-                OrderType = "SELL", 
-                Quantity = 50, 
-                Price = 326.75, 
-                IsPaperTrade = false, 
-                Status = "Failed", 
+
+            orderHistory.Add(new OrderModel
+            {
+                Symbol = "MSFT",
+                OrderType = "SELL",
+                Quantity = 50,
+                Price = 326.75,
+                IsPaperTrade = false,
+                Status = "Failed",
                 Timestamp = DateTime.Now.AddDays(-2),
                 PredictionSource = ""
             });
-            
-            orderHistory.Add(new OrderModel 
-            { 
-                Symbol = "TSLA", 
-                OrderType = "BUY", 
-                Quantity = 25, 
-                Price = 215.30, 
-                IsPaperTrade = true, 
-                Status = "Executed", 
+
+            orderHistory.Add(new OrderModel
+            {
+                Symbol = "TSLA",
+                OrderType = "BUY",
+                Quantity = 25,
+                Price = 215.30,
+                IsPaperTrade = true,
+                Status = "Executed",
                 Timestamp = DateTime.Now.AddDays(-1),
                 PredictionSource = ""
             });
@@ -184,14 +184,14 @@ namespace Quantra.DAL.Services
         {
             return _tradingBot.SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes);
         }
-        
+
         public bool SplitLargeOrder(string symbol, int quantity, string orderType, double price, int chunks, int intervalMinutes,
             double priceVariancePercent, bool randomizeIntervals, OrderDistributionType distribution)
         {
-            return _tradingBot.SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes, 
+            return _tradingBot.SplitLargeOrder(symbol, quantity, orderType, price, chunks, intervalMinutes,
                 priceVariancePercent, randomizeIntervals, distribution);
         }
-        
+
         public int CancelSplitOrderGroup(string splitOrderGroupId)
         {
             return _tradingBot.CancelSplitOrderGroup(splitOrderGroupId);
@@ -226,19 +226,19 @@ namespace Quantra.DAL.Services
         {
             return _tradingBot.IsTradingAllowed();
         }
-        
+
         public bool IsEmergencyStopActive()
         {
             return _tradingBot.IsEmergencyStopActive();
         }
-        
-        public bool SetMarketSessionTimes(TimeOnly preMarketOpenTime, TimeOnly regularMarketOpenTime, 
+
+        public bool SetMarketSessionTimes(TimeOnly preMarketOpenTime, TimeOnly regularMarketOpenTime,
             TimeOnly regularMarketCloseTime, TimeOnly afterHoursCloseTime)
         {
-            return _tradingBot.SetMarketSessionTimes(preMarketOpenTime, regularMarketOpenTime, 
+            return _tradingBot.SetMarketSessionTimes(preMarketOpenTime, regularMarketOpenTime,
                 regularMarketCloseTime, afterHoursCloseTime);
         }
-        
+
         public (TimeOnly preMarketOpen, TimeOnly regularMarketOpen, TimeOnly regularMarketClose, TimeOnly afterHoursClose) GetMarketSessionTimes()
         {
             return _tradingBot.GetMarketSessionTimes();

@@ -20,7 +20,7 @@ namespace Quantra.DAL.Services
         private readonly dynamic _apiConfig; // dynamic to avoid hard project refs for DI flexibility
         private readonly dynamic _sentimentConfig; // dynamic to avoid hard project refs for DI flexibility
         private readonly ISocialMediaSentimentService _openAiSentimentService;
-        
+
         /// <summary>
         /// Constructor for OpenAIPredictionEnhancementService
         /// </summary>
@@ -39,7 +39,7 @@ namespace Quantra.DAL.Services
             _apiConfig = BuildApiConfig(configManager);
             _sentimentConfig = BuildSentimentConfig(configManager);
         }
-        
+
         /// <summary>
         /// Enhances a prediction model with OpenAI-generated insights.
         /// </summary>
@@ -47,15 +47,15 @@ namespace Quantra.DAL.Services
         {
             if (prediction == null || string.IsNullOrEmpty(symbol))
                 return prediction;
-                
+
             // Check if OpenAI enabled and API key available
             if (string.IsNullOrEmpty(_apiConfig?.OpenAI?.ApiKey) || !(_sentimentConfig?.OpenAI?.EnableEnhancedPredictionExplanations ?? true))
                 return prediction;
-                
+
             try
             {
                 _logger.Information("Enhancing prediction for {Symbol} with OpenAI", symbol);
-                
+
                 // Fetch recent relevant content for context
                 var content = await _openAiSentimentService.FetchRecentContentAsync(symbol, 5);
                 if (content == null || content.Count == 0)
@@ -63,7 +63,7 @@ namespace Quantra.DAL.Services
                     _logger.Warning("No content available for enhancing prediction for {Symbol}", symbol);
                     return prediction;
                 }
-                
+
                 // Call Python script to enhance the prediction
                 var enhancedPrediction = await CallOpenAIPredictionEnhancementAsync(prediction, content, symbol);
                 if (enhancedPrediction != null)
@@ -73,7 +73,7 @@ namespace Quantra.DAL.Services
                     prediction.AnalysisDetails = enhancedPrediction.AnalysisDetails ?? prediction.AnalysisDetails;
                     prediction.UsesOpenAI = true;
                 }
-                
+
                 return prediction;
             }
             catch (Exception ex)
@@ -82,14 +82,14 @@ namespace Quantra.DAL.Services
                 return prediction; // Return unmodified prediction on error
             }
         }
-        
+
         /// <summary>
         /// Calls the Python helper script to enhance a prediction using OpenAI.
         /// </summary>
         private async Task<PredictionModel> CallOpenAIPredictionEnhancementAsync(PredictionModel prediction, List<string> content, string symbol)
         {
             string pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "openai_sentiment_analysis.py");
-            
+
             try
             {
                 if (!File.Exists(pythonScript))
@@ -97,7 +97,7 @@ namespace Quantra.DAL.Services
                     _logger.Error("Python script not found at: {Path}", pythonScript);
                     return null;
                 }
-                
+
                 // Prepare the request data
                 var requestData = new
                 {
@@ -115,11 +115,11 @@ namespace Quantra.DAL.Services
                     },
                     texts = content
                 };
-                
+
                 var json = JsonSerializer.Serialize(requestData);
-                
+
                 string pythonExe = "python";
-                
+
                 var psi = new ProcessStartInfo
                 {
                     FileName = pythonExe,
@@ -131,7 +131,7 @@ namespace Quantra.DAL.Services
                     CreateNoWindow = true,
                     WorkingDirectory = Path.GetDirectoryName(pythonScript)
                 };
-                
+
                 using (var process = Process.Start(psi))
                 {
                     if (process == null)
@@ -139,31 +139,31 @@ namespace Quantra.DAL.Services
                         _logger.Error("Failed to start Python process");
                         return null;
                     }
-                    
+
                     // Write JSON request to Python's stdin
                     await process.StandardInput.WriteLineAsync(json);
                     process.StandardInput.Close();
-                    
+
                     var outputTask = process.StandardOutput.ReadToEndAsync();
                     var errorTask = process.StandardError.ReadToEndAsync();
-                    
+
                     await process.WaitForExitAsync();
-                    
+
                     string stdOut = await outputTask;
                     string stdErr = await errorTask;
-                    
+
                     if (process.ExitCode != 0)
                     {
                         _logger.Error("Python script failed with exit code {Code}: {Error}", process.ExitCode, stdErr);
                         return null;
                     }
-                    
+
                     if (string.IsNullOrWhiteSpace(stdOut))
                     {
                         _logger.Error("Python script returned empty output. StdErr: {Error}", stdErr);
                         return null;
                     }
-                    
+
                     try
                     {
                         // Parse the response
@@ -173,7 +173,7 @@ namespace Quantra.DAL.Services
                             _logger.Error("Invalid response format from Python script");
                             return null;
                         }
-                        
+
                         return new PredictionModel
                         {
                             Symbol = symbol,
@@ -195,7 +195,7 @@ namespace Quantra.DAL.Services
                 return null;
             }
         }
-        
+
         /// <summary>
         /// Model for Python response
         /// </summary>
@@ -204,7 +204,7 @@ namespace Quantra.DAL.Services
             public PythonPrediction prediction { get; set; }
             public string error { get; set; }
         }
-        
+
         /// <summary>
         /// Model for Python prediction
         /// </summary>

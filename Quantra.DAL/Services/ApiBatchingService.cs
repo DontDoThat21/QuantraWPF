@@ -25,7 +25,7 @@ namespace Quantra.DAL.Services
                 ["AlphaVantage"] = TimeSpan.FromSeconds(12), // Alpha Vantage free tier limit
                 ["Default"] = TimeSpan.FromSeconds(1)
             };
-            
+
             // Initialize throttler with a reasonable default for API operations
             _taskThrottler = new ConcurrentTaskThrottler(4);
         }
@@ -50,7 +50,7 @@ namespace Quantra.DAL.Services
         {
             var itemList = items.ToList();
             var results = new Dictionary<TInput, TOutput>();
-            
+
             if (itemList.Count == 0)
                 return results;
 
@@ -61,12 +61,12 @@ namespace Quantra.DAL.Services
             for (int i = 0; i < itemList.Count; i += batchSize)
             {
                 var batch = itemList.Skip(i).Take(batchSize).ToList();
-                
+
                 // Apply rate limiting
                 await WaitForRateLimit(apiProvider);
-                
+
                 // Process batch concurrently with throttling to prevent thread pool exhaustion
-                var batchTaskFactories = batch.Select(item => 
+                var batchTaskFactories = batch.Select(item =>
                     new Func<Task<KeyValuePair<TInput, TOutput>>>(async () =>
                     {
                         try
@@ -82,7 +82,7 @@ namespace Quantra.DAL.Services
                     }));
 
                 var batchResults = await _taskThrottler.ExecuteThrottledAsync(batchTaskFactories);
-                
+
                 // Collect results
                 foreach (var result in batchResults)
                 {
@@ -94,7 +94,7 @@ namespace Quantra.DAL.Services
                 {
                     await Task.Delay(delay);
                 }
-                
+
                 //DatabaseMonolith.Log("Debug", $"Completed batch {i / batchSize + 1}/{(itemList.Count + batchSize - 1) / batchSize}");
             }
 
@@ -114,14 +114,14 @@ namespace Quantra.DAL.Services
                 {
                     var interval = _apiIntervals.GetValueOrDefault(apiProvider, _apiIntervals["Default"]);
                     var timeSinceLastCall = DateTime.UtcNow - lastCall;
-                    
+
                     if (timeSinceLastCall < interval)
                     {
                         var waitTime = interval - timeSinceLastCall;
                         Task.Delay(waitTime).Wait();
                     }
                 }
-                
+
                 _lastApiCall[apiProvider] = DateTime.UtcNow;
             }
         }

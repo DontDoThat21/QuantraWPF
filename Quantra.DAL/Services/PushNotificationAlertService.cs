@@ -8,9 +8,9 @@ namespace Quantra.DAL.Services
     /// </summary>
     public static class PushNotificationAlertService
     {
-        private static readonly Lazy<PushNotificationService> _pushService = 
+        private static readonly Lazy<PushNotificationService> _pushService =
             new Lazy<PushNotificationService>(() => new PushNotificationService());
-            
+
         // Send an alert as a push notification if enabled for the alert type
         public static void SendAlertPushNotification(AlertModel alert, DatabaseSettingsProfile settings)
         {
@@ -49,7 +49,7 @@ namespace Quantra.DAL.Services
                 // Log the push notification attempt
                 //DatabaseMonolith.Log("Info", $"Sending push notification for alert {alert.Id} to user {settings.PushNotificationUserId}", 
                 //    $"Alert: {alert.Name}, Category: {alert.Category}");
-                
+
                 // Send the notification asynchronously but don't wait for it
                 _ = _pushService.Value.SendAlertNotificationAsync(alert, settings.PushNotificationUserId);
             }
