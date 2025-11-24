@@ -20,17 +20,17 @@ namespace Quantra
         /// Event raised when a message is received
         /// </summary>
         public event EventHandler<string> MessageReceived;
-        
+
         /// <summary>
         /// Event raised when the connection is closed
         /// </summary>
         public event EventHandler ConnectionClosed;
-        
+
         /// <summary>
         /// Gets whether the socket is currently connected
         /// </summary>
         public bool IsConnected => _isConnected && _webSocket?.State == WebSocketState.Open;
-        
+
         /// <summary>
         /// Creates a new WebSocket instance
         /// </summary>
@@ -39,7 +39,7 @@ namespace Quantra
             _webSocket = new ClientWebSocket();
             _cancellationTokenSource = new CancellationTokenSource();
         }
-        
+
         /// <summary>
         /// Connects to a WebSocket server
         /// </summary>
@@ -54,21 +54,21 @@ namespace Quantra
                     // Already connecting or connected
                     return _webSocket.State == WebSocketState.Open;
                 }
-                
+
                 // Create a new WebSocket if needed
                 if (_webSocket.State == WebSocketState.Closed)
                 {
                     _webSocket = new ClientWebSocket();
                     _cancellationTokenSource = new CancellationTokenSource();
                 }
-                
+
                 // Connect to the WebSocket server
                 await _webSocket.ConnectAsync(new Uri(url), _cancellationTokenSource.Token);
                 _isConnected = true;
-                
+
                 // Start receiving messages
                 _receiveTask = StartReceiving();
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -78,7 +78,7 @@ namespace Quantra
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sends a message through the WebSocket
         /// </summary>
@@ -92,14 +92,14 @@ namespace Quantra
                 {
                     return false;
                 }
-                
+
                 byte[] buffer = Encoding.UTF8.GetBytes(message);
                 await _webSocket.SendAsync(
                     new ArraySegment<byte>(buffer),
                     WebSocketMessageType.Text,
                     true,
                     _cancellationTokenSource.Token);
-                    
+
                 return true;
             }
             catch (Exception ex)
@@ -108,7 +108,7 @@ namespace Quantra
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Closes the WebSocket connection
         /// </summary>
@@ -120,14 +120,14 @@ namespace Quantra
                 {
                     // Cancel any ongoing operations
                     _cancellationTokenSource.Cancel();
-                    
+
                     // Close the connection gracefully
                     await _webSocket.CloseAsync(
                         WebSocketCloseStatus.NormalClosure,
                         "Connection closed by client",
                         CancellationToken.None);
                 }
-                
+
                 _isConnected = false;
             }
             catch (Exception ex)
@@ -135,7 +135,7 @@ namespace Quantra
                 Console.WriteLine($"WebSocket close error: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Starts receiving messages from the WebSocket
         /// </summary>
@@ -149,14 +149,14 @@ namespace Quantra
                     // Create a string builder to accumulate the message
                     StringBuilder messageBuilder = new StringBuilder();
                     WebSocketReceiveResult result;
-                    
+
                     do
                     {
                         // Receive a chunk of the message
                         result = await _webSocket.ReceiveAsync(
                             new ArraySegment<byte>(buffer),
                             _cancellationTokenSource.Token);
-                            
+
                         // Append the chunk to the message
                         if (result.MessageType == WebSocketMessageType.Text)
                         {
@@ -165,7 +165,7 @@ namespace Quantra
                         }
                     }
                     while (!result.EndOfMessage);
-                    
+
                     // Process the complete message
                     if (result.MessageType == WebSocketMessageType.Text)
                     {
@@ -205,15 +205,15 @@ namespace Quantra
         {
             // Cancel any ongoing operations
             _cancellationTokenSource?.Cancel();
-            
+
             // Close and dispose the WebSocket
             _webSocket?.Dispose();
             _webSocket = null;
-            
+
             // Dispose the cancellation token source
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
-            
+
             _isConnected = false;
         }
     }
