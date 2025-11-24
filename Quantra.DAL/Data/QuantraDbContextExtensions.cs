@@ -9,7 +9,7 @@ namespace Quantra.DAL.Data
     /// Extension methods for configuring Quantra database services with dependency injection
     /// </summary>
     public static class QuantraDbContextExtensions
-  {
+    {
         /// <summary>
         /// Adds Quantra database services to the service collection
         /// </summary>
@@ -20,47 +20,47 @@ namespace Quantra.DAL.Data
          this IServiceCollection services,
        string connectionString = null)
         {
-    connectionString ??= ConnectionHelper.ConnectionString;
+            connectionString ??= ConnectionHelper.ConnectionString;
 
-  // Register DbContext
+            // Register DbContext
             services.AddDbContext<QuantraDbContext>(options =>
             {
-  options.UseSqlServer(connectionString, sqlServerOptions =>
-           {
-  sqlServerOptions.CommandTimeout(30);
-          });
+                options.UseSqlServer(connectionString, sqlServerOptions =>
+                         {
+                             sqlServerOptions.CommandTimeout(30);
+                         });
 
-  // Enable sensitive data logging in development
+                // Enable sensitive data logging in development
 #if DEBUG
-      options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
 #endif
-          });
+            });
 
-    // Register repositories
-    services.AddScoped<ILogRepository, LogRepository>();
+            // Register repositories
+            services.AddScoped<ILogRepository, LogRepository>();
             services.AddScoped<IStockSymbolRepository, StockSymbolRepository>();
             services.AddScoped<ITradingRuleRepository, TradingRuleRepository>();
-     
-        // Register generic repository
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-   return services;
+            // Register generic repository
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+            return services;
         }
 
         /// <summary>
- /// Initializes the database (creates tables, applies migrations)
+        /// Initializes the database (creates tables, applies migrations)
         /// Call this during application startup
-     /// </summary>
+        /// </summary>
         public static IServiceProvider InitializeQuantraDatabase(this IServiceProvider serviceProvider)
- {
+        {
             using (var scope = serviceProvider.CreateScope())
             {
-        var context = scope.ServiceProvider.GetRequiredService<QuantraDbContext>();
-     context.Initialize();
-       }
+                var context = scope.ServiceProvider.GetRequiredService<QuantraDbContext>();
+                context.Initialize();
+            }
 
-      return serviceProvider;
-  }
+            return serviceProvider;
+        }
     }
 }

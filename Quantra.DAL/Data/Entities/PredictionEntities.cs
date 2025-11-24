@@ -11,54 +11,54 @@ namespace Quantra.DAL.Data.Entities
     public class StockPredictionEntity
     {
         [Key]
-   public int Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(20)]
         public string Symbol { get; set; }
 
         [Required]
-   [MaxLength(20)]
-  public string PredictedAction { get; set; }
+        [MaxLength(20)]
+        public string PredictedAction { get; set; }
 
         [Required]
         public double Confidence { get; set; }
 
-      [Required]
-  public double CurrentPrice { get; set; }
+        [Required]
+        public double CurrentPrice { get; set; }
 
         [Required]
-   public double TargetPrice { get; set; }
+        public double TargetPrice { get; set; }
 
-    [Required]
-   public double PotentialReturn { get; set; }
+        [Required]
+        public double PotentialReturn { get; set; }
 
-      [Required]
-   public DateTime CreatedDate { get; set; }
+        [Required]
+        public DateTime CreatedDate { get; set; }
 
-// Navigation property
-    public virtual ICollection<PredictionIndicatorEntity> Indicators { get; set; }
+        // Navigation property
+        public virtual ICollection<PredictionIndicatorEntity> Indicators { get; set; }
     }
 
     /// <summary>
     /// Entity representing an indicator value for a prediction
     /// </summary>
     [Table("PredictionIndicators")]
-public class PredictionIndicatorEntity
+    public class PredictionIndicatorEntity
     {
- [Required]
+        [Required]
         public int PredictionId { get; set; }
 
-  [Required]
+        [Required]
         [MaxLength(100)]
-   public string IndicatorName { get; set; }
+        public string IndicatorName { get; set; }
 
         [Required]
         public double IndicatorValue { get; set; }
 
- // Navigation property
-      [ForeignKey("PredictionId")]
- public virtual StockPredictionEntity Prediction { get; set; }
+        // Navigation property
+        [ForeignKey("PredictionId")]
+        public virtual StockPredictionEntity Prediction { get; set; }
     }
 
     /// <summary>

@@ -10,71 +10,71 @@ namespace Quantra.DAL.Data.Entities
     [Table("OrderHistory")]
     public class OrderHistoryEntity
     {
-    [Key]
-   public int Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
-      [Required]
+        [Required]
         [MaxLength(20)]
-public string Symbol { get; set; }
+        public string Symbol { get; set; }
 
         [Required]
-[MaxLength(20)]
-   public string OrderType { get; set; }
+        [MaxLength(20)]
+        public string OrderType { get; set; }
 
         [Required]
-   public int Quantity { get; set; }
+        public int Quantity { get; set; }
 
-     [Required]
- public double Price { get; set; }
+        [Required]
+        public double Price { get; set; }
 
- public double? StopLoss { get; set; }
+        public double? StopLoss { get; set; }
 
-    public double? TakeProfit { get; set; }
+        public double? TakeProfit { get; set; }
 
- public bool IsPaperTrade { get; set; }
+        public bool IsPaperTrade { get; set; }
 
-  [MaxLength(50)]
-      public string Status { get; set; }
+        [MaxLength(50)]
+        public string Status { get; set; }
 
-     [MaxLength(200)]
+        [MaxLength(200)]
         public string PredictionSource { get; set; }
 
-     [Required]
-  public DateTime Timestamp { get; set; }
+        [Required]
+        public DateTime Timestamp { get; set; }
     }
 
     /// <summary>
     /// Entity representing a completed trade record
     /// </summary>
     [Table("TradeRecords")]
-  public class TradeRecordEntity
+    public class TradeRecordEntity
     {
         [Key]
-  public int Id { get; set; }
-
-      [Required]
-        [MaxLength(20)]
-   public string Symbol { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(20)]
-     public string Action { get; set; }
+        public string Symbol { get; set; }
 
-     [Required]
+        [Required]
+        [MaxLength(20)]
+        public string Action { get; set; }
+
+        [Required]
         public double Price { get; set; }
 
         [Required]
-    public double TargetPrice { get; set; }
+        public double TargetPrice { get; set; }
 
         public double Confidence { get; set; }
 
         [Required]
-   public DateTime ExecutionTime { get; set; }
+        public DateTime ExecutionTime { get; set; }
 
         [MaxLength(50)]
- public string Status { get; set; }
+        public string Status { get; set; }
 
-  public string Notes { get; set; }
+        public string Notes { get; set; }
     }
 
     /// <summary>
@@ -83,45 +83,45 @@ public string Symbol { get; set; }
     [Table("TradingRules")]
     public class TradingRuleEntity
     {
-     [Key]
+        [Key]
         public int Id { get; set; }
 
         [Required]
-  [MaxLength(200)]
- public string Name { get; set; }
-
-        [Required]
- [MaxLength(20)]
-   public string Symbol { get; set; }
+        [MaxLength(200)]
+        public string Name { get; set; }
 
         [Required]
         [MaxLength(20)]
-   public string OrderType { get; set; }
-
-      public bool IsActive { get; set; }
-
-     [Required]
-        public string Conditions { get; set; }  // JSON serialized list of conditions
-
-   [Required]
-  public DateTime CreatedDate { get; set; }
+        public string Symbol { get; set; }
 
         [Required]
-  public DateTime LastModified { get; set; }
-        
+        [MaxLength(20)]
+        public string OrderType { get; set; }
+
+        public bool IsActive { get; set; }
+
+        [Required]
+        public string Conditions { get; set; }  // JSON serialized list of conditions
+
+        [Required]
+        public DateTime CreatedDate { get; set; }
+
+        [Required]
+        public DateTime LastModified { get; set; }
+
         // Additional properties for advanced trading rules
         [Required]
         public double MinConfidence { get; set; }
-        
+
         [Required]
         public double EntryPrice { get; set; }
-        
+
         [Required]
         public double ExitPrice { get; set; }
-        
+
         [Required]
         public double StopLoss { get; set; }
-        
+
         [Required]
         public int Quantity { get; set; }
     }

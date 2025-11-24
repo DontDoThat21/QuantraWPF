@@ -10,34 +10,34 @@ namespace Quantra.DAL.Data.Entities
     [Table("StockSymbols")]
     public class StockSymbolEntity
     {
-      [Key]
+        [Key]
         [MaxLength(20)]
         public string Symbol { get; set; }
 
         [MaxLength(500)]
-      public string Name { get; set; }
+        public string Name { get; set; }
 
         [MaxLength(200)]
-      public string Sector { get; set; }
+        public string Sector { get; set; }
 
-    [MaxLength(200)]
+        [MaxLength(200)]
         public string Industry { get; set; }
 
- public DateTime? LastUpdated { get; set; }
+        public DateTime? LastUpdated { get; set; }
     }
 
- /// <summary>
+    /// <summary>
     /// Entity representing cached stock data
     /// </summary>
     [Table("StockDataCache")]
     public class StockDataCache
     {
-      [Key]
- public int Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
-[Required]
+        [Required]
         [MaxLength(20)]
-     public string Symbol { get; set; }
+        public string Symbol { get; set; }
 
         [Required]
         [MaxLength(50)]
@@ -63,14 +63,14 @@ namespace Quantra.DAL.Data.Entities
         public string Symbol { get; set; }
 
         [Required]
-    [MaxLength(100)]
-  public string DataType { get; set; }
+        [MaxLength(100)]
+        public string DataType { get; set; }
 
- public double? Value { get; set; }
+        public double? Value { get; set; }
 
-      [Required]
-  public DateTime CacheTime { get; set; }
+        [Required]
+        public DateTime CacheTime { get; set; }
 
         // Composite key defined in configuration
-  }
+    }
 }

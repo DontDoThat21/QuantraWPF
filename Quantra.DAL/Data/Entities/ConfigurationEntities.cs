@@ -10,17 +10,17 @@ namespace Quantra.DAL.Data.Entities
     [Table("Logs")]
     public class LogEntry
     {
-    [Key]
+        [Key]
         public int Id { get; set; }
 
-      [Required]
+        [Required]
         public DateTime Timestamp { get; set; }
 
         [Required]
         [MaxLength(50)]
         public string Level { get; set; }
 
-  [Required]
+        [Required]
         [MaxLength(1000)]
         public string Message { get; set; }
 
@@ -33,22 +33,22 @@ namespace Quantra.DAL.Data.Entities
     [Table("UserAppSettings")]
     public class UserAppSetting
     {
-    [Key]
+        [Key]
         public int Id { get; set; }
 
         [Required]
-     [MaxLength(200)]
-      public string TabName { get; set; }
+        [MaxLength(200)]
+        public string TabName { get; set; }
 
         public int TabOrder { get; set; }
 
         public string CardPositions { get; set; }
 
-  public string ControlsConfig { get; set; }
+        public string ControlsConfig { get; set; }
 
         public string ToolsConfig { get; set; }
 
-    public int GridRows { get; set; } = 4;
+        public int GridRows { get; set; } = 4;
 
         public int GridColumns { get; set; } = 4;
 
@@ -57,7 +57,7 @@ namespace Quantra.DAL.Data.Entities
 
     /// <summary>
     /// Entity representing user credentials for trading accounts
-  /// </summary>
+    /// </summary>
     [Table("UserCredentials")]
     public class UserCredential
     {
@@ -65,10 +65,10 @@ namespace Quantra.DAL.Data.Entities
         public int Id { get; set; }
 
         [Required]
-     [MaxLength(200)]
+        [MaxLength(200)]
         public string Username { get; set; }
 
-     [Required]
+        [Required]
         [MaxLength(500)]
         public string Password { get; set; }
 
@@ -84,9 +84,9 @@ namespace Quantra.DAL.Data.Entities
     [Table("UserPreferences")]
     public class UserPreference
     {
-      [Key]
+        [Key]
         [MaxLength(200)]
- public string Key { get; set; }
+        public string Key { get; set; }
 
         public string Value { get; set; }
 
@@ -104,33 +104,33 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(200)]
         public string TabName { get; set; }
 
-    public string ToolsConfig { get; set; }
+        public string ToolsConfig { get; set; }
     }
 
     /// <summary>
-  /// Entity representing application settings
+    /// Entity representing application settings
     /// </summary>
     [Table("Settings")]
     public class SettingsEntity
     {
- [Key]
+        [Key]
         public int ID { get; set; }
 
-     public bool EnableApiModalChecks { get; set; }
+        public bool EnableApiModalChecks { get; set; }
 
         public int ApiTimeoutSeconds { get; set; } = 30;
 
-   public int CacheDurationMinutes { get; set; } = 15;
+        public int CacheDurationMinutes { get; set; } = 15;
 
-      public bool EnableHistoricalDataCache { get; set; } = true;
+        public bool EnableHistoricalDataCache { get; set; } = true;
 
         public bool EnableDarkMode { get; set; } = true;
 
         public int ChartUpdateIntervalSeconds { get; set; } = 2;
 
-    public bool EnablePriceAlerts { get; set; } = true;
+        public bool EnablePriceAlerts { get; set; } = true;
 
-      public bool EnableTradeNotifications { get; set; } = true;
+        public bool EnableTradeNotifications { get; set; } = true;
 
         public bool EnablePaperTrading { get; set; } = true;
 
@@ -139,54 +139,54 @@ namespace Quantra.DAL.Data.Entities
 
         public int DefaultGridRows { get; set; } = 4;
 
- public int DefaultGridColumns { get; set; } = 4;
+        public int DefaultGridColumns { get; set; } = 4;
 
-     [MaxLength(20)]
+        [MaxLength(20)]
         public string GridBorderColor { get; set; } = "#FF00FFFF";
 
         [MaxLength(200)]
-    public string AlertEmail { get; set; } = "tylortrub@gmail.com";
+        public string AlertEmail { get; set; } = "tylortrub@gmail.com";
     }
 
     /// <summary>
     /// Entity representing a settings profile
     /// </summary>
-[Table("SettingsProfiles")]
+    [Table("SettingsProfiles")]
     public class SettingsProfile
     {
- [Key]
-   public int Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(100)]
-  public string Name { get; set; }
+        public string Name { get; set; }
 
-      [MaxLength(500)]
-      public string Description { get; set; }
+        [MaxLength(500)]
+        public string Description { get; set; }
 
         public bool IsDefault { get; set; }
 
         public bool EnableApiModalChecks { get; set; }
         public int ApiTimeoutSeconds { get; set; }
         public int CacheDurationMinutes { get; set; }
- public bool EnableHistoricalDataCache { get; set; }
+        public bool EnableHistoricalDataCache { get; set; }
         public bool EnableDarkMode { get; set; }
         public int ChartUpdateIntervalSeconds { get; set; }
-   public bool EnablePriceAlerts { get; set; }
-     public bool EnableTradeNotifications { get; set; }
+        public bool EnablePriceAlerts { get; set; }
+        public bool EnableTradeNotifications { get; set; }
         public bool EnablePaperTrading { get; set; }
-        
+
         [MaxLength(50)]
         public string RiskLevel { get; set; }
-     
+
         public int DefaultGridRows { get; set; }
         public int DefaultGridColumns { get; set; }
-        
-     [MaxLength(20)]
+
+        [MaxLength(20)]
         public string GridBorderColor { get; set; }
 
         public DateTime CreatedAt { get; set; }
-   public DateTime LastModified { get; set; }
+        public DateTime LastModified { get; set; }
     }
 
     /// <summary>
@@ -196,19 +196,19 @@ namespace Quantra.DAL.Data.Entities
     public class IndicatorSettingsEntity
     {
         [Key]
-      public int Id { get; set; }
+        public int Id { get; set; }
 
         [Required]
         public int ControlId { get; set; }
 
-[Required]
+        [Required]
         [MaxLength(100)]
         public string IndicatorName { get; set; }
 
-      [Required]
+        [Required]
         public bool IsEnabled { get; set; }
 
-    [Required]
-    public DateTime LastUpdated { get; set; }
-  }
+        [Required]
+        public DateTime LastUpdated { get; set; }
+    }
 }

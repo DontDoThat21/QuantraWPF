@@ -15,17 +15,17 @@ namespace Quantra.DAL.Data
     /// 
     /// Key features:
     /// - Automatic change tracking
- /// - LINQ query support
+    /// - LINQ query support
     /// - Migration support for schema changes
     /// - Transaction management
     /// - Connection pooling
     /// </remarks>
     public class QuantraDbContext : DbContext
     {
-  // Logging and Monitoring
+        // Logging and Monitoring
         public DbSet<LogEntry> Logs { get; set; }
 
-      // User Settings and Configuration
+        // User Settings and Configuration
         public DbSet<UserAppSetting> UserAppSettings { get; set; }
         public DbSet<UserCredential> UserCredentials { get; set; }
         public DbSet<UserPreference> UserPreferences { get; set; }
@@ -35,69 +35,69 @@ namespace Quantra.DAL.Data
         public DbSet<IndicatorSettingsEntity> IndicatorSettings { get; set; }
 
         // Stock and Market Data
- public DbSet<StockSymbolEntity> StockSymbols { get; set; }
+        public DbSet<StockSymbolEntity> StockSymbols { get; set; }
         public DbSet<StockDataCache> StockDataCache { get; set; }
         public DbSet<FundamentalDataCache> FundamentalDataCache { get; set; }
 
         // Trading Operations
-      public DbSet<OrderHistoryEntity> OrderHistory { get; set; }
+        public DbSet<OrderHistoryEntity> OrderHistory { get; set; }
         public DbSet<TradeRecordEntity> TradeRecords { get; set; }
         public DbSet<TradingRuleEntity> TradingRules { get; set; }
 
-// Predictions and Analysis
+        // Predictions and Analysis
         public DbSet<StockPredictionEntity> StockPredictions { get; set; }
         public DbSet<PredictionIndicatorEntity> PredictionIndicators { get; set; }
         public DbSet<PredictionCacheEntity> PredictionCache { get; set; }
 
-     // Analyst Ratings
+        // Analyst Ratings
         public DbSet<AnalystRatingEntity> AnalystRatings { get; set; }
         public DbSet<ConsensusHistoryEntity> ConsensusHistory { get; set; }
 
         // API Usage Tracking
         public DbSet<AlphaVantageApiUsage> AlphaVantageApiUsage { get; set; }
 
-  public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
+        public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-        if (!optionsBuilder.IsConfigured)
-        {
-      // Default configuration if not provided via DI
-          optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString,
-      sqlServerOptions =>
-      {
-      sqlServerOptions.CommandTimeout(30);
-         });
-  }
+            if (!optionsBuilder.IsConfigured)
+            {
+                // Default configuration if not provided via DI
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString,
+            sqlServerOptions =>
+            {
+                sqlServerOptions.CommandTimeout(30);
+            });
+            }
 
-      base.OnConfiguring(optionsBuilder);
+            base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-    base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(modelBuilder);
 
-          // Apply all entity configurations from the assembly
-       modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuantraDbContext).Assembly);
+            // Apply all entity configurations from the assembly
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuantraDbContext).Assembly);
 
             // Additional global configurations
-     ConfigureConventions(modelBuilder);
-    }
+            ConfigureConventions(modelBuilder);
+        }
 
-    private void ConfigureConventions(ModelBuilder modelBuilder)
+        private void ConfigureConventions(ModelBuilder modelBuilder)
         {
-       // Set default string length for all string properties (SQLite doesn't enforce, but good for documentation)
-      foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            // Set default string length for all string properties (SQLite doesn't enforce, but good for documentation)
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-         foreach (var property in entityType.GetProperties())
-         {
-              if (property.ClrType == typeof(string) && property.GetMaxLength() == null)
-                  {
-                    property.SetMaxLength(500);
-                  }
-                 }
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(string) && property.GetMaxLength() == null)
+                    {
+                        property.SetMaxLength(500);
+                    }
+                }
             }
         }
 
@@ -106,9 +106,9 @@ namespace Quantra.DAL.Data
         /// </summary>
         public void Initialize()
         {
-        Database.EnsureCreated();
-  
-         // For SQL Server, no special PRAGMA settings needed
+            Database.EnsureCreated();
+
+            // For SQL Server, no special PRAGMA settings needed
         }
     }
 }
