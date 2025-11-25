@@ -14,7 +14,7 @@ namespace Quantra.Models
         /// Stock symbol
         /// </summary>
         public string Symbol { get; set; }
-        
+
         /// <summary>
         /// Unique identifier for database storage
         /// </summary>
@@ -174,7 +174,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(LastChange));
             }
         }
-        
+
         private int upgradeCount;
         /// <summary>
         /// Number of upgrades in the current dataset
@@ -188,7 +188,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(UpgradeCount));
             }
         }
-        
+
         private int downgradeCount;
         /// <summary>
         /// Number of downgrades in the current dataset
@@ -202,7 +202,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(DowngradeCount));
             }
         }
-        
+
         private double ratingsStrengthIndex;
         /// <summary>
         /// Index showing the strength of recent ratings (-1.0 to 1.0) where positive means more upgrades
@@ -216,7 +216,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(RatingsStrengthIndex));
             }
         }
-        
+
         private string consensusTrend;
         /// <summary>
         /// Trend description of the consensus (Improving, Stable, Deteriorating)
@@ -230,7 +230,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(ConsensusTrend));
             }
         }
-        
+
         private double previousConsensusScore;
         /// <summary>
         /// Previous consensus score for tracking changes
@@ -244,7 +244,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(PreviousConsensusScore));
             }
         }
-        
+
         private string previousConsensusRating;
         /// <summary>
         /// Previous consensus rating for tracking changes

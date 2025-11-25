@@ -64,23 +64,23 @@ namespace Quantra.Models
             if (idx < 20) return null; // Need sufficient history
 
             var currentPrice = historical[idx];
-            
+
             // Simple entry conditions based on spread type
             // In a real implementation, this would be more sophisticated
             switch (SpreadConfig.SpreadType)
             {
                 case Enums.MultiLegStrategyType.VerticalSpread:
                     return GenerateVerticalSpreadSignal(historical, idx);
-                    
+
                 case Enums.MultiLegStrategyType.Straddle:
                     return GenerateStraddleSignal(historical, idx);
-                    
+
                 case Enums.MultiLegStrategyType.Strangle:
                     return GenerateStrangleSignal(historical, idx);
-                    
+
                 case Enums.MultiLegStrategyType.IronCondor:
                     return GenerateIronCondorSignal(historical, idx);
-                    
+
                 default:
                     return GenerateGenericSpreadSignal(historical, idx);
             }
@@ -180,7 +180,7 @@ namespace Quantra.Models
             if (recentPrices.Count < 10) return null;
 
             var volatility = CalculateVolatility(recentPrices);
-            
+
             // Enter when volatility is in moderate range
             if (volatility > 0.1 && volatility < 0.4)
             {
@@ -244,12 +244,12 @@ namespace Quantra.Models
                 case Enums.MultiLegStrategyType.IronCondor:
                     // Iron condors work best in low volatility environments
                     return !hasVolatility || volatility < 0.25;
-                    
+
                 case Enums.MultiLegStrategyType.Straddle:
                 case Enums.MultiLegStrategyType.Strangle:
                     // Straddles and strangles benefit from volatility information
                     return !hasVolatility || volatility > 0.1;
-                    
+
                 default:
                     // For other spread types, basic price validation is sufficient
                     return true;

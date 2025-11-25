@@ -94,17 +94,17 @@ namespace Quantra.Models
         /// Regular user question
         /// </summary>
         UserQuestion,
-        
+
         /// <summary>
         /// AI assistant response
         /// </summary>
         AssistantResponse,
-        
+
         /// <summary>
         /// System message (errors, status updates)
         /// </summary>
         SystemMessage,
-        
+
         /// <summary>
         /// Loading/thinking indicator
         /// </summary>

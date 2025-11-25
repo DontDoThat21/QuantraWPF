@@ -36,16 +36,16 @@ namespace Quantra.Models
         // Spread parameters
         public double SpreadPercentage { get; set; } = 0; // Spread as a percentage of price (e.g., 0.1% = 0.001)
         public double MinSpreadAbsolute { get; set; } = 0; // Minimum spread in absolute terms
-        
+
         // Slippage parameters
         public SlippageType SlippageModel { get; set; } = SlippageType.None;
         public double SlippageValue { get; set; } = 0; // Interpretation depends on SlippageModel
-        
+
         // Exchange and regulatory fees
         public double ExchangeFeePerShare { get; set; } = 0; // Per share exchange fees
         public double ExchangeFeeMinimum { get; set; } = 0; // Minimum exchange fee per trade
         public double RegulatoryFeePercentage { get; set; } = 0; // SEC fees, etc.
-        
+
         // Tax parameters
         public double SalesTax { get; set; } = 0; // For certain jurisdictions
         public double CapitalGainsTaxRate { get; set; } = 0; // Can be used for after-tax performance analysis
@@ -73,7 +73,7 @@ namespace Quantra.Models
         /// <param name="commissionPercentage">Commission percentage (e.g., 0.1% = 0.001)</param>
         /// <param name="minimumCommission">Minimum commission per trade</param>
         public static TransactionCostModel CreatePercentageCommissionModel(
-            double commissionPercentage, 
+            double commissionPercentage,
             double minimumCommission = 0)
         {
             return new TransactionCostModel
@@ -116,7 +116,7 @@ namespace Quantra.Models
                 RegulatoryFeePercentage = 0.000024 // SEC fees, etc.
             };
         }
-        
+
         /// <summary>
         /// Creates a cost model for active traders with better commission rates but still accounting for spread and slippage
         /// </summary>
@@ -126,7 +126,7 @@ namespace Quantra.Models
             {
                 CommissionModel = CommissionType.PerShare,
                 CommissionValue = 0.005, // Half a cent per share
-                MinCommission = 1.00,  
+                MinCommission = 1.00,
                 SpreadPercentage = 0.0001, // 1 basis point spread
                 SlippageModel = SlippageType.Percentage,
                 SlippageValue = 0.0003, // 3 basis points slippage
@@ -178,11 +178,11 @@ namespace Quantra.Models
                 case CommissionType.Fixed:
                     commission = CommissionValue;
                     break;
-                    
+
                 case CommissionType.PerShare:
                     commission = Math.Abs(quantity) * CommissionValue;
                     break;
-                    
+
                 case CommissionType.Percentage:
                     commission = tradeValue * CommissionValue;
                     break;
@@ -190,7 +190,7 @@ namespace Quantra.Models
 
             // Apply minimum/maximum commission constraints
             commission = Math.Max(MinCommission, Math.Min(MaxCommission, commission));
-            
+
             return commission;
         }
 
@@ -211,15 +211,15 @@ namespace Quantra.Models
                 case SlippageType.None:
                     slippage = 0;
                     break;
-                    
+
                 case SlippageType.Fixed:
                     slippage = SlippageValue;
                     break;
-                    
+
                 case SlippageType.Percentage:
                     slippage = price * SlippageValue;
                     break;
-                    
+
                 case SlippageType.VolumeBasedPercentage:
                     if (volumeForDay > 0)
                     {
@@ -233,7 +233,7 @@ namespace Quantra.Models
                     }
                     break;
             }
-            
+
             return slippage;
         }
 
@@ -259,16 +259,16 @@ namespace Quantra.Models
         {
             double tradeValue = Math.Abs(quantity) * price;
             double fees = 0;
-            
+
             // SEC fees typically only apply to sells
             if (isSell)
             {
                 fees += tradeValue * RegulatoryFeePercentage;
             }
-            
+
             // Exchange fees
             fees += Math.Max(ExchangeFeeMinimum, Math.Abs(quantity) * ExchangeFeePerShare);
-            
+
             return fees;
         }
 
@@ -285,24 +285,24 @@ namespace Quantra.Models
         {
             // Calculate spread component
             double halfSpread = CalculateHalfSpread(price);
-            
+
             // Calculate slippage
             double slippage = CalculateSlippage(quantity, price, isBuy, volumeForDay);
-            
+
             // Effective execution price after spread and slippage
             double effectivePrice = isBuy ?
                 price + halfSpread + slippage : // Buys execute at higher price
                 price - halfSpread - slippage;  // Sells execute at lower price
-                
+
             // Calculate commission
             double commission = CalculateCommission(Math.Abs(quantity), effectivePrice);
-            
+
             // Calculate regulatory fees
             double regFees = CalculateRegulatoryFees(Math.Abs(quantity), effectivePrice, !isBuy);
-            
+
             // Total transaction cost
             double totalCost = commission + regFees + (Math.Abs(quantity) * (halfSpread + slippage));
-            
+
             return (totalCost, effectivePrice);
         }
 

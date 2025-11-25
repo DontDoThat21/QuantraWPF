@@ -75,7 +75,7 @@ namespace Quantra.Models
         {
             string direction = SentimentScore > 0 ? "bullish" : "bearish";
             string magnitude = Math.Abs(SentimentScore) > 0.6 ? "extremely" : "strongly";
-            
+
             return $"{magnitude} {direction} sentiment detected across " +
                    $"{ContributingSources.Count} sources with {ConfidenceLevel:P0} confidence";
         }

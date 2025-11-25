@@ -89,9 +89,9 @@ namespace Quantra.Models
             }
         }
 
-        public override IEnumerable<string> RequiredIndicators => new[] 
-        { 
-            "SAR", "SAR_EP", "SAR_AF", "SAR_Trend" 
+        public override IEnumerable<string> RequiredIndicators => new[]
+        {
+            "SAR", "SAR_EP", "SAR_AF", "SAR_Trend"
         };
 
         public override string GenerateSignal(List<HistoricalPrice> prices, int? index = null)
@@ -105,7 +105,7 @@ namespace Quantra.Models
 
             // Calculate Parabolic SAR values
             var (sarValues, epValues, isUptrend) = CalculateParabolicSAR(prices, AccelerationFactor, MaxAccelerationFactor);
-            
+
             // Check if we have valid SAR values
             if (sarValues == null || sarValues.Count == 0)
                 return null;
@@ -149,7 +149,7 @@ namespace Quantra.Models
                 int lookback = Math.Min(5, currentIndex);
                 double avgVolume = prices.Skip(currentIndex - lookback).Take(lookback).Average(p => p.Volume);
                 bool volumeConfirms = prices[currentIndex].Volume > avgVolume * 1.1; // At least 10% higher than average
-                
+
                 if (!volumeConfirms)
                 {
                     isBullishCrossover = false;
@@ -173,7 +173,7 @@ namespace Quantra.Models
 
             // Check if we have the required SAR indicator and price
             if (!indicators.TryGetValue("SAR", out double sar) ||
-                !indicators.TryGetValue("Price", out double price) && 
+                !indicators.TryGetValue("Price", out double price) &&
                 !indicators.TryGetValue("Close", out price))
             {
                 return false;
@@ -203,7 +203,7 @@ namespace Quantra.Models
         /// <param name="initialAF">Initial acceleration factor</param>
         /// <param name="maxAF">Maximum acceleration factor</param>
         /// <returns>List of SAR values, extreme points, and uptrend status</returns>
-        private (List<double> sarValues, List<double> extremePoints, List<bool> isUptrend) 
+        private (List<double> sarValues, List<double> extremePoints, List<bool> isUptrend)
             CalculateParabolicSAR(List<HistoricalPrice> prices, double initialAF, double maxAF)
         {
             if (prices.Count < 3)
@@ -223,13 +223,13 @@ namespace Quantra.Models
 
             // Determine initial trend (based on closing prices)
             bool currentUptrend = prices[1].Close > prices[0].Close;
-            
+
             // Initial SAR value
             double sar = currentUptrend ? prices[0].Low : prices[0].High;
-            
+
             // Initial extreme point
             double ep = currentUptrend ? prices[1].High : prices[1].Low;
-            
+
             // Initial acceleration factor
             double af = initialAF;
 
@@ -262,13 +262,13 @@ namespace Quantra.Models
                 {
                     // Reverse the trend
                     currentUptrend = !currentUptrend;
-                    
+
                     // Reset acceleration factor
                     af = initialAF;
-                    
+
                     // Set new extreme point
                     ep = currentUptrend ? prices[i].High : prices[i].Low;
-                    
+
                     // Set new SAR at the prior extreme point
                     sar = ep;
                 }

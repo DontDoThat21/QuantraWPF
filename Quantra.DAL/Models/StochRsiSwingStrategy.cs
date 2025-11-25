@@ -12,7 +12,7 @@ namespace Quantra.Models
         private const int SignalPeriod = 3;
         private const double OverboughtLevel = 80;
         private const double OversoldLevel = 20;
-        
+
         public StochRsiSwingStrategy()
         {
             Name = "Stochastic RSI Swing";
@@ -23,8 +23,8 @@ namespace Quantra.Models
 
         public override bool ValidateConditions(Dictionary<string, double> indicators)
         {
-            return indicators.ContainsKey("RSI") && 
-                   indicators.ContainsKey("StochasticRSI") && 
+            return indicators.ContainsKey("RSI") &&
+                   indicators.ContainsKey("StochasticRSI") &&
                    indicators.ContainsKey("SignalLine");
         }
 
@@ -135,7 +135,7 @@ namespace Quantra.Models
                 var lowestRsi = periodRsi.Min();
                 var currentRsi = periodRsi.Last();
 
-                var stochValue = highestRsi - lowestRsi != 0 
+                var stochValue = highestRsi - lowestRsi != 0
                     ? ((currentRsi - lowestRsi) / (highestRsi - lowestRsi)) * 100
                     : 100;
 

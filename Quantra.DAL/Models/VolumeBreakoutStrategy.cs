@@ -11,7 +11,7 @@ namespace Quantra.Models
         private const int PriceLookbackPeriod = 20;  // For price range calculation
         private const double VolumeSurgeThreshold = 2.0; // Volume must be 2x average
         private const double BreakoutThreshold = 0.02; // 2% price movement for breakout
-        
+
         public VolumeBreakoutStrategy()
         {
             Name = "Volume Breakout";
@@ -36,7 +36,7 @@ namespace Quantra.Models
                 return null;
 
             var actualIndex = index ?? historical.Count - 1;
-            if (actualIndex < VolumeLookbackPeriod + 1) 
+            if (actualIndex < VolumeLookbackPeriod + 1)
                 return null;
 
             var prices = historical.Take(actualIndex + 1).ToList();
@@ -47,10 +47,10 @@ namespace Quantra.Models
 
             // Calculate average volume
             var avgVolume = CalculateAverageVolume(prices);
-            
+
             // Check for volume breakout
             var volumeRatio = volume / avgVolume;
-            if (volumeRatio < VolumeSurgeThreshold) 
+            if (volumeRatio < VolumeSurgeThreshold)
                 return null;
 
             // Calculate price change
@@ -102,9 +102,9 @@ namespace Quantra.Models
         {
             // Price breaks above the upper channel
             bool breaksResistance = current.Close > upperChannel;
-            
+
             // Confirmation: Strong closing above previous high
-            bool strongClose = current.Close > previous.High && 
+            bool strongClose = current.Close > previous.High &&
                              (current.Close - current.Open) / current.Open > BreakoutThreshold;
 
             return breaksResistance && strongClose;
@@ -114,7 +114,7 @@ namespace Quantra.Models
         {
             // Price breaks below the lower channel
             bool breaksSupport = current.Close < lowerChannel;
-            
+
             // Confirmation: Strong closing below previous low
             bool strongClose = current.Close < previous.Low &&
                              (current.Open - current.Close) / current.Open > BreakoutThreshold;
@@ -126,7 +126,7 @@ namespace Quantra.Models
         {
             // Use last 5 candles (representing a week) for trend
             var weekPrices = prices.Skip(prices.Count - 5).Take(5).ToList();
-            
+
             if (weekPrices.Count < 5)
                 return 0;
 
@@ -138,7 +138,7 @@ namespace Quantra.Models
             {
                 double x = i;
                 double y = weekPrices[i].Close;
-                
+
                 sumX += x;
                 sumY += y;
                 sumXY += x * y;

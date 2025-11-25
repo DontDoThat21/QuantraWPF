@@ -29,8 +29,8 @@ namespace Quantra.Models
 
             // Calculate Weekly and Monthly VWAP
             var weeklyVwap = CalculateVwap(prices.Skip(prices.Count - WeeklyPeriod).ToList());
-            var monthlyVwap = currentIndex >= MonthlyPeriod ? 
-                CalculateVwap(prices.Skip(prices.Count - MonthlyPeriod).ToList()) : 
+            var monthlyVwap = currentIndex >= MonthlyPeriod ?
+                CalculateVwap(prices.Skip(prices.Count - MonthlyPeriod).ToList()) :
                 weeklyVwap;
 
             // No signal if we can't calculate both VWAPs
@@ -53,8 +53,8 @@ namespace Quantra.Models
         public override bool ValidateConditions(Dictionary<string, double> indicators)
         {
             // VWAP strategy requires volume data to be valid
-            return indicators != null && 
-                   indicators.ContainsKey("Volume") && 
+            return indicators != null &&
+                   indicators.ContainsKey("Volume") &&
                    indicators["Volume"] > 0;
         }
 

@@ -119,14 +119,14 @@ namespace Quantra.Models
 
             // Calculate Ichimoku components
             var components = CalculateIchimoku(prices, TenkanPeriod, KijunPeriod, SenkouBPeriod, Displacement);
-            
+
             // Get values for the current candle
             double currentTenkan = components.tenkan[currentIndex];
             double currentKijun = components.kijun[currentIndex];
             double currentSenkouA = components.senkouA[currentIndex - Displacement];
             double currentSenkouB = components.senkouB[currentIndex - Displacement];
             double currentPrice = prices[currentIndex].Close;
-            
+
             // Get values for the previous candle
             double prevTenkan = components.tenkan[currentIndex - 1];
             double prevKijun = components.kijun[currentIndex - 1];
@@ -137,7 +137,7 @@ namespace Quantra.Models
 
             // Check if Tenkan crossed above Kijun
             bool tenkanCrossedAboveKijun = prevTenkan <= prevKijun && currentTenkan > currentKijun;
-            
+
             // Check if Tenkan crossed below Kijun
             bool tenkanCrossedBelowKijun = prevTenkan >= prevKijun && currentTenkan < currentKijun;
 
@@ -169,16 +169,16 @@ namespace Quantra.Models
 
         public override bool ValidateConditions(Dictionary<string, double> indicators)
         {
-            return indicators.ContainsKey("Tenkan") && 
-                   indicators.ContainsKey("Kijun") && 
-                   indicators.ContainsKey("SenkouA") && 
+            return indicators.ContainsKey("Tenkan") &&
+                   indicators.ContainsKey("Kijun") &&
+                   indicators.ContainsKey("SenkouA") &&
                    indicators.ContainsKey("SenkouB");
         }
 
         /// <summary>
         /// Calculate Ichimoku Cloud components
         /// </summary>
-        private (List<double> tenkan, List<double> kijun, List<double> senkouA, List<double> senkouB, List<double> chikou) 
+        private (List<double> tenkan, List<double> kijun, List<double> senkouA, List<double> senkouB, List<double> chikou)
             CalculateIchimoku(List<HistoricalPrice> prices, int tenkanPeriod, int kijunPeriod, int senkouBPeriod, int displacement)
         {
             var tenkan = new List<double>();

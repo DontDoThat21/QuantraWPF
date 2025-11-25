@@ -60,13 +60,13 @@ namespace Quantra.Models
             Category = category;
             _calculationMethod = calculationMethod;
             _outputKeys = new List<string> { outputKey };
-            
+
             // Add all dependencies to our tracking
             foreach (var dependency in dependencies)
             {
                 AddDependency(dependency);
             }
-            
+
             // Get the indicator service via dependency injection or service locator
             _indicatorService = ServiceLocator.GetService<ITechnicalIndicatorService>();
         }
@@ -104,7 +104,7 @@ namespace Quantra.Models
 
             // First, calculate all dependencies
             var dependencyValues = new Dictionary<string, Dictionary<string, double>>();
-            
+
             foreach (var dependency in _dependencies)
             {
                 try
@@ -115,7 +115,7 @@ namespace Quantra.Models
                     {
                         throw new InvalidOperationException($"Dependent indicator '{dependency}' not found");
                     }
-                    
+
                     // Calculate its values using the same historical data
                     var values = await indicator.CalculateAsync(historicalData);
                     dependencyValues[dependency] = values;
@@ -128,12 +128,12 @@ namespace Quantra.Models
 
             // Calculate the composite value(s)
             var result = new Dictionary<string, double>();
-            
+
             try
             {
                 // Call the calculation delegate with all dependency values
                 var calculatedValue = _calculationMethod(dependencyValues);
-                
+
                 // For simple outputs, assign the single calculated value to the output key
                 if (_outputKeys.Count == 1)
                 {
@@ -190,7 +190,7 @@ namespace Quantra.Models
         {
             return _dependencies.Remove(indicatorId);
         }
-        
+
         /// <summary>
         /// Returns a string representation of this composite indicator
         /// </summary>
@@ -202,12 +202,12 @@ namespace Quantra.Models
             sb.AppendLine($"Description: {Description}");
             sb.AppendLine($"Category: {Category}");
             sb.AppendLine("Dependencies:");
-            
+
             foreach (var dependency in _dependencies)
             {
                 sb.AppendLine($"  - {dependency}");
             }
-            
+
             return sb.ToString();
         }
     }

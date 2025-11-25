@@ -121,7 +121,7 @@ namespace Quantra.Models
             var result = CalculateMACD(prices, FastEma, SlowEma, SignalPeriod);
             if (result.macdLine == null || result.signalLine == null || result.histogram == null)
                 return null;
-                
+
             var macdLine = result.macdLine;
             var signalLine = result.signalLine;
             var histogram = result.histogram;
@@ -261,7 +261,7 @@ namespace Quantra.Models
         /// <summary>
         /// Calculate MACD, Signal line, and Histogram
         /// </summary>
-        private (List<double> macdLine, List<double> signalLine, List<double> histogram) 
+        private (List<double> macdLine, List<double> signalLine, List<double> histogram)
             CalculateMACD(List<HistoricalPrice> prices, int fastPeriod, int slowPeriod, int signalPeriod)
         {
             if (prices.Count < Math.Max(fastPeriod, slowPeriod))

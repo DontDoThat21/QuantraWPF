@@ -55,8 +55,8 @@ namespace Quantra.Models
         }
 
         private string _category;
-        public string Category 
-        { 
+        public string Category
+        {
             get => _category;
             set
             {
@@ -92,7 +92,7 @@ namespace Quantra.Models
             _parameters = new Dictionary<string, IndicatorParameter>();
             _dependencies = new List<string>();
             _isComposable = true;
-            
+
             // Generate a unique ID if one isn't provided
             _id = Guid.NewGuid().ToString();
         }
@@ -113,7 +113,7 @@ namespace Quantra.Models
             {
                 if (param.Value == null)
                     throw new InvalidOperationException($"Required parameter '{param.Name}' is not set");
-                
+
                 if (!param.IsValidValue(param.Value))
                     throw new InvalidOperationException($"Parameter '{param.Name}' has an invalid value");
             }
@@ -136,14 +136,14 @@ namespace Quantra.Models
         {
             if (_parameters.ContainsKey(parameter.Name))
                 throw new InvalidOperationException($"Parameter '{parameter.Name}' is already registered");
-                
+
             _parameters.Add(parameter.Name, parameter);
         }
 
         /// <summary>
         /// Helper method to register a simple numeric parameter
         /// </summary>
-        protected void RegisterParameter(string name, string description, double defaultValue, 
+        protected void RegisterParameter(string name, string description, double defaultValue,
                                       double? minValue = null, double? maxValue = null, bool isOptional = false)
         {
             var param = new IndicatorParameter
@@ -155,20 +155,20 @@ namespace Quantra.Models
                 ParameterType = typeof(double),
                 IsOptional = isOptional
             };
-            
+
             if (minValue.HasValue)
                 param.MinValue = minValue.Value;
-                
+
             if (maxValue.HasValue)
                 param.MaxValue = maxValue.Value;
-                
+
             RegisterParameter(param);
         }
 
         /// <summary>
         /// Helper method to register an integer parameter
         /// </summary>
-        protected void RegisterIntParameter(string name, string description, int defaultValue, 
+        protected void RegisterIntParameter(string name, string description, int defaultValue,
                                       int? minValue = null, int? maxValue = null, bool isOptional = false)
         {
             var param = new IndicatorParameter
@@ -180,20 +180,20 @@ namespace Quantra.Models
                 ParameterType = typeof(int),
                 IsOptional = isOptional
             };
-            
+
             if (minValue.HasValue)
                 param.MinValue = minValue.Value;
-                
+
             if (maxValue.HasValue)
                 param.MaxValue = maxValue.Value;
-                
+
             RegisterParameter(param);
         }
 
         /// <summary>
         /// Helper method to register a string selection parameter
         /// </summary>
-        protected void RegisterSelectionParameter(string name, string description, string defaultValue, 
+        protected void RegisterSelectionParameter(string name, string description, string defaultValue,
                                                string[] options, bool isOptional = false)
         {
             var param = new IndicatorParameter
@@ -206,7 +206,7 @@ namespace Quantra.Models
                 IsOptional = isOptional,
                 Options = options
             };
-                
+
             RegisterParameter(param);
         }
 

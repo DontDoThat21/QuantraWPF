@@ -148,7 +148,7 @@ namespace Quantra.Models
             rating = rating.ToLower().Trim();
 
             // Strong positive ratings
-            if (rating == "strong buy" || rating == "buy" || rating == "overweight" || 
+            if (rating == "strong buy" || rating == "buy" || rating == "overweight" ||
                 rating == "outperform" || rating == "add")
                 return 0.8;
 
@@ -157,12 +157,12 @@ namespace Quantra.Models
                 return 0.5;
 
             // Neutral/hold ratings
-            if (rating == "hold" || rating == "neutral" || rating == "market perform" || 
+            if (rating == "hold" || rating == "neutral" || rating == "market perform" ||
                 rating == "in-line" || rating == "sector perform")
                 return 0.0;
 
             // Moderate negative ratings
-            if (rating == "moderate sell" || rating == "underperform" || 
+            if (rating == "moderate sell" || rating == "underperform" ||
                 rating == "underweight" || rating == "reduce")
                 return -0.5;
 

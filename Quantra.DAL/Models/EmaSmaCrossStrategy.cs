@@ -11,7 +11,7 @@ namespace Quantra.Models
         // SMA will provide more stable baseline
         private const int SmaPeriod = 20;  // 4 trading weeks
         private const double CrossConfirmationThreshold = 0.001; // 0.1% threshold for cross confirmation
-        
+
         public EmaSmaCrossStrategy()
         {
             Name = "EMA/SMA Cross";
@@ -30,12 +30,12 @@ namespace Quantra.Models
         public override string GenerateSignal(List<HistoricalPrice> historical, int? index = null)
         {
             var currentIndex = index ?? historical.Count - 1;
-            
+
             if (currentIndex < Math.Max(EmaPeriod, SmaPeriod))
                 return null;
 
             var prices = historical.Take(currentIndex + 1).Select(p => p.Close).ToList();
-            
+
             var emaValues = CalculateEMA(prices, EmaPeriod);
             var smaValues = CalculateSMA(prices, SmaPeriod);
 

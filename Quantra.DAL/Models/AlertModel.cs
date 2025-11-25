@@ -14,7 +14,7 @@ namespace Quantra.Models
         Pattern,
         SystemHealth
     }
-    
+
     public enum ComparisonOperator
     {
         Equal,
@@ -26,7 +26,7 @@ namespace Quantra.Models
         CrossesAbove,
         CrossesBelow
     }
-    
+
     public enum VisualIndicatorType
     {
         Toast,
@@ -170,7 +170,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(Category));
             }
         }
-        
+
         private string indicatorName;
         public string IndicatorName
         {
@@ -181,7 +181,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(IndicatorName));
             }
         }
-        
+
         private ComparisonOperator comparisonOperator;
         public ComparisonOperator ComparisonOperator
         {
@@ -192,7 +192,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(ComparisonOperator));
             }
         }
-        
+
         private double thresholdValue;
         public double ThresholdValue
         {
@@ -203,7 +203,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(ThresholdValue));
             }
         }
-        
+
         private double currentIndicatorValue;
         public double CurrentIndicatorValue
         {
@@ -214,7 +214,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(CurrentIndicatorValue));
             }
         }
-        
+
         // Sound and Visual Indicator properties
         private string soundFileName;
         public string SoundFileName
@@ -226,7 +226,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(SoundFileName));
             }
         }
-        
+
         private bool enableSound;
         public bool EnableSound
         {
@@ -237,7 +237,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(EnableSound));
             }
         }
-        
+
         private VisualIndicatorType visualIndicatorType;
         public VisualIndicatorType VisualIndicatorType
         {
@@ -248,7 +248,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(VisualIndicatorType));
             }
         }
-        
+
         private string visualIndicatorColor;
         public string VisualIndicatorColor
         {
@@ -269,7 +269,7 @@ namespace Quantra.Models
             Category = AlertCategory.Standard;
             ComparisonOperator = ComparisonOperator.GreaterThan;
             ThresholdValue = 0;
-            
+
             // Default sound and visual indicator settings
             EnableSound = true;
             VisualIndicatorType = VisualIndicatorType.Toast;

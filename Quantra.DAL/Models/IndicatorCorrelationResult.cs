@@ -66,7 +66,7 @@ namespace Quantra.Models
             get
             {
                 double absCorr = Math.Abs(CorrelationCoefficient);
-                
+
                 if (absCorr > 0.8) return "Very Strong";
                 if (absCorr > 0.6) return "Strong";
                 if (absCorr > 0.4) return "Moderate";
@@ -87,8 +87,8 @@ namespace Quantra.Models
         public bool IsConfirmationPattern()
         {
             // Confirmation requires reasonably strong correlation and sufficient data
-            return Math.Abs(CorrelationCoefficient) > 0.6 && 
-                   ConfidenceLevel > 0.7 && 
+            return Math.Abs(CorrelationCoefficient) > 0.6 &&
+                   ConfidenceLevel > 0.7 &&
                    DataPointsCount >= 10;
         }
     }

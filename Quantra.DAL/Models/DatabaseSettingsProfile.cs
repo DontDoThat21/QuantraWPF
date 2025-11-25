@@ -11,7 +11,7 @@ namespace Quantra.Models
         public bool IsDefault { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime ModifiedDate { get; set; }
-        
+
         // Settings properties
         public bool EnableApiModalChecks { get; set; }
         public int ApiTimeoutSeconds { get; set; }
@@ -26,7 +26,7 @@ namespace Quantra.Models
         public bool EnableTradeNotifications { get; set; }
         public bool EnablePaperTrading { get; set; }
         public string RiskLevel { get; set; }
-        
+
         // Email settings
         public string AlertEmail { get; set; } = "tylortrub@gmail.com";
         public bool EnableEmailAlerts { get; set; } = false;
@@ -35,7 +35,7 @@ namespace Quantra.Models
         public bool EnablePredictionAlertEmails { get; set; } = false;
         public bool EnableGlobalAlertEmails { get; set; } = false;
         public bool EnableSystemHealthAlertEmails { get; set; } = false;
-        
+
         // SMS settings
         public string AlertPhoneNumber { get; set; } = "";
         public bool EnableSmsAlerts { get; set; } = false;
@@ -43,7 +43,7 @@ namespace Quantra.Models
         public bool EnableOpportunityAlertSms { get; set; } = false;
         public bool EnablePredictionAlertSms { get; set; } = false;
         public bool EnableGlobalAlertSms { get; set; } = false;
-        
+
         // Push notification settings
         public string PushNotificationUserId { get; set; } = "";
         public bool EnablePushNotifications { get; set; } = false;
@@ -55,17 +55,17 @@ namespace Quantra.Models
         public bool EnableSentimentShiftAlertPushNotifications { get; set; } = false;
         public bool EnableSystemHealthAlertPushNotifications { get; set; } = false;
         public bool EnableTradeExecutionPushNotifications { get; set; } = false;
-        
+
         // Window state settings
         public bool RememberWindowState { get; set; } = true;
         public int LastWindowState { get; set; } = 0; // 0:Normal, 1:Minimized, 2:Maximized
-        
+
         // VIX monitoring settings
         public bool EnableVixMonitoring { get; set; } = true;
-        
+
         // API Keys settings
         public string AlphaVantageApiKey { get; set; } = "";
-        
+
         // Create a new profile from a UserSettings object
         public static DatabaseSettingsProfile FromUserSettings(UserSettings settings, string name, string description, bool isDefault)
         {
@@ -122,7 +122,7 @@ namespace Quantra.Models
                 AlphaVantageApiKey = settings.AlphaVantageApiKey ?? ""
             };
         }
-        
+
         // Convert this profile to UserSettings
         public UserSettings ToUserSettings()
         {
@@ -174,7 +174,7 @@ namespace Quantra.Models
                 AlphaVantageApiKey = this.AlphaVantageApiKey ?? ""
             };
         }
-        
+
         // Clone the profile
         public DatabaseSettingsProfile Clone(string newName = null)
         {

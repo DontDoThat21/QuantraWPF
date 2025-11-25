@@ -107,9 +107,9 @@ namespace Quantra.Models
             }
         }
 
-        public override IEnumerable<string> RequiredIndicators => new[] 
-        { 
-            "BB_Upper", "BB_Middle", "BB_Lower", "BB_Width", "%B", "RSI" 
+        public override IEnumerable<string> RequiredIndicators => new[]
+        {
+            "BB_Upper", "BB_Middle", "BB_Lower", "BB_Width", "%B", "RSI"
         };
 
         public override string GenerateSignal(List<HistoricalPrice> prices, int? index = null)
@@ -248,7 +248,7 @@ namespace Quantra.Models
         /// <summary>
         /// Calculate Bollinger Bands and %B for a price series
         /// </summary>
-        private (List<double> upperBand, List<double> middleBand, List<double> lowerBand, List<double> percentB) 
+        private (List<double> upperBand, List<double> middleBand, List<double> lowerBand, List<double> percentB)
             CalculateBollingerBands(List<HistoricalPrice> prices, int period, double stdDevMultiplier)
         {
             if (prices.Count < period)
@@ -308,7 +308,7 @@ namespace Quantra.Models
                 return null;
 
             var rsiValues = new List<double>();
-            
+
             // Add empty values for initial periods
             for (int i = 0; i < period; i++)
                 rsiValues.Add(double.NaN);

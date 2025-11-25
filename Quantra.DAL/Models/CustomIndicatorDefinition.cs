@@ -63,7 +63,7 @@ namespace Quantra.Models
         /// Date the indicator was last modified
         /// </summary>
         public DateTime ModifiedDate { get; set; }
-        
+
         /// <summary>
         /// The user who created this indicator
         /// </summary>

@@ -20,8 +20,8 @@ namespace Quantra.Models
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public int Id 
-        { 
+        public int Id
+        {
             get => _id;
             set
             {
@@ -33,8 +33,8 @@ namespace Quantra.Models
             }
         }
 
-        public required string Symbol 
-        { 
+        public required string Symbol
+        {
             get => _symbol;
             set
             {
@@ -46,8 +46,8 @@ namespace Quantra.Models
             }
         }
 
-        public required string OrderType 
-        { 
+        public required string OrderType
+        {
             get => _orderType;
             set
             {
@@ -59,8 +59,8 @@ namespace Quantra.Models
             }
         }
 
-        public int Quantity 
-        { 
+        public int Quantity
+        {
             get => _quantity;
             set
             {
@@ -72,8 +72,8 @@ namespace Quantra.Models
             }
         }
 
-        public double Price 
-        { 
+        public double Price
+        {
             get => _price;
             set
             {
@@ -85,8 +85,8 @@ namespace Quantra.Models
             }
         }
 
-        public double StopLoss 
-        { 
+        public double StopLoss
+        {
             get => _stopLoss;
             set
             {
@@ -98,8 +98,8 @@ namespace Quantra.Models
             }
         }
 
-        public double TakeProfit 
-        { 
+        public double TakeProfit
+        {
             get => _takeProfit;
             set
             {
@@ -111,8 +111,8 @@ namespace Quantra.Models
             }
         }
 
-        public bool IsPaperTrade 
-        { 
+        public bool IsPaperTrade
+        {
             get => _isPaperTrade;
             set
             {
@@ -124,8 +124,8 @@ namespace Quantra.Models
             }
         }
 
-        public required string Status 
-        { 
+        public required string Status
+        {
             get => _status;
             set
             {
@@ -137,8 +137,8 @@ namespace Quantra.Models
             }
         }
 
-        public required string PredictionSource 
-        { 
+        public required string PredictionSource
+        {
             get => _predictionSource;
             set
             {
@@ -150,8 +150,8 @@ namespace Quantra.Models
             }
         }
 
-        public DateTime Timestamp 
-        { 
+        public DateTime Timestamp
+        {
             get => _timestamp;
             set
             {

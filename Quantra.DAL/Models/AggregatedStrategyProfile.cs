@@ -135,7 +135,7 @@ namespace Quantra.Models
         /// <summary>
         /// Get all required indicators from all underlying strategies
         /// </summary>
-        public override IEnumerable<string> RequiredIndicators => 
+        public override IEnumerable<string> RequiredIndicators =>
             _strategies.SelectMany(s => s.Strategy.RequiredIndicators).Distinct();
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace Quantra.Models
 
             // Collect signals from all strategies
             var signals = new Dictionary<StrategyProfile, string>();
-            
+
             foreach (var strategyWeight in _strategies)
             {
                 if (strategyWeight.Strategy.IsEnabled)
@@ -183,16 +183,16 @@ namespace Quantra.Models
             {
                 case AggregationMethod.MajorityVote:
                     return MajorityVoteAggregation(signals);
-                
+
                 case AggregationMethod.Consensus:
                     return ConsensusAggregation(signals);
-                
+
                 case AggregationMethod.WeightedVote:
                     return WeightedVoteAggregation(signals);
-                
+
                 case AggregationMethod.PriorityBased:
                     return PriorityBasedAggregation(signals);
-                
+
                 default:
                     return MajorityVoteAggregation(signals);
             }
@@ -225,7 +225,7 @@ namespace Quantra.Models
             {
                 var maxSignal = signalCounts.OrderByDescending(kv => kv.Value).First();
                 double consensusPercentage = (double)maxSignal.Value / signals.Count;
-                
+
                 // Only return the signal if it meets the consensus threshold
                 if (consensusPercentage >= ConsensusThreshold)
                 {
@@ -268,7 +268,7 @@ namespace Quantra.Models
             var sortedStrategies = _strategies
                 .OrderByDescending(s => s.Weight)
                 .Select(s => s.Strategy);
-            
+
             // Return the signal from highest priority strategy that generated a signal
             foreach (var strategy in sortedStrategies)
             {
@@ -305,7 +305,7 @@ namespace Quantra.Models
 
                     double signalWeight = signals
                         .Where(s => s.Value == aggregatedSignal)
-                        .Sum(s => 
+                        .Sum(s =>
                         {
                             var strategyWeight = _strategies.FirstOrDefault(sw => sw.Strategy == s.Key);
                             return strategyWeight?.Weight ?? 0;
@@ -335,7 +335,7 @@ namespace Quantra.Models
             int validCount = 0;
             foreach (var strategyWeight in _strategies)
             {
-                if (strategyWeight.Strategy.IsEnabled && 
+                if (strategyWeight.Strategy.IsEnabled &&
                     strategyWeight.Strategy.ValidateConditions(indicators))
                 {
                     validCount++;
@@ -347,14 +347,14 @@ namespace Quantra.Models
             {
                 case AggregationMethod.Consensus:
                     return (double)validCount / _strategies.Count >= ConsensusThreshold;
-                
+
                 case AggregationMethod.PriorityBased:
                     // If any strategy with above-average weight validates, return true
                     double avgWeight = _strategies.Average(s => s.Weight);
                     return _strategies
                         .Where(s => s.Weight > avgWeight && s.Strategy.IsEnabled)
                         .Any(s => s.Strategy.ValidateConditions(indicators));
-                
+
                 default:
                     // For majority and weighted voting, require at least half of strategies to validate
                     return validCount >= Math.Ceiling(_strategies.Count / 2.0);
@@ -373,7 +373,7 @@ namespace Quantra.Models
             // Use the most conservative (highest) stop loss if we have buy signals
             // or the most aggressive (lowest) if we have sell signals
             double stopLoss = 0;
-            
+
             switch (_aggregationMethod)
             {
                 case AggregationMethod.WeightedVote:
@@ -382,10 +382,10 @@ namespace Quantra.Models
                     if (totalWeight <= 0)
                         return base.GetStopLossPercentage();
 
-                    stopLoss = _strategies.Sum(s => 
+                    stopLoss = _strategies.Sum(s =>
                         s.Strategy.IsEnabled ? s.Strategy.GetStopLossPercentage() * s.Weight : 0) / totalWeight;
                     break;
-                
+
                 default:
                     // Simple average
                     stopLoss = _strategies
@@ -395,7 +395,7 @@ namespace Quantra.Models
                         .Average();
                     break;
             }
-            
+
             // Apply risk level adjustment
             return stopLoss * (1 + (RiskLevel - 0.5) * 0.5);
         }
@@ -408,9 +408,9 @@ namespace Quantra.Models
         {
             if (_strategies.Count == 0)
                 return base.GetTakeProfitPercentage();
-            
+
             double takeProfit;
-            
+
             switch (_aggregationMethod)
             {
                 case AggregationMethod.WeightedVote:
@@ -419,10 +419,10 @@ namespace Quantra.Models
                     if (totalWeight <= 0)
                         return base.GetTakeProfitPercentage();
 
-                    takeProfit = _strategies.Sum(s => 
+                    takeProfit = _strategies.Sum(s =>
                         s.Strategy.IsEnabled ? s.Strategy.GetTakeProfitPercentage() * s.Weight : 0) / totalWeight;
                     break;
-                
+
                 default:
                     // Simple average
                     takeProfit = _strategies
@@ -432,7 +432,7 @@ namespace Quantra.Models
                         .Average();
                     break;
             }
-            
+
             // Apply risk level adjustment
             return takeProfit * (1 + (RiskLevel - 0.5) * 0.5);
         }

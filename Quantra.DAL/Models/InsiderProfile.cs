@@ -63,7 +63,7 @@ namespace Quantra.Models
         /// Average return following their buy transactions (over 3 months)
         /// </summary>
         public double AverageBuyReturn { get; set; }
-        
+
         /// <summary>
         /// Average return following their sell transactions (over 3 months)
         /// </summary>

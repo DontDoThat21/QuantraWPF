@@ -14,7 +14,7 @@ namespace Quantra.Models
     {
         private static readonly string CacheFilePath = "stocksymbols_cache.json";
         private static List<string> _cachedSymbols;
-        
+
         /// <summary>
         /// Gets the major stock indices and their constituents
         /// </summary>
@@ -49,7 +49,7 @@ namespace Quantra.Models
                 }
             }
         };
-        
+
         /// <summary>
         /// Gets a comprehensive list of the most common stock symbols as a fallback
         /// </summary>
@@ -57,7 +57,7 @@ namespace Quantra.Models
         {
             // Major US Indices components (top components from S&P 500, Dow, and NASDAQ)
             "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "TSLA", "NVDA", "BRK.B", "JPM",
-            "JNJ", "V", "PG", "UNH", "HD", "BAC", "MA", "XOM", "DIS", "CSCO", "VZ", "ADBE", 
+            "JNJ", "V", "PG", "UNH", "HD", "BAC", "MA", "XOM", "DIS", "CSCO", "VZ", "ADBE",
             "CRM", "NFLX", "CMCSA", "PEP", "INTC", "ABT", "KO", "MRK", "PFE", "TMO", "COST",
             "WMT", "CVX", "AVGO", "ACN", "DHR", "MCD", "LLY", "TXN", "NEE", "NKE", "PM", "T",
             "WFC", "BMY", "QCOM", "UPS", "AMD", "PYPL", "MS", "C", "SBUX", "AMGN", "LMT",
@@ -67,7 +67,7 @@ namespace Quantra.Models
             "SPY", "QQQ", "IWM", "DIA", "VTI", "VOO", "VEA", "VWO", "BND", "VGK",
             "IEFA", "AGG", "EFA", "LQD", "XLF", "XLE", "XLV", "XLK", "XLI", "XLU"
         };
-        
+
         /// <summary>
         /// Load cached symbols from disk if available
         /// </summary>
@@ -77,14 +77,14 @@ namespace Quantra.Models
             {
                 return _cachedSymbols;
             }
-            
+
             try
             {
                 if (File.Exists(CacheFilePath))
                 {
                     var json = File.ReadAllText(CacheFilePath);
                     _cachedSymbols = JsonConvert.DeserializeObject<List<string>>(json);
-                    
+
                     if (_cachedSymbols != null && _cachedSymbols.Count > 0)
                     {
                         return _cachedSymbols;
@@ -95,11 +95,11 @@ namespace Quantra.Models
             {
                 //DatabaseMonolith.Log("Error", $"Failed to read symbol cache: {ex.Message}");
             }
-            
+
             // If cache loading failed, return the common symbols
             return CommonSymbols;
         }
-        
+
         /// <summary>
         /// Save symbols to cache file
         /// </summary>
@@ -109,7 +109,7 @@ namespace Quantra.Models
             {
                 return;
             }
-            
+
             try
             {
                 _cachedSymbols = symbols;
@@ -120,7 +120,7 @@ namespace Quantra.Models
                 //DatabaseMonolith.Log("Error", $"Failed to write symbol cache: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Search for symbols that match the query
         /// </summary>
@@ -130,24 +130,24 @@ namespace Quantra.Models
             {
                 return new List<string>();
             }
-            
+
             query = query.ToUpperInvariant().Trim();
-            
+
             // First, find exact matches at the beginning
             var exactMatches = symbolSource
                 .Where(s => s.StartsWith(query, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(s => s.Length) // Shorter symbols first
                 .ThenBy(s => s)
                 .Take(maxResults / 2);
-                
+
             // Then add symbols that contain the query
             var containsMatches = symbolSource
-                .Where(s => !s.StartsWith(query, StringComparison.OrdinalIgnoreCase) && 
+                .Where(s => !s.StartsWith(query, StringComparison.OrdinalIgnoreCase) &&
                            s.Contains(query, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(s => s.Length)
                 .ThenBy(s => s)
                 .Take(maxResults / 2);
-                
+
             return exactMatches.Concat(containsMatches).Take(maxResults).ToList();
         }
     }

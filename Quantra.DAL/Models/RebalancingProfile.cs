@@ -257,7 +257,7 @@ namespace Quantra.Models
         {
             if (TargetAllocations == null || TargetAllocations.Count == 0)
                 return false;
-                
+
             double total = TargetAllocations.Values.Sum();
             return Math.Abs(total - 1.0) < 0.0001;
         }
@@ -271,21 +271,21 @@ namespace Quantra.Models
         {
             if (!EnableMarketConditionAdjustments || marketConditions == null)
                 return new Dictionary<string, double>(TargetAllocations);
-                
+
             // Create a copy of the target allocations
             var adjustedAllocations = new Dictionary<string, double>(TargetAllocations);
-            
+
             // Determine if market conditions warrant adjustments
             bool highVolatility = marketConditions.VolatilityIndex > VolatilityThreshold;
             bool bearishTrend = marketConditions.MarketTrend < -0.1 * MarketTrendSensitivity;
-            
+
             if (highVolatility || bearishTrend)
             {
                 // Adjust based on risk level and asset types
                 foreach (var symbol in adjustedAllocations.Keys.ToList())
                 {
                     bool isDefensiveAsset = marketConditions.IsDefensiveAsset(symbol);
-                    
+
                     // Adjust allocation based on asset type and market conditions
                     if (isDefensiveAsset)
                     {
@@ -298,14 +298,14 @@ namespace Quantra.Models
                         adjustedAllocations[symbol] *= 1 - (MaxDeviationInAdverseConditions * 0.5);
                     }
                 }
-                
+
                 // Normalize allocations to ensure they still sum to 1.0
                 NormalizeAllocations(adjustedAllocations);
             }
-            
+
             return adjustedAllocations;
         }
-        
+
         /// <summary>
         /// Calculates the next scheduled rebalance date based on rebalancing schedule
         /// </summary>
@@ -316,47 +316,47 @@ namespace Quantra.Models
                 NextScheduledRebalance = DateTime.Now; // Rebalance immediately if never rebalanced
                 return;
             }
-            
+
             DateTime nextDate;
             DateTime baseDate = LastRebalanceDate.Value;
-            
+
             switch (Schedule)
             {
                 case RebalancingSchedule.Daily:
                     nextDate = baseDate.AddDays(1);
                     break;
-                    
+
                 case RebalancingSchedule.Weekly:
                     nextDate = baseDate.AddDays(7);
                     break;
-                    
+
                 case RebalancingSchedule.Monthly:
                     nextDate = baseDate.AddMonths(1);
                     break;
-                    
+
                 case RebalancingSchedule.Quarterly:
                     nextDate = baseDate.AddMonths(3);
                     break;
-                    
+
                 case RebalancingSchedule.Annually:
                     nextDate = baseDate.AddYears(1);
                     break;
-                    
+
                 default:
                     nextDate = baseDate.AddMonths(1); // Default to monthly
                     break;
             }
-            
+
             NextScheduledRebalance = nextDate;
         }
-        
+
         /// <summary>
         /// Normalizes allocations to ensure they sum to 1.0
         /// </summary>
         private void NormalizeAllocations(Dictionary<string, double> allocations)
         {
             double total = allocations.Values.Sum();
-            
+
             if (Math.Abs(total - 1.0) > 0.0001)
             {
                 foreach (var symbol in allocations.Keys.ToList())
@@ -365,7 +365,7 @@ namespace Quantra.Models
                 }
             }
         }
-        
+
         /// <summary>
         /// Raises the PropertyChanged event
         /// </summary>
@@ -374,7 +374,7 @@ namespace Quantra.Models
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
-    
+
     /// <summary>
     /// Risk levels for portfolio rebalancing profiles
     /// </summary>
@@ -384,23 +384,23 @@ namespace Quantra.Models
         /// Conservative - prioritizes capital preservation
         /// </summary>
         Conservative = 0,
-        
+
         /// <summary>
         /// Balanced - equal emphasis on growth and preservation
         /// </summary>
         Balanced = 1,
-        
+
         /// <summary>
         /// Growth - emphasis on capital appreciation with moderate risk
         /// </summary>
         Growth = 2,
-        
+
         /// <summary>
         /// Aggressive - maximizes growth potential with higher risk
         /// </summary>
         Aggressive = 3
     }
-    
+
     /// <summary>
     /// Schedule frequency for portfolio rebalancing
     /// </summary>
@@ -410,22 +410,22 @@ namespace Quantra.Models
         /// Rebalance daily
         /// </summary>
         Daily = 0,
-        
+
         /// <summary>
         /// Rebalance weekly
         /// </summary>
         Weekly = 1,
-        
+
         /// <summary>
         /// Rebalance monthly
         /// </summary>
         Monthly = 2,
-        
+
         /// <summary>
         /// Rebalance quarterly
         /// </summary>
         Quarterly = 3,
-        
+
         /// <summary>
         /// Rebalance annually
         /// </summary>

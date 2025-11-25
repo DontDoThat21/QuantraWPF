@@ -34,7 +34,7 @@ namespace Quantra.Models
         {
             advances.Add(advancingIssues);
             declines.Add(decliningIssues);
-            
+
             // Calculate the Breadth Thrust value
             CalculateBreadthThrust();
         }
@@ -54,13 +54,13 @@ namespace Quantra.Models
             double currentAdvances = advances.Last();
             double currentDeclines = declines.Last();
             double totalIssues = currentAdvances + currentDeclines;
-            
+
             // Avoid division by zero
             if (totalIssues > 0)
             {
                 double ratio = currentAdvances / totalIssues;
                 ratioValues.Add(ratio);
-                
+
                 // If we have enough data, calculate the Breadth Thrust value (typically a 10-day moving average)
                 if (ratioValues.Count >= period)
                 {
@@ -143,24 +143,24 @@ namespace Quantra.Models
             Random random = new Random();
 
             double trend = 0.5; // Start at neutral
-            
+
             for (int i = 0; i < dataPoints; i++)
             {
                 // Apply random walk with bias
                 trend += (random.NextDouble() - 0.5) * 0.1 + trendBias * 0.01;
-                
+
                 // Ensure trend stays between 0.1 and 0.9 for realistic simulation
                 trend = Math.Max(0.1, Math.Min(0.9, trend));
-                
+
                 // Calculate simulated advancing and declining issues
                 int totalIssues = 500; // Typical number for a major index
                 int advancing = (int)(totalIssues * trend);
                 int declining = totalIssues - advancing;
-                
+
                 // Add the simulated data point
                 indicator.AddDataPoint(advancing, declining);
             }
-            
+
             return indicator;
         }
     }

@@ -16,7 +16,7 @@ namespace Quantra.Models
         private const double FibLevel38 = 0.382;
         private const double FibLevel50 = 0.5;
         private const double FibLevel61 = 0.618;
-        
+
         public FibonacciRetracementStrategy()
         {
             Name = "Fibonacci Retracement";
@@ -43,25 +43,25 @@ namespace Quantra.Models
 
             // Get the relevant portion of historical data
             var prices = historical.Take(actualIndex + 1).ToList();
-            
+
             // Get the most recent price for signal generation
             double currentPrice = prices.Last().Close;
-            
+
             // Determine trend direction from historical prices
             TrendDirection trend = DetermineTrend(prices);
-            
+
             // If trend is undefined, no signal
             if (trend == TrendDirection.Undefined)
                 return null;
-                
+
             // Find swing high and low using the lookback period
             var recentPrices = prices.Skip(Math.Max(0, prices.Count - WeeklyLookback)).ToList();
             double high = recentPrices.Max(p => p.High);
             double low = recentPrices.Min(p => p.Low);
-            
+
             // Calculate Fibonacci retracement levels based on the high, low and trend
             var fibLevels = CalculateFibonacciLevels(high, low, trend);
-            
+
             // Generate signal based on current price and Fibonacci levels
             return GenerateSignalAtLevels(currentPrice, fibLevels, trend);
         }
@@ -89,10 +89,10 @@ namespace Quantra.Models
         {
             if (prices.Count < TrendLookback)
                 return TrendDirection.Undefined;
-                
+
             // Get recent prices for trend analysis
             var trendPrices = prices.Skip(Math.Max(0, prices.Count - TrendLookback)).ToList();
-            
+
             // Use linear regression to determine trend
             double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
             int n = trendPrices.Count;
@@ -109,10 +109,10 @@ namespace Quantra.Models
 
             // Calculate slope of the trend line
             double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-            
+
             if (Math.Abs(slope) < 0.0001) // Very flat trend
                 return TrendDirection.Undefined;
-                
+
             return slope > 0 ? TrendDirection.Uptrend : TrendDirection.Downtrend;
         }
 
@@ -169,7 +169,7 @@ namespace Quantra.Models
             foreach (var level in fibLevels)
             {
                 bool isNearLevel = Math.Abs(currentPrice - level.Price) <= (level.Price * PriceBuffer);
-                
+
                 if (!isNearLevel)
                     continue;
 

@@ -8,7 +8,7 @@ namespace Quantra.Models
     {
         private const int AdxPeriod = 14;
         private const double AdxThreshold = 25;
-        
+
         public AdxTrendStrengthStrategy()
         {
             Name = "ADX Trend Strength";
@@ -76,7 +76,7 @@ namespace Quantra.Models
                 // Plus DM
                 var highDiff = high - prevHigh;
                 var lowDiff = prevLow - low;
-                
+
                 if (highDiff > lowDiff && highDiff > 0)
                     plusDM.Add(highDiff);
                 else

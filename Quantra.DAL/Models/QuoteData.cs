@@ -112,14 +112,14 @@ namespace Quantra
 
                     if (PatternCandles != null)
                         PatternCandles.AddRange(candleValues);
-                        
+
                 });
             }
             else
             {
                 // Fallback for testing scenarios where no Application.Current exists
                 if (_disposed) return;
-                
+
                 StockPriceValues?.Clear();
                 UpperBandValues?.Clear();
                 MiddleBandValues?.Clear();
@@ -226,14 +226,14 @@ namespace Quantra
 
                     if (RSIValues != null && calculationResults.RSIValues.Any())
                         RSIValues.AddRange(calculationResults.RSIValues);
-                        
+
                 });
             }
             else
             {
                 // Fallback for testing scenarios where no Application.Current exists
                 if (_disposed) return;
-                
+
                 StockPriceValues?.Clear();
                 UpperBandValues?.Clear();
                 MiddleBandValues?.Clear();
@@ -344,8 +344,8 @@ namespace Quantra
             if (OptionChain == null || OptionChain.Count == 0)
                 return new List<OptionData>();
 
-            return OptionChain.Where(o => 
-                Math.Abs(o.StrikePrice - strikePrice) < 0.01 && 
+            return OptionChain.Where(o =>
+                Math.Abs(o.StrikePrice - strikePrice) < 0.01 &&
                 o.ExpirationDate.Date == expirationDate.Date)
                 .ToList();
         }
@@ -432,7 +432,7 @@ namespace Quantra
             {
                 // Clear chart data collections
                 ClearChartData();
-                
+
                 // Clear collections to allow reuse and prevent NullReferenceExceptions
                 StockPriceValues?.Clear();
                 UpperBandValues?.Clear();

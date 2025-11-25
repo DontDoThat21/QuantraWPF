@@ -21,7 +21,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(AnalystName));
             }
         }
-        
+
         private double accuracyRating;
         /// <summary>
         /// Overall accuracy rating (0.0 to 1.0)
@@ -35,7 +35,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(AccuracyRating));
             }
         }
-        
+
         private double avgPriceTargetAccuracy;
         /// <summary>
         /// Average accuracy of price targets
@@ -49,7 +49,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(AvgPriceTargetAccuracy));
             }
         }
-        
+
         private int totalRatings;
         /// <summary>
         /// Total number of ratings issued
@@ -63,7 +63,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(TotalRatings));
             }
         }
-        
+
         private double upgradeSuccessRate;
         /// <summary>
         /// Success rate of upgrade recommendations
@@ -77,7 +77,7 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(UpgradeSuccessRate));
             }
         }
-        
+
         private double downgradeSuccessRate;
         /// <summary>
         /// Success rate of downgrade recommendations
@@ -91,9 +91,9 @@ namespace Quantra.Models
                 OnPropertyChanged(nameof(DowngradeSuccessRate));
             }
         }
-        
+
         public event PropertyChangedEventHandler PropertyChanged;
-        
+
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

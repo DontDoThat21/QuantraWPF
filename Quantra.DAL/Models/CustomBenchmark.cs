@@ -169,13 +169,13 @@ namespace Quantra.Models
                 Name = name,
                 Weight = weight
             });
-            
+
             // Normalize weights after adding
             NormalizeWeights();
-            
+
             // Update modified date
             ModifiedDate = DateTime.Now;
-            
+
             OnPropertyChanged(nameof(Components));
             OnPropertyChanged(nameof(DisplaySymbol));
         }
@@ -188,15 +188,15 @@ namespace Quantra.Models
         {
             int initialCount = Components.Count;
             Components.RemoveAll(c => c.Symbol == symbol);
-            
+
             if (Components.Count != initialCount)
             {
                 // Normalize weights after removing
                 NormalizeWeights();
-                
+
                 // Update modified date
                 ModifiedDate = DateTime.Now;
-                
+
                 OnPropertyChanged(nameof(Components));
                 OnPropertyChanged(nameof(DisplaySymbol));
             }
@@ -208,9 +208,9 @@ namespace Quantra.Models
         public void NormalizeWeights()
         {
             if (Components.Count == 0) return;
-            
+
             double totalWeight = Components.Sum(c => c.Weight);
-            
+
             if (Math.Abs(totalWeight) < 0.000001) // Avoid division by zero
             {
                 double equalWeight = 1.0 / Components.Count;
@@ -235,26 +235,26 @@ namespace Quantra.Models
         public bool Validate(out string errorMessage)
         {
             errorMessage = null;
-            
+
             if (string.IsNullOrWhiteSpace(Name))
             {
                 errorMessage = "Benchmark name is required";
                 return false;
             }
-            
+
             if (Components.Count == 0)
             {
                 errorMessage = "Benchmark must have at least one component";
                 return false;
             }
-            
+
             double totalWeight = Components.Sum(c => c.Weight);
             if (Math.Abs(totalWeight - 1.0) > 0.01)
             {
                 errorMessage = $"Component weights must sum to 1.0 (current sum: {totalWeight})";
                 return false;
             }
-            
+
             return true;
         }
 
@@ -266,22 +266,22 @@ namespace Quantra.Models
         {
             if (Components.Count == 0)
                 return "CUSTOM";
-                
+
             if (Components.Count == 1)
                 return Components[0].Symbol;
-                
+
             // For multiple components, create a composite symbol like "60% SPY + 40% QQQ"
             var topComponents = Components
                 .OrderByDescending(c => c.Weight)
                 .Take(3) // Take top 3 by weight
                 .ToList();
-                
+
             string symbol = string.Join(" + ", topComponents.Select(c => $"{c.Weight:P0} {c.Symbol}"));
-            
+
             // If there are more components not shown, indicate with "..."
             if (Components.Count > 3)
                 symbol += " + ...";
-                
+
             return symbol;
         }
 
@@ -290,7 +290,7 @@ namespace Quantra.Models
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-        
+
         /// <summary>
         /// Override ToString to return the Name for display purposes
         /// </summary>
@@ -357,7 +357,7 @@ namespace Quantra.Models
                 }
             }
         }
-        
+
         /// <summary>
         /// Weight formatted as a percentage
         /// </summary>

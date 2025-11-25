@@ -19,24 +19,24 @@ namespace Quantra.Models
         public double CurrentPrice { get; set; }
         public double TargetPrice { get; set; }
         public DateTime PredictionDate { get; set; } = DateTime.Now;
-        
+
         // Time series prediction data
         public List<double> PricePredictions { get; set; } = new(); // Future price points
         public List<DateTime> PredictionTimePoints { get; set; } = new(); // Corresponding time points
-        
+
         // Risk metrics
         public double RiskScore { get; set; } // 0.0 to 1.0, higher means riskier
         public double ValueAtRisk { get; set; } // 95% VaR
         public double MaxDrawdown { get; set; } // Maximum expected drawdown
         public double SharpeRatio { get; set; } // Risk-adjusted return metric
         public double? Volatility { get; set; } // Price volatility as a percentage
-        
+
         // Prediction quality metrics
         public double PredictionAccuracy { get; set; } // Historical accuracy for this symbol
         public double ErrorMargin { get; set; } // Average error margin on price predictions
         public DateTime LastVerifiedDate { get; set; } // Last time prediction was verified
         public int ConsecutiveCorrectPredictions { get; set; } // Streak of correct predictions
-        
+
         // Potential return property made read-write to support UI scenarios
         private double? _potentialReturn;
         public double PotentialReturn
@@ -51,37 +51,37 @@ namespace Quantra.Models
             }
             set => _potentialReturn = value;
         }
-        
+
         // Additional context information
         public string Notes { get; set; }
-        
+
         // Analysis details for UI and reporting
         public string AnalysisDetails { get; set; } = string.Empty;
-        
+
         // OpenAI integration properties
         public double OpenAISentiment { get; set; } = 0;
         public bool UsesOpenAI { get; set; } = false;
         public string OpenAIExplanation { get; set; } = string.Empty;
-        
+
         // Trading rule association
         public string TradingRule { get; set; }
-        
+
         // Technical indicators used for the prediction
         public Dictionary<string, double> Indicators { get; set; } = new Dictionary<string, double>();
-        
+
         // Technical patterns detected
         public List<TechnicalPattern> DetectedPatterns { get; set; } = new();
-        
+
         // Aggregation metadata
         public string AggregationMethod { get; set; }
         public Dictionary<string, double> ModelWeights { get; set; } = new(); // Weights of different models in aggregation
-        
+
         // Market conditions during analysis
         public MarketConditions MarketContext { get; set; } = new MarketConditions();
-        
+
         // Normalized signal strength (across all algorithms)
         public double NormalizedSignalStrength { get; set; }
-        
+
         // Helper properties for UI binding
         public Brush SignalColor => PredictedAction switch
         {
@@ -89,7 +89,7 @@ namespace Quantra.Models
             "SELL" => new SolidColorBrush(Color.FromRgb(192, 32, 32)), // Red
             _ => new SolidColorBrush(Color.FromRgb(192, 192, 32)) // Yellow
         };
-        
+
         public string FormattedCurrentPrice => $"${CurrentPrice:F2}";
         public string SignalSummary => $"{Symbol} - {PredictedAction} @ {Confidence:P0}";
         public string RiskSummary => $"Risk: {RiskScore:P0} | VaR: ${ValueAtRisk:F2} | Sharpe: {SharpeRatio:F2}";
@@ -109,7 +109,7 @@ namespace Quantra.Models
 
         // Feature importances/weights from ML model (Python interop)
         public Dictionary<string, double> FeatureWeights { get; set; } = new Dictionary<string, double>();
-        
+
         // Real-time inference specific properties
         public string RequestId { get; set; } // Request ID for tracking real-time predictions
         public double InferenceTimeMs { get; set; } // Time taken for ML inference in milliseconds
@@ -127,7 +127,7 @@ namespace Quantra.Models
         public DateTime DetectionDate { get; set; }
         public double HistoricalAccuracy { get; set; } // Historical accuracy of this pattern
     }
-    
+
     /// <summary>
     /// Extension methods for the PredictionModel class
     /// </summary>
@@ -142,10 +142,10 @@ namespace Quantra.Models
         {
             if (model?.Indicators == null || model.Indicators.Count == 0)
                 return "Neutral";
-            
+
             int bullishSignals = 0;
             int bearishSignals = 0;
-            
+
             // Technical pattern analysis
             if (model.DetectedPatterns?.Any() == true)
             {
@@ -157,29 +157,29 @@ namespace Quantra.Models
                         bearishSignals++;
                 }
             }
-            
+
             // RSI rules
             if (model.Indicators.TryGetValue("RSI", out double rsi))
             {
                 if (rsi < 30) bullishSignals++;
                 else if (rsi > 70) bearishSignals++;
             }
-            
+
             // MACD rules
-            if (model.Indicators.TryGetValue("MACD", out double macd) && 
+            if (model.Indicators.TryGetValue("MACD", out double macd) &&
                 model.Indicators.TryGetValue("MACDSignal", out double macdSignal))
             {
                 if (macd > macdSignal) bullishSignals++;
                 else if (macd < macdSignal) bearishSignals++;
             }
-            
+
             // Price vs VWAP
             if (model.Indicators.TryGetValue("VWAP", out double vwap))
             {
                 if (model.CurrentPrice > vwap) bullishSignals++;
                 else if (model.CurrentPrice < vwap) bearishSignals++;
             }
-            
+
             // ADX trend strength
             if (model.Indicators.TryGetValue("ADX", out double adx))
             {
@@ -199,13 +199,13 @@ namespace Quantra.Models
                 else if (model.MarketContext.MarketTrend < -0.3)
                     bearishSignals++;
             }
-            
+
             // Compare signals with stronger threshold for market conditions
             if (bullishSignals > bearishSignals + 2) return "Up";
             if (bearishSignals > bullishSignals + 2) return "Down";
             return "Neutral";
         }
-        
+
         /// <summary>
         /// Estimates the signal strength based on available indicators, patterns, and market context
         /// </summary>
@@ -215,10 +215,10 @@ namespace Quantra.Models
         {
             if (model?.Indicators == null || model.Indicators.Count == 0)
                 return 0.5;
-            
+
             double signalStrength = 0.5;
             double totalWeight = 0;
-            
+
             // Technical indicator analysis
             if (model.Indicators.TryGetValue("RSI", out double rsi))
             {
@@ -239,7 +239,7 @@ namespace Quantra.Models
                 }
                 totalWeight += rsiWeight;
             }
-            
+
             // Technical pattern analysis
             if (model.DetectedPatterns?.Any() == true)
             {
@@ -247,11 +247,11 @@ namespace Quantra.Models
                 double patternScore = model.DetectedPatterns
                     .Where(p => p.ExpectedOutcome == (model.PredictedAction == "BUY" ? "Bullish" : "Bearish"))
                     .Sum(p => p.PatternStrength * p.HistoricalAccuracy);
-                
+
                 signalStrength += patternScore * patternWeight;
                 totalWeight += patternWeight;
             }
-            
+
             // Market context analysis
             if (model.MarketContext != null)
             {
@@ -273,18 +273,18 @@ namespace Quantra.Models
                 signalStrength += contextScore * contextWeight;
                 totalWeight += contextWeight;
             }
-            
+
             // Normalize the signal strength
             if (totalWeight > 0)
                 signalStrength = signalStrength / totalWeight;
-                
+
             // Consider prediction quality
             if (model.PredictionAccuracy > 0)
                 signalStrength *= (0.5 + model.PredictionAccuracy * 0.5);
-            
+
             return Math.Min(1.0, Math.Max(0.0, signalStrength));
         }
-        
+
         /// <summary>
         /// Determines if the prediction model signals a strong algorithmic trading opportunity
         /// </summary>
@@ -295,24 +295,24 @@ namespace Quantra.Models
         {
             if (model == null)
                 return false;
-            
+
             // Enhanced confidence check including prediction accuracy
             double adjustedConfidence = model.Confidence * (0.7 + 0.3 * model.PredictionAccuracy);
             if (adjustedConfidence < confidenceThreshold)
                 return false;
-            
+
             // Risk assessment
             if (model.RiskScore > 0.8 || model.ValueAtRisk > model.PotentialReturn * 0.5)
                 return false;
-            
+
             // Technical analysis consensus
             string trend = CalculateTrendDirection(model);
             bool trendAligned = (model.PredictedAction == "BUY" && trend == "Up") ||
                               (model.PredictedAction == "SELL" && trend == "Down");
-            
+
             if (!trendAligned)
                 return false;
-            
+
             // Market conditions check
             if (model.MarketContext != null)
             {
@@ -327,7 +327,7 @@ namespace Quantra.Models
                 if (!marketAligned)
                     return false;
             }
-            
+
             // Return potential and pattern confirmation
             if (Math.Abs(model.PotentialReturn) >= 0.10 && // 10% or greater potential
                 model.DetectedPatterns?.Any(p => p.PatternStrength > 0.7 &&
@@ -335,7 +335,7 @@ namespace Quantra.Models
             {
                 return true;
             }
-            
+
             // Strong signal with good prediction history
             if (model.ConsecutiveCorrectPredictions >= 3 &&
                 model.PredictionAccuracy > 0.7 &&
@@ -343,7 +343,7 @@ namespace Quantra.Models
             {
                 return true;
             }
-            
+
             return false;
         }
 
@@ -356,31 +356,31 @@ namespace Quantra.Models
         {
             if (model == null)
                 return 0.0;
-            
+
             double qualityScore = 0.5; // Base score
             int factorCount = 1;
-            
+
             // Historical accuracy weight
             if (model.PredictionAccuracy > 0)
             {
                 qualityScore += model.PredictionAccuracy * 0.3;
                 factorCount++;
             }
-            
+
             // Prediction streak consideration
             if (model.ConsecutiveCorrectPredictions > 0)
             {
                 qualityScore += Math.Min(model.ConsecutiveCorrectPredictions * 0.1, 0.3);
                 factorCount++;
             }
-            
+
             // Error margin analysis
             if (model.ErrorMargin < 0.1) // Less than 10% error
             {
                 qualityScore += (0.1 - model.ErrorMargin) / 0.1 * 0.2;
                 factorCount++;
             }
-            
+
             // Normalize the score
             return Math.Min(1.0, qualityScore / factorCount);
         }
@@ -481,7 +481,7 @@ namespace Quantra.Models
                             {
                                 PricePredictions = result.timeSeries.prices,
                                 Confidence = result.timeSeries.confidence,
-                                TimePoints = result.timeSeries.dates?.Select(date => 
+                                TimePoints = result.timeSeries.dates?.Select(date =>
                                     DateTime.TryParse(date, out DateTime dt) ? dt : DateTime.Now.AddDays(1)).ToList() ?? new List<DateTime>()
                             };
                         }
@@ -573,23 +573,23 @@ namespace Quantra.Models
     public class PredictionResult
     {
         public string Action { get; set; }
-        
+
         /// <summary>
         /// Alias for Action property to maintain consistency with PredictionModel naming convention
         /// </summary>
-        public string PredictedAction 
-        { 
-            get => Action; 
-            set => Action = value; 
+        public string PredictedAction
+        {
+            get => Action;
+            set => Action = value;
         }
-        
+
         public double Confidence { get; set; }
         public double TargetPrice { get; set; }
         public Dictionary<string, double> FeatureWeights { get; set; } = new();
         public TimeSeriesPrediction TimeSeries { get; set; }
         public RiskMetrics RiskMetrics { get; set; }
         public List<TechnicalPattern> DetectedPatterns { get; set; } = new();
-        
+
         // Real-time inference specific properties
         public string Symbol { get; set; }
         public string RequestId { get; set; }
@@ -599,13 +599,13 @@ namespace Quantra.Models
         public string ModelType { get; set; }
         public bool IsRealTime { get; set; }
         public string Error { get; set; }
-        
+
         // Additional real-time metrics
         public double RiskScore { get; set; }
         public double ValueAtRisk { get; set; }
         public double MaxDrawdown { get; set; }
         public double SharpeRatio { get; set; }
-        
+
         // Helper properties
         public double PotentialReturn => CurrentPrice != 0 ? (TargetPrice - CurrentPrice) / CurrentPrice : 0;
         public bool HasError => !string.IsNullOrEmpty(Error);

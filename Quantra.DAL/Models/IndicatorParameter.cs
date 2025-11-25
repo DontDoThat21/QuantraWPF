@@ -46,7 +46,7 @@ namespace Quantra.Models
                 {
                     if (!IsValidValue(value))
                         throw new ArgumentException($"Invalid value for parameter {Name}");
-                    
+
                     _value = value;
                     OnPropertyChanged(nameof(Value));
                 }
@@ -155,7 +155,7 @@ namespace Quantra.Models
             {
                 if (MinValue != null && comparableValue.CompareTo(MinValue) < 0)
                     return false;
-                
+
                 if (MaxValue != null && comparableValue.CompareTo(MaxValue) > 0)
                     return false;
             }
