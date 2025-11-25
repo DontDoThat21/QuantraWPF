@@ -20,15 +20,15 @@ namespace Quantra.Utilities
         {
             if (values == null || values.Count < period)
                 return null;
-                
+
             var result = new List<double>();
-            
+
             // Add NaN for periods where SMA can't be calculated
             for (int i = 0; i < period - 1; i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             // Calculate SMA for each subsequent period
             for (int i = period - 1; i < values.Count; i++)
             {
@@ -39,10 +39,10 @@ namespace Quantra.Utilities
                 }
                 result.Add(sum / period);
             }
-            
+
             return result;
         }
-        
+
         /// <summary>
         /// Calculate Simple Moving Average from historical prices using close values
         /// </summary>
@@ -53,11 +53,11 @@ namespace Quantra.Utilities
         {
             if (prices == null || prices.Count < period)
                 return null;
-                
+
             var values = prices.Select(p => p.Close).ToList();
             return CalculateSMA(values, period);
         }
-        
+
         /// <summary>
         /// Calculate Exponential Moving Average (EMA)
         /// </summary>
@@ -99,7 +99,7 @@ namespace Quantra.Utilities
 
             return result;
         }
-        
+
         /// <summary>
         /// Calculate Exponential Moving Average from historical prices using close values
         /// </summary>
@@ -110,11 +110,11 @@ namespace Quantra.Utilities
         {
             if (prices == null || prices.Count < period)
                 return null;
-                
+
             var values = prices.Select(p => p.Close).ToList();
             return CalculateEMA(values, period);
         }
-        
+
         /// <summary>
         /// Calculate Weighted Moving Average (WMA)
         /// </summary>
@@ -125,23 +125,23 @@ namespace Quantra.Utilities
         {
             if (values == null || values.Count < period)
                 return null;
-                
+
             var result = new List<double>();
-            
+
             // Add NaN for periods where WMA can't be calculated
             for (int i = 0; i < period - 1; i++)
             {
                 result.Add(double.NaN);
             }
-            
+
             // Calculate denominator (sum of weights)
             int denominator = (period * (period + 1)) / 2;
-            
+
             // Calculate WMA for each subsequent period
             for (int i = period - 1; i < values.Count; i++)
             {
                 double weightedSum = 0;
-                
+
                 for (int j = 0; j < period; j++)
                 {
                     // Weight = position+1 where position is 0-based from oldest to newest
@@ -149,13 +149,13 @@ namespace Quantra.Utilities
                     int weight = j + 1; // 1 to period
                     weightedSum += values[i - (period - 1) + j] * weight;
                 }
-                
+
                 result.Add(weightedSum / denominator);
             }
-            
+
             return result;
         }
-        
+
         /// <summary>
         /// Calculate Weighted Moving Average from historical prices using close values
         /// </summary>
@@ -166,7 +166,7 @@ namespace Quantra.Utilities
         {
             if (prices == null || prices.Count < period)
                 return null;
-                
+
             var values = prices.Select(p => p.Close).ToList();
             return CalculateWMA(values, period);
         }

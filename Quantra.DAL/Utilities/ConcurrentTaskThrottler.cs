@@ -84,7 +84,7 @@ namespace Quantra.Utilities
             {
                 var completedTask = await Task.WhenAny(throttledTasks);
                 throttledTasks.Remove(completedTask);
-                
+
                 T result;
                 try
                 {
@@ -96,7 +96,7 @@ namespace Quantra.Utilities
                     //DatabaseMonolith.Log("Warning", "Throttled task failed", ex.ToString());
                     continue;
                 }
-                
+
                 yield return result;
             }
         }
@@ -190,7 +190,7 @@ namespace Quantra.Utilities
                 });
 
             var batchResults = await ExecuteThrottledAsync(taskFactories, cancellationToken);
-            
+
             foreach (var result in batchResults)
             {
                 results[result.Key] = result.Value;

@@ -24,7 +24,7 @@ namespace Quantra.Repositories
             {
                 // Check if entity already exists
                 var existingEntity = _context.IndicatorSettings
-                    .FirstOrDefault(i => i.ControlId == setting.ControlId && 
+                    .FirstOrDefault(i => i.ControlId == setting.ControlId &&
                                          i.IndicatorName == setting.IndicatorName);
 
                 if (existingEntity != null)
@@ -65,7 +65,7 @@ namespace Quantra.Repositories
                 foreach (var setting in settings)
                 {
                     var existingEntity = _context.IndicatorSettings
-                        .FirstOrDefault(i => i.ControlId == setting.ControlId && 
+                        .FirstOrDefault(i => i.ControlId == setting.ControlId &&
                                              i.IndicatorName == setting.IndicatorName);
 
                     if (existingEntity != null)
