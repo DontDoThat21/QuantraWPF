@@ -7,7 +7,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -35,10 +34,6 @@ namespace Quantra
         private HistoricalDataService _historicalDataService;
         private TechnicalIndicatorService _technicalIndicatorService;
 
-        private bool _isFullscreen = false;
-        private WindowState _previousWindowState;
-        private WindowStyle _previousWindowStyle;
-        private bool _previousTopmost;
         public static readonly DependencyProperty TitleProperty =
             DependencyProperty.Register("Title", typeof(string), typeof(SharedTitleBar), new PropertyMetadata(string.Empty));
 
@@ -507,7 +502,7 @@ namespace Quantra
                     {
                         // Fallback to Market Closed if no cached data available
                         VixDisplay = "VIX: Market Closed";
-                        //DatabaseMonolith.Log("Info", "RefreshVixDisplay: No cached data, market closed");
+                        //Database.Monolith.Log("Info", "RefreshVixDisplay: No cached data, market closed");
                     }
                     return;
                 }
@@ -828,69 +823,5 @@ namespace Quantra
             // Unsubscribe from global loading state changes
             GlobalLoadingStateService.LoadingStateChanged -= OnGlobalLoadingStateChanged;
         }
-
-        private void FullscreenButton_Click(object sender, RoutedEventArgs e)
-        {
-            var window = Window.GetWindow(this);
-            if (window == null) return;
-
-            if (_isFullscreen)
-            {
-                ExitFullscreen(window);
-            }
-            else
-            {
-                EnterFullscreen(window);
-            }
-        }
-
-        private void ExitFullscreen(Window window)
-        {
-            // Show taskbar
-            IntPtr taskbarHandle = FindWindow("Shell_TrayWnd", null);
-            if (taskbarHandle != IntPtr.Zero)
-            {
-                ShowWindow(taskbarHandle, SW_SHOW);
-            }
-
-            // Restore previous window state
-            window.WindowStyle = _previousWindowStyle;
-            window.Topmost = _previousTopmost;
-            window.WindowState = _previousWindowState;
-
-            _isFullscreen = false;
-        }
-
-        private void EnterFullscreen(Window window)
-        {
-            // Save current window state
-            _previousWindowState = window.WindowState;
-            _previousWindowStyle = window.WindowStyle;
-            _previousTopmost = window.Topmost;
-
-            // Hide taskbar
-            IntPtr taskbarHandle = FindWindow("Shell_TrayWnd", null);
-            if (taskbarHandle != IntPtr.Zero)
-            {
-                ShowWindow(taskbarHandle, SW_HIDE);
-            }
-
-            // Set window to fullscreen
-            window.WindowStyle = WindowStyle.None;
-            window.WindowState = WindowState.Maximized;
-            window.Topmost = true;
-
-            _isFullscreen = true;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        private const int SW_HIDE = 0;
-        private const int SW_SHOW = 1;
     }
 }
