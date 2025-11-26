@@ -481,23 +481,15 @@ namespace Quantra
                 Point position = e.GetPosition(this);
                 ResizeDirection direction = GetResizeDirection(position);
                 
-                // Only show the grid preview when hovering over resize edges or corners
+                // Update cursor based on resize direction
                 if (direction != ResizeDirection.None)
                 {
-                    // Update cursor based on resize direction
                     this.Cursor = GetCursorForResizeDirection(direction);
-                    
-                    // Show the grid visualization when over a resize edge/corner
-                    UpdateGridVisualization();
-                    selectionRect.Visibility = Visibility.Visible;
                 }
                 else
                 {
-                    // Reset cursor and hide grid when not over a resize edge/corner
+                    // Reset cursor when not over a resize edge/corner
                     this.Cursor = originalCursor ?? Cursors.Arrow;
-                    
-                    // Hide the preview grid when not hovering over resizable edges
-                    selectionRect.Visibility = Visibility.Collapsed;
                 }
             }
         }
@@ -506,12 +498,6 @@ namespace Quantra
         {
             // Reset cursor when mouse leaves the window
             this.Cursor = originalCursor ?? Cursors.Arrow;
-            
-            // Hide the grid visualization when mouse leaves the window
-            if (!isResizing)
-            {
-                selectionRect.Visibility = Visibility.Collapsed;
-            }
         }
 
         private ResizeDirection GetResizeDirection(Point mousePosition)
@@ -651,9 +637,8 @@ namespace Quantra
                     break;
             }
             
-            // Always keep the grid visible and green during resizing
+            // Update the grid visualization during resize
             UpdateGridVisualization();
-            selectionRect.Visibility = Visibility.Visible;
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -672,10 +657,6 @@ namespace Quantra
                 startPoint = position;
                 this.CaptureMouse();
                 e.Handled = true;
-                
-                // Show the grid during resizing
-                UpdateGridVisualization();
-                selectionRect.Visibility = Visibility.Visible;
             }
         }
 
@@ -686,17 +667,6 @@ namespace Quantra
                 isResizing = false;
                 this.ReleaseMouseCapture();
                 this.Cursor = originalCursor ?? Cursors.Arrow;
-                
-                // Check if we still need to show the grid
-                Point position = e.GetPosition(this);
-                ResizeDirection direction = GetResizeDirection(position);
-                
-                // Only keep the grid visible if mouse is still over a resize edge/corner
-                if (direction == ResizeDirection.None)
-                {
-                    selectionRect.Visibility = Visibility.Collapsed;
-                }
-                
                 e.Handled = true;
             }
         }
