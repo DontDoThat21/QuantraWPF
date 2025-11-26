@@ -16,6 +16,23 @@ namespace Quantra.Tests.Views
     [TestClass]
     public class StockExplorerTests
     {
+        /// <summary>
+        /// Creates a test StockExplorerViewModel with stub services.
+        /// </summary>
+        private StockExplorerViewModel CreateTestViewModel()
+        {
+            var stubCacheService = TestServiceFactory.CreateStubStockDataCacheService();
+            var stubAlphaVantageService = TestServiceFactory.CreateStubAlphaVantageService();
+            var stubInferenceService = TestServiceFactory.CreateStubRealTimeInferenceService();
+            var stubPredictionCacheService = TestServiceFactory.CreateStubPredictionCacheService();
+
+            return new StockExplorerViewModel(
+                stubCacheService,
+                stubAlphaVantageService,
+                stubInferenceService,
+                stubPredictionCacheService);
+        }
+
         [TestMethod]
         public void UpdatedTimestampText_InitializesEmpty()
         {
@@ -214,7 +231,7 @@ namespace Quantra.Tests.Views
         public async Task StockExplorerViewModel_PriceValues_ReflectsSelectedStock()
         {
             // Arrange
-            var viewModel = new StockExplorerViewModel();
+            var viewModel = CreateTestViewModel();
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var historicalData = new List<HistoricalPrice>
             {
@@ -258,7 +275,7 @@ namespace Quantra.Tests.Views
         public async Task StockExplorerViewModel_DateFormatter_UpdatesWhenDateLabelFormatterChanges()
         {
             // Arrange
-            var viewModel = new StockExplorerViewModel();
+            var viewModel = CreateTestViewModel();
             bool dateFormatterChangedFired = false;
             
             viewModel.PropertyChanged += (sender, e) =>

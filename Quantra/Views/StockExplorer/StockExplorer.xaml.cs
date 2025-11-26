@@ -523,14 +523,17 @@ namespace Quantra.Controls
         }
 
         public StockExplorer(StockDataCacheService stockDataCacheService,
-                            UserSettingsService userSettingsService, LoggingService loggingService)
+                            UserSettingsService userSettingsService, LoggingService loggingService,
+                            AlphaVantageService alphaVantageService, RealTimeInferenceService inferenceService,
+                            PredictionCacheService predictionCacheService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
             
             InitializeComponent();
-            _viewModel = new StockExplorerViewModel(userSettingsService, loggingService);
+            _viewModel = new StockExplorerViewModel(stockDataCacheService, alphaVantageService, inferenceService, predictionCacheService);
             _cacheService = stockDataCacheService;
+            _alphaVantageService = alphaVantageService;
 
             // Initialize sentiment analysis services with null checks
             try
