@@ -156,6 +156,46 @@ namespace Quantra
 
                 // Update grid visualization
                 UpdateGridVisualization();
+                
+                // NEW: Synchronize tab selection with MainWindow
+                SynchronizeMainWindowTab(selectedTab);
+            }
+        }
+        
+        /// <summary>
+        /// Synchronizes the MainWindow's tab selection with the AddControlWindow's tab selection
+        /// </summary>
+        /// <param name="tabName">The name of the tab to select in MainWindow</param>
+        private void SynchronizeMainWindowTab(string tabName)
+        {
+            try
+            {
+                // Get the MainWindow instance
+                var mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
+                if (mainWindow != null)
+                {
+                    // Find the corresponding TabItem in MainWindow's TabControl
+                    var mainTabControl = mainWindow.MainTabControl;
+                    if (mainTabControl != null)
+                    {
+                        var targetTab = mainTabControl.Items.OfType<TabItem>()
+                            .FirstOrDefault(t => t.Header?.ToString() == tabName);
+                        
+                        if (targetTab != null && mainTabControl.SelectedItem != targetTab)
+                        {
+                            // Select the tab in MainWindow
+                            mainTabControl.SelectedItem = targetTab;
+                            
+                            // Optional: Log the synchronization for debugging
+                            //DatabaseMonolith.Log("Info", $"Synchronized MainWindow tab selection to: {tabName}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't interrupt the user experience
+                //DatabaseMonolith.Log("Warning", $"Failed to synchronize MainWindow tab selection: {ex.Message}", ex.ToString());
             }
         }
 
