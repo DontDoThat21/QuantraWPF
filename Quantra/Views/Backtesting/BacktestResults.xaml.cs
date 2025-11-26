@@ -1835,16 +1835,14 @@ namespace Quantra.Views.Backtesting
                 RunMonteCarloButton.IsEnabled = false;
                 
                 // Create a new BacktestingEngine using the ViewModel's service if available
-                BacktestingEngine engine;
-                if (_viewModel != null)
+                // Require ViewModel for Monte Carlo simulation
+                if (_viewModel == null)
                 {
-                    engine = new BacktestingEngine(_viewModel.HistoricalDataService);
+                    MonteCarloStatusText.Text = "Simulation unavailable - service not initialized";
+                    return;
                 }
-                else
-                {
-                    // Fallback - create engine without service (limited functionality)
-                    engine = new BacktestingEngine(null);
-                }
+                
+                var engine = new BacktestingEngine(_viewModel.HistoricalDataService);
                 
                 // Run simulation on a background thread
                 await Task.Run(() => {
