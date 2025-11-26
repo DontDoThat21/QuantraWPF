@@ -115,6 +115,9 @@ namespace Quantra.Extensions
             services.AddSingleton<StockSymbolCacheService>();
             services.AddSingleton<SystemHealthMonitorService>();
 
+            // Register PredictionCacheService
+            services.AddSingleton<PredictionCacheService>();
+
             // Register sentiment services and OpenAI helpers
             // Prefer OpenAI-backed implementation for ISocialMediaSentimentService
             services.AddSingleton<ISocialMediaSentimentService>(sp =>
@@ -141,6 +144,7 @@ namespace Quantra.Extensions
             services.AddTransient<TradingRulesControlViewModel>();
             services.AddTransient<ResizeControlWindowViewModel>();
             services.AddTransient<SentimentDashboardControlViewModel>();
+            services.AddTransient<StockExplorerViewModel>();
 
             // Register Views
             services.AddTransient<PredictionAnalysisControl>();

@@ -95,20 +95,23 @@ namespace Quantra.ViewModels
         public ICommand SymbolSelectedCommand { get; }
         public ICommand RunPredictionsCommand { get; }
 
-        private readonly StockDataCacheService _cacheService;
-        private readonly AlphaVantageService _alphaVantageService;
         private readonly StockDataCacheService _stockDataCacheService;
+        private readonly AlphaVantageService _alphaVantageService;
         private readonly RealTimeInferenceService _inferenceService;
         private readonly PredictionCacheService _predictionCacheService;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public StockExplorerViewModel(UserSettingsService userSettingsService, LoggingService loggingService)
+        public StockExplorerViewModel(
+            StockDataCacheService stockDataCacheService,
+            AlphaVantageService alphaVantageService,
+            RealTimeInferenceService inferenceService,
+            PredictionCacheService predictionCacheService)
         {
-            _cacheService = new StockDataCacheService(userSettingsService, loggingService);
-            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
-            _inferenceService = new RealTimeInferenceService(10);
-            _predictionCacheService = new PredictionCacheService(loggingService);
+            _stockDataCacheService = stockDataCacheService ?? throw new ArgumentNullException(nameof(stockDataCacheService));
+            _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
+            _inferenceService = inferenceService ?? throw new ArgumentNullException(nameof(inferenceService));
+            _predictionCacheService = predictionCacheService ?? throw new ArgumentNullException(nameof(predictionCacheService));
 
             SymbolSelectedCommand = new RelayCommand<string>(OnSymbolSelected);
             RunPredictionsCommand = new RelayCommand(async _ => await RunPredictionsAsync(), _ => CanRunPredictions);
@@ -124,7 +127,7 @@ namespace Quantra.ViewModels
         private void LoadCachedStocks()
         {
             // Load from cache so table/grid is populated on app start
-            var cached = _cacheService.GetAllCachedStocks();
+            var cached = _stockDataCacheService.GetAllCachedStocks();
             CachedStocks.Clear();
             foreach (var stock in cached)
                 CachedStocks.Add(stock);
@@ -133,7 +136,7 @@ namespace Quantra.ViewModels
         private async void OnSymbolSelected(string symbol)
         {
             // Try to get from cache first using async version to avoid blocking UI thread
-            var cached = await Task.Run(async () => await _cacheService.GetCachedStockAsync(symbol)).ConfigureAwait(false);
+            var cached = await Task.Run(async () => await _stockDataCacheService.GetCachedStockAsync(symbol)).ConfigureAwait(false);
 
             if (cached != null)
             {
@@ -163,7 +166,7 @@ namespace Quantra.ViewModels
                             };
 
                             // Cache the new data (database operation in background)
-                            await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                            await _stockDataCacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
 
                             // Update UI collections on UI thread
                             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
@@ -426,7 +429,7 @@ namespace Quantra.ViewModels
                 if (latestQuote != null)
                 {
                     // Update cache and UI collection
-                    _cacheService.CacheQuoteData(latestQuote);
+                    _stockDataCacheService.CacheQuoteData(latestQuote);
 
                     // Update or add in CachedStocks
                     var existing = CachedStocks.FirstOrDefault(s => s.Symbol == symbol);
@@ -691,7 +694,7 @@ namespace Quantra.ViewModels
 
                 // Update the stock with prediction results
                 // Perform the asynchronous operation outside the UI thread
-                await _cacheService.CacheQuoteDataAsync(stock);
+                await _stockDataCacheService.CacheQuoteDataAsync(stock);
 
                 // Update the UI on the UI thread
                 await App.Current.Dispatcher.InvokeAsync(() =>
@@ -719,7 +722,7 @@ namespace Quantra.ViewModels
                     stock.PredictionConfidence = 0;
 
                     // Cache the updated stock data with error state to database asynchronously
-                    await _cacheService.CacheQuoteDataAsync(stock);
+                    await _stockDataCacheService.CacheQuoteDataAsync(stock);
                 });
             }
         }

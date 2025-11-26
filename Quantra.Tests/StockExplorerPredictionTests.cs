@@ -1,17 +1,43 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Quantra.DAL.Services;
+using Quantra.ViewModels;
+using Quantra; // For QuoteData
 
 namespace Quantra.Tests
 {
+    /// <summary>
+    /// Tests for StockExplorerViewModel prediction-related functionality.
+    /// Note: These tests use stub services since the ViewModel requires dependency injection.
+    /// </summary>
     [TestClass]
     public class StockExplorerPredictionTests
     {
+        /// <summary>
+        /// Creates a test ViewModel with stub services.
+        /// The stub services provide minimal implementations for testing ViewModel logic.
+        /// </summary>
+        private StockExplorerViewModel CreateTestViewModel()
+        {
+            // Create stub services using test helper factory method
+            var stubCacheService = TestServiceFactory.CreateStubStockDataCacheService();
+            var stubAlphaVantageService = TestServiceFactory.CreateStubAlphaVantageService();
+            var stubInferenceService = TestServiceFactory.CreateStubRealTimeInferenceService();
+            var stubPredictionCacheService = TestServiceFactory.CreateStubPredictionCacheService();
+
+            return new StockExplorerViewModel(
+                stubCacheService,
+                stubAlphaVantageService,
+                stubInferenceService,
+                stubPredictionCacheService);
+        }
+
         [TestMethod]
         public void TestPredictionSummaryProperty()
         {
             // Arrange
-            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+            var viewModel = CreateTestViewModel();
             
             // Act
             var initialSummary = viewModel.PredictionSummary;
@@ -27,7 +53,7 @@ namespace Quantra.Tests
         public void TestPredictionLoadingState()
         {
             // Arrange
-            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+            var viewModel = CreateTestViewModel();
             
             // Act
             var initialState = viewModel.IsPredictionLoading;
@@ -46,13 +72,13 @@ namespace Quantra.Tests
         public void TestCanRunPredictionsLogic()
         {
             // Arrange
-            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+            var viewModel = CreateTestViewModel();
             
             // Act & Assert - No stocks initially
             Assert.IsFalse(viewModel.CanRunPredictions);
             
             // Add a mock stock
-            var mockStock = new Quantra.Models.QuoteData
+            var mockStock = new QuoteData
             {
                 Symbol = "AAPL",
                 Price = 150.0,

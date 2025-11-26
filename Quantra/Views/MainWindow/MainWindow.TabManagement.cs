@@ -38,6 +38,8 @@ namespace Quantra
         private AlphaVantageService _alphaVantageService;
         private LoggingService _loggingService;
         private EmailService _emailService;
+        private RealTimeInferenceService _inferenceService;
+        private PredictionCacheService _predictionCacheService;
         #endregion
 
         #region Constructor
@@ -638,9 +640,15 @@ namespace Quantra
         {
             try
             {
-                // Use services from MainWindow's initialized fields
-                // Create a new instance of our custom StockExplorer
-                var symbolChartControl = new StockExplorer(_stockDataCacheService, _userSettingsService, _loggingService);
+                // Use services from MainWindow's initialized fields via DI
+                // Create a new instance of our custom StockExplorer with properly injected services
+                var symbolChartControl = new StockExplorer(
+                    _stockDataCacheService, 
+                    _userSettingsService, 
+                    _loggingService,
+                    _alphaVantageService,
+                    _inferenceService,
+                    _predictionCacheService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width

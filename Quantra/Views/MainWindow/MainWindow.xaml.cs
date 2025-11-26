@@ -166,6 +166,10 @@ namespace Quantra
                 ?? throw new InvalidOperationException("LoggingService not registered in DI container");
             _quantraDbContext = App.ServiceProvider.GetService<QuantraDbContext>()
                 ?? throw new InvalidOperationException("QuantraDbContext not registered in DI container");
+            _inferenceService = App.ServiceProvider.GetService<RealTimeInferenceService>()
+                ?? throw new InvalidOperationException("RealTimeInferenceService not registered in DI container");
+            _predictionCacheService = App.ServiceProvider.GetService<PredictionCacheService>()
+                ?? throw new InvalidOperationException("PredictionCacheService not registered in DI container");
 
             // Initialize debounce timer - increased interval to reduce UI load
             debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
