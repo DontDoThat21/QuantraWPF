@@ -288,6 +288,11 @@ namespace Quantra
                 !int.TryParse(RowSpanTextBox?.Text, out int rowSpan) ||
                 !int.TryParse(ColumnSpanTextBox?.Text, out int colSpan))
             {
+                // Hide selection rect if inputs are invalid
+                if (selectionRect != null && selectionRect.Visibility == Visibility.Visible)
+                {
+                    selectionRect.Visibility = Visibility.Collapsed;
+                }
                 return;
             }
 
@@ -309,7 +314,14 @@ namespace Quantra
 
             // Validate position is within grid bounds
             if (row < 0 || row >= gridConfig.Rows || col < 0 || col >= gridConfig.Columns)
+            {
+                // Hide selection rect if position is out of bounds
+                if (selectionRect != null && selectionRect.Visibility == Visibility.Visible)
+                {
+                    selectionRect.Visibility = Visibility.Collapsed;
+                }
                 return;
+            }
 
             // Ensure spans don't go out of bounds
             rowSpan = Math.Min(rowSpan, gridConfig.Rows - row);
@@ -343,6 +355,9 @@ namespace Quantra
             {
                 gridVisualization.Children.Add(selectionRect);
             }
+
+            // Always make the selection rectangle visible when there's a valid selection
+            selectionRect.Visibility = Visibility.Visible;
         }
 
         /// <summary>
