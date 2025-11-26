@@ -1090,26 +1090,29 @@ namespace Quantra
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
                 
-                var backtestResultsControl = new Views.Backtesting.BacktestResultsControl(
+                // Create ViewModel with proper dependency injection
+                var viewModel = new BacktestResultsViewModel(
                     historicalDataService,
                     customBenchmarkService,
                     _userSettingsService);
+                
+                var backtestResults = new Views.Backtesting.BacktestResults(viewModel);
                     
-                backtestResultsControl.Width = double.NaN;
-                backtestResultsControl.Height = double.NaN;
-                backtestResultsControl.HorizontalAlignment = HorizontalAlignment.Stretch;
-                backtestResultsControl.VerticalAlignment = VerticalAlignment.Stretch;
-                backtestResultsControl.MinWidth = 400;
-                backtestResultsControl.MinHeight = 300;
-                backtestResultsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                backtestResultsControl.Arrange(new Rect(0, 0, backtestResultsControl.DesiredSize.Width, backtestResultsControl.DesiredSize.Height));
-                backtestResultsControl.UpdateLayout();
-                //DatabaseMonolith.Log("Info", "Successfully created BacktestResultsControl");
-                return backtestResultsControl;
+                backtestResults.Width = double.NaN;
+                backtestResults.Height = double.NaN;
+                backtestResults.HorizontalAlignment = HorizontalAlignment.Stretch;
+                backtestResults.VerticalAlignment = VerticalAlignment.Stretch;
+                backtestResults.MinWidth = 400;
+                backtestResults.MinHeight = 300;
+                backtestResults.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                backtestResults.Arrange(new Rect(0, 0, backtestResults.DesiredSize.Width, backtestResults.DesiredSize.Height));
+                backtestResults.UpdateLayout();
+                //DatabaseMonolith.Log("Info", "Successfully created BacktestResults");
+                return backtestResults;
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to create BacktestResultsControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create BacktestResults", ex.ToString());
                 var errorPanel = new StackPanel();
                 errorPanel.Children.Add(new TextBlock
                 {
