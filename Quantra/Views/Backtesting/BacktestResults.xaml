@@ -1,4 +1,4 @@
-<UserControl x:Class="Quantra.Views.Backtesting.BacktestResultsControl"
+<UserControl x:Class="Quantra.Views.Backtesting.BacktestResults"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -8,7 +8,7 @@
              xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" d:DesignWidth="900"
              Background="#23233A"
-             Loaded="BacktestResultsControl_Loaded" Height="948">
+             Loaded="BacktestResults_Loaded" Height="948">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

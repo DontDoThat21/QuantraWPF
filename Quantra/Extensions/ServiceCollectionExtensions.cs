@@ -145,6 +145,7 @@ namespace Quantra.Extensions
             services.AddTransient<ResizeControlWindowViewModel>();
             services.AddTransient<SentimentDashboardControlViewModel>();
             services.AddTransient<StockExplorerViewModel>();
+            services.AddTransient<BacktestResultsViewModel>();
 
             // Register Views
             services.AddTransient<PredictionAnalysisControl>();
