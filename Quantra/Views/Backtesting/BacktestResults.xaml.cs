@@ -12,74 +12,123 @@ using LiveCharts.Wpf;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.DAL.Services;
+using Quantra.ViewModels;
 
 namespace Quantra.Views.Backtesting
 {
-    public partial class BacktestResultsControl : UserControl
+    public partial class BacktestResults : UserControl
     {
+        private readonly BacktestResultsViewModel _viewModel;
+        
+        // Local references for chart manipulation (charts need direct access in code-behind)
         private BacktestingEngine.BacktestResult _currentResult;
         private List<Models.HistoricalPrice> _historicalData;
         private List<BenchmarkComparisonData> _benchmarkData = new List<BenchmarkComparisonData>();
-        private double _strategyEquityVolatility; // Store calculated equity volatility
-        private bool _showRelativeReturns = false; // Track if showing relative or absolute returns
+        private double _strategyEquityVolatility;
+        private bool _showRelativeReturns = false;
         private readonly Dictionary<string, Brush> _benchmarkColors = new Dictionary<string, Brush>
         {
             { "SPY", Brushes.DarkGreen },
             { "QQQ", Brushes.DarkBlue },
             { "IWM", Brushes.DarkOrange },
             { "DIA", Brushes.Purple },
-            // Default color for custom benchmarks
             { "CUSTOM", Brushes.Magenta }
         };
         
-        
-        private readonly HistoricalDataService _historicalDataService;
-        private readonly CustomBenchmarkService _customBenchmarkService;
         private ObservableCollection<CustomBenchmark> _customBenchmarks;
-        private UserSettingsService _userSettingsService;
         
-        // Parameterless constructor for XAML designer support
-        public BacktestResultsControl()
+        /// <summary>
+        /// Parameterless constructor for XAML designer support
+        /// </summary>
+        public BacktestResults()
         {
             InitializeComponent();
             _customBenchmarks = new ObservableCollection<CustomBenchmark>();
         }
         
-        public BacktestResultsControl(HistoricalDataService historicalDataService,
-            CustomBenchmarkService customBenchmarkService,
-            UserSettingsService userSettingsService
-            )
+        /// <summary>
+        /// Constructor with dependency injection via ViewModel
+        /// </summary>
+        /// <param name="viewModel">The BacktestResults ViewModel with injected dependencies</param>
+        public BacktestResults(BacktestResultsViewModel viewModel)
         {
             InitializeComponent();
-            _historicalDataService = historicalDataService;
-            _customBenchmarkService = customBenchmarkService;
-            _userSettingsService = userSettingsService;
-            _customBenchmarks = new ObservableCollection<CustomBenchmark>();
             
-            // Initialize UI elements if needed
-            LoadCustomBenchmarks();
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            DataContext = _viewModel;
             
-            // Apply active benchmark selection from user settings
-            ApplyActiveBenchmarkSelection();
+            _customBenchmarks = _viewModel.CustomBenchmarks;
             
-            // Add debugging event handler
-            CustomBenchmarkComboBox.SelectionChanged += (s, e) => {
-                if (CustomBenchmarkComboBox.SelectedItem != null)
-                {
-                    //DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox Selection: {CustomBenchmarkComboBox.SelectedItem.GetType().Name} - {CustomBenchmarkComboBox.SelectedItem}");
-                }
-            };
+            // Subscribe to ViewModel events
+            _viewModel.BenchmarkDataLoaded += OnBenchmarkDataLoaded;
+            _viewModel.MonteCarloCompleted += OnMonteCarloCompleted;
+            _viewModel.ResetZoomRequested += OnResetZoomRequested;
+            _viewModel.HighlightOutperformanceRequested += OnHighlightOutperformanceRequested;
+            _viewModel.ManageCustomBenchmarksRequested += OnManageCustomBenchmarksRequested;
+            
+            // Initialize custom benchmark combo box
+            CustomBenchmarkComboBox.ItemsSource = _customBenchmarks;
         }
 
-        private void BacktestResultsControl_Loaded(object sender, RoutedEventArgs e)
+        private void BacktestResults_Loaded(object sender, RoutedEventArgs e)
         {
             // Initialize UI elements if needed
         }
+        
+        #region ViewModel Event Handlers
+        
+        private void OnBenchmarkDataLoaded(object sender, EventArgs e)
+        {
+            if (_viewModel == null) return;
+            
+            _benchmarkData = _viewModel.BenchmarkData;
+            _currentResult = _viewModel.CurrentResult;
+            _strategyEquityVolatility = _viewModel.StrategyEquityVolatility;
+            
+            UpdateBenchmarkComparisonCharts();
+        }
+        
+        private void OnMonteCarloCompleted(object sender, EventArgs e)
+        {
+            if (_viewModel?.CurrentResult?.HasMonteCarloResults == true)
+            {
+                _currentResult = _viewModel.CurrentResult;
+                UpdateMonteCarloVisualization();
+            }
+        }
+        
+        private void OnResetZoomRequested(object sender, EventArgs e)
+        {
+            ResetChartZoom();
+        }
+        
+        private void OnHighlightOutperformanceRequested(object sender, EventArgs e)
+        {
+            UpdatePerformanceAttributionChart();
+        }
+        
+        private void OnManageCustomBenchmarksRequested(object sender, EventArgs e)
+        {
+            ManageCustomBenchmarks();
+        }
+        
+        #endregion
+        
+        #region Public Methods
 
+        /// <summary>
+        /// Load backtest results and update UI
+        /// </summary>
         public async void LoadResults(BacktestingEngine.BacktestResult result, List<Models.HistoricalPrice> historical)
         {
             _currentResult = result;
             _historicalData = historical;
+            
+            // Update ViewModel with results
+            if (_viewModel != null)
+            {
+                _viewModel.LoadResults(result, historical);
+            }
             
             // Calculate equity volatility for later use
             CalculateStrategyVolatility();
@@ -198,9 +247,20 @@ namespace Quantra.Views.Backtesting
                 UpdateMonteCarloVisualization();
             }
             
-            // Load benchmark data
-            await LoadBenchmarkData();
+            // Load benchmark data via ViewModel if available, otherwise use local method
+            if (_viewModel != null)
+            {
+                await _viewModel.LoadBenchmarkDataAsync();
+            }
+            else
+            {
+                await LoadBenchmarkData();
+            }
         }
+        
+        #endregion
+        
+        #region Private Methods
         
         private async Task LoadBenchmarkData()
         {
@@ -227,16 +287,21 @@ namespace Quantra.Views.Backtesting
                     
                     BenchmarkComparisonData benchmarkData;
                     
-                    if (customBenchmark != null)
+                    if (customBenchmark != null && _viewModel != null)
                     {
-                        // Load custom benchmark data using the service
-                        benchmarkData = await _customBenchmarkService.CalculateCustomBenchmarkData(
+                        // Load custom benchmark data using the service via ViewModel
+                        benchmarkData = await _viewModel.CustomBenchmarkService.CalculateCustomBenchmarkData(
                             customBenchmark, startDate, endDate);
+                    }
+                    else if (_viewModel != null)
+                    {
+                        // Load standard benchmark data from historical service via ViewModel
+                        var historicalData = await _viewModel.HistoricalDataService.GetComprehensiveHistoricalData(benchmarkInfo.symbol);
+                        benchmarkData = CreateBenchmarkData(historicalData, benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
                     }
                     else
                     {
-                        // Load standard benchmark data from historical service
-                        benchmarkData = await LoadBenchmarkHistoricalData(benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
+                        benchmarkData = null;
                     }
                     
                     if (benchmarkData != null)
@@ -249,203 +314,74 @@ namespace Quantra.Views.Backtesting
                 UpdateBenchmarkComparisonCharts();
                 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Log error
-                //DatabaseMonolith.Log("Error", "Failed to load benchmark data", ex.ToString());
             }
+        }
+        
+        private BenchmarkComparisonData CreateBenchmarkData(List<HistoricalPrice> historicalData, string symbol, string name, DateTime startDate, DateTime endDate)
+        {
+            var filteredData = historicalData
+                .Where(h => h.Date >= startDate && h.Date <= endDate)
+                .OrderBy(h => h.Date)
+                .ToList();
+
+            if (filteredData.Count == 0)
+            {
+                return null;
+            }
+
+            var benchmarkData = new BenchmarkComparisonData
+            {
+                Symbol = symbol,
+                Name = name,
+                HistoricalData = filteredData,
+                Dates = filteredData.Select(h => h.Date).ToList()
+            };
+
+            double initialPrice = filteredData.First().Close;
+            benchmarkData.NormalizedReturns = filteredData
+                .Select(h => h.Close / initialPrice)
+                .ToList();
+
+            benchmarkData.TotalReturn = (filteredData.Last().Close / filteredData.First().Close) - 1;
+
+            return benchmarkData;
         }
         
         private List<(string symbol, string name)> GetSelectedBenchmarks()
         {
+            // Use ViewModel if available
+            if (_viewModel != null)
+            {
+                return _viewModel.GetSelectedBenchmarks();
+            }
+            
+            // Fallback for parameterless constructor (designer support) - return empty list
             var benchmarks = new List<(string symbol, string name)>();
-            var (activeBenchmarkType, activeBenchmarkId) = _userSettingsService.GetActiveBenchmark();
             
-            // Add active benchmark first (this will be the primary baseline)
-            bool activeBenchmarkAdded = false;
-            
-            if (activeBenchmarkType == "CUSTOM" && !string.IsNullOrEmpty(activeBenchmarkId))
-            {
-                var activeCustomBenchmark = _customBenchmarks.FirstOrDefault(b => b.Id == activeBenchmarkId);
-                if (activeCustomBenchmark != null)
-                {
-                    benchmarks.Add((activeCustomBenchmark.DisplaySymbol, activeCustomBenchmark.Name));
-                    activeBenchmarkAdded = true;
-                }
-            }
-            else
-            {
-                switch (activeBenchmarkType)
-                {
-                    case "SPY":
-                        if (SPYCheckBox.IsChecked == true)
-                        {
-                            benchmarks.Add(("SPY", "S&P 500"));
-                            activeBenchmarkAdded = true;
-                        }
-                        break;
-                    case "QQQ":
-                        if (QQQCheckBox.IsChecked == true)
-                        {
-                            benchmarks.Add(("QQQ", "NASDAQ"));
-                            activeBenchmarkAdded = true;
-                        }
-                        break;
-                    case "IWM":
-                        if (IWMCheckBox.IsChecked == true)
-                        {
-                            benchmarks.Add(("IWM", "Russell 2000"));
-                            activeBenchmarkAdded = true;
-                        }
-                        break;
-                    case "DIA":
-                        if (DIACheckBox.IsChecked == true)
-                        {
-                            benchmarks.Add(("DIA", "Dow Jones"));
-                            activeBenchmarkAdded = true;
-                        }
-                        break;
-                }
-            }
-            
-            // Add other selected benchmarks (excluding the active one if already added)
-            if (SPYCheckBox.IsChecked == true && (activeBenchmarkType != "SPY" || !activeBenchmarkAdded))
+            // Check if benchmark checkboxes are initialized (may be null during design time)
+            if (SPYCheckBox?.IsChecked == true)
                 benchmarks.Add(("SPY", "S&P 500"));
                 
-            if (QQQCheckBox.IsChecked == true && (activeBenchmarkType != "QQQ" || !activeBenchmarkAdded))
+            if (QQQCheckBox?.IsChecked == true)
                 benchmarks.Add(("QQQ", "NASDAQ"));
                 
-            if (IWMCheckBox.IsChecked == true && (activeBenchmarkType != "IWM" || !activeBenchmarkAdded))
+            if (IWMCheckBox?.IsChecked == true)
                 benchmarks.Add(("IWM", "Russell 2000"));
                 
-            if (DIACheckBox.IsChecked == true && (activeBenchmarkType != "DIA" || !activeBenchmarkAdded))
+            if (DIACheckBox?.IsChecked == true)
                 benchmarks.Add(("DIA", "Dow Jones"));
 
-            // Add any selected custom benchmark (excluding the active one if already added)
-            var selectedCustomBenchmark = CustomBenchmarkComboBox.SelectedItem as CustomBenchmark;
-            if (selectedCustomBenchmark != null && 
-                (activeBenchmarkType != "CUSTOM" || activeBenchmarkId != selectedCustomBenchmark.Id || !activeBenchmarkAdded))
+            // Add any selected custom benchmark
+            var selectedCustomBenchmark = CustomBenchmarkComboBox?.SelectedItem as CustomBenchmark;
+            if (selectedCustomBenchmark != null)
             {
                 benchmarks.Add((selectedCustomBenchmark.DisplaySymbol, selectedCustomBenchmark.Name));
             }
                 
             return benchmarks;
-        }
-        
-        private async Task<BenchmarkComparisonData> LoadBenchmarkHistoricalData(string symbol, string name, DateTime startDate, DateTime endDate)
-        {
-            try
-            {
-                // Load historical data for the benchmark
-                var historicalData = await _historicalDataService.GetComprehensiveHistoricalData(symbol);
-                
-                // Filter to match the date range of the backtest
-                var filteredData = historicalData
-                    .Where(h => h.Date >= startDate && h.Date <= endDate)
-                    .OrderBy(h => h.Date)
-                    .ToList();
-                
-                if (filteredData.Count == 0)
-                {
-                    //DatabaseMonolith.Log("Warning", $"No benchmark data for {symbol} in date range {startDate} to {endDate}");
-                    return null;
-                }
-                
-                // Create benchmark comparison data
-                var benchmarkData = new BenchmarkComparisonData
-                {
-                    Symbol = symbol,
-                    Name = name,
-                    HistoricalData = filteredData,
-                    Dates = filteredData.Select(h => h.Date).ToList()
-                };
-                
-                // Calculate normalized returns (starting at 1.0)
-                double initialPrice = filteredData.First().Close;
-                benchmarkData.NormalizedReturns = filteredData
-                    .Select(h => h.Close / initialPrice)
-                    .ToList();
-                
-                // Calculate performance metrics
-                benchmarkData.TotalReturn = (filteredData.Last().Close / filteredData.First().Close) - 1;
-                
-                // Calculate drawdown and other metrics
-                double peak = filteredData.First().Close;
-                double maxDrawdown = 0;
-                List<double> dailyReturns = new List<double>();
-                List<double> downsideReturns = new List<double>();
-                
-                for (int i = 1; i < filteredData.Count; i++)
-                {
-                    if (filteredData[i].Close > peak)
-                    {
-                        peak = filteredData[i].Close;
-                    }
-                    
-                    double drawdown = (peak - filteredData[i].Close) / peak;
-                    if (drawdown > maxDrawdown)
-                    {
-                        maxDrawdown = drawdown;
-                    }
-                    
-                    // Calculate daily returns
-                    double dailyReturn = (filteredData[i].Close - filteredData[i - 1].Close) / filteredData[i - 1].Close;
-                    dailyReturns.Add(dailyReturn);
-                    
-                    if (dailyReturn < 0)
-                    {
-                        downsideReturns.Add(dailyReturn);
-                    }
-                }
-                
-                benchmarkData.MaxDrawdown = maxDrawdown;
-                benchmarkData.Volatility = CalculateStandardDeviation(dailyReturns);
-                
-                // Calculate CAGR
-                double totalDays = (endDate - startDate).TotalDays;
-                if (totalDays > 0 && filteredData.Count > 0)
-                {
-                    benchmarkData.TotalReturn = (filteredData.Last().Close / filteredData.First().Close) - 1;
-                    benchmarkData.CAGR = Math.Pow(1 + benchmarkData.TotalReturn, 365.0 / totalDays) - 1;
-                }
-                
-                // Calculate Sharpe, Sortino, and Calmar ratios
-                double averageReturn = dailyReturns.Count > 0 ? dailyReturns.Average() : 0;
-                double riskFreeRate = 0.0; // Simplified assumption
-                
-                benchmarkData.SharpeRatio = benchmarkData.Volatility > 0 ? 
-                    (averageReturn - riskFreeRate) / benchmarkData.Volatility * Math.Sqrt(252) : 0;
-                
-                double downsideDeviation = CalculateStandardDeviation(downsideReturns);
-                benchmarkData.SortinoRatio = downsideDeviation > 0 ? 
-                    (averageReturn - riskFreeRate) / downsideDeviation * Math.Sqrt(252) : 0;
-                
-                benchmarkData.CalmarRatio = benchmarkData.MaxDrawdown > 0 ? 
-                    benchmarkData.CAGR / benchmarkData.MaxDrawdown : 0;
-                    
-                benchmarkData.InformationRatio = benchmarkData.Volatility > 0 ?
-                    (averageReturn - riskFreeRate) / benchmarkData.Volatility * Math.Sqrt(252) : 0;
-                
-                // Calculate Beta and Alpha if strategy data exists
-                if (_currentResult != null && _currentResult.EquityCurve.Count > 0)
-                {
-                    // Align the dates between strategy and benchmark
-                    var alignedReturns = AlignReturnsForComparison(_currentResult, filteredData);
-                    if (alignedReturns.strategyReturns.Count > 0 && alignedReturns.benchmarkReturns.Count > 0)
-                    {
-                        benchmarkData.Beta = CalculateBeta(alignedReturns.strategyReturns, alignedReturns.benchmarkReturns);
-                        benchmarkData.Alpha = CalculateAlpha(alignedReturns.strategyReturns, alignedReturns.benchmarkReturns, benchmarkData.Beta, riskFreeRate);
-                        benchmarkData.Correlation = CalculateCorrelation(alignedReturns.strategyReturns, alignedReturns.benchmarkReturns);
-                    }
-                }
-                
-                return benchmarkData;
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", $"Failed to load benchmark data for {symbol}", ex.ToString());
-                return null;
-            }
         }
         
         private (List<double> strategyReturns, List<double> benchmarkReturns) AlignReturnsForComparison(
@@ -1563,9 +1499,9 @@ namespace Quantra.Views.Backtesting
                 else if (checkbox == IWMCheckBox) benchmarkType = "IWM";
                 else if (checkbox == DIACheckBox) benchmarkType = "DIA";
                 
-                if (benchmarkType != null)
+                if (benchmarkType != null && _viewModel?.UserSettingsService != null)
                 {
-                    _userSettingsService.SetActiveBenchmark(benchmarkType);
+                    _viewModel.UserSettingsService.SetActiveBenchmark(benchmarkType);
                     UpdateActiveBenchmarkDisplay();
                 }
             }
@@ -1586,21 +1522,36 @@ namespace Quantra.Views.Backtesting
                 return;
             }
             
-            await LoadBenchmarkData();
+            if (_viewModel != null)
+            {
+                await _viewModel.LoadBenchmarkDataAsync();
+            }
+            else
+            {
+                await LoadBenchmarkData();
+            }
         }
         
         private void ManageCustomBenchmarksButton_Click(object sender, RoutedEventArgs e)
         {
-            var manager = new CustomBenchmarkManager(_customBenchmarkService,
-            _userSettingsService);
+            ManageCustomBenchmarks();
+        }
+        
+        private void ManageCustomBenchmarks()
+        {
+            if (_viewModel == null) return;
+            
+            var manager = new CustomBenchmarkManager(
+                _viewModel.CustomBenchmarkService,
+                _viewModel.UserSettingsService as UserSettingsService);
             bool? result = manager.ShowDialog();
             
             if (result == true && manager.SelectedBenchmark != null)
             {
                 // The active benchmark has already been set in UserSettings by the CustomBenchmarkManager
                 // Now we need to reload benchmarks and apply the new active selection
-                LoadCustomBenchmarks();
-                ApplyActiveBenchmarkSelection();
+                _viewModel.LoadCustomBenchmarks();
+                _viewModel.ApplyActiveBenchmarkSelection();
                 
                 // Refresh the benchmark data to reflect the new active benchmark
                 RefreshBenchmarks();
@@ -1608,45 +1559,20 @@ namespace Quantra.Views.Backtesting
             else
             {
                 // Just refresh the custom benchmarks list
-                LoadCustomBenchmarks();
+                _viewModel.LoadCustomBenchmarks();
             }
         }
         
         private void LoadCustomBenchmarks()
         {
-            // Save current selection
-            CustomBenchmark currentSelection = CustomBenchmarkComboBox.SelectedItem as CustomBenchmark;
-            
-            // Clear and reload custom benchmarks
-            _customBenchmarks.Clear();
-            
-            var benchmarks = _customBenchmarkService.GetCustomBenchmarks();
-            foreach (var benchmark in benchmarks)
+            if (_viewModel != null)
             {
-                _customBenchmarks.Add(benchmark);
-                
-                // Log the benchmark details for debugging
-                //DatabaseMonolith.Log("Debug", $"Loaded custom benchmark: ID={benchmark.Id}, Name={benchmark.Name}, DisplaySymbol={benchmark.DisplaySymbol}");
+                _viewModel.LoadCustomBenchmarks();
+                return;
             }
             
-            // Apply custom benchmarks to ComboBox
-            CustomBenchmarkComboBox.ItemsSource = null; // Clear first
-            CustomBenchmarkComboBox.ItemsSource = _customBenchmarks;
-            
-            // Log the count and types for debugging
-            //DatabaseMonolith.Log("Debug", $"CustomBenchmarkComboBox ItemsSource set with {_customBenchmarks.Count} items");
-            
-            // Restore previous selection if possible
-            if (currentSelection != null)
-            {
-                CustomBenchmark newSelection = _customBenchmarks.FirstOrDefault(b => b.Id == currentSelection.Id);
-                if (newSelection != null)
-                {
-                    CustomBenchmarkComboBox.SelectedItem = newSelection;
-                }
-            }
-            
-            // Update the display in case custom benchmarks changed
+            // Fallback for parameterless constructor - clear only
+            _customBenchmarks?.Clear();
             UpdateActiveBenchmarkDisplay();
         }
         
@@ -1655,43 +1581,14 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void ApplyActiveBenchmarkSelection()
         {
-            var (benchmarkType, benchmarkId) = _userSettingsService.GetActiveBenchmark();
-            
-            // Clear all selections first
-            SPYCheckBox.IsChecked = false;
-            QQQCheckBox.IsChecked = false;
-            IWMCheckBox.IsChecked = false;
-            DIACheckBox.IsChecked = false;
-            CustomBenchmarkComboBox.SelectedItem = null;
-            
-            // Set the active benchmark based on user settings
-            switch (benchmarkType)
+            if (_viewModel != null)
             {
-                case "SPY":
-                    SPYCheckBox.IsChecked = true;
-                    break;
-                case "QQQ":
-                    QQQCheckBox.IsChecked = true;
-                    break;
-                case "IWM":
-                    IWMCheckBox.IsChecked = true;
-                    break;
-                case "DIA":
-                    DIACheckBox.IsChecked = true;
-                    break;
-                case "CUSTOM":
-                    if (!string.IsNullOrEmpty(benchmarkId))
-                    {
-                        var customBenchmark = _customBenchmarks.FirstOrDefault(b => b.Id == benchmarkId);
-                        if (customBenchmark != null)
-                        {
-                            CustomBenchmarkComboBox.SelectedItem = customBenchmark;
-                        }
-                    }
-                    break;
+                _viewModel.ApplyActiveBenchmarkSelection();
+                return;
             }
             
-            // Update the UI display
+            // Fallback for parameterless constructor - set default
+            if (SPYCheckBox != null) SPYCheckBox.IsChecked = true;
             UpdateActiveBenchmarkDisplay();
         }
         
@@ -1700,43 +1597,20 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void UpdateActiveBenchmarkDisplay()
         {
-            var (benchmarkType, benchmarkId) = _userSettingsService.GetActiveBenchmark();
-            
-            switch (benchmarkType)
+            if (_viewModel != null)
             {
-                case "SPY":
-                    ActiveBenchmarkText.Text = "S&P 500 (SPY)";
-                    break;
-                case "QQQ":
-                    ActiveBenchmarkText.Text = "NASDAQ (QQQ)";
-                    break;
-                case "IWM":
-                    ActiveBenchmarkText.Text = "Russell 2000 (IWM)";
-                    break;
-                case "DIA":
-                    ActiveBenchmarkText.Text = "Dow Jones (DIA)";
-                    break;
-                case "CUSTOM":
-                    if (!string.IsNullOrEmpty(benchmarkId))
-                    {
-                        var customBenchmark = _customBenchmarks.FirstOrDefault(b => b.Id == benchmarkId);
-                        if (customBenchmark != null)
-                        {
-                            ActiveBenchmarkText.Text = $"{customBenchmark.Name} ({customBenchmark.DisplaySymbol})";
-                        }
-                        else
-                        {
-                            ActiveBenchmarkText.Text = "Custom (Not Found)";
-                        }
-                    }
-                    else
-                    {
-                        ActiveBenchmarkText.Text = "Custom (None Selected)";
-                    }
-                    break;
-                default:
-                    ActiveBenchmarkText.Text = "S&P 500 (SPY)"; // Default fallback
-                    break;
+                // Bind to ViewModel's property
+                if (ActiveBenchmarkText != null)
+                {
+                    ActiveBenchmarkText.Text = _viewModel.ActiveBenchmarkText;
+                }
+                return;
+            }
+            
+            // Fallback for parameterless constructor
+            if (ActiveBenchmarkText != null)
+            {
+                ActiveBenchmarkText.Text = "S&P 500 (SPY)";
             }
         }
         
@@ -1744,9 +1618,9 @@ namespace Quantra.Views.Backtesting
         {
             // Set active custom benchmark if a selection was made
             var selectedBenchmark = CustomBenchmarkComboBox.SelectedItem as CustomBenchmark;
-            if (selectedBenchmark != null)
+            if (selectedBenchmark != null && _viewModel?.UserSettingsService != null)
             {
-                _userSettingsService.SetActiveCustomBenchmark(selectedBenchmark.Id);
+                _viewModel.UserSettingsService.SetActiveCustomBenchmark(selectedBenchmark.Id);
                 UpdateActiveBenchmarkDisplay();
             }
             
@@ -1759,6 +1633,12 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private Brush GetBenchmarkColor(string symbol)
         {
+            // Use ViewModel's method if available
+            if (_viewModel != null)
+            {
+                return _viewModel.GetBenchmarkColor(symbol);
+            }
+            
             if (_benchmarkColors.ContainsKey(symbol))
                 return _benchmarkColors[symbol];
             
@@ -1773,36 +1653,88 @@ namespace Quantra.Views.Backtesting
             return Brushes.Gray;
         }
         
-        // Event handlers for interactive chart controls
+        private void ResetChartZoom()
+        {
+            // Reset zoom on all charts
+            if (BenchmarkReturnsChart?.AxisX?.Count > 0)
+            {
+                BenchmarkReturnsChart.AxisX[0].MinValue = double.NaN;
+                BenchmarkReturnsChart.AxisX[0].MaxValue = double.NaN;
+            }
+            if (BenchmarkReturnsChart?.AxisY?.Count > 0)
+            {
+                BenchmarkReturnsChart.AxisY[0].MinValue = double.NaN;
+                BenchmarkReturnsChart.AxisY[0].MaxValue = double.NaN;
+            }
+            
+            if (BenchmarkDrawdownChart?.AxisX?.Count > 0)
+            {
+                BenchmarkDrawdownChart.AxisX[0].MinValue = double.NaN;
+                BenchmarkDrawdownChart.AxisX[0].MaxValue = double.NaN;
+            }
+            if (BenchmarkDrawdownChart?.AxisY?.Count > 0)
+            {
+                BenchmarkDrawdownChart.AxisY[0].MinValue = double.NaN;
+                BenchmarkDrawdownChart.AxisY[0].MaxValue = double.NaN;
+            }
+            
+            if (CombinedPerformanceChart?.AxisX?.Count > 0)
+            {
+                CombinedPerformanceChart.AxisX[0].MinValue = double.NaN;
+                CombinedPerformanceChart.AxisX[0].MaxValue = double.NaN;
+            }
+            if (CombinedPerformanceChart?.AxisY?.Count > 0)
+            {
+                CombinedPerformanceChart.AxisY[0].MinValue = double.NaN;
+                CombinedPerformanceChart.AxisY[0].MaxValue = double.NaN;
+            }
+            
+            if (PerformanceAttributionChart?.AxisX?.Count > 0)
+            {
+                PerformanceAttributionChart.AxisX[0].MinValue = double.NaN;
+                PerformanceAttributionChart.AxisX[0].MaxValue = double.NaN;
+            }
+            if (PerformanceAttributionChart?.AxisY?.Count > 0)
+            {
+                PerformanceAttributionChart.AxisY[0].MinValue = double.NaN;
+                PerformanceAttributionChart.AxisY[0].MaxValue = double.NaN;
+            }
+        }
+        
+        #endregion
+        
+        #region Event Handlers
         
         private void ShowRelativeReturns_Changed(object sender, RoutedEventArgs e)
         {
             _showRelativeReturns = ShowRelativeReturnsToggle.IsChecked ?? false;
+            if (_viewModel != null)
+            {
+                _viewModel.ShowRelativeReturns = _showRelativeReturns;
+            }
             UpdateBenchmarkReturnsChart();
         }
         
         private void ResetChartZoom_Click(object sender, RoutedEventArgs e)
         {
-            // Reset zoom on all charts
-            BenchmarkReturnsChart.AxisX[0].MinValue = double.NaN;
-            BenchmarkReturnsChart.AxisX[0].MaxValue = double.NaN;
-            BenchmarkReturnsChart.AxisY[0].MinValue = double.NaN;
-            BenchmarkReturnsChart.AxisY[0].MaxValue = double.NaN;
-            
-            BenchmarkDrawdownChart.AxisX[0].MinValue = double.NaN;
-            BenchmarkDrawdownChart.AxisX[0].MaxValue = double.NaN;
-            BenchmarkDrawdownChart.AxisY[0].MinValue = double.NaN;
-            BenchmarkDrawdownChart.AxisY[0].MaxValue = double.NaN;
-            
-            CombinedPerformanceChart.AxisX[0].MinValue = double.NaN;
-            CombinedPerformanceChart.AxisX[0].MaxValue = double.NaN;
-            CombinedPerformanceChart.AxisY[0].MinValue = double.NaN;
-            CombinedPerformanceChart.AxisY[0].MaxValue = double.NaN;
-            
-            PerformanceAttributionChart.AxisX[0].MinValue = double.NaN;
-            PerformanceAttributionChart.AxisX[0].MaxValue = double.NaN;
-            PerformanceAttributionChart.AxisY[0].MinValue = double.NaN;
-            PerformanceAttributionChart.AxisY[0].MaxValue = double.NaN;
+            ResetChartZoom();
+        }
+        
+        private void HighlightOutperformance_Click(object sender, RoutedEventArgs e)
+        {
+            UpdatePerformanceAttributionChart();
+        }
+        
+        private void RunMonteCarloButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _ = _viewModel.RunMonteCarloSimulationAsync();
+            }
+            else
+            {
+                RunMonteCarloSimulation();
+            }
         }
         
         private void TimeRangeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1857,24 +1789,23 @@ namespace Quantra.Views.Backtesting
             if (endIndex < 0) endIndex = _currentResult.EquityCurve.Count - 1;
             
             // Apply the filter to returns chart
-            BenchmarkReturnsChart.AxisX[0].MinValue = startIndex;
-            BenchmarkReturnsChart.AxisX[0].MaxValue = endIndex;
+            if (BenchmarkReturnsChart?.AxisX?.Count > 0)
+            {
+                BenchmarkReturnsChart.AxisX[0].MinValue = startIndex;
+                BenchmarkReturnsChart.AxisX[0].MaxValue = endIndex;
+            }
             
             // Apply to performance attribution chart
-            PerformanceAttributionChart.AxisX[0].MinValue = startIndex;
-            PerformanceAttributionChart.AxisX[0].MaxValue = endIndex;
+            if (PerformanceAttributionChart?.AxisX?.Count > 0)
+            {
+                PerformanceAttributionChart.AxisX[0].MinValue = startIndex;
+                PerformanceAttributionChart.AxisX[0].MaxValue = endIndex;
+            }
         }
         
-        private void HighlightOutperformance_Click(object sender, RoutedEventArgs e)
-        {
-            // Toggle highlighting of outperformance periods on the returns chart
-            UpdatePerformanceAttributionChart();
-        }
+        #endregion
         
-        private void RunMonteCarloButton_Click(object sender, RoutedEventArgs e)
-        {
-            RunMonteCarloSimulation();
-        }
+        #region Monte Carlo Methods
         
         /// <summary>
         /// Run Monte Carlo simulation on the current backtest result
@@ -1903,8 +1834,17 @@ namespace Quantra.Views.Backtesting
                 MonteCarloStatusText.Text = $"Running {simulationCount} simulations...";
                 RunMonteCarloButton.IsEnabled = false;
                 
-                // Create a new BacktestingEngine with the same historical data service
-                var engine = new BacktestingEngine(_historicalDataService);
+                // Create a new BacktestingEngine using the ViewModel's service if available
+                BacktestingEngine engine;
+                if (_viewModel != null)
+                {
+                    engine = new BacktestingEngine(_viewModel.HistoricalDataService);
+                }
+                else
+                {
+                    // Fallback - create engine without service (limited functionality)
+                    engine = new BacktestingEngine(null);
+                }
                 
                 // Run simulation on a background thread
                 await Task.Run(() => {
@@ -1916,10 +1856,9 @@ namespace Quantra.Views.Backtesting
                 
                 MonteCarloStatusText.Text = $"Completed {simulationCount} simulations";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 MonteCarloStatusText.Text = "Simulation failed";
-                //DatabaseMonolith.Log("Error", "Monte Carlo simulation failed", ex.ToString());
             }
             finally
             {
@@ -2199,6 +2138,10 @@ namespace Quantra.Views.Backtesting
             DrawdownDistributionChart.DisableAnimations = true;
         }
 
+        #endregion
+
+        #region Tab Selection Handlers
+
         /// <summary>
         /// Handles the selection changed event for the benchmark comparison tab control
         /// </summary>
@@ -2282,10 +2225,12 @@ namespace Quantra.Views.Backtesting
                 // Mark the event as handled to prevent it from bubbling up to MainWindow
                 e.Handled = true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", $"Error handling tab selection change in BacktestResultsControl: {ex.Message}", ex.ToString());
+                // Log error if needed
             }
         }
+
+        #endregion
     }
 }
