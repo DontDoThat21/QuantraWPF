@@ -318,8 +318,20 @@ namespace Quantra
 
             chosenControlDefinition = $"{controlType},{row},{column},{rowSpan},{columnSpan}";
 
+            // Save the current cursor and set to wait cursor
+            Cursor previousCursor = this.Cursor;
+            
             try
             {
+                // Set wait cursor to indicate operation is in progress
+                this.Cursor = Cursors.Wait;
+                
+                // Disable the Add button to prevent multiple clicks
+                AddButton.IsEnabled = false;
+                
+                // Force UI update to show the wait cursor immediately
+                Application.Current.Dispatcher.Invoke(() => { }, System.Windows.Threading.DispatcherPriority.Render);
+                
                 if (mainWindow != null)
                 {
                     // Try to add the control to the tab - the MainWindow.AddControlToTab method
@@ -354,6 +366,12 @@ namespace Quantra
                     mainWindow.AppendAlert($"Error adding control: {ex.Message}", "negative");
                 else
                     MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Always restore the cursor and re-enable the button
+                this.Cursor = previousCursor;
+                AddButton.IsEnabled = true;
             }
         }
 

@@ -100,19 +100,18 @@ namespace Quantra
                     {
                         TabComboBox.ItemsSource = tabs;
 
-                        // Select the new tab if specified, otherwise restore the previous selection
+                        // Select the new tab if specified
                         if (!string.IsNullOrEmpty(newTabName) && tabs != null && tabs.Contains(newTabName))
                         {
                             TabComboBox.SelectedItem = newTabName;
                         }
+                        // Restore the previous selection if it still exists
                         else if (!string.IsNullOrEmpty(currentSelection) && tabs != null && tabs.Contains(currentSelection))
                         {
                             TabComboBox.SelectedItem = currentSelection;
                         }
-                        else if (tabs != null && tabs.Any())
-                        {
-                            TabComboBox.SelectedIndex = 0;
-                        }
+                        // REMOVED: Don't automatically select the first tab
+                        // This ensures no default tab is selected when window opens
 
                         // Log the refresh
                         //DatabaseMonolith.Log("Info", $"Refreshed tab list in AddControlWindow. Tab count: {tabs?.Count ?? 0}");
