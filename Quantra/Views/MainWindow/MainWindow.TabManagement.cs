@@ -40,6 +40,13 @@ namespace Quantra
         private EmailService _emailService;
         private RealTimeInferenceService _inferenceService;
         private PredictionCacheService _predictionCacheService;
+        
+        // Sentiment analysis services (for DI into PredictionAnalysisControl)
+        private TwitterSentimentService _twitterSentimentService;
+        private FinancialNewsSentimentService _financialNewsSentimentService;
+        private IEarningsTranscriptService _earningsTranscriptService;
+        private IAnalystRatingService _analystRatingService;
+        private IInsiderTradingService _insiderTradingService;
         #endregion
 
         #region Constructor
@@ -724,6 +731,41 @@ namespace Quantra
                 var tradingRuleService = new TradingRuleService(_quantraDbContext);
                 var orderHistoryService = new OrderHistoryService(_quantraDbContext);
                 
+                // Initialize sentiment analysis services for DI
+                if (_twitterSentimentService == null)
+                {
+                    _twitterSentimentService = new TwitterSentimentService();
+                }
+                
+                if (_financialNewsSentimentService == null)
+                {
+                    var userSettings = _userSettingsService.GetUserSettings();
+                    _financialNewsSentimentService = new FinancialNewsSentimentService(userSettings);
+                }
+                
+                if (_earningsTranscriptService == null)
+                {
+                    _earningsTranscriptService = new EarningsTranscriptService();
+                }
+                
+                if (_analystRatingService == null)
+                {
+                    var userSettings = _userSettingsService.GetUserSettings();
+                    IAlertPublisher alertPublisher = null;
+                    try
+                    {
+                        alertPublisher = App.ServiceProvider?.GetService(typeof(IAlertPublisher)) as IAlertPublisher;
+                    }
+                    catch { /* Ignore if not available */ }
+                    _analystRatingService = new AnalystRatingService(userSettings, alertPublisher, _loggingService);
+                }
+                
+                if (_insiderTradingService == null)
+                {
+                    var userSettings = _userSettingsService.GetUserSettings();
+                    _insiderTradingService = new InsiderTradingService(userSettings);
+                }
+                
                 // Initialize repositories
                 if (_analysisRepository == null)
                 {
@@ -759,7 +801,12 @@ namespace Quantra
                     tradingRuleService,
                     _userSettingsService,
                     _loggingService,
-                    orderHistoryService);
+                    orderHistoryService,
+                    _twitterSentimentService,
+                    _financialNewsSentimentService,
+                    _earningsTranscriptService,
+                    _analystRatingService,
+                    _insiderTradingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width

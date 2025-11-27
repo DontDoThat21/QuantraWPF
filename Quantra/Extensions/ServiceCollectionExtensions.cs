@@ -127,6 +127,38 @@ namespace Quantra.Extensions
                 return new OpenAISentimentService(logger: null, configManager: configMgr);
             });
 
+            // Register TwitterSentimentService for Twitter sentiment analysis
+            services.AddSingleton<TwitterSentimentService>();
+
+            // Register FinancialNewsSentimentService for financial news analysis (separate from main social media)
+            services.AddSingleton<FinancialNewsSentimentService>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                return new FinancialNewsSentimentService(userSettings);
+            });
+
+            // Register EarningsTranscriptService
+            services.AddSingleton<EarningsTranscriptService>();
+            services.AddSingleton<IEarningsTranscriptService>(sp => sp.GetRequiredService<EarningsTranscriptService>());
+
+            // Register AnalystRatingService
+            services.AddSingleton<AnalystRatingService>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                var alertPublisher = sp.GetService<IAlertPublisher>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new AnalystRatingService(userSettings, alertPublisher, loggingService);
+            });
+            services.AddSingleton<IAnalystRatingService>(sp => sp.GetRequiredService<AnalystRatingService>());
+
+            // Register InsiderTradingService
+            services.AddSingleton<InsiderTradingService>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                return new InsiderTradingService(userSettings);
+            });
+            services.AddSingleton<IInsiderTradingService>(sp => sp.GetRequiredService<InsiderTradingService>());
+
             // Register prediction enhancement service via factory to satisfy its constructor
             services.AddSingleton<OpenAIPredictionEnhancementService>(sp =>
             {

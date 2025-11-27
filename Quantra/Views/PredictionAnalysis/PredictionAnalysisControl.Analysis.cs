@@ -13,12 +13,14 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysisControl : UserControl
     {
-        private static TwitterSentimentService _twitterSentimentService = new TwitterSentimentService();
-        private readonly ISocialMediaSentimentService _financialNewsSentimentService;
-        private readonly IEarningsTranscriptService _earningsTranscriptService;
-        private readonly IAnalystRatingService _analystRatingService;
-        private readonly IInsiderTradingService _insiderTradingService;
-        private readonly UserSettings _userSettings;
+        // NOTE: These service fields are initialized via DI in the main constructor (xaml.cs)
+        // They are declared here for clarity but assigned in the main partial class constructor
+        private TwitterSentimentService _twitterSentimentService;
+        private FinancialNewsSentimentService _financialNewsSentimentService;
+        private IEarningsTranscriptService _earningsTranscriptService;
+        private IAnalystRatingService _analystRatingService;
+        private IInsiderTradingService _insiderTradingService;
+        private UserSettings _userSettings;
         
         // Sentiment metrics storage
         private double sentimentScore = 0;
