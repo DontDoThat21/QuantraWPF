@@ -14,8 +14,8 @@ namespace Quantra.DAL.Data
      "Initial Catalog=QuantraRelational;" +
             "Integrated Security=True;" +
       "Persist Security Info=False;" +
-         "Pooling=False;" +
-            "MultipleActiveResultSets=False;" +
+         "Pooling=True;" +
+            "MultipleActiveResultSets=True;" +
        "Encrypt=True;" +
             "TrustServerCertificate=False;" +
       "Application Name=\"Quantra Trading Platform\";" +

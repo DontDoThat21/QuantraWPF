@@ -143,7 +143,7 @@ if (chartContainer != null)
                 try
                 {
                     // Try to create and add a SmaCrossoverStrategy
-                    var smaCrossover = Activator.CreateInstance(Type.GetType("Quantra.Models.SmaCrossoverStrategy, Quantra"));
+                    var smaCrossover = Activator.CreateInstance(Type.GetType("Quantra.Models.SmaCrossoverStrategy, Quantra.DAL"));
                     if (smaCrossover != null)
                         strategies.Add(smaCrossover);
                 }
@@ -164,7 +164,7 @@ if (chartContainer != null)
                 // Add other strategies if they exist in your project
                 try {
                     // Add EMA/SMA cross strategy if it exists
-                    var emaSmaStrategy = Activator.CreateInstance(Type.GetType("Quantra.Models.EmaSmaCrossStrategy, Quantra"));
+                    var emaSmaStrategy = Activator.CreateInstance(Type.GetType("Quantra.Models.EmaSmaCrossStrategy, Quantra.DAL"));
                     if (emaSmaStrategy != null)
                         strategies.Add(emaSmaStrategy);
                 } catch (Exception ex) {

@@ -5,6 +5,7 @@ using Quantra.DAL.Data.Entities;
 using System.Linq;
 using Quantra.CrossCutting.ErrorHandling;
 using Quantra.DAL.Services.Interfaces;
+using Microsoft.Data.SqlClient;
 
 namespace Quantra.DAL.Services
 {
@@ -142,6 +143,69 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Fixes the UserPreferences.Value column to allow unlimited text storage (NVARCHAR(MAX))
+        /// This fixes the string truncation issue when saving UserSettings
+        /// </summary>
+        public void FixUserPreferencesValueColumn()
+        {
+            try
+            {
+                _loggingService.Log("Info", "Checking UserPreferences.Value column size");
+
+                using (var connection = _dbContext.Database.GetDbConnection())
+                {
+                    connection.Open();
+                    
+                    // Check if column needs to be altered
+                    var checkSql = @"
+                        SELECT c.max_length
+                        FROM sys.columns c
+                        INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
+                        WHERE c.object_id = OBJECT_ID('dbo.UserPreferences')
+                        AND c.name = 'Value'
+                        AND t.name LIKE '%varchar%'";
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = checkSql;
+                        var maxLength = command.ExecuteScalar();
+
+                        // If max_length is -1, it's already NVARCHAR(MAX)
+                        // If it's anything else (like 1000 or 500), we need to alter it
+                        if (maxLength != null && Convert.ToInt32(maxLength) != -1)
+                        {
+                            _loggingService.Log("Info", $"UserPreferences.Value column is VARCHAR({maxLength}), updating to NVARCHAR(MAX)");
+
+                            // Alter the column to NVARCHAR(MAX)
+                            var alterSql = "ALTER TABLE dbo.UserPreferences ALTER COLUMN [Value] NVARCHAR(MAX) NULL";
+                            
+                            using (var alterCommand = connection.CreateCommand())
+                            {
+                                alterCommand.CommandText = alterSql;
+                                alterCommand.ExecuteNonQuery();
+                            }
+
+                            _loggingService.Log("Info", "Successfully updated UserPreferences.Value column to NVARCHAR(MAX)");
+                        }
+                        else if (maxLength == null)
+                        {
+                            _loggingService.Log("Warning", "Could not determine UserPreferences.Value column size - table may not exist yet");
+                        }
+                        else
+                        {
+                            _loggingService.Log("Info", "UserPreferences.Value column is already NVARCHAR(MAX)");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Warning", "Could not alter UserPreferences.Value column", ex.ToString());
+                // Don't throw - this is not critical for application startup
+            }
+        }
+
+        /// <summary>
         /// Applies any pending migrations to the database
         /// </summary>
         public void ApplyMigrations()
@@ -166,6 +230,9 @@ namespace Quantra.DAL.Services
                 // Fall back to EnsureCreated if migrations fail
                 _dbContext.Database.EnsureCreated();
             }
+            
+            // After ensuring database exists, fix the UserPreferences column if needed
+            FixUserPreferencesValueColumn();
         }
 
         /// <summary>

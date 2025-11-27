@@ -40,6 +40,18 @@ namespace Quantra.DAL.Data.Configurations
         }
     }
 
+    public class StockPredictionConfiguration : IEntityTypeConfiguration<StockPredictionEntity>
+    {
+        public void Configure(EntityTypeBuilder<StockPredictionEntity> builder)
+        {
+            // Indexes for performance on GroupBy and Max queries
+            builder.HasIndex(s => s.Symbol);
+            builder.HasIndex(s => s.CreatedDate);
+            builder.HasIndex(s => new { s.Symbol, s.CreatedDate });
+            builder.HasIndex(s => s.Confidence);
+        }
+    }
+
     public class PredictionIndicatorConfiguration : IEntityTypeConfiguration<PredictionIndicatorEntity>
     {
         public void Configure(EntityTypeBuilder<PredictionIndicatorEntity> builder)

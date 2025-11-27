@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Quantra.DAL.Data.Entities;
 using Quantra.Models;
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Quantra.DAL.Data
 {
@@ -88,14 +89,31 @@ namespace Quantra.DAL.Data
 
         private void ConfigureConventions(ModelBuilder modelBuilder)
         {
-            // Set default string length for all string properties (SQLite doesn't enforce, but good for documentation)
+            // Set default string length for all string properties without explicit MaxLength
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 foreach (var property in entityType.GetProperties())
                 {
-                    if (property.ClrType == typeof(string) && property.GetMaxLength() == null)
+                    if (property.ClrType == typeof(string))
                     {
-                        property.SetMaxLength(500);
+                        var maxLength = property.GetMaxLength();
+                        
+                        // Only set default if no MaxLength was specified at all
+                        // If MaxLength is null, check if the property has [MaxLength] attribute
+                        // which indicates it should be NVARCHAR(MAX)
+                        if (maxLength == null)
+                        {
+                            var memberInfo = property.PropertyInfo ?? (System.Reflection.MemberInfo)property.FieldInfo;
+                            var hasMaxLengthAttribute = memberInfo != null && 
+                                memberInfo.GetCustomAttributes(typeof(MaxLengthAttribute), false).Length > 0;
+                            
+                            // If [MaxLength] attribute exists without value, it means unlimited (NVARCHAR(MAX))
+                            // Don't set a default length for these
+                            if (!hasMaxLengthAttribute)
+                            {
+                                property.SetMaxLength(500);
+                            }
+                        }
                     }
                 }
             }
@@ -108,7 +126,61 @@ namespace Quantra.DAL.Data
         {
             Database.EnsureCreated();
 
-            // For SQL Server, no special PRAGMA settings needed
+            // Fix UserPreferences.Value column if needed (for SQL Server)
+            FixUserPreferencesValueColumnIfNeeded();
+        }
+
+        /// <summary>
+        /// Fixes the UserPreferences.Value column to NVARCHAR(MAX) if it's currently truncated
+        /// </summary>
+        private void FixUserPreferencesValueColumnIfNeeded()
+        {
+            try
+            {
+                using (var connection = Database.GetDbConnection())
+                {
+                    connection.Open();
+                    
+                    // Check if column needs to be altered
+                    var checkSql = @"
+                        SELECT c.max_length
+                        FROM sys.columns c
+                        INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
+                        WHERE c.object_id = OBJECT_ID('dbo.UserPreferences')
+                        AND c.name = 'Value'
+                        AND t.name LIKE '%varchar%'";
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = checkSql;
+                        var maxLength = command.ExecuteScalar();
+
+                        // If max_length is -1, it's already NVARCHAR(MAX)
+                        // If it's anything else (like 1000 or 500), we need to alter it
+                        if (maxLength != null && Convert.ToInt32(maxLength) != -1)
+                        {
+                            Console.WriteLine($"Fixing UserPreferences.Value column from VARCHAR({maxLength}) to NVARCHAR(MAX)");
+
+                            // Alter the column to NVARCHAR(MAX)
+                            var alterSql = "ALTER TABLE dbo.UserPreferences ALTER COLUMN [Value] NVARCHAR(MAX) NULL";
+                            
+                            using (var alterCommand = connection.CreateCommand())
+                            {
+                                alterCommand.CommandText = alterSql;
+                                alterCommand.ExecuteNonQuery();
+                            }
+
+                            Console.WriteLine("Successfully updated UserPreferences.Value column to NVARCHAR(MAX)");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Don't throw - this is not critical for application startup
+                // Just log to console as a fallback
+                Console.WriteLine($"Warning: Could not alter UserPreferences.Value column: {ex.Message}");
+            }
         }
     }
 }

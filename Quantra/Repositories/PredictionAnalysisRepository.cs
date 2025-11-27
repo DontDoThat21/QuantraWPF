@@ -49,7 +49,8 @@ namespace Quantra.Repositories
 
         public List<PredictionAnalysisResult> GetLatestAnalyses(int count = 50)
         {
-            return GetLatestAnalysesAsync(count).GetAwaiter().GetResult();
+            // Use Task.Run to avoid deadlock - execute async method on background thread
+            return Task.Run(async () => await GetLatestAnalysesAsync(count)).GetAwaiter().GetResult();
         }
 
         public async Task<List<PredictionAnalysisResult>> GetLatestAnalysesAsync(int count = 50)
@@ -57,16 +58,34 @@ namespace Quantra.Repositories
             var result = new List<PredictionAnalysisResult>();
             try
             {
-                // Query using LINQ with EF Core - get the latest prediction per symbol
-                var latestPredictions = await _context.StockPredictions
+                // Optimized approach: Get the latest date for each symbol in a single query,
+                // then fetch the predictions. This is more efficient than the GroupBy approach.
+                var latestDates = await _context.StockPredictions
                     .AsNoTracking()
-                    .Include(p => p.Indicators)
                     .GroupBy(p => p.Symbol)
-                    .Select(g => g.OrderByDescending(p => p.CreatedDate).FirstOrDefault())
-                    .Where(p => p != null)
+                    .Select(g => new { Symbol = g.Key, MaxDate = g.Max(p => p.CreatedDate) })
+                    .ToListAsync();
+
+                // Fetch predictions matching those symbol/date combinations
+                var latestPredictions = new List<StockPredictionEntity>();
+                foreach (var item in latestDates)
+                {
+                    var prediction = await _context.StockPredictions
+                        .AsNoTracking()
+                        .Include(p => p.Indicators)
+                        .FirstOrDefaultAsync(p => p.Symbol == item.Symbol && p.CreatedDate == item.MaxDate);
+                    
+                    if (prediction != null)
+                    {
+                        latestPredictions.Add(prediction);
+                    }
+                }
+
+                // Order by confidence and take the top results
+                latestPredictions = latestPredictions
                     .OrderByDescending(p => p.Confidence)
                     .Take(count)
-                    .ToListAsync();
+                    .ToList();
 
                 foreach (var prediction in latestPredictions)
                 {
@@ -106,7 +125,8 @@ namespace Quantra.Repositories
 
         public List<string> GetSymbols()
         {
-            return GetSymbolsAsync().GetAwaiter().GetResult();
+            // Use Task.Run to avoid deadlock - execute async method on background thread
+            return Task.Run(async () => await GetSymbolsAsync()).GetAwaiter().GetResult();
         }
 
         public async Task<List<string>> GetSymbolsAsync()
@@ -156,7 +176,8 @@ namespace Quantra.Repositories
         // Returns historical price data for a symbol, ordered by date ascending
         public List<HistoricalPrice> GetHistoricalPrices(string symbol)
         {
-            return GetHistoricalPricesAsync(symbol).GetAwaiter().GetResult();
+            // Use Task.Run to avoid deadlock - execute async method on background thread
+            return Task.Run(async () => await GetHistoricalPricesAsync(symbol)).GetAwaiter().GetResult();
         }
 
         /// <summary>

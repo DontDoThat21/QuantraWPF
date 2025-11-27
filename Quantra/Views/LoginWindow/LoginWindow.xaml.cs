@@ -1,5 +1,5 @@
 using Quantra.DAL.Services.Interfaces;
-using System.IO; // Add this for Path operations
+using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +7,9 @@ using System.Windows;
 using System.Windows.Input;
 using static Quantra.ResizableBorder;
 using System.Text.Json;
-using Quantra.DAL.Services; // For JSON deserialization
+using Quantra.DAL.Services;
 using Quantra.ViewModels;
+using System.ComponentModel;
 
 namespace Quantra
 {
@@ -36,6 +37,9 @@ namespace Quantra
             _viewModel.LoginSuccessful += OnLoginSuccessful;
             _viewModel.LoginFailed += OnLoginFailed;
             _viewModel.SettingsRequested += OnSettingsRequested;
+            
+            // Subscribe to PropertyChanged to monitor IsLoggingIn state
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         }
 
         /// <summary>
@@ -47,6 +51,15 @@ namespace Quantra
             TechnicalIndicatorService technicalIndicatorService)
             : this(new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
         {
+        }
+
+        private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(LoginWindowViewModel.IsLoggingIn))
+            {
+                // Set cursor based on IsLoggingIn state
+                this.Cursor = _viewModel.IsLoggingIn ? Cursors.Wait : Cursors.Arrow;
+            }
         }
 
         private void OnLoginSuccessful(object sender, LoginSuccessEventArgs e)
@@ -85,6 +98,7 @@ namespace Quantra
                 _viewModel.LoginSuccessful -= OnLoginSuccessful;
                 _viewModel.LoginFailed -= OnLoginFailed;
                 _viewModel.SettingsRequested -= OnSettingsRequested;
+                _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             }
             base.OnClosed(e);
         }

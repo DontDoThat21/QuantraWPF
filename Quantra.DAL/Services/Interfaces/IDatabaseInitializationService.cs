@@ -41,6 +41,11 @@ namespace Quantra.DAL.Services.Interfaces
         void ApplyMigrations();
 
         /// <summary>
+        /// Fixes the UserPreferences.Value column to allow unlimited text storage
+        /// </summary>
+        void FixUserPreferencesValueColumn();
+
+        /// <summary>
         /// Tests if the database connection is working
         /// </summary>
         bool TestConnection();
