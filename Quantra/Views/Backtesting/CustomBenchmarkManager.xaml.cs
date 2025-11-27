@@ -17,6 +17,7 @@ namespace Quantra.Views.Backtesting
     {
         private readonly CustomBenchmarkService _benchmarkService;
         private readonly UserSettingsService _userSettingsService;
+        private readonly AlphaVantageService _alphaVantageService;
         private List<CustomBenchmark> _benchmarks;
         private CustomBenchmark _selectedBenchmark;
         
@@ -44,11 +45,13 @@ namespace Quantra.Views.Backtesting
         /// Constructor
         /// </summary>
         public CustomBenchmarkManager(CustomBenchmarkService customBenchmarkService,
-            UserSettingsService userSettingsService)
+            UserSettingsService userSettingsService,
+            AlphaVantageService alphaVantageService)
         {
             InitializeComponent();
             _benchmarkService = customBenchmarkService;
             _userSettingsService = userSettingsService;
+            _alphaVantageService = alphaVantageService;
             
             // Attach resize behavior for borderless window
             this.SourceInitialized += (s, e) =>
@@ -109,7 +112,7 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void CreateNewButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CustomBenchmarkDialog();
+            var dialog = new CustomBenchmarkDialog(_alphaVantageService);
             bool? result = dialog.ShowDialog();
             
             if (result == true && dialog.Benchmark != null)
@@ -132,7 +135,7 @@ namespace Quantra.Views.Backtesting
                 var benchmark = _benchmarks.FirstOrDefault(b => b.Id == id);
                 if (benchmark != null)
                 {
-                    var dialog = new CustomBenchmarkDialog(benchmark);
+                    var dialog = new CustomBenchmarkDialog(benchmark, _alphaVantageService);
                     bool? result = dialog.ShowDialog();
                     
                     if (result == true && dialog.Benchmark != null)
@@ -172,7 +175,7 @@ namespace Quantra.Views.Backtesting
                     }
                     
                     // Show dialog to allow editing the clone
-                    var dialog = new CustomBenchmarkDialog(clone);
+                    var dialog = new CustomBenchmarkDialog(clone, _alphaVantageService);
                     bool? result = dialog.ShowDialog();
                     
                     if (result == true && dialog.Benchmark != null)

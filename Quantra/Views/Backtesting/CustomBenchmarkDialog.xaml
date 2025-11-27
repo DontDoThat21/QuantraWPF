@@ -187,10 +187,23 @@
                         </Grid.ColumnDefinitions>
                         
                         <TextBlock Grid.Column="0" Text="Symbol:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                        <TextBox Grid.Column="1" x:Name="SymbolTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        <ComboBox Grid.Column="1" x:Name="SymbolComboBox" Margin="5,0" 
+                                  IsEditable="True"
+                                  Style="{StaticResource EnhancedComboBoxStyle}"
+                                  TextSearch.TextPath="DisplayText"
+                                  ToolTip="Type to search for symbols">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding DisplayText}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Type}" FontSize="10" Opacity="0.7"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         
                         <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                        <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}" IsReadOnly="True"/>
                         
                         <TextBlock Grid.Column="4" Text="Weight (%):" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
                         <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
