@@ -9,6 +9,7 @@ namespace Quantra.DAL.Services.Interfaces
         Task<double> GetQuoteData(string symbol, string? interval = null);
         Task<QuoteData> GetQuoteDataAsync(string symbol);
         Task<List<string>> GetAllStockSymbols();
+        Task<List<SymbolSearchResult>> SearchSymbolsAsync(string keywords);
         Task<double> GetRSI(string symbol, string? interval = null);
         Task<double> GetLatestADX(string symbol, string? interval = null);
         Task<double> GetATR(string symbol, string? interval = null);
