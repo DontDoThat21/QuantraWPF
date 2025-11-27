@@ -40,6 +40,13 @@ namespace Quantra
         private EmailService _emailService;
         private RealTimeInferenceService _inferenceService;
         private PredictionCacheService _predictionCacheService;
+        
+        // Sentiment analysis services (for DI into PredictionAnalysisControl)
+        private TwitterSentimentService _twitterSentimentService;
+        private FinancialNewsSentimentService _financialNewsSentimentService;
+        private IEarningsTranscriptService _earningsTranscriptService;
+        private IAnalystRatingService _analystRatingService;
+        private IInsiderTradingService _insiderTradingService;
         #endregion
 
         #region Constructor
@@ -718,11 +725,49 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 
+                // Cache UserSettings to avoid redundant calls
+                var userSettings = _userSettingsService.GetUserSettings();
+                
                 // Initialize services that need DbContext
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var indicatorSettingsService = new IndicatorSettingsService(_quantraDbContext);
                 var tradingRuleService = new TradingRuleService(_quantraDbContext);
                 var orderHistoryService = new OrderHistoryService(_quantraDbContext);
+                
+                // Initialize sentiment analysis services - try DI first, fall back to manual instantiation
+                if (_twitterSentimentService == null)
+                {
+                    _twitterSentimentService = App.ServiceProvider?.GetService(typeof(TwitterSentimentService)) as TwitterSentimentService
+                        ?? new TwitterSentimentService();
+                }
+                
+                if (_financialNewsSentimentService == null)
+                {
+                    _financialNewsSentimentService = App.ServiceProvider?.GetService(typeof(FinancialNewsSentimentService)) as FinancialNewsSentimentService
+                        ?? new FinancialNewsSentimentService(userSettings);
+                }
+                
+                if (_earningsTranscriptService == null)
+                {
+                    _earningsTranscriptService = App.ServiceProvider?.GetService(typeof(IEarningsTranscriptService)) as IEarningsTranscriptService
+                        ?? new EarningsTranscriptService();
+                }
+                
+                if (_analystRatingService == null)
+                {
+                    _analystRatingService = App.ServiceProvider?.GetService(typeof(IAnalystRatingService)) as IAnalystRatingService;
+                    if (_analystRatingService == null)
+                    {
+                        IAlertPublisher alertPublisher = App.ServiceProvider?.GetService(typeof(IAlertPublisher)) as IAlertPublisher;
+                        _analystRatingService = new AnalystRatingService(userSettings, alertPublisher, _loggingService);
+                    }
+                }
+                
+                if (_insiderTradingService == null)
+                {
+                    _insiderTradingService = App.ServiceProvider?.GetService(typeof(IInsiderTradingService)) as IInsiderTradingService
+                        ?? new InsiderTradingService(userSettings);
+                }
                 
                 // Initialize repositories
                 if (_analysisRepository == null)
@@ -759,7 +804,12 @@ namespace Quantra
                     tradingRuleService,
                     _userSettingsService,
                     _loggingService,
-                    orderHistoryService);
+                    orderHistoryService,
+                    _twitterSentimentService,
+                    _financialNewsSentimentService,
+                    _earningsTranscriptService,
+                    _analystRatingService,
+                    _insiderTradingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width

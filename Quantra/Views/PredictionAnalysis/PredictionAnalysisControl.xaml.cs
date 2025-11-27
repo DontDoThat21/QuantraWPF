@@ -73,7 +73,12 @@ namespace Quantra.Controls
         TradingRuleService tradingRuleService,
         UserSettingsService userSettingsService,
         LoggingService loggingService,
-        OrderHistoryService orderHistoryService)
+        OrderHistoryService orderHistoryService,
+        TwitterSentimentService twitterSentimentService,
+        FinancialNewsSentimentService financialNewsSentimentService,
+        IEarningsTranscriptService earningsTranscriptService,
+        IAnalystRatingService analystRatingService,
+        IInsiderTradingService insiderTradingService)
      {
   InitializeComponent();
 
@@ -92,6 +97,14 @@ namespace Quantra.Controls
     _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
     _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
     _orderHistoryService = orderHistoryService ?? throw new ArgumentNullException(nameof(orderHistoryService));
+
+    // Initialize sentiment analysis services via DI (MVVM pattern)
+    _twitterSentimentService = twitterSentimentService ?? throw new ArgumentNullException(nameof(twitterSentimentService));
+    _financialNewsSentimentService = financialNewsSentimentService ?? throw new ArgumentNullException(nameof(financialNewsSentimentService));
+    _earningsTranscriptService = earningsTranscriptService ?? throw new ArgumentNullException(nameof(earningsTranscriptService));
+    _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
+    _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
+    _userSettings = _userSettingsService.GetUserSettings();
 
     _indicatorModule = new IndicatorDisplayModule(
         _settingsService, 
