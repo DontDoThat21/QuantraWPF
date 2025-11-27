@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Quantra.Models;
 
 namespace Quantra.Views.Backtesting
@@ -29,6 +30,12 @@ namespace Quantra.Views.Backtesting
             _benchmark = new CustomBenchmark();
             _isEditMode = false;
             
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
+            
             InitializeUI();
         }
         
@@ -41,6 +48,12 @@ namespace Quantra.Views.Backtesting
             InitializeComponent();
             _benchmark = benchmark ?? new CustomBenchmark();
             _isEditMode = benchmark != null;
+            
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
             
             InitializeUI();
             LoadBenchmarkData();

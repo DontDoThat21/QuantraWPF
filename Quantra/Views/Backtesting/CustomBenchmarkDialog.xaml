@@ -4,170 +4,317 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:Quantra.Views.Backtesting"
+        xmlns:shared="clr-namespace:Quantra"
         mc:Ignorable="d"
         Title="Custom Benchmark" Height="550" Width="700"
         WindowStartupLocation="CenterOwner"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
         ResizeMode="CanResize"
-        Background="#23233A"
-        Foreground="White">
+        MinHeight="550"
+        MinWidth="700">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Custom style for ComboBox items with tooltips -->
+            <Style x:Key="BenchmarkCategoryItemStyle" TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding}" Value="Sector">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Sector Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A benchmark composed of stocks or ETFs representing a specific economic sector (e.g., Technology, Healthcare, Financial Services). Use this to compare strategy performance against sector-specific indices."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding}" Value="Industry">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Industry Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A benchmark focused on a specific industry within a sector (e.g., Semiconductor Manufacturing, Biotechnology, Investment Banking). Use this for granular industry-level comparisons."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding}" Value="AssetClass">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Asset Class Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A benchmark representing a broad asset class (e.g., Large Cap Stocks, Small Cap Growth, International Equities, Bonds). Use this to compare against different investment categories."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding}" Value="Strategy">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Strategy Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A benchmark reflecting a specific investment strategy (e.g., Momentum, Value Investing, Growth, Dividend Aristocrats). Use this to measure performance against strategy-specific indices."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding}" Value="Geography">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Geography Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A benchmark based on geographic regions or countries (e.g., Emerging Markets, European Stocks, Asian Pacific, US Domestic). Use this for regional market comparisons."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding}" Value="Custom">
+                        <Setter Property="ToolTip">
+                            <Setter.Value>
+                                <ToolTip>
+                                    <StackPanel MaxWidth="300">
+                                        <TextBlock FontWeight="Bold" Text="Custom Benchmark" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="A fully customizable benchmark for unique comparisons (e.g., Personal Portfolio, Thematic Investments, Multi-Asset Allocations). Use this for any specialized benchmark not fitting other categories."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Resize grip style -->
+            <Style x:Key="ResizeGripStyle" TargetType="Rectangle">
+                <Setter Property="Width" Value="16"/>
+                <Setter Property="Height" Value="16"/>
+                <Setter Property="Fill" Value="Transparent"/>
+                <Setter Property="Stroke" Value="Transparent"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="Cursor" Value="SizeNWSE"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Opacity" Value="1"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    
+    <Grid>
+        <!-- Add ResizableBorder for consistent behavior with other windows -->
+        <shared:ResizableBorder/>
         
-        <!-- Basic Info Section -->
-        <GroupBox Header="Benchmark Information" Grid.Row="0" Margin="0,0,0,10" Foreground="White">
-            <Grid Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+        <!-- Main Border with rounded corners -->
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Grid.Column="0" Grid.Row="0" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBox Grid.Column="1" Grid.Row="0" x:Name="NameTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                <!-- Custom Title Bar -->
+                <shared:SharedTitleBar Title="Custom Benchmark" Grid.Row="0"/>
                 
-                <TextBlock Grid.Column="2" Grid.Row="0" Text="Category:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <ComboBox Grid.Column="3" Grid.Row="0" x:Name="CategoryComboBox" Style="{StaticResource EnhancedComboBoxStyle}"/>
+                <!-- Basic Info Section -->
+                <GroupBox Header="Benchmark Information" Grid.Row="1" Margin="10,10,10,0" Foreground="White">
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Grid.Row="0" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox Grid.Column="1" Grid.Row="0" x:Name="NameTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Column="2" Grid.Row="0" Text="Category:" VerticalAlignment="Center" Margin="10,0,0,0" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <ComboBox Grid.Column="3" Grid.Row="0" x:Name="CategoryComboBox" 
+                                  Style="{StaticResource EnhancedComboBoxStyle}"
+                                  ItemContainerStyle="{StaticResource BenchmarkCategoryItemStyle}">
+                            <ComboBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock TextWrapping="Wrap" MaxWidth="250" 
+                                               Text="Select the category that best describes this benchmark. Hover over each option for detailed descriptions."/>
+                                </ToolTip>
+                            </ComboBox.ToolTip>
+                        </ComboBox>
+                        
+                        <TextBlock Grid.Column="0" Grid.Row="1" Text="Description:" VerticalAlignment="Top" Margin="0,10,0,0" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="1" x:Name="DescriptionTextBox" TextWrapping="Wrap" 
+                                 AcceptsReturn="True" Height="40" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                    </Grid>
+                </GroupBox>
                 
-                <TextBlock Grid.Column="0" Grid.Row="1" Text="Description:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBox Grid.Column="1" Grid.ColumnSpan="3" Grid.Row="1" x:Name="DescriptionTextBox" TextWrapping="Wrap" 
-                         AcceptsReturn="True" Height="40" VerticalScrollBarVisibility="Auto" Style="{StaticResource EnhancedTextBoxStyle}"/>
-            </Grid>
-        </GroupBox>
-        
-        <!-- Component Management Section -->
-        <GroupBox Header="Benchmark Components" Grid.Row="1" Margin="0,0,0,10" Foreground="White">
-            <Grid Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <!-- Component Management Section -->
+                <GroupBox Header="Benchmark Components" Grid.Row="2" Margin="10,10,10,0" Foreground="White">
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="Symbol:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox Grid.Column="1" x:Name="SymbolTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        
+                        <TextBlock Grid.Column="4" Text="Weight (%):" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        
+                        <Button Grid.Column="6" x:Name="AddComponentButton" Content="Add"
+                                Click="AddComponentButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"/>
+                    </Grid>
+                </GroupBox>
                 
-                <TextBlock Grid.Column="0" Text="Symbol:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBox Grid.Column="1" x:Name="SymbolTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                <!-- Weight Distribution Section -->
+                <GroupBox Header="Component Weights" Grid.Row="3" Margin="10,10,10,0" Foreground="White">
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Button x:Name="EqualWeightButton" Content="Equal Weight" Margin="0,0,10,0"
+                                    Click="EqualWeightButton_Click" ToolTip="Set equal weights for all components"
+                                    Style="{StaticResource EnhancedButtonStyle}"/>
+                            <Button x:Name="NormalizeWeightsButton" Content="Normalize Weights" Margin="0,0,10,0"
+                                    Click="NormalizeWeightsButton_Click" ToolTip="Normalize weights to sum to 100%"
+                                    Style="{StaticResource EnhancedButtonStyle}"/>
+                        </StackPanel>
+                        
+                        <TextBlock Grid.Column="1" x:Name="TotalWeightText" Text="Total: 0%" 
+                                   VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    </Grid>
+                </GroupBox>
                 
-                <TextBlock Grid.Column="2" Text="Name:" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                <!-- Component Table Header -->
+                <Grid Grid.Row="4" Margin="15,10,15,5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Symbol" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    <TextBlock Grid.Column="1" Text="Name" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    <TextBlock Grid.Column="2" Text="Weight %" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    <TextBlock Grid.Column="3" Text="Actions" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                </Grid>
                 
-                <TextBlock Grid.Column="4" Text="Weight (%):" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                <!-- Component List -->
+                <ScrollViewer Grid.Row="5" Margin="15,0,15,5" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ComponentsItemControl">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" Text="{Binding Symbol}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding WeightPercentage}" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                        <Button Content="Edit" Tag="{Binding Symbol}" 
+                                                Style="{StaticResource EnhancedButtonStyle}"
+                                                Margin="2"
+                                                Click="EditComponentButton_Click"/>
+                                        <Button Content="Remove" Tag="{Binding Symbol}" 
+                                                Style="{StaticResource EnhancedButtonStyle}"
+                                                Margin="2"
+                                                Click="RemoveComponentButton_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
                 
-                <Button Grid.Column="5" x:Name="AddComponentButton" Content="Add"
-                        Click="AddComponentButton_Click"
-                        Style="{StaticResource EnhancedButtonStyle}"/>
-            </Grid>
-        </GroupBox>
-        
-        <!-- Weight Distribution Section -->
-        <GroupBox Header="Component Weights" Grid.Row="2" Margin="0,0,0,10" Foreground="White">
-            <Grid Margin="5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <!-- Preview Section -->
+                <GroupBox Header="Benchmark Preview" Grid.Row="6" Margin="10,5,10,0" Foreground="White">
+                    <Grid Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="This custom benchmark will be displayed as:" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        <TextBlock Grid.Row="1" x:Name="PreviewText" Text="CUSTOM" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    </Grid>
+                </GroupBox>
                 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button x:Name="EqualWeightButton" Content="Equal Weight" Margin="0,0,10,0"
-                            Click="EqualWeightButton_Click" ToolTip="Set equal weights for all components"
+                <!-- Action Buttons -->
+                <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+                    <Button x:Name="SaveButton" Content="Save Benchmark" Width="120" 
+                            Click="SaveButton_Click"
                             Style="{StaticResource EnhancedButtonStyle}"/>
-                    <Button x:Name="NormalizeWeightsButton" Content="Normalize Weights" Margin="0,0,10,0"
-                            Click="NormalizeWeightsButton_Click" ToolTip="Normalize weights to sum to 100%"
+                    <Button x:Name="CancelButton" Content="Cancel" Width="80" IsCancel="True" 
+                            Margin="5,0,0,0"
+                            Click="CancelButton_Click"
                             Style="{StaticResource EnhancedButtonStyle}"/>
                 </StackPanel>
                 
-                <TextBlock Grid.Column="1" x:Name="TotalWeightText" Text="Total: 0%" 
-                           VerticalAlignment="Center" HorizontalAlignment="Right" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <!-- Resize Grips -->
+                <Grid Grid.Row="8" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Rectangle x:Name="BottomLeftGrip" Grid.Column="0" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNESW"/>
+                    
+                    <Rectangle x:Name="BottomGrip" Grid.Column="1" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Center" VerticalAlignment="Bottom" 
+                             Width="80" Margin="0,0,0,2" Cursor="SizeNS"/>
+                    
+                    <Rectangle x:Name="BottomRightGrip" Grid.Column="2" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNWSE"/>
+                </Grid>
             </Grid>
-        </GroupBox>
-        
-        <!-- Component Table Header -->
-        <Grid Grid.Row="3" Margin="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" Text="Symbol" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-            <TextBlock Grid.Column="1" Text="Name" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-            <TextBlock Grid.Column="2" Text="Weight %" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-            <TextBlock Grid.Column="3" Text="Actions" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-        </Grid>
-        
-        <!-- Component List -->
-        <ScrollViewer Grid.Row="4" Margin="5" VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="ComponentsItemControl">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <TextBlock Grid.Column="0" Text="{Binding Symbol}" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding WeightPercentage}" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal">
-                                <Button Content="Edit" Tag="{Binding Symbol}" 
-                                        Click="EditComponentButton_Click"/>
-                                <Button Content="Remove" Tag="{Binding Symbol}" 
-                                        Click="RemoveComponentButton_Click"/>
-                            </StackPanel>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-        
-        <!-- Preview Section -->
-        <GroupBox Header="Benchmark Preview" Grid.Row="5" Margin="0,10,0,10" Foreground="White">
-            <Grid Margin="5">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Text="This custom benchmark will be displayed as:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                <TextBlock Grid.Row="1" x:Name="PreviewText" Text="CUSTOM" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-            </Grid>
-        </GroupBox>
-        
-        <!-- Action Buttons -->
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveButton" Content="Save Benchmark" Width="120" 
-                    Click="SaveButton_Click"
-                    Style="{StaticResource EnhancedButtonStyle}"/>
-            <Button x:Name="CancelButton" Content="Cancel" Width="80" IsCancel="True" 
-                    Click="CancelButton_Click"
-                    Style="{StaticResource EnhancedButtonStyle}"/>
-        </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.DAL.Services;
@@ -31,6 +32,12 @@ namespace Quantra.Views.Backtesting
         {
             InitializeComponent();
             _benchmarks = new List<CustomBenchmark>();
+            
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
         }
         
         /// <summary>
@@ -41,6 +48,13 @@ namespace Quantra.Views.Backtesting
         {
             InitializeComponent();
             _benchmarkService = customBenchmarkService;
+            _userSettingsService = userSettingsService;
+            
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
             
             // Load benchmarks
             LoadBenchmarks();
