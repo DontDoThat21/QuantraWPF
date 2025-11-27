@@ -725,45 +725,48 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 
+                // Cache UserSettings to avoid redundant calls
+                var userSettings = _userSettingsService.GetUserSettings();
+                
                 // Initialize services that need DbContext
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var indicatorSettingsService = new IndicatorSettingsService(_quantraDbContext);
                 var tradingRuleService = new TradingRuleService(_quantraDbContext);
                 var orderHistoryService = new OrderHistoryService(_quantraDbContext);
                 
-                // Initialize sentiment analysis services for DI
+                // Initialize sentiment analysis services - try DI first, fall back to manual instantiation
                 if (_twitterSentimentService == null)
                 {
-                    _twitterSentimentService = new TwitterSentimentService();
+                    _twitterSentimentService = App.ServiceProvider?.GetService(typeof(TwitterSentimentService)) as TwitterSentimentService
+                        ?? new TwitterSentimentService();
                 }
                 
                 if (_financialNewsSentimentService == null)
                 {
-                    var userSettings = _userSettingsService.GetUserSettings();
-                    _financialNewsSentimentService = new FinancialNewsSentimentService(userSettings);
+                    _financialNewsSentimentService = App.ServiceProvider?.GetService(typeof(FinancialNewsSentimentService)) as FinancialNewsSentimentService
+                        ?? new FinancialNewsSentimentService(userSettings);
                 }
                 
                 if (_earningsTranscriptService == null)
                 {
-                    _earningsTranscriptService = new EarningsTranscriptService();
+                    _earningsTranscriptService = App.ServiceProvider?.GetService(typeof(IEarningsTranscriptService)) as IEarningsTranscriptService
+                        ?? new EarningsTranscriptService();
                 }
                 
                 if (_analystRatingService == null)
                 {
-                    var userSettings = _userSettingsService.GetUserSettings();
-                    IAlertPublisher alertPublisher = null;
-                    try
+                    _analystRatingService = App.ServiceProvider?.GetService(typeof(IAnalystRatingService)) as IAnalystRatingService;
+                    if (_analystRatingService == null)
                     {
-                        alertPublisher = App.ServiceProvider?.GetService(typeof(IAlertPublisher)) as IAlertPublisher;
+                        IAlertPublisher alertPublisher = App.ServiceProvider?.GetService(typeof(IAlertPublisher)) as IAlertPublisher;
+                        _analystRatingService = new AnalystRatingService(userSettings, alertPublisher, _loggingService);
                     }
-                    catch { /* Ignore if not available */ }
-                    _analystRatingService = new AnalystRatingService(userSettings, alertPublisher, _loggingService);
                 }
                 
                 if (_insiderTradingService == null)
                 {
-                    var userSettings = _userSettingsService.GetUserSettings();
-                    _insiderTradingService = new InsiderTradingService(userSettings);
+                    _insiderTradingService = App.ServiceProvider?.GetService(typeof(IInsiderTradingService)) as IInsiderTradingService
+                        ?? new InsiderTradingService(userSettings);
                 }
                 
                 // Initialize repositories
