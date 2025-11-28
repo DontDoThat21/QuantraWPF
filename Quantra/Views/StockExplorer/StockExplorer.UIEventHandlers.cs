@@ -15,6 +15,10 @@ namespace Quantra.Controls
     public partial class StockExplorer
     {
         private string _lastSearchText = "";
+        
+        // Tracks whether a dropdown selection was made (vs just closing without selection)
+        private bool _dropdownSelectionMade = false;
+        private string _selectedSymbolBeforeDropdown = null;
 
         private void StockExplorer_Loaded(object sender, RoutedEventArgs e)
         {
@@ -522,7 +526,12 @@ namespace Quantra.Controls
         }
 
         // SymbolComboBox selection changed event handler
-        private async void SymbolComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        // This handler ONLY enables the Search button when a valid symbol is selected
+        // It does NOT trigger an automatic search - search is only triggered by:
+        // 1. Enter key press (handled in SymbolComboBox_KeyUp)
+        // 2. Clicking on a dropdown item (handled in SymbolComboBox_DropDownClosed)
+        // 3. Clicking the Search button (handled in RefreshButton_Click)
+        private void SymbolComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isHandlingSelectionChanged || sender is not ComboBox comboBox) 
                 return;
@@ -530,10 +539,62 @@ namespace Quantra.Controls
             var selectedSymbol = comboBox.SelectedItem as string;
             if (!string.IsNullOrEmpty(selectedSymbol))
             {
+                // Only enable the Search button - do NOT auto-search
+                // Search is triggered by Enter key, dropdown click, or Search button click
                 EnableStockSearchButton();
-                // Update the title when selecting from ComboBox
-                await HandleSymbolSelectionAsync(selectedSymbol, "ComboBox");
+                
+                // Track that a selection was made (used by DropDownClosed)
+                if (comboBox.IsDropDownOpen)
+                {
+                    _dropdownSelectionMade = true;
+                }
             }
+        }
+
+        // DropDownOpened event handler - stores the selection state before dropdown opens
+        private void SymbolComboBox_DropDownOpened(object sender, EventArgs e)
+        {
+            if (sender is ComboBox comboBox)
+            {
+                // Store the current selection before the dropdown opens
+                _selectedSymbolBeforeDropdown = comboBox.SelectedItem as string;
+                _dropdownSelectionMade = false;
+            }
+        }
+
+        // DropDownClosed event handler - triggers search only when user explicitly clicks on a dropdown item
+        private async void SymbolComboBox_DropDownClosed(object sender, EventArgs e)
+        {
+            if (sender is not ComboBox comboBox || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
+                return;
+
+            var selectedSymbol = comboBox.SelectedItem as string;
+            
+            // Only trigger search if:
+            // 1. A selection was actually made while dropdown was open, OR
+            // 2. The selection changed from what it was before the dropdown opened
+            bool selectionChanged = !string.Equals(_selectedSymbolBeforeDropdown, selectedSymbol, StringComparison.OrdinalIgnoreCase);
+            
+            if (!string.IsNullOrEmpty(selectedSymbol) && (_dropdownSelectionMade || selectionChanged))
+            {
+                try
+                {
+                    // User explicitly clicked on a dropdown item, trigger the search
+                    await HandleSymbolSelectionAsync(selectedSymbol, "DropdownSelection");
+                }
+                catch (System.OperationCanceledException)
+                {
+                    // Operation was cancelled - this is expected when user selects quickly
+                }
+                catch (Exception ex)
+                {
+                    CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
+                }
+            }
+            
+            // Reset tracking state
+            _dropdownSelectionMade = false;
+            _selectedSymbolBeforeDropdown = null;
         }
 
         private async void SymbolComboBox_KeyUp(object sender, KeyEventArgs e)
