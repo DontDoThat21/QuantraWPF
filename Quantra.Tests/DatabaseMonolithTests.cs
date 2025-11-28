@@ -18,7 +18,7 @@ namespace Quantra.Tests
         {
             // Ensure database is initialized
             DatabaseMonolith.Initialize();
-            
+
             // Clean up any existing test data
             CleanupTestData();
         }
@@ -37,7 +37,7 @@ namespace Quantra.Tests
                 using (var connection = ConnectionHelper.GetConnection())
                 {
                     connection.Open();
-                    
+
                     // Delete from both tables
                     var deleteCacheQuery = "DELETE FROM StockDataCache WHERE Symbol = @Symbol";
                     using (var command = new SQLiteCommand(deleteCacheQuery, connection))
@@ -45,7 +45,7 @@ namespace Quantra.Tests
                         command.Parameters.AddWithValue("@Symbol", TestSymbol);
                         command.ExecuteNonQuery();
                     }
-                    
+
                     var deleteSymbolQuery = "DELETE FROM StockSymbols WHERE Symbol = @Symbol";
                     using (var command = new SQLiteCommand(deleteSymbolQuery, connection))
                     {
@@ -67,7 +67,7 @@ namespace Quantra.Tests
             using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
-                
+
                 // Insert into StockSymbols table
                 var insertSymbolQuery = @"
                     INSERT INTO StockSymbols (Symbol, Name, Sector, Industry, LastUpdated)
@@ -81,7 +81,7 @@ namespace Quantra.Tests
                     command.Parameters.AddWithValue("@LastUpdated", DateTime.Now);
                     command.ExecuteNonQuery();
                 }
-                
+
                 // Insert into StockDataCache table
                 var insertCacheQuery = @"
                     INSERT INTO StockDataCache (Symbol, TimeRange, Interval, Data, CacheTime)
@@ -102,12 +102,12 @@ namespace Quantra.Tests
 
             // Assert
             Assert.IsTrue(result, "DeleteStockSymbol should return true for valid symbol");
-            
+
             // Verify the symbol was deleted from both tables
             using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
-                
+
                 // Check StockSymbols table
                 var checkSymbolQuery = "SELECT COUNT(*) FROM StockSymbols WHERE Symbol = @Symbol";
                 using (var command = new SQLiteCommand(checkSymbolQuery, connection))
@@ -116,7 +116,7 @@ namespace Quantra.Tests
                     var symbolCount = Convert.ToInt32(command.ExecuteScalar());
                     Assert.AreEqual(0, symbolCount, "Symbol should be deleted from StockSymbols table");
                 }
-                
+
                 // Check StockDataCache table
                 var checkCacheQuery = "SELECT COUNT(*) FROM StockDataCache WHERE Symbol = @Symbol";
                 using (var command = new SQLiteCommand(checkCacheQuery, connection))
@@ -157,7 +157,7 @@ namespace Quantra.Tests
             using (var connection = ConnectionHelper.GetConnection())
             {
                 connection.Open();
-                
+
                 var insertSymbolQuery = @"
                     INSERT INTO StockSymbols (Symbol, Name, Sector, Industry, LastUpdated)
                     VALUES (@Symbol, @Name, @Sector, @Industry, @LastUpdated)";
@@ -177,7 +177,7 @@ namespace Quantra.Tests
 
             // Assert
             Assert.IsTrue(result, "DeleteStockSymbol should return true even if symbol is only in StockSymbols table");
-            
+
             // Verify deletion
             using (var connection = ConnectionHelper.GetConnection())
             {

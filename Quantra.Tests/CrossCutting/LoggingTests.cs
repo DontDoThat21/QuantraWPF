@@ -22,10 +22,10 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange
             var manager = LoggingManager.Instance;
-            
+
             // Act
             manager.Initialize("Logging");
-            
+
             // Assert
             Assert.IsNotNull(manager);
         }
@@ -35,7 +35,7 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange & Act
             var logger = Log.ForType<LoggingTests>();
-            
+
             // Assert
             Assert.IsNotNull(logger);
         }
@@ -45,13 +45,13 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange
             var logger = Log.ForType<LoggingTests>();
-            
+
             // Act & Assert
             try
             {
                 logger.Information("Test log message");
                 logger.Information("Test with parameters {Param1} and {Param2}", "Value1", 42);
-                
+
                 // Log should succeed without exceptions
                 Assert.IsTrue(true);
             }
@@ -66,7 +66,7 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange
             var logger = Log.ForType<LoggingTests>();
-            
+
             // Act
             TimeSpan elapsed;
             using (var operation = logger.BeginTimedOperation("TestOperation"))
@@ -74,7 +74,7 @@ namespace Quantra.Tests.CrossCutting
                 // Simulate some work
                 Task.Delay(100).Wait();
             }
-            
+
             // Assert - if we reach here, the operation completed and logged correctly
             Assert.IsTrue(true);
         }
@@ -89,7 +89,7 @@ namespace Quantra.Tests.CrossCutting
                 Quantra.Services._loggingService.Log("Info", "Legacy log test");
                 Quantra.Services._loggingService.LogErrorWithContext(
                     new InvalidOperationException("Test exception"), "Legacy error logging test");
-                
+
                 // Log should succeed without exceptions
                 Assert.IsTrue(true);
             }
@@ -104,23 +104,23 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange
             var logger = Log.ForType<LoggingTests>();
-            
+
             // Act & Assert
             try
             {
                 using (logger.BeginScope("OuterOperation"))
                 {
                     logger.Information("Outer operation started");
-                    
+
                     using (logger.BeginScope("InnerOperation"))
                     {
                         logger.Information("Inner operation started");
                         logger.Information("Inner operation completed");
                     }
-                    
+
                     logger.Information("Outer operation completed");
                 }
-                
+
                 // Log should succeed without exceptions
                 Assert.IsTrue(true);
             }
@@ -135,18 +135,18 @@ namespace Quantra.Tests.CrossCutting
         {
             // Arrange
             string testDbPath = "test_logs.db";
-            
+
             try
             {
                 // Clean up any existing test database
                 if (File.Exists(testDbPath))
                     File.Delete(testDbPath);
-                
+
                 // Create a test database with the old LogLevel column schema
                 using (var connection = new System.Data.SQLite.SQLiteConnection($"Data Source={testDbPath};Version=3;"))
                 {
                     connection.Open();
-                    
+
                     // Create the problematic table with LogLevel column
                     using (var command = new System.Data.SQLite.SQLiteCommand(
                         @"CREATE TABLE Logs (
@@ -159,23 +159,23 @@ namespace Quantra.Tests.CrossCutting
                         command.ExecuteNonQuery();
                     }
                 }
-                
+
                 // Act - temporarily use test database for logging
-                var originalDbPath = typeof(DatabaseMonolith).GetField("DbFilePath", 
+                var originalDbPath = typeof(DatabaseMonolith).GetField("DbFilePath",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 var originalValue = originalDbPath?.GetValue(null);
                 originalDbPath?.SetValue(null, testDbPath);
-                
+
                 try
                 {
                     // This should trigger the column migration and succeed
                     //DatabaseMonolith.Log("Info", "Test message", "Test details");
-                    
+
                     // Verify the Level column exists and data was inserted
                     using (var connection = new System.Data.SQLite.SQLiteConnection($"Data Source={testDbPath};Version=3;"))
                     {
                         connection.Open();
-                        
+
                         // Check that Level column exists
                         bool hasLevelColumn = false;
                         using (var command = new System.Data.SQLite.SQLiteCommand("PRAGMA table_info(Logs)", connection))
@@ -190,9 +190,9 @@ namespace Quantra.Tests.CrossCutting
                                 }
                             }
                         }
-                        
+
                         Assert.IsTrue(hasLevelColumn, "Level column should exist after migration");
-                        
+
                         // Verify data was inserted
                         using (var command = new System.Data.SQLite.SQLiteCommand("SELECT COUNT(*) FROM Logs WHERE Level = 'Info'", connection))
                         {

@@ -37,13 +37,13 @@ namespace Quantra.Tests
         public void TestPredictionSummaryProperty()
         {
             // Arrange
-            var viewModel = CreateTestViewModel();
-            
+            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+
             // Act
             var initialSummary = viewModel.PredictionSummary;
             viewModel.PredictionSummary = "Test prediction summary";
             var updatedSummary = viewModel.PredictionSummary;
-            
+
             // Assert
             Assert.AreEqual("Ready to run predictions...", initialSummary);
             Assert.AreEqual("Test prediction summary", updatedSummary);
@@ -53,15 +53,15 @@ namespace Quantra.Tests
         public void TestPredictionLoadingState()
         {
             // Arrange
-            var viewModel = CreateTestViewModel();
-            
+            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+
             // Act
             var initialState = viewModel.IsPredictionLoading;
             viewModel.IsPredictionLoading = true;
             var loadingState = viewModel.IsPredictionLoading;
             viewModel.IsPredictionLoading = false;
             var finalState = viewModel.IsPredictionLoading;
-            
+
             // Assert
             Assert.IsFalse(initialState);
             Assert.IsTrue(loadingState);
@@ -72,11 +72,11 @@ namespace Quantra.Tests
         public void TestCanRunPredictionsLogic()
         {
             // Arrange
-            var viewModel = CreateTestViewModel();
-            
+            var viewModel = new Quantra.ViewModels.StockExplorerViewModel();
+
             // Act & Assert - No stocks initially
             Assert.IsFalse(viewModel.CanRunPredictions);
-            
+
             // Add a mock stock
             var mockStock = new QuoteData
             {
@@ -85,10 +85,10 @@ namespace Quantra.Tests
                 Volume = 1000000
             };
             viewModel.CachedStocks.Add(mockStock);
-            
+
             // Should be able to run predictions now
             Assert.IsTrue(viewModel.CanRunPredictions);
-            
+
             // When loading is true, should not be able to run
             viewModel.IsPredictionLoading = true;
             Assert.IsFalse(viewModel.CanRunPredictions);

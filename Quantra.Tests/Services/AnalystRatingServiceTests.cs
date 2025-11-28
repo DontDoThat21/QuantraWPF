@@ -32,7 +32,7 @@ namespace Quantra.Tests.Services
             double sentiment = await _service.GetAnalystSentimentAsync(symbol);
 
             // Assert
-            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0, 
+            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0,
                 $"Sentiment score {sentiment} should be between -1.0 and 1.0");
         }
 
@@ -46,7 +46,7 @@ namespace Quantra.Tests.Services
             double sentiment = await _service.GetAnalystSentimentAsync(symbol);
 
             // Assert - Should fall back to traditional rating sentiment even with invalid symbol
-            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0, 
+            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0,
                 $"Sentiment score {sentiment} should be between -1.0 and 1.0 even for invalid symbol");
         }
 
@@ -60,7 +60,7 @@ namespace Quantra.Tests.Services
             double sentiment = await _service.GetRatingSentimentAsync(symbol);
 
             // Assert
-            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0, 
+            Assert.IsTrue(sentiment >= -1.0 && sentiment <= 1.0,
                 $"Rating sentiment score {sentiment} should be between -1.0 and 1.0");
         }
 

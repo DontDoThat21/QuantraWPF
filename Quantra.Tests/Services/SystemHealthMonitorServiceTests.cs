@@ -56,7 +56,7 @@ namespace Quantra.Tests.Services
 
             // This should not throw an exception anymore
             Assert.IsTrue(result.TryGetProperty("anomalies_detected", out JsonElement anomaliesDetectedElement));
-            
+
             // The original code would have called GetInt32() here and failed
             // The fixed code uses GetBoolean() which should work
             bool anomaliesDetected = anomaliesDetectedElement.GetBoolean();
@@ -69,11 +69,11 @@ namespace Quantra.Tests.Services
             // Demonstrate that the original approach would fail
             var jsonWithFalse = @"{""anomalies_detected"": false}";
             var result = JsonSerializer.Deserialize<JsonElement>(jsonWithFalse);
-            
+
             Assert.IsTrue(result.TryGetProperty("anomalies_detected", out JsonElement anomaliesDetectedElement));
-            
+
             // This is what the original code tried to do - should throw InvalidOperationException
-            Assert.ThrowsException<InvalidOperationException>(() => 
+            Assert.ThrowsException<InvalidOperationException>(() =>
             {
                 anomaliesDetectedElement.GetInt32();
             }, "GetInt32() should throw when trying to read a boolean as integer");
@@ -106,11 +106,11 @@ namespace Quantra.Tests.Services
             var resultWithoutAnomalies = JsonSerializer.Deserialize<JsonElement>(jsonWithoutAnomalies);
 
             // Test the logic pattern from the fixed code
-            bool shouldProcessAnomalies1 = resultWithAnomalies.TryGetProperty("anomalies_detected", out JsonElement element1) && 
+            bool shouldProcessAnomalies1 = resultWithAnomalies.TryGetProperty("anomalies_detected", out JsonElement element1) &&
                                           element1.GetBoolean();
             Assert.IsTrue(shouldProcessAnomalies1, "Should detect anomalies when true");
 
-            bool shouldProcessAnomalies2 = resultWithoutAnomalies.TryGetProperty("anomalies_detected", out JsonElement element2) && 
+            bool shouldProcessAnomalies2 = resultWithoutAnomalies.TryGetProperty("anomalies_detected", out JsonElement element2) &&
                                           element2.GetBoolean();
             Assert.IsFalse(shouldProcessAnomalies2, "Should not detect anomalies when false");
         }

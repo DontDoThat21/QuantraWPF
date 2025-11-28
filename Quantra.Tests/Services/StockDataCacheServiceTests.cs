@@ -89,13 +89,13 @@ namespace Quantra.Tests.Services
 
             // Assert
             Assert.True(allStocks.Count >= 2);
-            
+
             var aaplStock = allStocks.Find(s => s.Symbol == "AAPL");
             var msftStock = allStocks.Find(s => s.Symbol == "MSFT");
-            
+
             Assert.NotNull(aaplStock);
             Assert.NotNull(msftStock);
-            
+
             Assert.Equal(150.00, aaplStock.Price, 2);
             Assert.Equal(70.0, aaplStock.RSI, 2);
             Assert.Equal(300.00, msftStock.Price, 2);

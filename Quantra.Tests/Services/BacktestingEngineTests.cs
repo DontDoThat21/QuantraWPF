@@ -21,25 +21,25 @@ namespace Quantra.Tests.Services
             var backtest = new BacktestingEngine();
             var strategy = new TestStrategy();
             var historical = GenerateTestHistoricalData();
-            
+
             // Set up fixed commission model - $10 per trade
             var costModel = TransactionCostModel.CreateFixedCommissionModel(10);
-            
+
             // Act
             var resultWithoutCosts = await backtest.RunBacktestAsync("TEST", historical, strategy);
             var resultWithCosts = await backtest.RunBacktestAsync("TEST", historical, strategy, costModel: costModel);
-            
+
             // Assert
-            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn, 
+            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn,
                 "Return with costs should be less than return without costs");
-            Assert.True(resultWithCosts.TotalTransactionCosts > 0, 
+            Assert.True(resultWithCosts.TotalTransactionCosts > 0,
                 "Total transaction costs should be greater than zero");
-            
+
             // Verify the cost impact is tracked
             Assert.True(resultWithCosts.GrossReturn - resultWithCosts.NetReturn > 0,
                 "Cost impact should be positive");
         }
-        
+
         /// <summary>
         /// Test transaction costs with percentage-based commission model
         /// </summary>
@@ -50,25 +50,25 @@ namespace Quantra.Tests.Services
             var backtest = new BacktestingEngine();
             var strategy = new TestStrategy();
             var historical = GenerateTestHistoricalData();
-            
+
             // Set up percentage commission model - 0.5% per trade
             var costModel = TransactionCostModel.CreatePercentageCommissionModel(0.005);
-            
+
             // Act
             var resultWithoutCosts = await backtest.RunBacktestAsync("TEST", historical, strategy);
             var resultWithCosts = await backtest.RunBacktestAsync("TEST", historical, strategy, costModel: costModel);
-            
+
             // Assert
-            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn, 
+            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn,
                 "Return with costs should be less than return without costs");
-            Assert.True(resultWithCosts.TotalTransactionCosts > 0, 
+            Assert.True(resultWithCosts.TotalTransactionCosts > 0,
                 "Total transaction costs should be greater than zero");
-                
+
             // Verify transaction cost percentage is tracked
             Assert.True(resultWithCosts.TransactionCostsPercentage > 0,
                 "Transaction costs percentage should be positive");
         }
-        
+
         /// <summary>
         /// Test realistic transaction cost model with commission, spread and slippage
         /// </summary>
@@ -79,23 +79,23 @@ namespace Quantra.Tests.Services
             var backtest = new BacktestingEngine();
             var strategy = new TestStrategy();
             var historical = GenerateTestHistoricalData();
-            
+
             // Create realistic retail brokerage model
             var costModel = TransactionCostModel.CreateRetailBrokerageModel();
-            
+
             // Act
             var resultWithoutCosts = await backtest.RunBacktestAsync("TEST", historical, strategy);
             var resultWithCosts = await backtest.RunBacktestAsync("TEST", historical, strategy, costModel: costModel);
-            
+
             // Assert
-            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn, 
+            Assert.True(resultWithCosts.TotalReturn < resultWithoutCosts.TotalReturn,
                 "Return with costs should be less than return without costs");
-            
+
             // Make sure transaction costs are reported
             Assert.True(resultWithCosts.TotalTransactionCosts > 0);
             Assert.True(resultWithCosts.TransactionCostsPercentage > 0);
         }
-        
+
         /// <summary>
         /// Generate test historical data with an upward trend
         /// </summary>
@@ -103,10 +103,10 @@ namespace Quantra.Tests.Services
         {
             var data = new List<HistoricalPrice>();
             var random = new Random(42); // Fixed seed for reproducibility
-            
+
             double price = 100.0;
             DateTime date = DateTime.Now.AddYears(-1);
-            
+
             for (int i = 0; i < 252; i++) // One year of trading days
             {
                 date = date.AddDays(1);
@@ -114,13 +114,13 @@ namespace Quantra.Tests.Services
                 {
                     continue;
                 }
-                
+
                 double dailyChange = (random.NextDouble() - 0.4) * 2; // Slightly positive bias
                 price += price * (dailyChange / 100);
-                
+
                 double high = price * (1 + random.NextDouble() * 0.01);
                 double low = price * (1 - random.NextDouble() * 0.01);
-                
+
                 data.Add(new HistoricalPrice
                 {
                     Date = date,
@@ -131,11 +131,11 @@ namespace Quantra.Tests.Services
                     Volume = random.Next(10000, 1000000)
                 });
             }
-            
+
             return data;
         }
     }
-    
+
     /// <summary>
     /// Simple test strategy for backtesting
     /// </summary>
@@ -145,19 +145,19 @@ namespace Quantra.Tests.Services
         {
             Name = "Test Strategy";
         }
-        
+
         public override string GenerateSignal(List<HistoricalPrice> prices, int? index = null)
         {
             int idx = index ?? (prices.Count - 1);
             if (idx < 20) return null;
-            
+
             // Simple moving average crossover
             double shortMA = prices.Skip(idx - 10).Take(10).Average(h => h.Close);
             double longMA = prices.Skip(idx - 20).Take(20).Average(h => h.Close);
-            
+
             if (shortMA > longMA) return "BUY";
             if (shortMA < longMA) return "SELL";
-            
+
             return null;
         }
 

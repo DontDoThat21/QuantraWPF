@@ -62,7 +62,7 @@ namespace Quantra.Tests.Services
 
             // This should work even with retry logic
             var profile = SettingsService.GetDefaultSettingsProfile();
-            
+
             Assert.IsNotNull(profile, "Should return a default profile");
             Assert.IsTrue(profile.IsDefault, "Returned profile should be marked as default");
         }

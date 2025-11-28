@@ -50,7 +50,7 @@ namespace Quantra.Tests.Utilities
             using var throttler = new ConcurrentTaskThrottler(2);
 
             // Assert
-            await Assert.ThrowsAsync<ArgumentNullException>(() => 
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
                 throttler.ExecuteThrottledAsync<int>(null));
         }
 
@@ -61,13 +61,13 @@ namespace Quantra.Tests.Utilities
             const int maxDegree = 2;
             const int taskCount = 6;
             const int taskDurationMs = 100;
-            
+
             using var throttler = new ConcurrentTaskThrottler(maxDegree);
             var concurrentExecutions = 0;
             var maxConcurrentExecutions = 0;
             var lockObject = new object();
 
-            var taskFactories = Enumerable.Range(0, taskCount).Select(i => 
+            var taskFactories = Enumerable.Range(0, taskCount).Select(i =>
                 new Func<Task<int>>(async () =>
                 {
                     lock (lockObject)
@@ -94,9 +94,9 @@ namespace Quantra.Tests.Utilities
             // Assert
             Assert.Equal(taskCount, results.Length);
             Assert.Equal(Enumerable.Range(0, taskCount), results.OrderBy(x => x));
-            Assert.True(maxConcurrentExecutions <= maxDegree, 
+            Assert.True(maxConcurrentExecutions <= maxDegree,
                 $"Max concurrent executions ({maxConcurrentExecutions}) exceeded max degree ({maxDegree})");
-            
+
             // Verify that throttling actually occurred (should take longer than if all tasks ran concurrently)
             var expectedMinTime = (taskCount / maxDegree - 1) * taskDurationMs;
             Assert.True(stopwatch.ElapsedMilliseconds >= expectedMinTime * 0.8, // Allow 20% tolerance
@@ -109,7 +109,7 @@ namespace Quantra.Tests.Utilities
             // Arrange
             using var throttler = new ConcurrentTaskThrottler(3);
             var items = Enumerable.Range(1, 10).ToList();
-            
+
             async Task<int> SquareOperation(int x)
             {
                 await Task.Delay(10); // Simulate work
@@ -134,7 +134,7 @@ namespace Quantra.Tests.Utilities
             // Arrange
             using var throttler = new ConcurrentTaskThrottler(2);
             var items = new[] { 1, 2, 3, 4, 5 };
-            
+
             async Task<int> FaultyOperation(int x)
             {
                 await Task.Delay(10);

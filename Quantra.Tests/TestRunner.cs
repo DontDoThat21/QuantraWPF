@@ -14,12 +14,12 @@ namespace Quantra.Tests
         {
             Console.WriteLine("Running Sentiment-Price Correlation Analysis Test");
             Console.WriteLine("================================================");
-            
+
             var results = await SentimentPriceCorrelationTests.RunTestAnalysisAsync();
-            
+
             Console.WriteLine("Test Results:");
             Console.WriteLine("-------------");
-            
+
             // Check if there was an error
             if (results.ContainsKey("Error"))
             {
@@ -27,16 +27,16 @@ namespace Quantra.Tests
                 Console.WriteLine($"Stack Trace: {results["StackTrace"]}");
                 return;
             }
-            
+
             // Print results
             foreach (var key in results.Keys)
             {
                 if (key == "SourceCorrelations" || key == "SampleEvents")
                     continue;
-                    
+
                 Console.WriteLine($"{key}: {results[key]}");
             }
-            
+
             // Print source correlations
             Console.WriteLine("\nSource Correlations:");
             var sourceCorrelations = (JsonElement)results["SourceCorrelations"];
@@ -44,7 +44,7 @@ namespace Quantra.Tests
             {
                 Console.WriteLine($"  {property.Name}: {property.Value}");
             }
-            
+
             // Print sample events
             Console.WriteLine("\nSample Sentiment Shift Events:");
             var events = (JsonElement)results["SampleEvents"];
@@ -52,7 +52,7 @@ namespace Quantra.Tests
             {
                 Console.WriteLine($"  {evnt.GetString()}");
             }
-            
+
             // Save results to file
             string json = JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText("sentiment_price_correlation_results.json", json);

@@ -23,41 +23,41 @@ namespace Quantra.Tests.Services
         public static async Task<Dictionary<string, object>> RunBasicTestAsync()
         {
             var results = new Dictionary<string, object>();
-            
+
             try
             {
                 // Create mock configuration manager
                 var configManager = new MockConfigurationManager();
-                
+
                 // Create logger (using console logger for testing)
                 var logger = new MockLogger<YouTubeSentimentService>();
-                
+
                 // Create service
                 var youTubeService = new YouTubeSentimentService(logger, configManager);
-                
+
                 // Test sentiment analysis with mock URLs
                 var testUrls = new List<string>
                 {
                     "https://www.youtube.com/watch?v=dp8PhLsUcFE", // Bloomberg TV Live
                     "https://www.youtube.com/watch?v=Ga3maNZ0x0w"  // Bloomberg Markets
                 };
-                
+
                 // Test analyzing sentiment from URLs
                 var sentiment = await youTubeService.AnalyzeSentimentAsync(testUrls);
                 results["AnalyzeSentimentAsync"] = sentiment.ToString("F4");
-                
+
                 // Test getting symbol sentiment
                 var symbolSentiment = await youTubeService.GetSymbolSentimentAsync("AAPL");
                 results["GetSymbolSentimentAsync"] = symbolSentiment.ToString("F4");
-                
+
                 // Test getting detailed source sentiment
                 var detailedSentiment = await youTubeService.GetDetailedSourceSentimentAsync("AAPL");
                 results["DetailedSourcesCount"] = detailedSentiment.Count;
-                
+
                 // Test fetching recent content
                 var recentContent = await youTubeService.FetchRecentContentAsync("AAPL", 5);
                 results["RecentContentCount"] = recentContent.Count;
-                
+
                 results["TestSuccess"] = true;
                 results["TestTime"] = DateTime.Now.ToString();
             }
@@ -67,32 +67,32 @@ namespace Quantra.Tests.Services
                 results["Error"] = ex.Message;
                 results["TestTime"] = DateTime.Now.ToString();
             }
-            
+
             return results;
         }
-        
+
         /// <summary>
         /// Test YouTube URL sentiment analysis
         /// </summary>
         public static async Task<Dictionary<string, object>> RunUrlAnalysisTestAsync()
         {
             var results = new Dictionary<string, object>();
-            
+
             try
             {
                 // Create mock configuration manager
                 var configManager = new MockConfigurationManager();
-                
+
                 // Create logger
                 var logger = new MockLogger<YouTubeSentimentService>();
-                
+
                 // Create service
                 var youTubeService = new YouTubeSentimentService(logger, configManager);
-                
+
                 // Test single URL analysis (this should use fallback mode)
                 var testUrl = "https://www.youtube.com/watch?v=dp8PhLsUcFE";
                 var sentiment = await youTubeService.AnalyzeYouTubeUrlSentimentAsync(testUrl, "Bloomberg financial news");
-                
+
                 results["SingleUrlSentiment"] = sentiment.ToString("F4");
                 results["TestSuccess"] = true;
                 results["TestTime"] = DateTime.Now.ToString();
@@ -103,11 +103,11 @@ namespace Quantra.Tests.Services
                 results["Error"] = ex.Message;
                 results["TestTime"] = DateTime.Now.ToString();
             }
-            
+
             return results;
         }
     }
-    
+
     /// <summary>
     /// Mock configuration manager for testing
     /// </summary>
@@ -115,11 +115,11 @@ namespace Quantra.Tests.Services
     {
         private readonly Dictionary<string, string> _values = new();
         private readonly Dictionary<string, object> _sections = new();
-        
+
         public event EventHandler<ConfigurationChangedEventArgs> ConfigurationChanged;
-        
+
         public Microsoft.Extensions.Configuration.IConfiguration RawConfiguration => null; // Not used in tests
-        
+
         public T GetSection<T>(string sectionPath) where T : class, new()
         {
             if (typeof(T) == typeof(ApiConfig))
@@ -135,7 +135,7 @@ namespace Quantra.Tests.Services
                 };
                 return (T)(object)apiConfig;
             }
-            
+
             if (typeof(T) == typeof(SentimentAnalysisConfig))
             {
                 var sentimentConfig = new SentimentAnalysisConfig
@@ -144,7 +144,7 @@ namespace Quantra.Tests.Services
                 };
                 return (T)(object)sentimentConfig;
             }
-            
+
             return new T();
         }
 
@@ -168,7 +168,7 @@ namespace Quantra.Tests.Services
         {
             var oldValue = _values.TryGetValue(key, out var existing) ? existing : null;
             _values[key] = value?.ToString() ?? string.Empty;
-            
+
             if (persist)
             {
                 ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(key, oldValue, value));
@@ -244,7 +244,7 @@ namespace Quantra.Tests.Services
     public class MockConfigurationSection : IConfigurationSection
     {
         private readonly Dictionary<string, string> _values;
-        
+
         public MockConfigurationSection(string key, Dictionary<string, string> values)
         {
             Key = key;
@@ -252,16 +252,16 @@ namespace Quantra.Tests.Services
             _values = values;
         }
 
-        public string this[string key] 
-        { 
+        public string this[string key]
+        {
             get => _values.TryGetValue($"{Path}:{key}", out var value) ? value : null;
             set => _values[$"{Path}:{key}"] = value;
         }
 
         public string Key { get; }
         public string Path { get; }
-        public string Value 
-        { 
+        public string Value
+        {
             get => _values.TryGetValue(Path, out var value) ? value : null;
             set => _values[Path] = value;
         }
@@ -277,14 +277,14 @@ namespace Quantra.Tests.Services
     public class MockConfigurationRoot : IConfigurationRoot
     {
         private readonly Dictionary<string, string> _values;
-        
+
         public MockConfigurationRoot(Dictionary<string, string> values)
         {
             _values = values;
         }
 
-        public string this[string key] 
-        { 
+        public string this[string key]
+        {
             get => _values.TryGetValue(key, out var value) ? value : null;
             set => _values[key] = value;
         }

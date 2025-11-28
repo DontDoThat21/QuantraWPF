@@ -103,7 +103,7 @@ namespace Quantra.Tests.Services
             const string expectedResult = "test result";
             bool loadingStateDuringTask = false;
             var taskStarted = new TaskCompletionSource<bool>();
-            
+
             var testTask = Task.Run(async () =>
             {
                 taskStarted.SetResult(true);

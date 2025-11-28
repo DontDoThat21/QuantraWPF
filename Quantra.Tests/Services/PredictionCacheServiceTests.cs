@@ -21,7 +21,7 @@ namespace Quantra.Tests.Services
         {
             // Create logging service for tests
             _loggingService = new LoggingService();
-            
+
             // Use a test-specific cache with shorter validity period
             _cacheService = new PredictionCacheService(_loggingService, TimeSpan.FromMinutes(5));
 

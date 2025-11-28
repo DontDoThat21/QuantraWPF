@@ -27,7 +27,7 @@ namespace Quantra.Tests.Services
             string symbol = "CACHE_TEST";
             string range = "1mo";
             string interval = "1d";
-            
+
             // First create some test data and cache it manually
             var testData = new List<HistoricalPrice>
             {
@@ -38,7 +38,7 @@ namespace Quantra.Tests.Services
 
             // Clear any existing cache for this symbol
             _cacheService.DeleteCachedDataForSymbol(symbol);
-            
+
             // Cache the test data
             await _cacheService.GetStockData(symbol, range, interval, forceRefresh: true);
 
@@ -65,7 +65,7 @@ namespace Quantra.Tests.Services
             // Act & Assert - Test that forceRefresh: false is the preferred behavior
             // This should attempt to use cache first, then fall back to API if needed
             var result = await _cacheService.GetStockData(symbol, range, interval, forceRefresh: false);
-            
+
             // The result might be null if API fails in test environment, which is expected
             // The key is that we're not forcing a refresh
         }
@@ -187,7 +187,7 @@ namespace Quantra.Tests.Services
         {
             // Arrange
             var testSymbols = new[] { "FREQ_TEST1", "FREQ_TEST2", "FREQ_TEST3" };
-            
+
             foreach (var symbol in testSymbols)
             {
                 var testQuote = new QuoteData

@@ -19,7 +19,7 @@ namespace Quantra.Tests.Models
                 Symbol = "AAPL",
                 Price = 150.00
             };
-            
+
             // Assert
             Assert.IsNotNull(quoteData.OptionChain);
             Assert.AreEqual(0, quoteData.OptionChain.Count);
@@ -31,10 +31,10 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var fetchTime = DateTime.Now;
-            
+
             // Act
             quoteData.OptionDataFetchTimestamp = fetchTime;
-            
+
             // Assert
             Assert.AreEqual(fetchTime, quoteData.OptionDataFetchTimestamp);
         }
@@ -45,10 +45,10 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var cacheWindow = TimeSpan.FromMinutes(15);
-            
+
             // Act
             quoteData.OptionDataCacheWindow = cacheWindow;
-            
+
             // Assert
             Assert.AreEqual(cacheWindow, quoteData.OptionDataCacheWindow);
         }
@@ -72,10 +72,10 @@ namespace Quantra.Tests.Models
                 LastPrice = 5.25,
                 FetchTimestamp = DateTime.Now
             };
-            
+
             // Act
             quoteData.OptionChain.Add(optionData);
-            
+
             // Assert
             Assert.AreEqual(1, quoteData.OptionChain.Count);
             Assert.AreEqual("AAPL", quoteData.OptionChain[0].UnderlyingSymbol);
@@ -92,7 +92,7 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var expirationDate = DateTime.Now.AddDays(30);
-            
+
             var option1 = new OptionData
             {
                 UnderlyingSymbol = "AAPL",
@@ -103,7 +103,7 @@ namespace Quantra.Tests.Models
                 Delta = 0.6,
                 Theta = -0.05
             };
-            
+
             var option2 = new OptionData
             {
                 UnderlyingSymbol = "AAPL",
@@ -114,7 +114,7 @@ namespace Quantra.Tests.Models
                 Delta = -0.4,
                 Theta = -0.04
             };
-            
+
             var option3 = new OptionData
             {
                 UnderlyingSymbol = "AAPL",
@@ -125,12 +125,12 @@ namespace Quantra.Tests.Models
                 Delta = 0.5,
                 Theta = -0.06
             };
-            
+
             quoteData.OptionChain.AddRange(new[] { option1, option2, option3 });
-            
+
             // Act
             var result = quoteData.GetOptionsByStrikeAndExpiration(150.0, expirationDate);
-            
+
             // Assert
             Assert.AreEqual(2, result.Count);
             Assert.IsTrue(result.All(o => o.StrikePrice == 150.0));
@@ -143,7 +143,7 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var expirationDate = DateTime.Now.AddDays(30);
-            
+
             var options = new[]
             {
                 new OptionData { StrikePrice = 145.0, ExpirationDate = expirationDate, OptionType = "CALL" },
@@ -152,12 +152,12 @@ namespace Quantra.Tests.Models
                 new OptionData { StrikePrice = 155.0, ExpirationDate = expirationDate, OptionType = "CALL" },
                 new OptionData { StrikePrice = 160.0, ExpirationDate = DateTime.Now.AddDays(60), OptionType = "CALL" }
             };
-            
+
             quoteData.OptionChain.AddRange(options);
-            
+
             // Act
             var result = quoteData.GetAvailableStrikes(expirationDate);
-            
+
             // Assert
             Assert.AreEqual(3, result.Count);
             Assert.AreEqual(145.0, result[0]);
@@ -173,7 +173,7 @@ namespace Quantra.Tests.Models
             var exp1 = DateTime.Now.AddDays(30);
             var exp2 = DateTime.Now.AddDays(60);
             var exp3 = DateTime.Now.AddDays(90);
-            
+
             var options = new[]
             {
                 new OptionData { StrikePrice = 150.0, ExpirationDate = exp1, OptionType = "CALL" },
@@ -181,12 +181,12 @@ namespace Quantra.Tests.Models
                 new OptionData { StrikePrice = 150.0, ExpirationDate = exp1, OptionType = "PUT" },
                 new OptionData { StrikePrice = 155.0, ExpirationDate = exp3, OptionType = "CALL" }
             };
-            
+
             quoteData.OptionChain.AddRange(options);
-            
+
             // Act
             var result = quoteData.GetAvailableExpirations();
-            
+
             // Assert
             Assert.AreEqual(3, result.Count);
             Assert.AreEqual(exp1.Date, result[0].Date);
@@ -207,13 +207,13 @@ namespace Quantra.Tests.Models
                 Delta = 0.6,
                 Theta = -0.05
             };
-            
+
             quoteData.OptionChain.Add(optionData);
             Assert.AreEqual(1, quoteData.OptionChain.Count);
-            
+
             // Act
             quoteData.ClearChartData();
-            
+
             // Assert
             Assert.AreEqual(0, quoteData.OptionChain.Count);
         }
@@ -231,13 +231,13 @@ namespace Quantra.Tests.Models
                 Delta = 0.6,
                 Theta = -0.05
             };
-            
+
             quoteData.OptionChain.Add(optionData);
             Assert.AreEqual(1, quoteData.OptionChain.Count);
-            
+
             // Act
             quoteData.Dispose();
-            
+
             // Assert
             Assert.AreEqual(0, quoteData.OptionChain.Count);
         }
@@ -248,10 +248,10 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var expirationDate = DateTime.Now.AddDays(30);
-            
+
             // Act
             var result = quoteData.GetOptionsByStrikeAndExpiration(150.0, expirationDate);
-            
+
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count);
@@ -263,10 +263,10 @@ namespace Quantra.Tests.Models
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var expirationDate = DateTime.Now.AddDays(30);
-            
+
             // Act
             var result = quoteData.GetAvailableStrikes(expirationDate);
-            
+
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count);
@@ -277,10 +277,10 @@ namespace Quantra.Tests.Models
         {
             // Arrange
             var quoteData = new QuoteData { Symbol = "AAPL" };
-            
+
             // Act
             var result = quoteData.GetAvailableExpirations();
-            
+
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(0, result.Count);
@@ -298,10 +298,10 @@ namespace Quantra.Tests.Models
                 OptionType = "CALL"
             };
             var fetchTime = DateTime.Now;
-            
+
             // Act
             optionData.FetchTimestamp = fetchTime;
-            
+
             // Assert
             Assert.AreEqual(fetchTime, optionData.FetchTimestamp);
         }
@@ -313,14 +313,14 @@ namespace Quantra.Tests.Models
             var quoteData = new QuoteData { Symbol = "AAPL" };
             var fetchTime = DateTime.Now.AddMinutes(-10);
             var cacheWindow = TimeSpan.FromMinutes(15);
-            
+
             quoteData.OptionDataFetchTimestamp = fetchTime;
             quoteData.OptionDataCacheWindow = cacheWindow;
-            
+
             // Act
             var isFreshNow = quoteData.IsOptionDataFresh(DateTime.Now);
             var isFreshFuture = quoteData.IsOptionDataFresh(DateTime.Now.AddMinutes(10)); // 20 minutes after fetch = expired
-            
+
             // Assert
             Assert.IsTrue(isFreshNow, "Data should be fresh within cache window");
             Assert.IsFalse(isFreshFuture, "Data should be expired outside cache window");
@@ -333,10 +333,10 @@ namespace Quantra.Tests.Models
             var quoteData = new QuoteData { Symbol = "AAPL" };
             quoteData.OptionDataCacheWindow = TimeSpan.FromMinutes(15);
             // OptionDataFetchTimestamp not set
-            
+
             // Act
             var isFresh = quoteData.IsOptionDataFresh(DateTime.Now);
-            
+
             // Assert
             Assert.IsFalse(isFresh, "Should return false when no fetch timestamp is set");
         }
@@ -348,10 +348,10 @@ namespace Quantra.Tests.Models
             var quoteData = new QuoteData { Symbol = "AAPL" };
             quoteData.OptionDataFetchTimestamp = DateTime.Now;
             // OptionDataCacheWindow not set
-            
+
             // Act
             var isFresh = quoteData.IsOptionDataFresh(DateTime.Now);
-            
+
             // Assert
             Assert.IsFalse(isFresh, "Should return false when no cache window is set");
         }

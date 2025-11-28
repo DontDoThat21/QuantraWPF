@@ -13,12 +13,12 @@ namespace Quantra.Tests.Services
         private GreekCalculationEngine _greekEngine;
         private Position _testPosition;
         private MarketConditions _testMarket;
-        
+
         [SetUp]
         public void Setup()
         {
             _greekEngine = new GreekCalculationEngine();
-            
+
             // Standard test position: At-the-money call option
             _testPosition = new Position
             {
@@ -32,7 +32,7 @@ namespace Quantra.Tests.Services
                 Quantity = 1,
                 OptionPrice = 5.0
             };
-            
+
             _testMarket = new MarketConditions
             {
                 InterestRate = 0.05,
@@ -41,7 +41,7 @@ namespace Quantra.Tests.Services
                 EconomicGrowth = 0.0
             };
         }
-        
+
         [Test]
         public void CalculateTheta_ValidCallOption_ReturnsNegativeTheta()
         {

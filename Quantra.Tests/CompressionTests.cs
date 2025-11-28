@@ -13,10 +13,10 @@ namespace Quantra.Tests
         {
             // Arrange
             string input = "Test string";
-            
+
             // Act
             string compressed = CompressionHelper.CompressString(input);
-            
+
             // Assert
             Assert.IsTrue(compressed.StartsWith("GZIP:"), "Compressed string should start with GZIP marker");
         }
@@ -26,11 +26,11 @@ namespace Quantra.Tests
         {
             // Arrange
             string input = "This is a test string that should be compressed and then decompressed back to its original form.";
-            
+
             // Act
             string compressed = CompressionHelper.CompressString(input);
             string decompressed = CompressionHelper.DecompressString(compressed);
-            
+
             // Assert
             Assert.AreEqual(input, decompressed, "Decompressed string should match original input");
         }
@@ -59,11 +59,11 @@ namespace Quantra.Tests
                     }
                 ]
             }";
-            
+
             // Act
             string compressed = CompressionHelper.CompressString(json);
             string decompressed = CompressionHelper.DecompressString(compressed);
-            
+
             // Assert
             Assert.AreEqual(json, decompressed, "JSON should be preserved through compression/decompression");
         }
@@ -73,11 +73,11 @@ namespace Quantra.Tests
         {
             // Arrange
             string input = "";
-            
+
             // Act
             string compressed = CompressionHelper.CompressString(input);
             string decompressed = CompressionHelper.DecompressString(compressed);
-            
+
             // Assert
             Assert.AreEqual(input, decompressed, "Empty string should be handled correctly");
         }
@@ -87,10 +87,10 @@ namespace Quantra.Tests
         {
             // Arrange
             string input = "This string is not compressed";
-            
+
             // Act
             string result = CompressionHelper.DecompressString(input);
-            
+
             // Assert
             Assert.AreEqual(input, result, "Uncompressed data should be returned as-is");
         }
@@ -101,11 +101,11 @@ namespace Quantra.Tests
             // Arrange
             string uncompressed = "Uncompressed data";
             string compressed = CompressionHelper.CompressString("Some data");
-            
+
             // Act
             bool isUncompressedDetected = CompressionHelper.IsCompressed(uncompressed);
             bool isCompressedDetected = CompressionHelper.IsCompressed(compressed);
-            
+
             // Assert
             Assert.IsFalse(isUncompressedDetected, "Uncompressed data should not be detected as compressed");
             Assert.IsTrue(isCompressedDetected, "Compressed data should be detected as compressed");
@@ -122,12 +122,12 @@ namespace Quantra.Tests
                 sb.AppendLine("This is a test line with some repetitive content.");
             }
             string input = sb.ToString();
-            
+
             // Act
             string compressed = CompressionHelper.CompressString(input);
-            
+
             // Assert
-            Assert.IsTrue(compressed.Length < input.Length, 
+            Assert.IsTrue(compressed.Length < input.Length,
                 $"Compressed size ({compressed.Length}) should be smaller than original size ({input.Length})");
         }
     }
