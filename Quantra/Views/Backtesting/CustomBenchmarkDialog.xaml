@@ -26,9 +26,9 @@
                     <DataTrigger Binding="{Binding}" Value="Sector">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Sector Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Sector Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A benchmark composed of stocks or ETFs representing a specific economic sector (e.g., Technology, Healthcare, Financial Services). Use this to compare strategy performance against sector-specific indices."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -38,9 +38,9 @@
                     <DataTrigger Binding="{Binding}" Value="Industry">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Industry Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Industry Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A benchmark focused on a specific industry within a sector (e.g., Semiconductor Manufacturing, Biotechnology, Investment Banking). Use this for granular industry-level comparisons."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -50,9 +50,9 @@
                     <DataTrigger Binding="{Binding}" Value="AssetClass">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Asset Class Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Asset Class Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A benchmark representing a broad asset class (e.g., Large Cap Stocks, Small Cap Growth, International Equities, Bonds). Use this to compare against different investment categories."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -62,9 +62,9 @@
                     <DataTrigger Binding="{Binding}" Value="Strategy">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Strategy Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Strategy Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A benchmark reflecting a specific investment strategy (e.g., Momentum, Value Investing, Growth, Dividend Aristocrats). Use this to measure performance against strategy-specific indices."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -74,9 +74,9 @@
                     <DataTrigger Binding="{Binding}" Value="Geography">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Geography Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Geography Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A benchmark based on geographic regions or countries (e.g., Emerging Markets, European Stocks, Asian Pacific, US Domestic). Use this for regional market comparisons."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -86,9 +86,9 @@
                     <DataTrigger Binding="{Binding}" Value="Custom">
                         <Setter Property="ToolTip">
                             <Setter.Value>
-                                <ToolTip>
-                                    <StackPanel MaxWidth="300">
-                                        <TextBlock FontWeight="Bold" Text="Custom Benchmark" Margin="0,0,0,5"/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Custom Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
                                         <TextBlock TextWrapping="Wrap" Text="A fully customizable benchmark for unique comparisons (e.g., Personal Portfolio, Thematic Investments, Multi-Asset Allocations). Use this for any specialized benchmark not fitting other categories."/>
                                     </StackPanel>
                                 </ToolTip>
@@ -160,9 +160,11 @@
                                   Style="{StaticResource EnhancedComboBoxStyle}"
                                   ItemContainerStyle="{StaticResource BenchmarkCategoryItemStyle}">
                             <ComboBox.ToolTip>
-                                <ToolTip>
-                                    <TextBlock TextWrapping="Wrap" MaxWidth="250" 
-                                               Text="Select the category that best describes this benchmark. Hover over each option for detailed descriptions."/>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Benchmark Category" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Select the category that best describes this benchmark. Hover over each option for detailed descriptions of Sector, Industry, Asset Class, Strategy, Geography, and Custom benchmarks."/>
+                                    </StackPanel>
                                 </ToolTip>
                             </ComboBox.ToolTip>
                         </ComboBox>
@@ -190,8 +192,15 @@
                         <ComboBox Grid.Column="1" x:Name="SymbolComboBox" Margin="5,0" 
                                   IsEditable="True"
                                   Style="{StaticResource EnhancedComboBoxStyle}"
-                                  TextSearch.TextPath="DisplayText"
-                                  ToolTip="Type to search for symbols">
+                                  TextSearch.TextPath="DisplayText">
+                            <ComboBox.ToolTip>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Component Symbol" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Enter a stock ticker symbol, ETF symbol, or index symbol to add as a component of this benchmark. Type to search and select from available symbols."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </ComboBox.ToolTip>
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel>
@@ -206,11 +215,29 @@
                         <TextBox Grid.Column="3" x:Name="ComponentNameTextBox" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}" IsReadOnly="True"/>
                         
                         <TextBlock Grid.Column="4" Text="Weight (%):" VerticalAlignment="Center" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                        <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}"/>
+                        <TextBox Grid.Column="5" x:Name="WeightTextBox" Width="60" Text="100" Margin="5,0" Style="{StaticResource EnhancedTextBoxStyle}">
+                            <TextBox.ToolTip>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Component Weight" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Specify the percentage weight (0-100%) for this component in the benchmark. The total weight of all components should equal 100%. Use the 'Normalize Weights' button to automatically adjust weights to sum to 100%."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
                         
                         <Button Grid.Column="6" x:Name="AddComponentButton" Content="Add"
                                 Click="AddComponentButton_Click"
-                                Style="{StaticResource EnhancedButtonStyle}"/>
+                                Style="{StaticResource EnhancedButtonStyle}">
+                            <Button.ToolTip>
+                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                    <StackPanel>
+                                        <TextBlock Text="Add Component" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Add the specified symbol as a component to this custom benchmark with the given weight percentage."/>
+                                    </StackPanel>
+                                </ToolTip>
+                            </Button.ToolTip>
+                        </Button>
                     </Grid>
                 </GroupBox>
                 
@@ -224,11 +251,29 @@
                         
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
                             <Button x:Name="EqualWeightButton" Content="Equal Weight" Margin="0,0,10,0"
-                                    Click="EqualWeightButton_Click" ToolTip="Set equal weights for all components"
-                                    Style="{StaticResource EnhancedButtonStyle}"/>
+                                    Click="EqualWeightButton_Click"
+                                    Style="{StaticResource EnhancedButtonStyle}">
+                                <Button.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Equal Weight Distribution" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Automatically distribute weights equally among all benchmark components. For example, if you have 4 components, each will receive a 25% weight allocation."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </Button.ToolTip>
+                            </Button>
                             <Button x:Name="NormalizeWeightsButton" Content="Normalize Weights" Margin="0,0,10,0"
-                                    Click="NormalizeWeightsButton_Click" ToolTip="Normalize weights to sum to 100%"
-                                    Style="{StaticResource EnhancedButtonStyle}"/>
+                                    Click="NormalizeWeightsButton_Click"
+                                    Style="{StaticResource EnhancedButtonStyle}">
+                                <Button.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Normalize Weights" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Adjust all component weights proportionally so they sum to exactly 100%. Maintains the relative weight ratios while ensuring the total equals 100%."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </Button.ToolTip>
+                            </Button>
                         </StackPanel>
                         
                         <TextBlock Grid.Column="1" x:Name="TotalWeightText" Text="Total: 0%" 
@@ -271,11 +316,29 @@
                                         <Button Content="Edit" Tag="{Binding Symbol}" 
                                                 Style="{StaticResource EnhancedButtonStyle}"
                                                 Margin="2"
-                                                Click="EditComponentButton_Click"/>
+                                                Click="EditComponentButton_Click">
+                                            <Button.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="300">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Edit Component" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Modify the weight percentage for this component."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Button.ToolTip>
+                                        </Button>
                                         <Button Content="Remove" Tag="{Binding Symbol}" 
                                                 Style="{StaticResource EnhancedButtonStyle}"
                                                 Margin="2"
-                                                Click="RemoveComponentButton_Click"/>
+                                                Click="RemoveComponentButton_Click">
+                                            <Button.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="300">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Remove Component" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Remove this component from the custom benchmark."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Button.ToolTip>
+                                        </Button>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -300,11 +363,29 @@
                 <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
                     <Button x:Name="SaveButton" Content="Save Benchmark" Width="120" 
                             Click="SaveButton_Click"
-                            Style="{StaticResource EnhancedButtonStyle}"/>
+                            Style="{StaticResource EnhancedButtonStyle}">
+                        <Button.ToolTip>
+                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                <StackPanel>
+                                    <TextBlock Text="Save Custom Benchmark" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                    <TextBlock TextWrapping="Wrap" Text="Save this custom benchmark configuration for use in backtesting and performance comparisons. The benchmark will be available in the benchmark selection dropdown."/>
+                                </StackPanel>
+                            </ToolTip>
+                        </Button.ToolTip>
+                    </Button>
                     <Button x:Name="CancelButton" Content="Cancel" Width="80" IsCancel="True" 
                             Margin="5,0,0,0"
                             Click="CancelButton_Click"
-                            Style="{StaticResource EnhancedButtonStyle}"/>
+                            Style="{StaticResource EnhancedButtonStyle}">
+                        <Button.ToolTip>
+                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="300">
+                                <StackPanel>
+                                    <TextBlock Text="Cancel" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                    <TextBlock TextWrapping="Wrap" Text="Discard changes and close this dialog without saving."/>
+                                </StackPanel>
+                            </ToolTip>
+                        </Button.ToolTip>
+                    </Button>
                 </StackPanel>
                 
                 <!-- Resize Grips -->
