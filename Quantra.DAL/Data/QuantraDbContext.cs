@@ -50,6 +50,9 @@ namespace Quantra.DAL.Data
         public DbSet<PredictionIndicatorEntity> PredictionIndicators { get; set; }
         public DbSet<PredictionCacheEntity> PredictionCache { get; set; }
 
+        // Chat History
+        public DbSet<ChatHistoryEntity> ChatHistory { get; set; }
+
         // Analyst Ratings
         public DbSet<AnalystRatingEntity> AnalystRatings { get; set; }
         public DbSet<ConsensusHistoryEntity> ConsensusHistory { get; set; }
