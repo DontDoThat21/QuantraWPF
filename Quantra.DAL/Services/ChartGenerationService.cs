@@ -29,9 +29,10 @@ namespace Quantra.DAL.Services
             @"\b(price|prediction|forecast|projection)\b.*\b(chart|graph|plot|visual)\b",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Pattern matches uppercase letters only since we convert message to uppercase before matching
         private static readonly Regex SymbolPattern = new Regex(
             @"\b([A-Z]{1,5})\b",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            RegexOptions.Compiled);
 
         private static readonly Regex DaysPattern = new Regex(
             @"(\d+)\s*(?:day|week|month)s?",
