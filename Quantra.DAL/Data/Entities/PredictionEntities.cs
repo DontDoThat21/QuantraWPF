@@ -38,9 +38,9 @@ namespace Quantra.DAL.Data.Entities
         public DateTime CreatedDate { get; set; }
 
         /// <summary>
-        /// Links prediction to a chat conversation session (optional)
+        /// Links prediction to a chat history record (optional foreign key to ChatHistory.Id)
         /// </summary>
-        public int? ChatSessionId { get; set; }
+        public int? ChatHistoryId { get; set; }
 
         /// <summary>
         /// Original user query that triggered this prediction (optional)
@@ -51,8 +51,11 @@ namespace Quantra.DAL.Data.Entities
         // Navigation properties
         public virtual ICollection<PredictionIndicatorEntity> Indicators { get; set; }
 
-        [ForeignKey("ChatSessionId")]
-        public virtual ChatHistoryEntity ChatSession { get; set; }
+        /// <summary>
+        /// Navigation property to the chat history record that triggered this prediction
+        /// </summary>
+        [ForeignKey("ChatHistoryId")]
+        public virtual ChatHistoryEntity ChatHistory { get; set; }
     }
 
     /// <summary>
@@ -172,7 +175,9 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(100)]
         public string UserId { get; set; }
 
-        // Navigation property for predictions linked to this chat session
+        /// <summary>
+        /// Navigation property for predictions that reference this chat history record
+        /// </summary>
         public virtual ICollection<StockPredictionEntity> Predictions { get; set; }
     }
 }

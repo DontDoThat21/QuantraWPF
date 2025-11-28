@@ -50,13 +50,13 @@ namespace Quantra.DAL.Data.Configurations
             builder.HasIndex(s => new { s.Symbol, s.CreatedDate });
             builder.HasIndex(s => s.Confidence);
 
-            // Index for ChatSessionId for querying predictions by chat session
-            builder.HasIndex(s => s.ChatSessionId);
+            // Index for ChatHistoryId for querying predictions by chat history record
+            builder.HasIndex(s => s.ChatHistoryId);
 
             // Relationship with ChatHistory
-            builder.HasOne(s => s.ChatSession)
+            builder.HasOne(s => s.ChatHistory)
                    .WithMany(c => c.Predictions)
-                   .HasForeignKey(s => s.ChatSessionId)
+                   .HasForeignKey(s => s.ChatHistoryId)
                    .OnDelete(DeleteBehavior.SetNull);
         }
     }
@@ -136,9 +136,9 @@ namespace Quantra.DAL.Data.Configurations
             // Index for symbol-specific chat history
             builder.HasIndex(c => c.Symbol);
 
-            // Configure Content as NVARCHAR(MAX) for large messages
+            // Configure Content as NVARCHAR(MAX) for large chat messages
             builder.Property(c => c.Content)
-                   .HasMaxLength(-1);
+                   .HasColumnType("NVARCHAR(MAX)");
         }
     }
 }
