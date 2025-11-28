@@ -97,6 +97,7 @@ namespace Quantra.Controls
         public DataTemplate AssistantMessageTemplate { get; set; }
         public DataTemplate SystemMessageTemplate { get; set; }
         public DataTemplate LoadingMessageTemplate { get; set; }
+        public DataTemplate QueryResultMessageTemplate { get; set; }
 
         public override DataTemplate SelectTemplate(object item, DependencyObject container)
         {
@@ -107,11 +108,18 @@ namespace Quantra.Controls
                     case MessageType.UserQuestion:
                         return UserMessageTemplate;
                     case MessageType.AssistantResponse:
+                        // Use QueryResult template if this is a query result
+                        if (message.IsQueryResult && QueryResultMessageTemplate != null)
+                        {
+                            return QueryResultMessageTemplate;
+                        }
                         return AssistantMessageTemplate;
                     case MessageType.SystemMessage:
                         return SystemMessageTemplate;
                     case MessageType.LoadingMessage:
                         return LoadingMessageTemplate;
+                    case MessageType.QueryResult:
+                        return QueryResultMessageTemplate ?? AssistantMessageTemplate;
                 }
             }
 

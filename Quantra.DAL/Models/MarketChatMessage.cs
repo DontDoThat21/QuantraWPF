@@ -17,6 +17,9 @@ namespace Quantra.Models
         private bool _usesCachedData;
         private string _cacheStatusDisplay;
         private TimeSpan? _cacheAge;
+        private bool _isQueryResult;
+        private int _queryRowCount;
+        private long _queryExecutionTimeMs;
 
         /// <summary>
         /// The content of the message
@@ -92,6 +95,33 @@ namespace Quantra.Models
         }
 
         /// <summary>
+        /// Indicates whether this response is a database query result (MarketChat story 5)
+        /// </summary>
+        public bool IsQueryResult
+        {
+            get => _isQueryResult;
+            set => SetProperty(ref _isQueryResult, value);
+        }
+
+        /// <summary>
+        /// Number of rows returned from a database query (MarketChat story 5)
+        /// </summary>
+        public int QueryRowCount
+        {
+            get => _queryRowCount;
+            set => SetProperty(ref _queryRowCount, value);
+        }
+
+        /// <summary>
+        /// Execution time of the database query in milliseconds (MarketChat story 5)
+        /// </summary>
+        public long QueryExecutionTimeMs
+        {
+            get => _queryExecutionTimeMs;
+            set => SetProperty(ref _queryExecutionTimeMs, value);
+        }
+
+        /// <summary>
         /// Formatted timestamp for display
         /// </summary>
         public string TimestampDisplay => Timestamp.ToString("HH:mm:ss");
@@ -100,6 +130,16 @@ namespace Quantra.Models
         /// Indicates whether cache status should be displayed (non-empty and response is from assistant)
         /// </summary>
         public bool ShowCacheStatus => !IsFromUser && !IsLoading && !string.IsNullOrEmpty(CacheStatusDisplay);
+
+        /// <summary>
+        /// Indicates whether query result status should be displayed (MarketChat story 5)
+        /// </summary>
+        public bool ShowQueryStatus => !IsFromUser && !IsLoading && IsQueryResult;
+
+        /// <summary>
+        /// Gets a display string for query result status (MarketChat story 5)
+        /// </summary>
+        public string QueryStatusDisplay => IsQueryResult ? $"{QueryRowCount} rows in {QueryExecutionTimeMs}ms" : null;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -144,6 +184,11 @@ namespace Quantra.Models
         /// <summary>
         /// Loading/thinking indicator
         /// </summary>
-        LoadingMessage
+        LoadingMessage,
+
+        /// <summary>
+        /// Database query result (MarketChat story 5)
+        /// </summary>
+        QueryResult
     }
 }

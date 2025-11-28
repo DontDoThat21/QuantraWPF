@@ -169,14 +169,27 @@ namespace Quantra.ViewModels
                 // Show processing state
                 IsProcessing = true;
 
-                // Check if this is a trading plan request
+                // Check if this is a trading plan request or database query
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
-                StatusMessage = isTradingPlan ? "Creating trading plan..." : "Analyzing your question...";
+                bool isQueryRequest = _marketChatService.IsQueryRequest(userMessage);
+
+                if (isQueryRequest)
+                {
+                    StatusMessage = "Querying database...";
+                }
+                else if (isTradingPlan)
+                {
+                    StatusMessage = "Creating trading plan...";
+                }
+                else
+                {
+                    StatusMessage = "Analyzing your question...";
+                }
 
                 // Add loading message
                 var loadingMessage = new MarketChatMessage
                 {
-                    Content = isTradingPlan ? "Creating trading plan..." : "Thinking...",
+                    Content = isQueryRequest ? "Querying database..." : (isTradingPlan ? "Creating trading plan..." : "Thinking..."),
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
                     MessageType = MessageType.LoadingMessage,
@@ -202,7 +215,7 @@ namespace Quantra.ViewModels
                 }
                 else
                 {
-                    // Standard market analysis
+                    // Standard market analysis (will also handle database queries via MarketChat story 5)
                     response = await _marketChatService.SendMarketAnalysisRequestAsync(userMessage, includeContext: true);
                 }
 
@@ -212,21 +225,32 @@ namespace Quantra.ViewModels
                 // Get cache metadata from the last prediction lookup (MarketChat story 3)
                 var cacheResult = _marketChatService.LastPredictionCacheResult;
 
-                // Add assistant response with cache metadata
+                // Get query result metadata (MarketChat story 5)
+                var queryResult = _marketChatService.LastQueryResult;
+
+                // Add assistant response with cache/query metadata
                 var assistantMessage = new MarketChatMessage
                 {
                     Content = response,
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
-                    MessageType = MessageType.AssistantResponse,
+                    MessageType = (queryResult?.Success == true) ? MessageType.QueryResult : MessageType.AssistantResponse,
                     UsesCachedData = cacheResult?.IsCached ?? false,
                     CacheStatusDisplay = cacheResult?.CacheStatusDisplay,
-                    CacheAge = cacheResult?.CacheAge
+                    CacheAge = cacheResult?.CacheAge,
+                    IsQueryResult = queryResult?.Success == true,
+                    QueryRowCount = queryResult?.RowCount ?? 0,
+                    QueryExecutionTimeMs = queryResult?.ExecutionTimeMs ?? 0
                 };
                 Messages.Add(assistantMessage);
 
-                // Update status to show cache hit/miss info
-                if (cacheResult?.IsCached == true)
+                // Update status to show cache hit/miss info or query result
+                if (queryResult?.Success == true)
+                {
+                    StatusMessage = $"Query complete | {queryResult.RowCount} rows in {queryResult.ExecutionTimeMs}ms";
+                    _logger.LogInformation("Database query completed: {RowCount} rows in {TimeMs}ms", queryResult.RowCount, queryResult.ExecutionTimeMs);
+                }
+                else if (cacheResult?.IsCached == true)
                 {
                     StatusMessage = $"Ready | {cacheResult.CacheStatusDisplay}";
                     _logger.LogInformation("Response used cached prediction data ({Age} old)", cacheResult.CacheAge);
@@ -346,11 +370,18 @@ namespace Quantra.ViewModels
             var welcomeMessage = new MarketChatMessage
             {
                 Content = "Hello! I'm your AI market analysis assistant. Ask me anything about market conditions, stock analysis, trading strategies, or financial insights. For example:\n\n" +
+                         "**Market Analysis:**\n" +
                          "• \"What's the current sentiment around AAPL?\"\n" +
                          "• \"Analyze the risks for tech stocks this quarter\"\n" +
-                         "• \"Explain the recent volatility in the market\"\n" +
+                         "• \"Explain the recent volatility in the market\"\n\n" +
+                         "**Trading Plans:**\n" +
                          "• \"Suggest a trading plan for MSFT for the next month\"\n" +
-                         "• \"Give me a trading plan for TSLA in a volatile market\"",
+                         "• \"Give me a trading plan for TSLA in a volatile market\"\n\n" +
+                         "**Database Queries (new!):**\n" +
+                         "• \"Show me all stocks with predictions above 80% confidence\"\n" +
+                         "• \"List recent predictions for AAPL\"\n" +
+                         "• \"Find all BUY predictions with high confidence\"\n" +
+                         "• \"Count predictions by stock symbol\"",
                 IsFromUser = false,
                 Timestamp = DateTime.Now,
                 MessageType = MessageType.SystemMessage

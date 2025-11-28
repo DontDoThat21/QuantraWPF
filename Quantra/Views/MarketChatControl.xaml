@@ -73,12 +73,40 @@
             </Border>
         </DataTemplate>
         
+        <!-- Query result message template (MarketChat story 5) -->
+        <DataTemplate x:Key="QueryResultMessageTemplate">
+            <Border Background="#2D3D48" CornerRadius="10,10,10,2" Padding="12,8" Margin="10,2,50,2" HorizontalAlignment="Left">
+                <StackPanel>
+                    <TextBlock Text="{Binding Content}" Style="{StaticResource EnhancedSmallTextBlockStyle}" TextWrapping="Wrap" FontFamily="Consolas"/>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Query result indicator (MarketChat story 5) -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" 
+                                    Visibility="{Binding ShowQueryStatus, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Border Background="#1565C0" CornerRadius="3" Padding="4,2" Margin="0,0,8,0">
+                                <TextBlock Text="QUERY" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                            </Border>
+                            <TextBlock Text="{Binding QueryStatusDisplay}" Foreground="#64B5F6" FontSize="10" 
+                                       VerticalAlignment="Center" Opacity="0.9"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding TimestampDisplay}" Foreground="#CCCCCC" FontSize="10" 
+                                   HorizontalAlignment="Right" Opacity="0.7"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+        
         <!-- Message template selector -->
         <local:MessageTemplateSelector x:Key="MessageTemplateSelector"
                                        UserMessageTemplate="{StaticResource UserMessageTemplate}"
                                        AssistantMessageTemplate="{StaticResource AssistantMessageTemplate}"
                                        SystemMessageTemplate="{StaticResource SystemMessageTemplate}"
-                                       LoadingMessageTemplate="{StaticResource LoadingMessageTemplate}"/>
+                                       LoadingMessageTemplate="{StaticResource LoadingMessageTemplate}"
+                                       QueryResultMessageTemplate="{StaticResource QueryResultMessageTemplate}"/>
         
         <!-- Converters are now defined globally in App.xaml -->
         </ResourceDictionary>

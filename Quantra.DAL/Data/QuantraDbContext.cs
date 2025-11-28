@@ -53,6 +53,9 @@ namespace Quantra.DAL.Data
         // Chat History
         public DbSet<ChatHistoryEntity> ChatHistory { get; set; }
 
+        // Query History (MarketChat story 5 - Natural Language Query Audit Trail)
+        public DbSet<QueryHistoryEntity> QueryHistory { get; set; }
+
         // Analyst Ratings
         public DbSet<AnalystRatingEntity> AnalystRatings { get; set; }
         public DbSet<ConsensusHistoryEntity> ConsensusHistory { get; set; }
