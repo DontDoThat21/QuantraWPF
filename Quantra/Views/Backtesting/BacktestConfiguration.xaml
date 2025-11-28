@@ -1,0 +1,164 @@
+<UserControl x:Class="Quantra.Views.Backtesting.BacktestConfiguration"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:Quantra.Views.Backtesting"
+             mc:Ignorable="d"
+             d:DesignHeight="800" d:DesignWidth="900"
+             Background="#23233A">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Backtest Configuration"
+                   FontSize="28" FontWeight="Bold" Foreground="White" Margin="0,0,0,20"/>
+
+        <!-- Configuration Panel -->
+        <GroupBox Grid.Row="1" Header="Backtest Settings" Foreground="White" Margin="0,0,0,15">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Symbol -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Symbol:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <TextBox x:Name="SymbolTextBox" Grid.Row="0" Grid.Column="1"
+                         Text="AAPL" Style="{StaticResource EnhancedTextBoxStyle}"
+                         ToolTip="Stock symbol to backtest (e.g., AAPL, MSFT, GOOGL)" Margin="0,0,10,10"/>
+
+                <!-- Strategy Selection -->
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Strategy:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <ComboBox x:Name="StrategyComboBox" Grid.Row="0" Grid.Column="3"
+                          Style="{StaticResource EnhancedComboBoxStyle}"
+                          SelectionChanged="StrategyComboBox_SelectionChanged" Margin="0,0,0,10">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <!-- Initial Capital -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Initial Capital:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <TextBox x:Name="InitialCapitalTextBox" Grid.Row="1" Grid.Column="1"
+                         Text="10000" Style="{StaticResource EnhancedTextBoxStyle}"
+                         ToolTip="Starting capital amount ($)" Margin="0,0,10,10"/>
+
+                <!-- Trade Size -->
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="Trade Size (Shares):" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <TextBox x:Name="TradeSizeTextBox" Grid.Row="1" Grid.Column="3"
+                         Text="100" Style="{StaticResource EnhancedTextBoxStyle}"
+                         ToolTip="Number of shares per trade" Margin="0,0,0,10"/>
+
+                <!-- Date Range -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Start Date:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <DatePicker x:Name="StartDatePicker" Grid.Row="2" Grid.Column="1"
+                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,10,10"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="End Date:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <DatePicker x:Name="EndDatePicker" Grid.Row="2" Grid.Column="3"
+                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,0,10"/>
+
+                <!-- Transaction Costs -->
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Cost Model:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <ComboBox x:Name="CostModelComboBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                          Style="{StaticResource EnhancedComboBoxStyle}" SelectedIndex="1" 
+                          SelectionChanged="CostModelComboBox_SelectionChanged" Margin="0,0,0,10">
+                    <ComboBoxItem Content="Zero Cost (No commissions or slippage)"/>
+                    <ComboBoxItem Content="Retail Brokerage ($1 commission + spread + slippage)"/>
+                    <ComboBoxItem Content="Fixed Commission ($10 per trade)"/>
+                    <ComboBoxItem Content="Percentage Commission (0.1% per trade)"/>
+                </ComboBox>
+
+                <!-- Strategy Description -->
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Strategy Info:" VerticalAlignment="Top"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,5,0,0"/>
+                <TextBlock x:Name="StrategyDescriptionText" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3"
+                           TextWrapping="Wrap" Style="{StaticResource EnhancedTextBlockStyle}"
+                           Foreground="#AAAAAA" FontSize="12" Margin="0,5,0,10"
+                           Text="Select a strategy to see its description"/>
+
+                <!-- Strategy Parameters (Dynamic) -->
+                <StackPanel x:Name="StrategyParametersPanel" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4"
+                            Margin="0,10,0,0"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+            <Button x:Name="RunBacktestButton" Content="Run Backtest"
+                    Click="RunBacktestButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Padding="20,10" FontSize="16" FontWeight="Bold" Margin="0,0,10,0"/>
+            <Button x:Name="QuickTestButton" Content="Quick Test (Last 6 Months)"
+                    Click="QuickTestButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Padding="15,10" Margin="0,0,10,0"/>
+            <Button x:Name="ClearButton" Content="Clear Results"
+                    Click="ClearButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Padding="15,10"/>
+        </StackPanel>
+
+        <!-- Progress Panel -->
+        <GroupBox Grid.Row="3" Header="Status" Foreground="White" Margin="0,0,0,15">
+            <StackPanel Margin="10">
+                <TextBlock x:Name="StatusText" Text="Ready to run backtest"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <ProgressBar x:Name="ProgressBar" Height="20" Minimum="0" Maximum="100" Value="0"
+                             Visibility="Collapsed" Margin="0,0,0,10"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Results Container -->
+        <GroupBox Grid.Row="4" Header="Results" Foreground="White">
+            <Grid>
+                <ScrollViewer x:Name="ResultsScrollViewer" VerticalScrollBarVisibility="Auto">
+                    <ContentControl x:Name="ResultsContainer" />
+                </ScrollViewer>
+
+                <!-- Empty State -->
+                <StackPanel x:Name="EmptyStatePanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="📊" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="No backtest results yet" FontSize="20" Foreground="#AAAAAA"
+                               HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                    <TextBlock Text="Configure settings above and click 'Run Backtest' to begin"
+                               FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+    </Grid>
+</UserControl>

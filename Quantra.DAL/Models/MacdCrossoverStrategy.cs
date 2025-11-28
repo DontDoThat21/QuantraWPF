@@ -38,8 +38,18 @@ namespace Quantra.Models
                 {
                     _fastEma = value;
                     OnPropertyChanged(nameof(FastEma));
+                    OnPropertyChanged(nameof(FastPeriod));
                 }
             }
+        }
+
+        /// <summary>
+        /// Fast period for MACD calculation (alias for FastEma)
+        /// </summary>
+        public int FastPeriod
+        {
+            get => FastEma;
+            set => FastEma = value;
         }
 
         /// <summary>
@@ -54,8 +64,18 @@ namespace Quantra.Models
                 {
                     _slowEma = value;
                     OnPropertyChanged(nameof(SlowEma));
+                    OnPropertyChanged(nameof(SlowPeriod));
                 }
             }
+        }
+
+        /// <summary>
+        /// Slow period for MACD calculation (alias for SlowEma)
+        /// </summary>
+        public int SlowPeriod
+        {
+            get => SlowEma;
+            set => SlowEma = value;
         }
 
         /// <summary>

@@ -1136,34 +1136,27 @@ namespace Quantra
             try
             {
                 // Use services from MainWindow's initialized fields
-                // Create services that need dependencies
-                var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
-                var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
-                
-                // Create ViewModel with proper dependency injection including IAlphaVantageService
-                var viewModel = new BacktestResultsViewModel(
-                    historicalDataService,
-                    customBenchmarkService,
+                // Create BacktestConfiguration control with proper dependency injection
+                var backtestConfig = new Views.Backtesting.BacktestConfiguration(
                     _userSettingsService,
+                    _loggingService,
                     _alphaVantageService);
-                
-                var backtestResults = new Views.Backtesting.BacktestResults(viewModel);
-                    
-                backtestResults.Width = double.NaN;
-                backtestResults.Height = double.NaN;
-                backtestResults.HorizontalAlignment = HorizontalAlignment.Stretch;
-                backtestResults.VerticalAlignment = VerticalAlignment.Stretch;
-                backtestResults.MinWidth = 400;
-                backtestResults.MinHeight = 300;
-                backtestResults.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                backtestResults.Arrange(new Rect(0, 0, backtestResults.DesiredSize.Width, backtestResults.DesiredSize.Height));
-                backtestResults.UpdateLayout();
-                //DatabaseMonolith.Log("Info", "Successfully created BacktestResults");
-                return backtestResults;
+
+                backtestConfig.Width = double.NaN;
+                backtestConfig.Height = double.NaN;
+                backtestConfig.HorizontalAlignment = HorizontalAlignment.Stretch;
+                backtestConfig.VerticalAlignment = VerticalAlignment.Stretch;
+                backtestConfig.MinWidth = 400;
+                backtestConfig.MinHeight = 300;
+                backtestConfig.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                backtestConfig.Arrange(new Rect(0, 0, backtestConfig.DesiredSize.Width, backtestConfig.DesiredSize.Height));
+                backtestConfig.UpdateLayout();
+                //DatabaseMonolith.Log("Info", "Successfully created BacktestConfiguration");
+                return backtestConfig;
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to create BacktestResults", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create BacktestConfiguration", ex.ToString());
                 var errorPanel = new StackPanel();
                 errorPanel.Children.Add(new TextBlock
                 {
