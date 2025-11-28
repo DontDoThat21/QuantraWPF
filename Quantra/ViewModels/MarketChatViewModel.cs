@@ -169,10 +169,11 @@ namespace Quantra.ViewModels
                 // Show processing state
                 IsProcessing = true;
 
-                // Check if this is a trading plan request, database query, or multi-symbol comparison
+                // Check if this is a trading plan request, database query, multi-symbol comparison, or chart request
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
                 bool isQueryRequest = _marketChatService.IsQueryRequest(userMessage);
                 bool isComparisonRequest = _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
+                bool isChartRequest = _marketChatService.IsChartRequest(userMessage);
 
                 if (isQueryRequest)
                 {
@@ -181,6 +182,10 @@ namespace Quantra.ViewModels
                 else if (isComparisonRequest)
                 {
                     StatusMessage = "Comparing symbols...";
+                }
+                else if (isChartRequest)
+                {
+                    StatusMessage = "Generating chart...";
                 }
                 else if (isTradingPlan)
                 {
@@ -194,7 +199,8 @@ namespace Quantra.ViewModels
                 // Add loading message
                 string loadingContent = isQueryRequest ? "Querying database..." : 
                                        (isComparisonRequest ? "Comparing symbols..." :
-                                        (isTradingPlan ? "Creating trading plan..." : "Thinking..."));
+                                        (isChartRequest ? "Generating chart..." :
+                                         (isTradingPlan ? "Creating trading plan..." : "Thinking...")));
                 var loadingMessage = new MarketChatMessage
                 {
                     Content = loadingContent,

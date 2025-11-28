@@ -23,6 +23,7 @@ namespace Quantra.DAL.Services
     /// Integrates with NaturalLanguageQueryService for SQL table queries via natural language (MarketChat story 5).
     /// Integrates with SentimentPriceCorrelationAnalysis for sentiment-price correlation context (MarketChat story 6).
     /// Integrates with MultiSymbolAnalyzer for multi-symbol comparative analysis (MarketChat story 7).
+    /// Integrates with ChartGenerationService for chart visualization in chat (MarketChat story 8).
     /// </summary>
     public class MarketChatService
     {
@@ -34,12 +35,14 @@ namespace Quantra.DAL.Services
         private readonly INaturalLanguageQueryService _naturalLanguageQueryService;
         private readonly SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly IMultiSymbolAnalyzer _multiSymbolAnalyzer;
+        private readonly IChartGenerationService _chartGenerationService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
         private readonly Dictionary<string, string> _sentimentCorrelationContextHistory;
         private readonly Dictionary<string, PredictionContextResult> _predictionCacheResults;
         private readonly Dictionary<string, PredictionResult> _lastPredictionResults;
+        private readonly Dictionary<string, ProjectionChartData> _chartDataCache;
         private const string OpenAiBaseUrl = "https://api.openai.com";
         private const string OpenAiModel = "gpt-3.5-turbo";
         private const double OpenAiTemperature = 0.3;
@@ -77,6 +80,11 @@ namespace Quantra.DAL.Services
         public MultiSymbolComparisonResult LastComparisonResult { get; private set; }
 
         /// <summary>
+        /// Gets the most recent chart data generated for visualization (MarketChat story 8).
+        /// </summary>
+        public ProjectionChartData LastChartData { get; private set; }
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -87,7 +95,8 @@ namespace Quantra.DAL.Services
             INaturalLanguageQueryService naturalLanguageQueryService = null,
             SentimentPriceCorrelationAnalysis sentimentCorrelationAnalysis = null,
             IMultiSymbolAnalyzer multiSymbolAnalyzer = null,
-            IConfigurationManager configManager = null)
+            IConfigurationManager configManager = null,
+            IChartGenerationService chartGenerationService = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
@@ -96,6 +105,7 @@ namespace Quantra.DAL.Services
             _naturalLanguageQueryService = naturalLanguageQueryService;
             _sentimentCorrelationAnalysis = sentimentCorrelationAnalysis ?? new SentimentPriceCorrelationAnalysis();
             _multiSymbolAnalyzer = multiSymbolAnalyzer;
+            _chartGenerationService = chartGenerationService ?? new ChartGenerationService(null, predictionDataService);
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -103,6 +113,7 @@ namespace Quantra.DAL.Services
             _sentimentCorrelationContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionCacheResults = new Dictionary<string, PredictionContextResult>(StringComparer.OrdinalIgnoreCase);
             _lastPredictionResults = new Dictionary<string, PredictionResult>(StringComparer.OrdinalIgnoreCase);
+            _chartDataCache = new Dictionary<string, ProjectionChartData>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -125,6 +136,8 @@ namespace Quantra.DAL.Services
         /// by the NaturalLanguageQueryService instead (MarketChat story 5).
         /// If the question is detected as a multi-symbol comparison request,
         /// it will be processed by the MultiSymbolAnalyzer (MarketChat story 7).
+        /// If the question is detected as a chart request, it will generate
+        /// chart data for visualization (MarketChat story 8).
         /// </summary>
         /// <param name="userQuestion">The user's market analysis question</param>
         /// <param name="includeContext">Whether to include recent market data as context</param>
@@ -147,6 +160,13 @@ namespace Quantra.DAL.Services
                 {
                     _logger.LogInformation("Detected multi-symbol comparison request, processing with MultiSymbolAnalyzer");
                     return await ProcessMultiSymbolComparisonAsync(userQuestion);
+                }
+
+                // Check if this is a chart visualization request (MarketChat story 8)
+                if (IsChartRequest(userQuestion))
+                {
+                    _logger.LogInformation("Detected chart visualization request, processing with ChartGenerationService");
+                    return await ProcessChartRequestAsync(userQuestion);
                 }
 
                 // Build the system prompt
@@ -469,6 +489,136 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Determines if the user's message is a chart visualization request (MarketChat story 8).
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message appears to be a chart request</returns>
+        public bool IsChartRequest(string message)
+        {
+            return _chartGenerationService?.IsChartRequest(message) ?? false;
+        }
+
+        /// <summary>
+        /// Processes a chart visualization request (MarketChat story 8).
+        /// Generates chart data for historical prices and ML projections.
+        /// </summary>
+        /// <param name="userQuestion">The user's chart request</param>
+        /// <returns>Response with chart description and chart data set in LastChartData</returns>
+        private async Task<string> ProcessChartRequestAsync(string userQuestion)
+        {
+            try
+            {
+                var parameters = _chartGenerationService.ExtractChartParameters(userQuestion);
+                if (parameters.Symbols.Count == 0)
+                {
+                    return "Please specify a stock symbol for the chart. For example: 'Show me a chart for AAPL with 30-day projections'";
+                }
+
+                var symbol = parameters.Symbols.First();
+                var startDate = parameters.StartDate ?? DateTime.Now.AddDays(-parameters.HistoricalDays);
+
+                _logger.LogInformation("Generating projection chart for {Symbol} from {StartDate} with {ForecastDays} day forecast",
+                    symbol, startDate, parameters.ForecastDays);
+
+                var chartData = await _chartGenerationService.GenerateProjectionChartAsync(symbol, startDate, parameters.ForecastDays);
+                LastChartData = chartData;
+
+                // Cache the chart data for multi-turn conversations
+                _chartDataCache[symbol] = chartData;
+
+                if (!chartData.IsValid)
+                {
+                    return $"Unable to generate chart for {symbol}: {chartData.ErrorMessage}";
+                }
+
+                // Build response with chart context
+                var responseBuilder = new StringBuilder();
+                responseBuilder.AppendLine($"📈 **{chartData.ChartTitle}**");
+                responseBuilder.AppendLine();
+                responseBuilder.AppendLine($"**Current Price:** ${chartData.CurrentPrice:F2}");
+                responseBuilder.AppendLine($"**Target Price:** ${chartData.TargetPrice:F2} ({(chartData.TargetPrice > chartData.CurrentPrice ? "+" : "")}{((chartData.TargetPrice - chartData.CurrentPrice) / chartData.CurrentPrice):P1})");
+                responseBuilder.AppendLine($"**Prediction:** {chartData.PredictedAction} ({chartData.Confidence:P0} confidence)");
+                responseBuilder.AppendLine();
+
+                // Bollinger Bands summary
+                if (chartData.BollingerUpper?.Count > 0)
+                {
+                    var lastUpper = chartData.BollingerUpper.LastOrDefault(v => !double.IsNaN(v));
+                    var lastMiddle = chartData.BollingerMiddle.LastOrDefault(v => !double.IsNaN(v));
+                    var lastLower = chartData.BollingerLower.LastOrDefault(v => !double.IsNaN(v));
+                    
+                    if (lastMiddle > 0)
+                    {
+                        responseBuilder.AppendLine("**Bollinger Bands (20-day):**");
+                        responseBuilder.AppendLine($"- Upper: ${lastUpper:F2}");
+                        responseBuilder.AppendLine($"- Middle (SMA): ${lastMiddle:F2}");
+                        responseBuilder.AppendLine($"- Lower: ${lastLower:F2}");
+                        
+                        // Position analysis
+                        if (chartData.CurrentPrice > lastUpper)
+                        {
+                            responseBuilder.AppendLine($"- *Price is above upper band (potentially overbought)*");
+                        }
+                        else if (chartData.CurrentPrice < lastLower)
+                        {
+                            responseBuilder.AppendLine($"- *Price is below lower band (potentially oversold)*");
+                        }
+                        responseBuilder.AppendLine();
+                    }
+                }
+
+                // Support/Resistance summary
+                if (chartData.SupportLevels?.Count > 0 || chartData.ResistanceLevels?.Count > 0)
+                {
+                    responseBuilder.AppendLine("**Key Levels:**");
+                    if (chartData.ResistanceLevels?.Count > 0)
+                    {
+                        responseBuilder.AppendLine($"- Resistance: {string.Join(", ", chartData.ResistanceLevels.Select(r => $"${r:F2}"))}");
+                    }
+                    if (chartData.SupportLevels?.Count > 0)
+                    {
+                        responseBuilder.AppendLine($"- Support: {string.Join(", ", chartData.SupportLevels.Select(s => $"${s:F2}"))}");
+                    }
+                    responseBuilder.AppendLine();
+                }
+
+                responseBuilder.AppendLine($"_Chart shows {chartData.HistoricalPrices.Count} days of historical data and {chartData.PredictionPrices.Count} days of ML projections._");
+                responseBuilder.AppendLine();
+                responseBuilder.AppendLine("*The chart is displayed above this message.*");
+
+                var response = responseBuilder.ToString();
+                StoreConversationTurn(userQuestion, response);
+
+                _logger.LogInformation("Successfully generated chart for {Symbol} with {Historical} historical points and {Prediction} prediction points",
+                    symbol, chartData.HistoricalPrices.Count, chartData.PredictionPrices.Count);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing chart request");
+                LastChartData = null;
+                return "I apologize, but I couldn't generate the chart. Please try again with a valid stock symbol.";
+            }
+        }
+
+        /// <summary>
+        /// Gets cached chart data for a symbol if available (MarketChat story 8).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <returns>Cached chart data or null</returns>
+        public ProjectionChartData GetCachedChartData(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            _chartDataCache.TryGetValue(symbol.ToUpperInvariant(), out var chartData);
+            return chartData;
+        }
+
+        /// <summary>
         /// Generate a trading plan for a specific ticker and market conditions
         /// </summary>
         /// <param name="ticker">The ticker symbol</param>
@@ -609,7 +759,9 @@ namespace Quantra.DAL.Services
             _sentimentCorrelationContextHistory.Clear();
             _predictionCacheResults.Clear();
             _lastPredictionResults.Clear();
+            _chartDataCache.Clear();
             LastPredictionCacheResult = null;
+            LastChartData = null;
             _logger.LogInformation("Conversation history and enriched context cleared");
         }
 
