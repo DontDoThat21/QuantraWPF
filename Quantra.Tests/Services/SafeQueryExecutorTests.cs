@@ -219,6 +219,32 @@ namespace Quantra.Tests.Services
             Assert.IsFalse(isValid);
         }
 
+        [TestMethod]
+        public void ValidateQuery_SingleSemicolon_ReturnsFalse()
+        {
+            // Arrange - Single semicolon should be blocked (statement chaining)
+            var query = "SELECT * FROM StockPredictions; DROP TABLE Users";
+
+            // Act
+            var (isValid, reason) = _executor.ValidateQuery(query);
+
+            // Assert
+            Assert.IsFalse(isValid);
+        }
+
+        [TestMethod]
+        public void ValidateQuery_UnionSelectAttack_ReturnsFalse()
+        {
+            // Arrange - UNION SELECT (without ALL) should be blocked
+            var query = "SELECT Symbol FROM StockPredictions UNION SELECT Password FROM Users";
+
+            // Act
+            var (isValid, reason) = _executor.ValidateQuery(query);
+
+            // Assert
+            Assert.IsFalse(isValid);
+        }
+
         #endregion
 
         #region ExtractTableNames Tests

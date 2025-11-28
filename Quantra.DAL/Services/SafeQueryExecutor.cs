@@ -278,14 +278,14 @@ namespace Quantra.DAL.Services
                 return true;
             }
 
-            // Check for multiple statements (semicolons)
-            if (query.Contains(";") && query.IndexOf(";") != query.LastIndexOf(";"))
+            // Check for multiple statements (any semicolon indicates potential statement chaining)
+            if (query.Contains(";"))
             {
                 return true;
             }
 
-            // Check for UNION-based attacks
-            if (Regex.IsMatch(query, @"\bUNION\s+ALL\s+SELECT\b", RegexOptions.IgnoreCase))
+            // Check for UNION-based attacks (both UNION and UNION ALL)
+            if (Regex.IsMatch(query, @"\bUNION\s+(ALL\s+)?SELECT\b", RegexOptions.IgnoreCase))
             {
                 return true;
             }

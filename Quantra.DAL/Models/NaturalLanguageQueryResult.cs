@@ -103,7 +103,9 @@ namespace Quantra.DAL.Models
                 var formattedValues = new List<string>();
                 for (int j = 0; j < row.Count; j++)
                 {
-                    formattedValues.Add(FormatValue(row[j]));
+                    // Pass column name for context-aware formatting
+                    var columnName = j < Columns.Count ? Columns[j] : null;
+                    formattedValues.Add(FormatValue(row[j], columnName));
                 }
                 lines.Add("| " + string.Join(" | ", formattedValues) + " |");
             }
@@ -119,9 +121,12 @@ namespace Quantra.DAL.Models
         }
 
         /// <summary>
-        /// Formats a single value for display in the Markdown table
+        /// Formats a single value for display in the Markdown table.
+        /// Uses heuristics based on value ranges to determine appropriate formatting.
         /// </summary>
-        private static string FormatValue(object value)
+        /// <param name="value">The value to format</param>
+        /// <param name="columnName">Optional column name to help determine formatting context</param>
+        private static string FormatValue(object value, string columnName = null)
         {
             if (value == null || value == DBNull.Value)
             {
@@ -135,22 +140,40 @@ namespace Quantra.DAL.Models
 
             if (value is double d)
             {
-                // Format as percentage if value looks like a confidence/percentage
-                if (d >= 0 && d <= 1)
+                // Format as percentage if value looks like a confidence/percentage (0-1 range)
+                // or if column name suggests it's a percentage/confidence
+                var lowerColumnName = columnName?.ToLowerInvariant() ?? "";
+                if ((d >= 0 && d <= 1) && 
+                    (lowerColumnName.Contains("confidence") || lowerColumnName.Contains("percent") || 
+                     lowerColumnName.Contains("return") || lowerColumnName.Contains("ratio") ||
+                     string.IsNullOrEmpty(columnName)))
                 {
                     return $"{d:P1}";
                 }
-                // Format as currency if it looks like a price
-                if (d > 1 && d < 100000)
+                // Format as currency only if column name suggests price/target
+                if (lowerColumnName.Contains("price") || lowerColumnName.Contains("target") || 
+                    lowerColumnName.Contains("value") || lowerColumnName.Contains("cost"))
                 {
                     return $"${d:F2}";
+                }
+                // Generic number formatting
+                if (d > 1 && d < 100000)
+                {
+                    return $"{d:F2}";
                 }
                 return $"{d:F4}";
             }
 
             if (value is decimal dec)
             {
-                return $"${dec:F2}";
+                // Format decimal as currency only if column name suggests it
+                var lowerColumnName = columnName?.ToLowerInvariant() ?? "";
+                if (lowerColumnName.Contains("price") || lowerColumnName.Contains("target") || 
+                    lowerColumnName.Contains("value") || lowerColumnName.Contains("cost"))
+                {
+                    return $"${dec:F2}";
+                }
+                return $"{dec:F2}";
             }
 
             if (value is long l)
