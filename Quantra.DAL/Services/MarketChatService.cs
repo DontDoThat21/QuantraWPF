@@ -19,6 +19,7 @@ namespace Quantra.DAL.Services
     /// <summary>
     /// Service for handling ChatGPT/OpenAI API calls for market analysis conversations.
     /// Integrates with PredictionCacheService to leverage cached predictions (MarketChat story 3).
+    /// Integrates with ModelExplainerService to provide plain English explanations of ML predictions (MarketChat story 4).
     /// </summary>
     public class MarketChatService
     {
@@ -26,10 +27,12 @@ namespace Quantra.DAL.Services
         private readonly ILogger<MarketChatService> _logger;
         private readonly IMarketDataEnrichmentService _marketDataEnrichmentService;
         private readonly IPredictionDataService _predictionDataService;
+        private readonly IModelExplainerService _modelExplainerService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
         private readonly Dictionary<string, PredictionContextResult> _predictionCacheResults;
+        private readonly Dictionary<string, PredictionResult> _lastPredictionResults;
         private const string OpenAiBaseUrl = "https://api.openai.com";
         private const string OpenAiModel = "gpt-3.5-turbo";
         private const double OpenAiTemperature = 0.3;
@@ -63,16 +66,19 @@ namespace Quantra.DAL.Services
             ILogger<MarketChatService> logger,
             IMarketDataEnrichmentService marketDataEnrichmentService = null,
             IPredictionDataService predictionDataService = null,
+            IModelExplainerService modelExplainerService = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
             _predictionDataService = predictionDataService;
+            _modelExplainerService = modelExplainerService ?? new ModelExplainerService();
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionCacheResults = new Dictionary<string, PredictionContextResult>(StringComparer.OrdinalIgnoreCase);
+            _lastPredictionResults = new Dictionary<string, PredictionResult>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -291,6 +297,7 @@ namespace Quantra.DAL.Services
             _enrichedContextHistory.Clear();
             _predictionContextHistory.Clear();
             _predictionCacheResults.Clear();
+            _lastPredictionResults.Clear();
             LastPredictionCacheResult = null;
             _logger.LogInformation("Conversation history and enriched context cleared");
         }
@@ -410,6 +417,126 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Generates a plain English explanation of the factors driving a prediction (MarketChat story 4).
+        /// </summary>
+        /// <param name="prediction">The prediction result to explain</param>
+        /// <returns>A detailed explanation of the prediction factors</returns>
+        public string ExplainPredictionFactors(PredictionResult prediction)
+        {
+            if (_modelExplainerService == null)
+            {
+                _logger.LogWarning("Model explainer service is not configured");
+                return "Prediction explanation service is not available.";
+            }
+
+            try
+            {
+                return _modelExplainerService.ExplainPredictionFactors(prediction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating prediction explanation");
+                return "Unable to generate prediction explanation at this time.";
+            }
+        }
+
+        /// <summary>
+        /// Gets a stored prediction result for a symbol (MarketChat story 4).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <returns>The prediction result or null if not available</returns>
+        public PredictionResult GetStoredPredictionResult(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            _lastPredictionResults.TryGetValue(symbol.ToUpperInvariant(), out var result);
+            return result;
+        }
+
+        /// <summary>
+        /// Stores a prediction result for later explanation (MarketChat story 4).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="prediction">The prediction result to store</param>
+        public void StorePredictionResult(string symbol, PredictionResult prediction)
+        {
+            if (string.IsNullOrWhiteSpace(symbol) || prediction == null)
+            {
+                return;
+            }
+
+            _lastPredictionResults[symbol.ToUpperInvariant()] = prediction;
+            _logger.LogDebug("Stored prediction result for {Symbol}", symbol);
+        }
+
+        /// <summary>
+        /// Compares predictions from different model types for a symbol (MarketChat story 4).
+        /// </summary>
+        /// <param name="predictions">Dictionary of model type to prediction result</param>
+        /// <returns>A plain English comparison of the predictions</returns>
+        public string CompareModelPredictions(Dictionary<string, PredictionResult> predictions)
+        {
+            if (_modelExplainerService == null)
+            {
+                _logger.LogWarning("Model explainer service is not configured");
+                return "Model comparison service is not available.";
+            }
+
+            try
+            {
+                return _modelExplainerService.CompareModelPredictions(predictions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error comparing model predictions");
+                return "Unable to compare model predictions at this time.";
+            }
+        }
+
+        /// <summary>
+        /// Generates a detailed feature weight context for AI prompts (MarketChat story 4).
+        /// </summary>
+        /// <param name="prediction">The prediction result</param>
+        /// <returns>Formatted context string with feature weights and explanations</returns>
+        private string BuildFeatureWeightContext(PredictionResult prediction)
+        {
+            if (prediction?.FeatureWeights == null || prediction.FeatureWeights.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine();
+            builder.AppendLine("Feature Weight Analysis (factors driving this prediction):");
+            
+            // Add top influential factors
+            var topFactors = _modelExplainerService?.GetTopInfluentialFactors(prediction.FeatureWeights, 5);
+            if (!string.IsNullOrEmpty(topFactors))
+            {
+                builder.AppendLine(topFactors);
+            }
+
+            // Add confidence explanation
+            if (prediction.Confidence > 0 && _modelExplainerService != null)
+            {
+                builder.AppendLine(_modelExplainerService.ExplainConfidenceScore(prediction.Confidence, prediction.ModelType));
+            }
+
+            // Add risk metrics if available
+            if (prediction.RiskMetrics != null && _modelExplainerService != null)
+            {
+                builder.AppendLine();
+                builder.AppendLine("Risk Assessment:");
+                builder.AppendLine(_modelExplainerService.ExplainRiskMetrics(prediction.RiskMetrics));
+            }
+
+            return builder.ToString();
+        }
+
+        /// <summary>
         /// Builds the system prompt for market analysis
         /// </summary>
         private string BuildSystemPrompt()
@@ -419,8 +546,12 @@ namespace Quantra.DAL.Services
                    "Focus on technical analysis, market sentiment, risk factors, and actionable insights. " +
                    "When historical data context is provided, reference specific price levels, moving averages, volatility metrics, and volume patterns in your analysis. " +
                    "When ML prediction data is provided, discuss the AI-generated forecast including the predicted action (BUY/SELL/HOLD), target price, and confidence level. " +
-                   "Explain the rationale behind predictions based on the technical indicators that were used. " +
-                   "For example: 'Based on your ML model's [confidence]% [action] signal for [symbol] targeting $[price], supported by the technical indicators...' " +
+                   "When feature weights are provided, explain which technical indicators drove the prediction the most, " +
+                   "translating terms like RSI, MACD, VWAP into plain English (e.g., 'The RSI at 28 indicates oversold conditions, meaning the stock may be undervalued'). " +
+                   "When risk metrics are provided (VaR, Sharpe ratio, max drawdown), explain what they mean for the trader's risk exposure. " +
+                   "If the user asks about factors driving a prediction, focus on the top 3-5 most influential features and their practical meaning. " +
+                   "For example: 'The 0.85 confidence score is driven primarily by RSI (weight: 0.32) indicating oversold conditions, " +
+                   "combined with MACD momentum (weight: 0.24) showing bullish divergence...' " +
                    "Always mention relevant risks and avoid giving direct investment advice. " +
                    "Use professional yet accessible language appropriate for experienced traders.";
         }
@@ -434,6 +565,8 @@ namespace Quantra.DAL.Services
                    "Generate detailed, actionable trading plans based on technical analysis, market conditions, and risk management. " +
                    "When historical data context is provided, use actual price levels, moving averages, volatility, and volume patterns to inform your recommendations. " +
                    "When ML prediction data is provided, incorporate the AI-generated forecast into your trading plan, explaining how the predicted action, target price, and confidence level inform entry/exit strategies. " +
+                   "When feature weights are provided, explain which technical indicators influenced the prediction most and how they should factor into the trading plan. " +
+                   "For risk metrics (VaR, Sharpe ratio, max drawdown), incorporate them into position sizing and stop-loss recommendations. " +
                    "Structure your responses with clear sections for Entry Criteria, Exit Criteria, Position Sizing, " +
                    "Stop-Loss Strategy, Take-Profit Targets, and Rationale. " +
                    "Always consider risk management as a priority and explain your reasoning. " +
