@@ -21,6 +21,7 @@ namespace Quantra.DAL.Services
     /// Integrates with PredictionCacheService to leverage cached predictions (MarketChat story 3).
     /// Integrates with ModelExplainerService to provide plain English explanations of ML predictions (MarketChat story 4).
     /// Integrates with NaturalLanguageQueryService for SQL table queries via natural language (MarketChat story 5).
+    /// Integrates with SentimentPriceCorrelationAnalysis for sentiment-price correlation context (MarketChat story 6).
     /// </summary>
     public class MarketChatService
     {
@@ -30,9 +31,11 @@ namespace Quantra.DAL.Services
         private readonly IPredictionDataService _predictionDataService;
         private readonly IModelExplainerService _modelExplainerService;
         private readonly INaturalLanguageQueryService _naturalLanguageQueryService;
+        private readonly SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
+        private readonly Dictionary<string, string> _sentimentCorrelationContextHistory;
         private readonly Dictionary<string, PredictionContextResult> _predictionCacheResults;
         private readonly Dictionary<string, PredictionResult> _lastPredictionResults;
         private const string OpenAiBaseUrl = "https://api.openai.com";
@@ -75,6 +78,7 @@ namespace Quantra.DAL.Services
             IPredictionDataService predictionDataService = null,
             IModelExplainerService modelExplainerService = null,
             INaturalLanguageQueryService naturalLanguageQueryService = null,
+            SentimentPriceCorrelationAnalysis sentimentCorrelationAnalysis = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
@@ -82,10 +86,12 @@ namespace Quantra.DAL.Services
             _predictionDataService = predictionDataService;
             _modelExplainerService = modelExplainerService ?? new ModelExplainerService();
             _naturalLanguageQueryService = naturalLanguageQueryService;
+            _sentimentCorrelationAnalysis = sentimentCorrelationAnalysis ?? new SentimentPriceCorrelationAnalysis();
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _sentimentCorrelationContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionCacheResults = new Dictionary<string, PredictionContextResult>(StringComparer.OrdinalIgnoreCase);
             _lastPredictionResults = new Dictionary<string, PredictionResult>(StringComparer.OrdinalIgnoreCase);
 
@@ -373,6 +379,7 @@ namespace Quantra.DAL.Services
             _conversationHistory.Clear();
             _enrichedContextHistory.Clear();
             _predictionContextHistory.Clear();
+            _sentimentCorrelationContextHistory.Clear();
             _predictionCacheResults.Clear();
             _lastPredictionResults.Clear();
             LastPredictionCacheResult = null;
@@ -574,6 +581,53 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Gets sentiment-price correlation context for a specific symbol (MarketChat story 6).
+        /// Returns historical analysis of how sentiment shifts have correlated with price movements.
+        /// </summary>
+        /// <param name="symbol">Stock symbol (e.g., "AAPL", "MSFT")</param>
+        /// <param name="days">Number of days to analyze (default 30)</param>
+        /// <returns>Formatted context string with correlation data, or null if unavailable</returns>
+        public async Task<string> GetSentimentCorrelationContext(string symbol, int days = 30)
+        {
+            if (_sentimentCorrelationAnalysis == null)
+            {
+                _logger.LogWarning("Sentiment correlation analysis service is not configured");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            try
+            {
+                // Check if we have cached context for this symbol
+                if (_sentimentCorrelationContextHistory.TryGetValue(symbol.ToUpperInvariant(), out var cachedContext))
+                {
+                    return cachedContext;
+                }
+
+                // Fetch fresh sentiment correlation context
+                var context = await _sentimentCorrelationAnalysis.GetHistoricalSentimentContext(symbol, days);
+                
+                if (!string.IsNullOrEmpty(context))
+                {
+                    // Cache the context for future use
+                    _sentimentCorrelationContextHistory[symbol.ToUpperInvariant()] = context;
+                    _logger.LogInformation("Retrieved sentiment-price correlation context for {Symbol}", symbol);
+                }
+
+                return context;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching sentiment correlation context for {Symbol}", symbol);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Generates a detailed feature weight context for AI prompts (MarketChat story 4).
         /// </summary>
         /// <param name="prediction">The prediction result</param>
@@ -626,6 +680,12 @@ namespace Quantra.DAL.Services
                    "When feature weights are provided, explain which technical indicators drove the prediction the most, " +
                    "translating terms like RSI, MACD, VWAP into plain English (e.g., 'The RSI at 28 indicates oversold conditions, meaning the stock may be undervalued'). " +
                    "When risk metrics are provided (VaR, Sharpe ratio, max drawdown), explain what they mean for the trader's risk exposure. " +
+                   "When sentiment-price correlation data is provided, explain the historical relationship between sentiment shifts and price movements. " +
+                   "Reference the correlation coefficients from different sentiment sources (Twitter, News, Analyst Ratings, etc.) and explain what they mean. " +
+                   "If sentiment leads price (positive lead/lag), mention that sentiment shifts have historically preceded price movements. " +
+                   "Explain the predictive accuracy score in context - for example: 'Twitter sentiment for NVDA showed a +0.65 correlation with next-day price moves over the past 30 days, " +
+                   "with sentiment shifts correctly predicting price direction 68% of the time.' " +
+                   "When recent sentiment shift events are provided, discuss specific instances where sentiment predicted (or failed to predict) price movements. " +
                    "If the user asks about factors driving a prediction, focus on the top 3-5 most influential features and their practical meaning. " +
                    "For example: 'The 0.85 confidence score is driven primarily by RSI (weight: 0.32) indicating oversold conditions, " +
                    "combined with MACD momentum (weight: 0.24) showing bullish divergence...' " +
@@ -644,6 +704,10 @@ namespace Quantra.DAL.Services
                    "When ML prediction data is provided, incorporate the AI-generated forecast into your trading plan, explaining how the predicted action, target price, and confidence level inform entry/exit strategies. " +
                    "When feature weights are provided, explain which technical indicators influenced the prediction most and how they should factor into the trading plan. " +
                    "For risk metrics (VaR, Sharpe ratio, max drawdown), incorporate them into position sizing and stop-loss recommendations. " +
+                   "When sentiment-price correlation data is provided, incorporate the sentiment analysis into the trading plan. " +
+                   "Explain how the historical correlation between sentiment and price movements for this symbol affects timing and conviction. " +
+                   "If sentiment has strong predictive accuracy, consider it as a signal for entry/exit timing. " +
+                   "Reference specific sentiment shift events that have historically preceded price movements. " +
                    "Structure your responses with clear sections for Entry Criteria, Exit Criteria, Position Sizing, " +
                    "Stop-Loss Strategy, Take-Profit Targets, and Rationale. " +
                    "Always consider risk management as a priority and explain your reasoning. " +
@@ -747,6 +811,38 @@ namespace Quantra.DAL.Services
                             catch (Exception ex)
                             {
                                 _logger.LogWarning(ex, "Failed to fetch prediction context for {Symbol}", symbol);
+                            }
+                        }
+
+                        // Add sentiment-price correlation context (MarketChat story 6)
+                        if (_sentimentCorrelationAnalysis != null)
+                        {
+                            try
+                            {
+                                // Check if we have sentiment correlation context in history for follow-up questions
+                                if (_sentimentCorrelationContextHistory.TryGetValue(symbol, out var cachedSentimentCorrelation))
+                                {
+                                    promptBuilder.AppendLine(cachedSentimentCorrelation);
+                                    promptBuilder.AppendLine();
+                                }
+                                else
+                                {
+                                    // Fetch sentiment-price correlation context
+                                    var sentimentCorrelationContext = await _sentimentCorrelationAnalysis.GetHistoricalSentimentContext(symbol, 30);
+                                    if (!string.IsNullOrEmpty(sentimentCorrelationContext))
+                                    {
+                                        promptBuilder.AppendLine(sentimentCorrelationContext);
+                                        promptBuilder.AppendLine();
+
+                                        // Store in sentiment correlation context history for follow-up questions
+                                        _sentimentCorrelationContextHistory[symbol] = sentimentCorrelationContext;
+                                        _logger.LogInformation("Added sentiment-price correlation context for {Symbol} to conversation", symbol);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to fetch sentiment-price correlation context for {Symbol}", symbol);
                             }
                         }
                     }

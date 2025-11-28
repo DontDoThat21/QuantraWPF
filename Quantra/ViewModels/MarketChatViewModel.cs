@@ -377,7 +377,11 @@ namespace Quantra.ViewModels
                          "**Trading Plans:**\n" +
                          "• \"Suggest a trading plan for MSFT for the next month\"\n" +
                          "• \"Give me a trading plan for TSLA in a volatile market\"\n\n" +
-                         "**Database Queries (new!):**\n" +
+                         "**Sentiment Correlation Analysis:**\n" +
+                         "• \"How does sentiment correlate with price for NVDA?\"\n" +
+                         "• \"Show historical sentiment-price correlation for AAPL\"\n" +
+                         "• \"Has Twitter sentiment predicted price movements for TSLA?\"\n\n" +
+                         "**Database Queries:**\n" +
                          "• \"Show me all stocks with predictions above 80% confidence\"\n" +
                          "• \"List recent predictions for AAPL\"\n" +
                          "• \"Find all BUY predictions with high confidence\"\n" +
