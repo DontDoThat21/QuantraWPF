@@ -23,8 +23,10 @@ namespace Quantra.DAL.Services
         private readonly HttpClient _httpClient;
         private readonly ILogger<MarketChatService> _logger;
         private readonly IMarketDataEnrichmentService _marketDataEnrichmentService;
+        private readonly IPredictionDataService _predictionDataService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
+        private readonly Dictionary<string, string> _predictionContextHistory;
         private const string OpenAiBaseUrl = "https://api.openai.com";
         private const string OpenAiModel = "gpt-3.5-turbo";
         private const double OpenAiTemperature = 0.3;
@@ -50,13 +52,16 @@ namespace Quantra.DAL.Services
         public MarketChatService(
             ILogger<MarketChatService> logger,
             IMarketDataEnrichmentService marketDataEnrichmentService = null,
+            IPredictionDataService predictionDataService = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
+            _predictionDataService = predictionDataService;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _predictionContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -177,6 +182,27 @@ namespace Quantra.DAL.Services
                     }
                 }
 
+                // Add ML prediction context for the ticker
+                if (_predictionDataService != null && !string.IsNullOrWhiteSpace(ticker))
+                {
+                    try
+                    {
+                        var predictionContext = await _predictionDataService.GetPredictionContextAsync(ticker.ToUpperInvariant());
+                        if (!string.IsNullOrEmpty(predictionContext))
+                        {
+                            promptBuilder.AppendLine(predictionContext);
+                            promptBuilder.AppendLine();
+
+                            // Store in prediction context history for follow-up questions
+                            _predictionContextHistory[ticker.ToUpperInvariant()] = predictionContext;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to fetch prediction context for trading plan ticker {Ticker}", ticker);
+                    }
+                }
+
                 promptBuilder.AppendLine($"Suggest a detailed trading plan for {ticker} for the {timeframe}.");
                 promptBuilder.AppendLine($"Include entry and exit criteria, position sizing, stop-loss, and a brief rationale.");
                 promptBuilder.AppendLine($"Assume {riskProfile} risk tolerance.");
@@ -252,7 +278,38 @@ namespace Quantra.DAL.Services
         {
             _conversationHistory.Clear();
             _enrichedContextHistory.Clear();
+            _predictionContextHistory.Clear();
             _logger.LogInformation("Conversation history and enriched context cleared");
+        }
+
+        /// <summary>
+        /// Gets prediction context for a specific stock symbol.
+        /// Returns null if no predictions exist or the prediction service is not configured.
+        /// </summary>
+        /// <param name="symbol">Stock symbol (e.g., "AAPL", "MSFT")</param>
+        /// <returns>Formatted prediction context string for display, or null if unavailable</returns>
+        public async Task<string> GetPredictionContext(string symbol)
+        {
+            if (_predictionDataService == null)
+            {
+                _logger.LogWarning("Prediction data service is not configured");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            try
+            {
+                return await _predictionDataService.GetPredictionContextAsync(symbol);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching prediction context for {Symbol}", symbol);
+                return null;
+            }
         }
 
         /// <summary>
@@ -264,6 +321,9 @@ namespace Quantra.DAL.Services
                    "Provide clear, concise, and actionable market analysis to help traders make informed decisions. " +
                    "Focus on technical analysis, market sentiment, risk factors, and actionable insights. " +
                    "When historical data context is provided, reference specific price levels, moving averages, volatility metrics, and volume patterns in your analysis. " +
+                   "When ML prediction data is provided, discuss the AI-generated forecast including the predicted action (BUY/SELL/HOLD), target price, and confidence level. " +
+                   "Explain the rationale behind predictions based on the technical indicators that were used. " +
+                   "For example: 'Based on your ML model's [confidence]% [action] signal for [symbol] targeting $[price], supported by the technical indicators...' " +
                    "Always mention relevant risks and avoid giving direct investment advice. " +
                    "Use professional yet accessible language appropriate for experienced traders.";
         }
@@ -276,6 +336,7 @@ namespace Quantra.DAL.Services
             return "You are a professional trading coach for Quantra, an advanced algorithmic trading platform. " +
                    "Generate detailed, actionable trading plans based on technical analysis, market conditions, and risk management. " +
                    "When historical data context is provided, use actual price levels, moving averages, volatility, and volume patterns to inform your recommendations. " +
+                   "When ML prediction data is provided, incorporate the AI-generated forecast into your trading plan, explaining how the predicted action, target price, and confidence level inform entry/exit strategies. " +
                    "Structure your responses with clear sections for Entry Criteria, Exit Criteria, Position Sizing, " +
                    "Stop-Loss Strategy, Take-Profit Targets, and Rationale. " +
                    "Always consider risk management as a priority and explain your reasoning. " +
@@ -299,36 +360,72 @@ namespace Quantra.DAL.Services
 
                 // Extract symbol(s) from the user question and add historical context
                 var symbols = ExtractSymbolsFromQuestion(userQuestion);
-                if (symbols.Count > 0 && _marketDataEnrichmentService != null)
+                if (symbols.Count > 0)
                 {
                     foreach (var symbol in symbols)
                     {
-                        try
+                        // Add historical market data context
+                        if (_marketDataEnrichmentService != null)
                         {
-                            // Check if we have enriched context in history for follow-up questions
-                            if (_enrichedContextHistory.TryGetValue(symbol, out var cachedContext))
+                            try
                             {
-                                promptBuilder.AppendLine(cachedContext);
-                                promptBuilder.AppendLine();
-                            }
-                            else
-                            {
-                                // Fetch fresh historical context
-                                var historicalContext = await _marketDataEnrichmentService.GetHistoricalContextAsync(symbol, 60);
-                                if (!string.IsNullOrEmpty(historicalContext))
+                                // Check if we have enriched context in history for follow-up questions
+                                if (_enrichedContextHistory.TryGetValue(symbol, out var cachedContext))
                                 {
-                                    promptBuilder.AppendLine(historicalContext);
+                                    promptBuilder.AppendLine(cachedContext);
                                     promptBuilder.AppendLine();
+                                }
+                                else
+                                {
+                                    // Fetch fresh historical context
+                                    var historicalContext = await _marketDataEnrichmentService.GetHistoricalContextAsync(symbol, 60);
+                                    if (!string.IsNullOrEmpty(historicalContext))
+                                    {
+                                        promptBuilder.AppendLine(historicalContext);
+                                        promptBuilder.AppendLine();
 
-                                    // Store in enriched context history for follow-up questions
-                                    _enrichedContextHistory[symbol] = historicalContext;
-                                    _logger.LogInformation("Added historical context for {Symbol} to conversation", symbol);
+                                        // Store in enriched context history for follow-up questions
+                                        _enrichedContextHistory[symbol] = historicalContext;
+                                        _logger.LogInformation("Added historical context for {Symbol} to conversation", symbol);
+                                    }
                                 }
                             }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to fetch historical context for {Symbol}", symbol);
+                            }
                         }
-                        catch (Exception ex)
+
+                        // Add ML prediction context
+                        if (_predictionDataService != null)
                         {
-                            _logger.LogWarning(ex, "Failed to fetch historical context for {Symbol}", symbol);
+                            try
+                            {
+                                // Check if we have prediction context in history for follow-up questions
+                                if (_predictionContextHistory.TryGetValue(symbol, out var cachedPrediction))
+                                {
+                                    promptBuilder.AppendLine(cachedPrediction);
+                                    promptBuilder.AppendLine();
+                                }
+                                else
+                                {
+                                    // Fetch fresh prediction context
+                                    var predictionContext = await _predictionDataService.GetPredictionContextAsync(symbol);
+                                    if (!string.IsNullOrEmpty(predictionContext))
+                                    {
+                                        promptBuilder.AppendLine(predictionContext);
+                                        promptBuilder.AppendLine();
+
+                                        // Store in prediction context history for follow-up questions
+                                        _predictionContextHistory[symbol] = predictionContext;
+                                        _logger.LogInformation("Added ML prediction context for {Symbol} to conversation", symbol);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to fetch prediction context for {Symbol}", symbol);
+                            }
                         }
                     }
                 }
