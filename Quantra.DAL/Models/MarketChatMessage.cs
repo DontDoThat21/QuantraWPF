@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Quantra.DAL.Models;
 
 namespace Quantra.Models
 {
@@ -22,6 +23,7 @@ namespace Quantra.Models
         private long _queryExecutionTimeMs;
         private bool _isComparisonResult;
         private int _comparisonSymbolCount;
+        private ProjectionChartData _chartData;
 
         /// <summary>
         /// The content of the message
@@ -171,6 +173,36 @@ namespace Quantra.Models
         /// </summary>
         public string ComparisonStatusDisplay => IsComparisonResult ? $"Comparing {ComparisonSymbolCount} symbols" : null;
 
+        /// <summary>
+        /// Chart data for displaying historical + projection chart (MarketChat story 8)
+        /// </summary>
+        public ProjectionChartData ChartData
+        {
+            get => _chartData;
+            set
+            {
+                if (SetProperty(ref _chartData, value))
+                {
+                    OnPropertyChanged(nameof(HasChartData));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Indicates whether this message has chart data to display (MarketChat story 8)
+        /// </summary>
+        public bool HasChartData => _chartData?.IsValid ?? false;
+
+        /// <summary>
+        /// Indicates whether chart should be displayed (MarketChat story 8)
+        /// </summary>
+        public bool ShowChart => !IsFromUser && !IsLoading && HasChartData;
+
+        /// <summary>
+        /// Gets a display string for chart status (MarketChat story 8)
+        /// </summary>
+        public string ChartStatusDisplay => HasChartData ? $"{ChartData?.Symbol} - {ChartData?.PredictedAction} ({ChartData?.Confidence:P0})" : null;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -224,6 +256,11 @@ namespace Quantra.Models
         /// <summary>
         /// Multi-symbol comparison result (MarketChat story 7)
         /// </summary>
-        ComparisonResult
+        ComparisonResult,
+
+        /// <summary>
+        /// Chart visualization message with historical + projection data (MarketChat story 8)
+        /// </summary>
+        ChartMessage
     }
 }

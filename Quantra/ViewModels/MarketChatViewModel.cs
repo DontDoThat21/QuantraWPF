@@ -169,10 +169,11 @@ namespace Quantra.ViewModels
                 // Show processing state
                 IsProcessing = true;
 
-                // Check if this is a trading plan request, database query, or multi-symbol comparison
+                // Check if this is a trading plan request, database query, multi-symbol comparison, or chart request
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
                 bool isQueryRequest = _marketChatService.IsQueryRequest(userMessage);
                 bool isComparisonRequest = _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
+                bool isChartRequest = _marketChatService.IsChartRequest(userMessage);
 
                 if (isQueryRequest)
                 {
@@ -181,6 +182,10 @@ namespace Quantra.ViewModels
                 else if (isComparisonRequest)
                 {
                     StatusMessage = "Comparing symbols...";
+                }
+                else if (isChartRequest)
+                {
+                    StatusMessage = "Generating chart...";
                 }
                 else if (isTradingPlan)
                 {
@@ -194,7 +199,8 @@ namespace Quantra.ViewModels
                 // Add loading message
                 string loadingContent = isQueryRequest ? "Querying database..." : 
                                        (isComparisonRequest ? "Comparing symbols..." :
-                                        (isTradingPlan ? "Creating trading plan..." : "Thinking..."));
+                                        (isChartRequest ? "Generating chart..." :
+                                         (isTradingPlan ? "Creating trading plan..." : "Thinking...")));
                 var loadingMessage = new MarketChatMessage
                 {
                     Content = loadingContent,
@@ -243,6 +249,10 @@ namespace Quantra.ViewModels
                                            comparisonResult.IsSuccessful && 
                                            _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
 
+                // Get chart data metadata (MarketChat story 8)
+                var chartData = _marketChatService.LastChartData;
+                bool isChartResponse = chartData != null && chartData.IsValid && isChartRequest;
+
                 // Determine message type
                 MessageType messageType = MessageType.AssistantResponse;
                 if (queryResult?.Success == true)
@@ -253,8 +263,12 @@ namespace Quantra.ViewModels
                 {
                     messageType = MessageType.ComparisonResult;
                 }
+                else if (isChartResponse)
+                {
+                    messageType = MessageType.ChartMessage;
+                }
 
-                // Add assistant response with cache/query/comparison metadata
+                // Add assistant response with cache/query/comparison/chart metadata
                 var assistantMessage = new MarketChatMessage
                 {
                     Content = response,
@@ -268,7 +282,8 @@ namespace Quantra.ViewModels
                     QueryRowCount = queryResult?.RowCount ?? 0,
                     QueryExecutionTimeMs = queryResult?.ExecutionTimeMs ?? 0,
                     IsComparisonResult = isComparisonResponse,
-                    ComparisonSymbolCount = comparisonResult?.Symbols?.Count ?? 0
+                    ComparisonSymbolCount = comparisonResult?.Symbols?.Count ?? 0,
+                    ChartData = isChartResponse ? chartData : null
                 };
                 Messages.Add(assistantMessage);
 
@@ -283,6 +298,12 @@ namespace Quantra.ViewModels
                     StatusMessage = $"Comparison complete | {comparisonResult.Symbols.Count} symbols analyzed";
                     _logger.LogInformation("Multi-symbol comparison completed: {Count} symbols", comparisonResult.Symbols.Count);
                 }
+                else if (isChartResponse)
+                {
+                    StatusMessage = $"Chart ready | {chartData.Symbol} - {chartData.PredictedAction}";
+                    _logger.LogInformation("Chart generated for {Symbol} with {Historical} historical points and {Prediction} prediction points",
+                        chartData.Symbol, chartData.HistoricalPrices?.Count ?? 0, chartData.PredictionPrices?.Count ?? 0);
+                }
                 else if (cacheResult?.IsCached == true)
                 {
                     StatusMessage = $"Ready | {cacheResult.CacheStatusDisplay}";
@@ -293,7 +314,7 @@ namespace Quantra.ViewModels
                     StatusMessage = "Ready for your next question";
                 }
 
-                _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : isComparisonResponse ? "comparison" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
+                _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : isChartResponse ? "chart" : isComparisonResponse ? "comparison" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
             }
             catch (Exception ex)
             {
