@@ -37,7 +37,7 @@ namespace Quantra.Models
         public string GridBorderColor { get; set; } = "#FF00FFFF"; // Default Cyan
 
         // Email alert settings
-        public string AlertEmail { get; set; } = "tylortrub@gmail.com";
+        public string AlertEmail { get; set; } = "test@gmail.com";
         public bool EnableEmailAlerts { get; set; } = false;
         public bool EnableStandardAlertEmails { get; set; } = false;
         public bool EnableOpportunityAlertEmails { get; set; } = false;

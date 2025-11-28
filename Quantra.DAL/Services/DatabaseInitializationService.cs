@@ -129,7 +129,7 @@ namespace Quantra.DAL.Services
                         DefaultGridRows = 4,
                         DefaultGridColumns = 4,
                         GridBorderColor = "#FF00FFFF",
-                        AlertEmail = "tylortrub@gmail.com"
+                        AlertEmail = "test@gmail.com"
                     };
 
                     _dbContext.Settings.Add(defaultSettings);

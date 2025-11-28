@@ -22,7 +22,7 @@ Improve the SettingsWindow form's UI and functionality.
 Any settings in the UI need to be implemented if they are not already.
 
 Add email alerts when a good buying opportunity has been spotted through the Prediction Analysis results.
-Send the emails to a configurable email address, set and saved in the database from the SettingsWindow form (tylortrub@gmail.com for default).
+Send the emails to a configurable email address, set and saved in the database from the SettingsWindow form (test@gmail.com for default).
 
 Any prediction analysis control with "Auto Mode" toggled automatically analyze every-so-often.
 This may already happen, but the grid isn't ever displaying datas. The Grid should show the most recent result of the analysis.

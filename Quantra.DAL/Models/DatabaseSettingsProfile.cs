@@ -28,7 +28,7 @@ namespace Quantra.Models
         public string RiskLevel { get; set; }
 
         // Email settings
-        public string AlertEmail { get; set; } = "tylortrub@gmail.com";
+        public string AlertEmail { get; set; } = "test@gmail.com";
         public bool EnableEmailAlerts { get; set; } = false;
         public bool EnableStandardAlertEmails { get; set; } = false;
         public bool EnableOpportunityAlertEmails { get; set; } = false;
@@ -256,7 +256,7 @@ namespace Quantra.Models
                 EnableTradeNotifications = true,
                 EnablePaperTrading = true,
                 RiskLevel = "Low",
-                AlertEmail = "tylortrub@gmail.com",
+                AlertEmail = "test@gmail.com",
                 EnableEmailAlerts = false,
                 EnableStandardAlertEmails = false,
                 EnableOpportunityAlertEmails = false,

@@ -146,7 +146,7 @@ namespace Quantra.DAL.Data.Entities
         public string GridBorderColor { get; set; } = "#FF00FFFF";
 
         [MaxLength(200)]
-        public string AlertEmail { get; set; } = "tylortrub@gmail.com";
+        public string AlertEmail { get; set; } = "test@gmail.com";
     }
 
     /// <summary>

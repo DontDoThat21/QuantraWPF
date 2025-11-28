@@ -141,4 +141,13 @@ namespace Quantra.DAL.Data.Configurations
                    .HasColumnType("NVARCHAR(MAX)");
         }
     }
+
+    public class SettingsProfileConfiguration : IEntityTypeConfiguration<SettingsProfile>
+    {
+        public void Configure(EntityTypeBuilder<SettingsProfile> builder)
+        {
+            // Tell EF Core that this table has triggers to prevent OUTPUT clause usage
+            builder.ToTable(tb => tb.HasTrigger("TR_SettingsProfiles_Update"));
+        }
+    }
 }

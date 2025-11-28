@@ -182,7 +182,7 @@ namespace Quantra.ViewModels
                         try
                         {
                             await _emailService.SendEmailAsync(
-                                "tylortrub@gmail.com",
+                                "test@gmail.com",
                                 $"Buy Opportunity: {prediction.Symbol}",
                                 $"A high-confidence BUY signal was detected for {prediction.Symbol}.\nConfidence: {prediction.Confidence:P0}\nCurrent Price: {prediction.CurrentPrice}\nTarget Price: {prediction.TargetPrice}"
                             );
