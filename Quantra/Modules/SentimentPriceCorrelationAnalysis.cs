@@ -766,6 +766,12 @@ namespace Quantra.Modules
         /// <returns>Formatted context string with correlation coefficients and sentiment shift summaries</returns>
         public async Task<string> GetHistoricalSentimentContext(string symbol, int days = 30)
         {
+            // Validate input parameters
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return string.Empty;
+            }
+
             try
             {
                 // Get the correlation analysis
