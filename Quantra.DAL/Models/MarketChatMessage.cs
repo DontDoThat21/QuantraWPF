@@ -20,6 +20,8 @@ namespace Quantra.Models
         private bool _isQueryResult;
         private int _queryRowCount;
         private long _queryExecutionTimeMs;
+        private bool _isComparisonResult;
+        private int _comparisonSymbolCount;
 
         /// <summary>
         /// The content of the message
@@ -122,6 +124,24 @@ namespace Quantra.Models
         }
 
         /// <summary>
+        /// Indicates whether this response is a multi-symbol comparison result (MarketChat story 7)
+        /// </summary>
+        public bool IsComparisonResult
+        {
+            get => _isComparisonResult;
+            set => SetProperty(ref _isComparisonResult, value);
+        }
+
+        /// <summary>
+        /// Number of symbols in the comparison (MarketChat story 7)
+        /// </summary>
+        public int ComparisonSymbolCount
+        {
+            get => _comparisonSymbolCount;
+            set => SetProperty(ref _comparisonSymbolCount, value);
+        }
+
+        /// <summary>
         /// Formatted timestamp for display
         /// </summary>
         public string TimestampDisplay => Timestamp.ToString("HH:mm:ss");
@@ -137,9 +157,19 @@ namespace Quantra.Models
         public bool ShowQueryStatus => !IsFromUser && !IsLoading && IsQueryResult;
 
         /// <summary>
+        /// Indicates whether comparison result status should be displayed (MarketChat story 7)
+        /// </summary>
+        public bool ShowComparisonStatus => !IsFromUser && !IsLoading && IsComparisonResult;
+
+        /// <summary>
         /// Gets a display string for query result status (MarketChat story 5)
         /// </summary>
         public string QueryStatusDisplay => IsQueryResult ? $"{QueryRowCount} rows in {QueryExecutionTimeMs}ms" : null;
+
+        /// <summary>
+        /// Gets a display string for comparison result status (MarketChat story 7)
+        /// </summary>
+        public string ComparisonStatusDisplay => IsComparisonResult ? $"Comparing {ComparisonSymbolCount} symbols" : null;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -189,6 +219,11 @@ namespace Quantra.Models
         /// <summary>
         /// Database query result (MarketChat story 5)
         /// </summary>
-        QueryResult
+        QueryResult,
+
+        /// <summary>
+        /// Multi-symbol comparison result (MarketChat story 7)
+        /// </summary>
+        ComparisonResult
     }
 }

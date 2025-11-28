@@ -22,6 +22,7 @@ namespace Quantra.DAL.Services
     /// Integrates with ModelExplainerService to provide plain English explanations of ML predictions (MarketChat story 4).
     /// Integrates with NaturalLanguageQueryService for SQL table queries via natural language (MarketChat story 5).
     /// Integrates with SentimentPriceCorrelationAnalysis for sentiment-price correlation context (MarketChat story 6).
+    /// Integrates with MultiSymbolAnalyzer for multi-symbol comparative analysis (MarketChat story 7).
     /// </summary>
     public class MarketChatService
     {
@@ -32,6 +33,7 @@ namespace Quantra.DAL.Services
         private readonly IModelExplainerService _modelExplainerService;
         private readonly INaturalLanguageQueryService _naturalLanguageQueryService;
         private readonly SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
+        private readonly IMultiSymbolAnalyzer _multiSymbolAnalyzer;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
@@ -70,6 +72,11 @@ namespace Quantra.DAL.Services
         public NaturalLanguageQueryResult LastQueryResult { get; private set; }
 
         /// <summary>
+        /// Gets the most recent multi-symbol comparison result (MarketChat story 7).
+        /// </summary>
+        public MultiSymbolComparisonResult LastComparisonResult { get; private set; }
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -79,6 +86,7 @@ namespace Quantra.DAL.Services
             IModelExplainerService modelExplainerService = null,
             INaturalLanguageQueryService naturalLanguageQueryService = null,
             SentimentPriceCorrelationAnalysis sentimentCorrelationAnalysis = null,
+            IMultiSymbolAnalyzer multiSymbolAnalyzer = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
@@ -87,6 +95,7 @@ namespace Quantra.DAL.Services
             _modelExplainerService = modelExplainerService ?? new ModelExplainerService();
             _naturalLanguageQueryService = naturalLanguageQueryService;
             _sentimentCorrelationAnalysis = sentimentCorrelationAnalysis ?? new SentimentPriceCorrelationAnalysis();
+            _multiSymbolAnalyzer = multiSymbolAnalyzer;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -114,6 +123,8 @@ namespace Quantra.DAL.Services
         /// Sends a market analysis question to ChatGPT and returns the response.
         /// If the question is detected as a database query, it will be processed
         /// by the NaturalLanguageQueryService instead (MarketChat story 5).
+        /// If the question is detected as a multi-symbol comparison request,
+        /// it will be processed by the MultiSymbolAnalyzer (MarketChat story 7).
         /// </summary>
         /// <param name="userQuestion">The user's market analysis question</param>
         /// <param name="includeContext">Whether to include recent market data as context</param>
@@ -129,6 +140,13 @@ namespace Quantra.DAL.Services
                 {
                     _logger.LogInformation("Detected database query request, processing with NaturalLanguageQueryService");
                     return await ProcessDatabaseQueryAsync(userQuestion);
+                }
+
+                // Check if this is a multi-symbol comparison request (MarketChat story 7)
+                if (IsMultiSymbolComparisonRequest(userQuestion))
+                {
+                    _logger.LogInformation("Detected multi-symbol comparison request, processing with MultiSymbolAnalyzer");
+                    return await ProcessMultiSymbolComparisonAsync(userQuestion);
                 }
 
                 // Build the system prompt
@@ -180,6 +198,215 @@ namespace Quantra.DAL.Services
                 _logger.LogError(ex, "Error processing market analysis request");
                 return "I apologize, but I'm currently unable to process your market analysis request due to a technical issue. Please try again in a moment.";
             }
+        }
+
+        /// <summary>
+        /// Determines if the user's message is a multi-symbol comparison request (MarketChat story 7).
+        /// Detects queries like "Compare predictions for AAPL, MSFT, and GOOGL" or
+        /// "Compare AAPL vs MSFT vs GOOGL" or "Which is better, AAPL or MSFT?"
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message appears to be a multi-symbol comparison request</returns>
+        public bool IsMultiSymbolComparisonRequest(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            var lowerMessage = message.ToLowerInvariant();
+
+            // Check for explicit comparison keywords
+            bool hasCompareKeyword = lowerMessage.Contains("compare") ||
+                                     lowerMessage.Contains("comparison") ||
+                                     lowerMessage.Contains(" vs ") ||
+                                     lowerMessage.Contains("versus") ||
+                                     lowerMessage.Contains("which is better") ||
+                                     lowerMessage.Contains("which one") ||
+                                     lowerMessage.Contains("difference between") ||
+                                     lowerMessage.Contains("side by side") ||
+                                     lowerMessage.Contains("side-by-side") ||
+                                     lowerMessage.Contains("relative value");
+
+            if (!hasCompareKeyword)
+            {
+                return false;
+            }
+
+            // Extract symbols and check if there are multiple
+            var symbols = ExtractSymbolsFromQuestion(message);
+            return symbols.Count >= 2;
+        }
+
+        /// <summary>
+        /// Processes a multi-symbol comparison request (MarketChat story 7).
+        /// </summary>
+        /// <param name="userQuestion">The user's comparison question</param>
+        /// <returns>Formatted response with comparison analysis and AI recommendations</returns>
+        private async Task<string> ProcessMultiSymbolComparisonAsync(string userQuestion)
+        {
+            try
+            {
+                // Extract symbols from the question
+                var symbols = ExtractSymbolsFromQuestion(userQuestion);
+                if (symbols.Count < 2)
+                {
+                    return "I need at least two stock symbols to compare. Please specify the symbols you'd like to compare (e.g., 'Compare predictions for AAPL, MSFT, and GOOGL').";
+                }
+
+                _logger.LogInformation("Processing multi-symbol comparison for: {Symbols}", string.Join(", ", symbols));
+
+                // Use MultiSymbolAnalyzer if available, otherwise create one
+                var analyzer = _multiSymbolAnalyzer ?? new MultiSymbolAnalyzer(
+                    null,
+                    _predictionDataService,
+                    _marketDataEnrichmentService,
+                    null);
+
+                // Perform the comparison
+                var comparisonResult = await analyzer.CompareSymbolsAsync(symbols, includeHistoricalContext: true);
+                LastComparisonResult = comparisonResult;
+
+                if (!comparisonResult.IsSuccessful)
+                {
+                    var errorMessage = comparisonResult.Errors.Count > 0
+                        ? string.Join("; ", comparisonResult.Errors)
+                        : "Unable to retrieve data for the specified symbols.";
+                    return $"I couldn't complete the comparison: {errorMessage}";
+                }
+
+                // Build the response with comparison tables and AI analysis
+                var responseBuilder = new StringBuilder();
+
+                // Add formatted comparison tables
+                responseBuilder.AppendLine(analyzer.FormatComparisonAsMarkdown(comparisonResult));
+                responseBuilder.AppendLine();
+
+                // Add allocation recommendations based on detected risk profile
+                var riskProfile = ExtractRiskProfile(userQuestion);
+                responseBuilder.AppendLine(analyzer.GenerateAllocationRecommendations(comparisonResult, riskProfile));
+                responseBuilder.AppendLine();
+
+                // Now get AI-enhanced analysis for portfolio optimization
+                var aiAnalysis = await GetAiComparisonAnalysisAsync(comparisonResult, userQuestion);
+                if (!string.IsNullOrEmpty(aiAnalysis))
+                {
+                    responseBuilder.AppendLine("### AI Analysis & Recommendations");
+                    responseBuilder.AppendLine(aiAnalysis);
+                }
+
+                var response = responseBuilder.ToString();
+
+                // Store the conversation
+                StoreConversationTurn(userQuestion, response);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing multi-symbol comparison");
+                return "I apologize, but I encountered an error while comparing the symbols. Please try again.";
+            }
+        }
+
+        /// <summary>
+        /// Gets AI-enhanced analysis for a multi-symbol comparison (MarketChat story 7).
+        /// Uses OpenAI to provide portfolio optimization recommendations based on the comparison data.
+        /// </summary>
+        private async Task<string> GetAiComparisonAnalysisAsync(MultiSymbolComparisonResult comparisonResult, string originalQuestion)
+        {
+            try
+            {
+                // Build a comparison-focused system prompt
+                var systemPrompt = BuildComparisonSystemPrompt();
+
+                // Build the context from comparison data
+                var analyzer = _multiSymbolAnalyzer ?? new MultiSymbolAnalyzer(null, _predictionDataService, _marketDataEnrichmentService, null);
+                var comparisonContext = analyzer.BuildComparisonContext(comparisonResult);
+
+                var userPrompt = new StringBuilder();
+                userPrompt.AppendLine(comparisonContext);
+                userPrompt.AppendLine();
+                userPrompt.AppendLine($"Original question: {originalQuestion}");
+                userPrompt.AppendLine();
+                userPrompt.AppendLine("Based on the comparison data above, provide:");
+                userPrompt.AppendLine("1. A summary of the key differences between these symbols");
+                userPrompt.AppendLine("2. Which symbol(s) present the best risk-adjusted opportunity");
+                userPrompt.AppendLine("3. Any portfolio allocation suggestions");
+                userPrompt.AppendLine("4. Key risks to consider for each symbol");
+
+                var messages = new List<object>
+                {
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user", content = userPrompt.ToString() }
+                };
+
+                var response = await ResilienceHelper.ExternalApiCallAsync("OpenAI", async () =>
+                {
+                    var requestBody = new
+                    {
+                        model = OpenAiModel,
+                        messages = messages.ToArray(),
+                        temperature = 0.4, // Slightly higher for portfolio recommendations
+                        max_tokens = 1200
+                    };
+
+                    var content = new StringContent(
+                        JsonSerializer.Serialize(requestBody),
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    var httpResponse = await _httpClient.PostAsync("/v1/chat/completions", content);
+                    httpResponse.EnsureSuccessStatusCode();
+
+                    var responseString = await httpResponse.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<OpenAIResponse>(responseString, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                });
+
+                return response.Choices[0].Message.Content;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get AI comparison analysis");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Builds the system prompt specifically for multi-symbol comparison analysis (MarketChat story 7).
+        /// </summary>
+        private string BuildComparisonSystemPrompt()
+        {
+            return "You are a professional portfolio analyst for Quantra, an advanced algorithmic trading platform. " +
+                   "You are analyzing a multi-symbol comparison and providing portfolio allocation recommendations. " +
+                   "Focus on relative value analysis - comparing the strengths and weaknesses of each symbol against the others. " +
+                   "When discussing predictions, reference the specific confidence levels and composite scores. " +
+                   "When discussing risk, reference the specific risk scores and volatility metrics. " +
+                   "Provide clear, actionable recommendations for portfolio allocation based on the comparison data. " +
+                   "Consider both return potential and risk when making recommendations. " +
+                   "If there are clear winners or losers in the comparison, highlight them with specific reasons. " +
+                   "Format your response with clear sections and bullet points for easy reading. " +
+                   "Always mention relevant risks and avoid giving direct investment advice. " +
+                   "Use professional yet accessible language appropriate for experienced traders.";
+        }
+
+        /// <summary>
+        /// Extracts the risk profile from a message for multi-symbol comparison (MarketChat story 7).
+        /// </summary>
+        private string ExtractRiskProfile(string message)
+        {
+            string loweredMessage = message.ToLower();
+
+            if (loweredMessage.Contains("conservative") || loweredMessage.Contains("low risk") || loweredMessage.Contains("safe"))
+                return "conservative";
+            if (loweredMessage.Contains("aggressive") || loweredMessage.Contains("high risk") || loweredMessage.Contains("risky"))
+                return "aggressive";
+
+            return "moderate"; // Default risk profile
         }
 
         /// <summary>
