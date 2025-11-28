@@ -169,13 +169,18 @@ namespace Quantra.ViewModels
                 // Show processing state
                 IsProcessing = true;
 
-                // Check if this is a trading plan request or database query
+                // Check if this is a trading plan request, database query, or multi-symbol comparison
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
                 bool isQueryRequest = _marketChatService.IsQueryRequest(userMessage);
+                bool isComparisonRequest = _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
 
                 if (isQueryRequest)
                 {
                     StatusMessage = "Querying database...";
+                }
+                else if (isComparisonRequest)
+                {
+                    StatusMessage = "Comparing symbols...";
                 }
                 else if (isTradingPlan)
                 {
@@ -187,9 +192,12 @@ namespace Quantra.ViewModels
                 }
 
                 // Add loading message
+                string loadingContent = isQueryRequest ? "Querying database..." : 
+                                       (isComparisonRequest ? "Comparing symbols..." :
+                                        (isTradingPlan ? "Creating trading plan..." : "Thinking..."));
                 var loadingMessage = new MarketChatMessage
                 {
-                    Content = isQueryRequest ? "Querying database..." : (isTradingPlan ? "Creating trading plan..." : "Thinking..."),
+                    Content = loadingContent,
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
                     MessageType = MessageType.LoadingMessage,
@@ -215,7 +223,8 @@ namespace Quantra.ViewModels
                 }
                 else
                 {
-                    // Standard market analysis (will also handle database queries via MarketChat story 5)
+                    // Standard market analysis (will also handle database queries via MarketChat story 5
+                    // and multi-symbol comparisons via MarketChat story 7)
                     response = await _marketChatService.SendMarketAnalysisRequestAsync(userMessage, includeContext: true);
                 }
 
@@ -228,27 +237,51 @@ namespace Quantra.ViewModels
                 // Get query result metadata (MarketChat story 5)
                 var queryResult = _marketChatService.LastQueryResult;
 
-                // Add assistant response with cache/query metadata
+                // Get comparison result metadata (MarketChat story 7)
+                var comparisonResult = _marketChatService.LastComparisonResult;
+                bool isComparisonResponse = comparisonResult != null && 
+                                           comparisonResult.IsSuccessful && 
+                                           _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
+
+                // Determine message type
+                MessageType messageType = MessageType.AssistantResponse;
+                if (queryResult?.Success == true)
+                {
+                    messageType = MessageType.QueryResult;
+                }
+                else if (isComparisonResponse)
+                {
+                    messageType = MessageType.ComparisonResult;
+                }
+
+                // Add assistant response with cache/query/comparison metadata
                 var assistantMessage = new MarketChatMessage
                 {
                     Content = response,
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
-                    MessageType = (queryResult?.Success == true) ? MessageType.QueryResult : MessageType.AssistantResponse,
+                    MessageType = messageType,
                     UsesCachedData = cacheResult?.IsCached ?? false,
                     CacheStatusDisplay = cacheResult?.CacheStatusDisplay,
                     CacheAge = cacheResult?.CacheAge,
                     IsQueryResult = queryResult?.Success == true,
                     QueryRowCount = queryResult?.RowCount ?? 0,
-                    QueryExecutionTimeMs = queryResult?.ExecutionTimeMs ?? 0
+                    QueryExecutionTimeMs = queryResult?.ExecutionTimeMs ?? 0,
+                    IsComparisonResult = isComparisonResponse,
+                    ComparisonSymbolCount = comparisonResult?.Symbols?.Count ?? 0
                 };
                 Messages.Add(assistantMessage);
 
-                // Update status to show cache hit/miss info or query result
+                // Update status to show appropriate info
                 if (queryResult?.Success == true)
                 {
                     StatusMessage = $"Query complete | {queryResult.RowCount} rows in {queryResult.ExecutionTimeMs}ms";
                     _logger.LogInformation("Database query completed: {RowCount} rows in {TimeMs}ms", queryResult.RowCount, queryResult.ExecutionTimeMs);
+                }
+                else if (isComparisonResponse)
+                {
+                    StatusMessage = $"Comparison complete | {comparisonResult.Symbols.Count} symbols analyzed";
+                    _logger.LogInformation("Multi-symbol comparison completed: {Count} symbols", comparisonResult.Symbols.Count);
                 }
                 else if (cacheResult?.IsCached == true)
                 {
@@ -260,7 +293,7 @@ namespace Quantra.ViewModels
                     StatusMessage = "Ready for your next question";
                 }
 
-                _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
+                _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : isComparisonResponse ? "comparison" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
             }
             catch (Exception ex)
             {
@@ -377,7 +410,16 @@ namespace Quantra.ViewModels
                          "**Trading Plans:**\n" +
                          "• \"Suggest a trading plan for MSFT for the next month\"\n" +
                          "• \"Give me a trading plan for TSLA in a volatile market\"\n\n" +
-                         "**Database Queries (new!):**\n" +
+                         "**Multi-Symbol Comparison:**\n" +
+                         "• \"Compare predictions for AAPL, MSFT, and GOOGL\"\n" +
+                         "• \"Which is better: NVDA vs AMD vs INTC?\"\n" +
+                         "• \"Side-by-side comparison of TSLA and F\"\n" +
+                         "• \"Compare risk and return for tech giants\"\n\n" +
+                         "**Sentiment Correlation Analysis:**\n" +
+                         "• \"How does sentiment correlate with price for NVDA?\"\n" +
+                         "• \"Show historical sentiment-price correlation for AAPL\"\n" +
+                         "• \"Has Twitter sentiment predicted price movements for TSLA?\"\n\n" +
+                         "**Database Queries:**\n" +
                          "• \"Show me all stocks with predictions above 80% confidence\"\n" +
                          "• \"List recent predictions for AAPL\"\n" +
                          "• \"Find all BUY predictions with high confidence\"\n" +
