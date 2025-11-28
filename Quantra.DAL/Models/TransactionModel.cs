@@ -162,6 +162,7 @@ namespace Quantra.Models
             CalculateRealizedPnL();
         }
 
+        // todo finish p and l calculations (do i need alpha vantage api?)
         // Default placeholder for P&L calculation - would be replaced with actual calculation
         private void CalculateRealizedPnL()
         {

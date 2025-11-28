@@ -21,6 +21,10 @@ namespace Quantra.Controls
         // Renamed to Predictions for clarity and to avoid conflict if xaml.cs has 'predictions'
         public ObservableCollection<Quantra.Models.PredictionModel> Predictions { get; set; } = new ObservableCollection<Quantra.Models.PredictionModel>();
 
+        // Track if user is manually interacting with tabs to prevent automatic tab switching
+        private bool _isUserSelectingTab = false;
+        private int _lastUserSelectedTabIndex = 0;
+
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -307,6 +311,29 @@ namespace Quantra.Controls
                     Indicators = new Dictionary<string, double> { { "RSI", 32.1 }, { "MACDHistogram", 0.12 } }
                 }
             };
+        }
+
+        // Handle tab selection changes to track user interaction
+        private void ResultsTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                if (sender is TabControl tabControl)
+                {
+                    // Mark that the user is manually selecting a tab
+                    _isUserSelectingTab = true;
+                    _lastUserSelectedTabIndex = tabControl.SelectedIndex;
+
+                    // Reset the flag after a short delay to allow the selection to complete
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                        new Action(() => _isUserSelectingTab = false),
+                        System.Windows.Threading.DispatcherPriority.Background);
+                }
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", "Error in ResultsTabControl_SelectionChanged", ex.ToString());
+            }
         }
     }
 }

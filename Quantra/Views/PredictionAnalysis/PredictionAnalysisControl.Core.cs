@@ -127,6 +127,19 @@ namespace Quantra.Controls
         /// </summary>
         public void SelectTopPredictionsTab()
         {
+            // Don't interfere with tab selection if user is manually navigating tabs
+            if (_isUserSelectingTab)
+            {
+                return;
+            }
+
+            // Also check if user has manually selected a tab other than the first one
+            // If so, respect their choice and don't force focus to the predictions grid
+            if (ResultsTabControl != null && _lastUserSelectedTabIndex > 0)
+            {
+                return;
+            }
+
             // If the PredictionDataGrid exists, set focus to it.
             if (PredictionDataGrid != null)
             {

@@ -52,6 +52,23 @@
                                       BorderThickness="0"
                                       Foreground="White"
                                       SelectionChanged="ProfilesListView_SelectionChanged">
+								<ListView.ContextMenu>
+									<ContextMenu Background="#2E2E3E" BorderBrush="#3E90FF" BorderThickness="1">
+										<MenuItem Header="Save" Click="SaveMenuItem_Click">
+											<MenuItem.Style>
+												<Style TargetType="MenuItem">
+													<Setter Property="Foreground" Value="White"/>
+													<Setter Property="Background" Value="Transparent"/>
+													<Style.Triggers>
+														<Trigger Property="IsHighlighted" Value="True">
+															<Setter Property="Background" Value="#3E3E56"/>
+														</Trigger>
+													</Style.Triggers>
+												</Style>
+											</MenuItem.Style>
+										</MenuItem>
+									</ContextMenu>
+								</ListView.ContextMenu>
 								<ListView.ItemContainerStyle>
 									<Style TargetType="ListViewItem">
 										<Setter Property="Padding" Value="12,8"/>
@@ -120,15 +137,27 @@
                                         Background="#3E3E56"
                                         BorderBrush="{StaticResource AccentBlueBrush}"/>
 							</Grid>
-							<Button x:Name="SetAsDefaultButton" Content="Set as Default" Height="36"
+						<Button x:Name="SetAsDefaultButton" Content="Set as Default" Height="36"
                                     Margin="0,8,0,0" Click="SetAsDefaultButton_Click"
                                     Style="{StaticResource ButtonStyle1}"
                                     Background="#3E3E56"
                                     BorderBrush="{StaticResource AccentBlueBrush}"/>
-						</StackPanel>
-					</Grid>
+						<Button x:Name="SaveProfileButton" Content="?? Save" Height="40"
+                                    Margin="0,12,0,0" Click="SaveProfileButton_Click"
+                                    Style="{StaticResource ButtonStyle1}"
+                                    Background="#2D6A4C"
+                                    BorderBrush="#50E070"
+                                    BorderThickness="2"
+                                    FontWeight="Bold"
+                                    FontSize="14">
+							<Button.Effect>
+								<DropShadowEffect ShadowDepth="2" BlurRadius="6" Opacity="0.5" Color="#50E070"/>
+							</Button.Effect>
+						</Button>
+					</StackPanel>
+				</Grid>
 
-					<!-- Right Panel - Settings -->
+				<!-- Right Panel - Settings -->
 					<ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
 						<Grid>
 							<Grid.RowDefinitions>

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Quantra.DAL.Data.Entities;
 
 namespace Quantra.DAL.Data.Configurations
@@ -148,6 +149,43 @@ namespace Quantra.DAL.Data.Configurations
         {
             // Tell EF Core that this table has triggers to prevent OUTPUT clause usage
             builder.ToTable(tb => tb.HasTrigger("TR_SettingsProfiles_Update"));
+
+            // Create a converter for double to decimal conversion
+            var doubleToDecimalConverter = new ValueConverter<decimal, double>(
+                v => (double)v,           // decimal to double for writing to DB
+                v => (decimal)v           // double to decimal for reading from DB
+            );
+
+            // Configure decimal properties to convert from database double values
+            builder.Property(p => p.AccountSize)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.BaseRiskPercentage)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.MaxPositionSizePercent)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.FixedTradeAmount)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.ATRMultiple)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.HistoricalWinRate)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.HistoricalRewardRiskRatio)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.KellyFractionMultiplier)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.AnalystRatingSentimentWeight)
+                .HasConversion(doubleToDecimalConverter);
+
+            builder.Property(p => p.InsiderTradingSentimentWeight)
+                .HasConversion(doubleToDecimalConverter);
         }
     }
 }

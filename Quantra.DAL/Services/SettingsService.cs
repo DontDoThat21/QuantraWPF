@@ -356,6 +356,42 @@ namespace Quantra.DAL.Services
                 DefaultGridRows = profile.DefaultGridRows,
                 DefaultGridColumns = profile.DefaultGridColumns,
                 GridBorderColor = profile.GridBorderColor,
+                
+                // Email alerts
+                AlertEmail = profile.AlertEmail,
+                EnableEmailAlerts = profile.EnableEmailAlerts,
+                EnableStandardAlertEmails = profile.EnableStandardAlertEmails,
+                EnableOpportunityAlertEmails = profile.EnableOpportunityAlertEmails,
+                EnablePredictionAlertEmails = profile.EnablePredictionAlertEmails,
+                EnableGlobalAlertEmails = profile.EnableGlobalAlertEmails,
+                EnableSystemHealthAlertEmails = profile.EnableSystemHealthAlertEmails,
+                
+                // SMS alerts
+                AlertPhoneNumber = profile.AlertPhoneNumber,
+                EnableSmsAlerts = profile.EnableSmsAlerts,
+                EnableStandardAlertSms = profile.EnableStandardAlertSms,
+                EnableOpportunityAlertSms = profile.EnableOpportunityAlertSms,
+                EnablePredictionAlertSms = profile.EnablePredictionAlertSms,
+                EnableGlobalAlertSms = profile.EnableGlobalAlertSms,
+                
+                // Push notifications
+                PushNotificationUserId = profile.PushNotificationUserId,
+                EnablePushNotifications = profile.EnablePushNotifications,
+                EnableStandardAlertPushNotifications = profile.EnableStandardAlertPushNotifications,
+                EnableOpportunityAlertPushNotifications = profile.EnableOpportunityAlertPushNotifications,
+                EnablePredictionAlertPushNotifications = profile.EnablePredictionAlertPushNotifications,
+                EnableGlobalAlertPushNotifications = profile.EnableGlobalAlertPushNotifications,
+                EnableTechnicalIndicatorAlertPushNotifications = profile.EnableTechnicalIndicatorAlertPushNotifications,
+                EnableSentimentShiftAlertPushNotifications = profile.EnableSentimentShiftAlertPushNotifications,
+                EnableSystemHealthAlertPushNotifications = profile.EnableSystemHealthAlertPushNotifications,
+                EnableTradeExecutionPushNotifications = profile.EnableTradeExecutionPushNotifications,
+                
+                // VIX monitoring
+                EnableVixMonitoring = profile.EnableVixMonitoring,
+                
+                // API Keys
+                AlphaVantageApiKey = profile.AlphaVantageApiKey,
+                
                 CreatedAt = profile.CreatedDate,
                 LastModified = profile.ModifiedDate
             };
@@ -382,11 +418,45 @@ namespace Quantra.DAL.Services
             entity.DefaultGridRows = profile.DefaultGridRows;
             entity.DefaultGridColumns = profile.DefaultGridColumns;
             entity.GridBorderColor = profile.GridBorderColor;
+            
+            // Email alerts
+            entity.AlertEmail = profile.AlertEmail;
+            entity.EnableEmailAlerts = profile.EnableEmailAlerts;
+            entity.EnableStandardAlertEmails = profile.EnableStandardAlertEmails;
+            entity.EnableOpportunityAlertEmails = profile.EnableOpportunityAlertEmails;
+            entity.EnablePredictionAlertEmails = profile.EnablePredictionAlertEmails;
+            entity.EnableGlobalAlertEmails = profile.EnableGlobalAlertEmails;
+            entity.EnableSystemHealthAlertEmails = profile.EnableSystemHealthAlertEmails;
+            
+            // SMS alerts
+            entity.AlertPhoneNumber = profile.AlertPhoneNumber;
+            entity.EnableSmsAlerts = profile.EnableSmsAlerts;
+            entity.EnableStandardAlertSms = profile.EnableStandardAlertSms;
+            entity.EnableOpportunityAlertSms = profile.EnableOpportunityAlertSms;
+            entity.EnablePredictionAlertSms = profile.EnablePredictionAlertSms;
+            entity.EnableGlobalAlertSms = profile.EnableGlobalAlertSms;
+            
+            // Push notifications
+            entity.PushNotificationUserId = profile.PushNotificationUserId;
+            entity.EnablePushNotifications = profile.EnablePushNotifications;
+            entity.EnableStandardAlertPushNotifications = profile.EnableStandardAlertPushNotifications;
+            entity.EnableOpportunityAlertPushNotifications = profile.EnableOpportunityAlertPushNotifications;
+            entity.EnablePredictionAlertPushNotifications = profile.EnablePredictionAlertPushNotifications;
+            entity.EnableGlobalAlertPushNotifications = profile.EnableGlobalAlertPushNotifications;
+            entity.EnableTechnicalIndicatorAlertPushNotifications = profile.EnableTechnicalIndicatorAlertPushNotifications;
+            entity.EnableSentimentShiftAlertPushNotifications = profile.EnableSentimentShiftAlertPushNotifications;
+            entity.EnableSystemHealthAlertPushNotifications = profile.EnableSystemHealthAlertPushNotifications;
+            entity.EnableTradeExecutionPushNotifications = profile.EnableTradeExecutionPushNotifications;
+            
+            // VIX monitoring
+            entity.EnableVixMonitoring = profile.EnableVixMonitoring;
+            
+            // API Keys
+            entity.AlphaVantageApiKey = profile.AlphaVantageApiKey;
         }
 
         /// <summary>
         /// Maps SettingsProfile entity to DatabaseSettingsProfile
-        /// Note: The entity doesn't have all fields, so we'll use defaults for missing ones
         /// </summary>
         private DatabaseSettingsProfile MapFromEntity(SettingsProfile entity)
         {
@@ -411,32 +481,41 @@ namespace Quantra.DAL.Services
                 EnableTradeNotifications = entity.EnableTradeNotifications,
                 EnablePaperTrading = entity.EnablePaperTrading,
                 RiskLevel = entity.RiskLevel ?? "Low",
-                // Default values for fields not in entity
-                AlertEmail = "test@gmail.com",
-                EnableEmailAlerts = false,
-                EnableStandardAlertEmails = false,
-                EnableOpportunityAlertEmails = false,
-                EnablePredictionAlertEmails = false,
-                EnableGlobalAlertEmails = false,
-                EnableSystemHealthAlertEmails = false,
-                AlertPhoneNumber = "",
-                EnableSmsAlerts = false,
-                EnableStandardAlertSms = false,
-                EnableOpportunityAlertSms = false,
-                EnablePredictionAlertSms = false,
-                EnableGlobalAlertSms = false,
-                PushNotificationUserId = "",
-                EnablePushNotifications = false,
-                EnableStandardAlertPushNotifications = false,
-                EnableOpportunityAlertPushNotifications = false,
-                EnablePredictionAlertPushNotifications = false,
-                EnableGlobalAlertPushNotifications = false,
-                EnableTechnicalIndicatorAlertPushNotifications = false,
-                EnableSentimentShiftAlertPushNotifications = false,
-                EnableSystemHealthAlertPushNotifications = false,
-                EnableTradeExecutionPushNotifications = false,
-                EnableVixMonitoring = true,
-                AlphaVantageApiKey = ""
+                
+                // Email alerts
+                AlertEmail = entity.AlertEmail ?? "test@gmail.com",
+                EnableEmailAlerts = entity.EnableEmailAlerts,
+                EnableStandardAlertEmails = entity.EnableStandardAlertEmails,
+                EnableOpportunityAlertEmails = entity.EnableOpportunityAlertEmails,
+                EnablePredictionAlertEmails = entity.EnablePredictionAlertEmails,
+                EnableGlobalAlertEmails = entity.EnableGlobalAlertEmails,
+                EnableSystemHealthAlertEmails = entity.EnableSystemHealthAlertEmails,
+                
+                // SMS alerts
+                AlertPhoneNumber = entity.AlertPhoneNumber ?? "",
+                EnableSmsAlerts = entity.EnableSmsAlerts,
+                EnableStandardAlertSms = entity.EnableStandardAlertSms,
+                EnableOpportunityAlertSms = entity.EnableOpportunityAlertSms,
+                EnablePredictionAlertSms = entity.EnablePredictionAlertSms,
+                EnableGlobalAlertSms = entity.EnableGlobalAlertSms,
+                
+                // Push notifications
+                PushNotificationUserId = entity.PushNotificationUserId ?? "",
+                EnablePushNotifications = entity.EnablePushNotifications,
+                EnableStandardAlertPushNotifications = entity.EnableStandardAlertPushNotifications,
+                EnableOpportunityAlertPushNotifications = entity.EnableOpportunityAlertPushNotifications,
+                EnablePredictionAlertPushNotifications = entity.EnablePredictionAlertPushNotifications,
+                EnableGlobalAlertPushNotifications = entity.EnableGlobalAlertPushNotifications,
+                EnableTechnicalIndicatorAlertPushNotifications = entity.EnableTechnicalIndicatorAlertPushNotifications,
+                EnableSentimentShiftAlertPushNotifications = entity.EnableSentimentShiftAlertPushNotifications,
+                EnableSystemHealthAlertPushNotifications = entity.EnableSystemHealthAlertPushNotifications,
+                EnableTradeExecutionPushNotifications = entity.EnableTradeExecutionPushNotifications,
+                
+                // VIX monitoring
+                EnableVixMonitoring = entity.EnableVixMonitoring,
+                
+                // API Keys
+                AlphaVantageApiKey = entity.AlphaVantageApiKey ?? ""
             };
         }
 

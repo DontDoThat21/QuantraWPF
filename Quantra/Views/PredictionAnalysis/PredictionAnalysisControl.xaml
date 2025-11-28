@@ -513,19 +513,20 @@
         </Grid>
 
         <!-- Results and Charts - Add TabControl with Sentiment Tab -->
-        <TabControl Grid.Row="3" Margin="0,10,0,10" Background="#2D2D42" 
-                      BorderBrush="#3E3E56" BorderThickness="1">
+        <TabControl x:Name="ResultsTabControl" Grid.Row="3" Margin="0,10,0,10" Background="#2D2D42"
+                      BorderBrush="#3E3E56" BorderThickness="1"
+                      SelectionChanged="ResultsTabControl_SelectionChanged">
             <TabItem Header="Prediction Details" Name="PredictionTabItem" FontWeight="SemiBold" Foreground="Black"
                      Style="{StaticResource TabItemStyle}">
                 <Grid x:Name="chartContainer" MinHeight="200"/>
             </TabItem>
 
-            <TabItem Header="Sentiment Analysis" Name="SentimentTabItem" FontWeight="SemiBold" Foreground="Black" 
+            <TabItem Header="Sentiment Analysis" Name="SentimentTabItem" FontWeight="SemiBold" Foreground="Black"
                      Visibility="Collapsed"
                      Style="{StaticResource TabItemStyle}">
                 <StackPanel x:Name="sentimentVisualizationContainer" Margin="0" />
             </TabItem>
-            
+
             <TabItem Header="Technical Indicators" Name="IndicatorsTabItem" FontWeight="SemiBold" Foreground="Black"
                      Style="{StaticResource TabItemStyle}">
                 <Grid x:Name="indicatorContainer" MinHeight="200"/>

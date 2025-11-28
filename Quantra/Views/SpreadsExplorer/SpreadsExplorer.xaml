@@ -163,11 +163,12 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBox x:Name="SymbolTextBox" 
+                                <TextBox x:Name="SymbolTextBox"
                                         Grid.Column="0"
                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                         materialDesign:HintAssist.Hint="Enter Symbol (e.g., AAPL)"
-                                        Text="{Binding UnderlyingSymbol, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Text="{Binding UnderlyingSymbol, UpdateSourceTrigger=PropertyChanged}"
+                                        ToolTip="Enter the ticker symbol of the underlying stock or asset"/>
                                 <Button x:Name="LoadSymbolButton" 
                                        Grid.Column="1"
                                        Content="LOAD" 
@@ -208,49 +209,55 @@
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- Action and Type -->
-                                                <ComboBox Grid.Row="0" Grid.Column="0" 
+                                                <ComboBox Grid.Row="0" Grid.Column="0"
                                                          Style="{StaticResource EnhancedComboBoxStyle}"
                                                          materialDesign:HintAssist.Hint="Action"
                                                          SelectedValue="{Binding Action}"
-                                                         Margin="0,0,5,5">
+                                                         Margin="0,0,5,5"
+                                                         ToolTip="Choose whether to BUY (long position) or SELL (short position) this option leg">
                                                     <ComboBoxItem Content="BUY"/>
                                                     <ComboBoxItem Content="SELL"/>
                                                 </ComboBox>
                                                 
-                                                <ComboBox Grid.Row="0" Grid.Column="1" 
+                                                <ComboBox Grid.Row="0" Grid.Column="1"
                                                          Style="{StaticResource EnhancedComboBoxStyle}"
                                                          materialDesign:HintAssist.Hint="Type"
                                                          SelectedValue="{Binding Option.OptionType}"
-                                                         Margin="5,0,0,5">
+                                                         Margin="5,0,0,5"
+                                                         ToolTip="Select CALL (bullish) for the right to buy, or PUT (bearish) for the right to sell">
                                                     <ComboBoxItem Content="CALL"/>
                                                     <ComboBoxItem Content="PUT"/>
                                                 </ComboBox>
 
                                                 <!-- Strike and Expiry -->
-                                                <TextBox Grid.Row="1" Grid.Column="0" 
+                                                <TextBox Grid.Row="1" Grid.Column="0"
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Strike Price"
                                                         Text="{Binding Option.StrikePrice}"
-                                                        Margin="0,0,5,5"/>
+                                                        Margin="0,0,5,5"
+                                                        ToolTip="Enter the strike price at which the option can be exercised"/>
                                                 
-                                                <DatePicker Grid.Row="1" Grid.Column="1" 
+                                                <DatePicker Grid.Row="1" Grid.Column="1"
                                                            Style="{StaticResource EnhancedDatePickerStyle}"
                                                            materialDesign:HintAssist.Hint="Expiry Date"
                                                            SelectedDate="{Binding Option.ExpirationDate}"
-                                                           Margin="5,0,0,5"/>
+                                                           Margin="5,0,0,5"
+                                                           ToolTip="Select the expiration date when the option contract expires"/>
 
                                                 <!-- Price and Quantity -->
-                                                <TextBox Grid.Row="2" Grid.Column="0" 
+                                                <TextBox Grid.Row="2" Grid.Column="0"
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Price"
                                                         Text="{Binding Price}"
-                                                        Margin="0,0,5,0"/>
+                                                        Margin="0,0,5,0"
+                                                        ToolTip="Enter the premium price per contract (typically per share, multiply by 100 for total cost)"/>
                                                 
-                                                <TextBox Grid.Row="2" Grid.Column="1" 
+                                                <TextBox Grid.Row="2" Grid.Column="1"
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Quantity"
                                                         Text="{Binding Quantity}"
-                                                        Margin="5,0,0,0"/>
+                                                        Margin="5,0,0,0"
+                                                        ToolTip="Enter the number of option contracts for this leg"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

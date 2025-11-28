@@ -349,6 +349,36 @@ namespace Quantra
             // Trigger auto-save
             OnSettingChanged(sender, e);
         }
+
+        private void SaveProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedProfile == null)
+            {
+                MessageBox.Show("No profile selected.", "Save Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Stop any pending auto-save timer
+            if (_saveTimer.IsEnabled)
+            {
+                _saveTimer.Stop();
+            }
+
+            // Save immediately
+            SaveCurrentSettings();
+
+            // Show confirmation
+            MessageBox.Show($"Profile '{_selectedProfile.Name}' has been saved successfully.", "Save Profile", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Refresh the profiles list to show updated modification date
+            _ = LoadProfilesAsync();
+        }
+
+        private void SaveMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            // Same functionality as button click
+            SaveProfileButton_Click(sender, e);
+        }
     }
 }
 
