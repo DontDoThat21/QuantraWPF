@@ -88,6 +88,7 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(200)]
         public string Key { get; set; }
 
+        [MaxLength]
         public string Value { get; set; }
 
         [Required]

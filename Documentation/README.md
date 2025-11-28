@@ -4,6 +4,11 @@ This directory contains technical documentation for the Quantra algorithmic trad
 
 ## User Guides
 
+### Profitability Guide
+
+- **[Quantra Profitability Guide](Quantra_Profitability_Guide.md)** - Comprehensive guide to generating profits with Quantra's prediction engine and backtesting
+- **[Quantra Profitability Guide PDF](Quantra_Profitability_Guide.pdf)** - PDF version for offline use and printing
+
 ### Enterprise User Documentation
 
 - **[Complete User Guide v1.0](UserGuides/v1.0/Quantra_Complete_User_Guide_v1.0.md)** - Comprehensive enterprise-tier user guide covering all platform features

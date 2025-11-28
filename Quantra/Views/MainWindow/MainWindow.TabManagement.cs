@@ -38,6 +38,15 @@ namespace Quantra
         private AlphaVantageService _alphaVantageService;
         private LoggingService _loggingService;
         private EmailService _emailService;
+        private RealTimeInferenceService _inferenceService;
+        private PredictionCacheService _predictionCacheService;
+        
+        // Sentiment analysis services (for DI into PredictionAnalysisControl)
+        private TwitterSentimentService _twitterSentimentService;
+        private FinancialNewsSentimentService _financialNewsSentimentService;
+        private IEarningsTranscriptService _earningsTranscriptService;
+        private IAnalystRatingService _analystRatingService;
+        private IInsiderTradingService _insiderTradingService;
         #endregion
 
         #region Constructor
@@ -638,9 +647,15 @@ namespace Quantra
         {
             try
             {
-                // Use services from MainWindow's initialized fields
-                // Create a new instance of our custom StockExplorer
-                var symbolChartControl = new StockExplorer(_stockDataCacheService, _userSettingsService, _loggingService);
+                // Use services from MainWindow's initialized fields via DI
+                // Create a new instance of our custom StockExplorer with properly injected services
+                var symbolChartControl = new StockExplorer(
+                    _stockDataCacheService, 
+                    _userSettingsService, 
+                    _loggingService,
+                    _alphaVantageService,
+                    _inferenceService,
+                    _predictionCacheService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width
@@ -710,11 +725,49 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 
+                // Cache UserSettings to avoid redundant calls
+                var userSettings = _userSettingsService.GetUserSettings();
+                
                 // Initialize services that need DbContext
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var indicatorSettingsService = new IndicatorSettingsService(_quantraDbContext);
                 var tradingRuleService = new TradingRuleService(_quantraDbContext);
                 var orderHistoryService = new OrderHistoryService(_quantraDbContext);
+                
+                // Initialize sentiment analysis services - try DI first, fall back to manual instantiation
+                if (_twitterSentimentService == null)
+                {
+                    _twitterSentimentService = App.ServiceProvider?.GetService(typeof(TwitterSentimentService)) as TwitterSentimentService
+                        ?? new TwitterSentimentService();
+                }
+                
+                if (_financialNewsSentimentService == null)
+                {
+                    _financialNewsSentimentService = App.ServiceProvider?.GetService(typeof(FinancialNewsSentimentService)) as FinancialNewsSentimentService
+                        ?? new FinancialNewsSentimentService(userSettings);
+                }
+                
+                if (_earningsTranscriptService == null)
+                {
+                    _earningsTranscriptService = App.ServiceProvider?.GetService(typeof(IEarningsTranscriptService)) as IEarningsTranscriptService
+                        ?? new EarningsTranscriptService();
+                }
+                
+                if (_analystRatingService == null)
+                {
+                    _analystRatingService = App.ServiceProvider?.GetService(typeof(IAnalystRatingService)) as IAnalystRatingService;
+                    if (_analystRatingService == null)
+                    {
+                        IAlertPublisher alertPublisher = App.ServiceProvider?.GetService(typeof(IAlertPublisher)) as IAlertPublisher;
+                        _analystRatingService = new AnalystRatingService(userSettings, alertPublisher, _loggingService);
+                    }
+                }
+                
+                if (_insiderTradingService == null)
+                {
+                    _insiderTradingService = App.ServiceProvider?.GetService(typeof(IInsiderTradingService)) as IInsiderTradingService
+                        ?? new InsiderTradingService(userSettings);
+                }
                 
                 // Initialize repositories
                 if (_analysisRepository == null)
@@ -751,7 +804,12 @@ namespace Quantra
                     tradingRuleService,
                     _userSettingsService,
                     _loggingService,
-                    orderHistoryService);
+                    orderHistoryService,
+                    _twitterSentimentService,
+                    _financialNewsSentimentService,
+                    _earningsTranscriptService,
+                    _analystRatingService,
+                    _insiderTradingService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width
@@ -1082,26 +1140,30 @@ namespace Quantra
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
                 
-                var backtestResultsControl = new Views.Backtesting.BacktestResultsControl(
+                // Create ViewModel with proper dependency injection including IAlphaVantageService
+                var viewModel = new BacktestResultsViewModel(
                     historicalDataService,
                     customBenchmarkService,
-                    _userSettingsService);
+                    _userSettingsService,
+                    _alphaVantageService);
+                
+                var backtestResults = new Views.Backtesting.BacktestResults(viewModel);
                     
-                backtestResultsControl.Width = double.NaN;
-                backtestResultsControl.Height = double.NaN;
-                backtestResultsControl.HorizontalAlignment = HorizontalAlignment.Stretch;
-                backtestResultsControl.VerticalAlignment = VerticalAlignment.Stretch;
-                backtestResultsControl.MinWidth = 400;
-                backtestResultsControl.MinHeight = 300;
-                backtestResultsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                backtestResultsControl.Arrange(new Rect(0, 0, backtestResultsControl.DesiredSize.Width, backtestResultsControl.DesiredSize.Height));
-                backtestResultsControl.UpdateLayout();
-                //DatabaseMonolith.Log("Info", "Successfully created BacktestResultsControl");
-                return backtestResultsControl;
+                backtestResults.Width = double.NaN;
+                backtestResults.Height = double.NaN;
+                backtestResults.HorizontalAlignment = HorizontalAlignment.Stretch;
+                backtestResults.VerticalAlignment = VerticalAlignment.Stretch;
+                backtestResults.MinWidth = 400;
+                backtestResults.MinHeight = 300;
+                backtestResults.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                backtestResults.Arrange(new Rect(0, 0, backtestResults.DesiredSize.Width, backtestResults.DesiredSize.Height));
+                backtestResults.UpdateLayout();
+                //DatabaseMonolith.Log("Info", "Successfully created BacktestResults");
+                return backtestResults;
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to create BacktestResultsControl", ex.ToString());
+                //DatabaseMonolith.Log("Error", "Failed to create BacktestResults", ex.ToString());
                 var errorPanel = new StackPanel();
                 errorPanel.Children.Add(new TextBlock
                 {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -36,8 +37,25 @@ namespace Quantra.DAL.Data.Entities
         [Required]
         public DateTime CreatedDate { get; set; }
 
-        // Navigation property
+        /// <summary>
+        /// Links prediction to a chat history record (optional foreign key to ChatHistory.Id)
+        /// </summary>
+        public int? ChatHistoryId { get; set; }
+
+        /// <summary>
+        /// Original user query that triggered this prediction (optional)
+        /// </summary>
+        [MaxLength(1000)]
+        public string UserQuery { get; set; }
+
+        // Navigation properties
         public virtual ICollection<PredictionIndicatorEntity> Indicators { get; set; }
+
+        /// <summary>
+        /// Navigation property to the chat history record that triggered this prediction
+        /// </summary>
+        [ForeignKey("ChatHistoryId")]
+        public virtual ChatHistoryEntity ChatHistory { get; set; }
     }
 
     /// <summary>
@@ -93,5 +111,73 @@ namespace Quantra.DAL.Data.Entities
 
         [Required]
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>
+        /// Tracks how many times this cache entry has been accessed
+        /// </summary>
+        public int AccessCount { get; set; }
+
+        /// <summary>
+        /// Timestamp of the last access to help identify stale entries
+        /// </summary>
+        public DateTime? LastAccessedAt { get; set; }
+    }
+
+    /// <summary>
+    /// Entity representing chat history for Market Chat conversations
+    /// </summary>
+    [Table("ChatHistory")]
+    public class ChatHistoryEntity
+    {
+        [Key]
+        public int Id { get; set; }
+
+        /// <summary>
+        /// Unique session identifier for grouping related chat messages
+        /// </summary>
+        [Required]
+        [MaxLength(100)]
+        public string SessionId { get; set; }
+
+        /// <summary>
+        /// The content of the chat message
+        /// </summary>
+        [Required]
+        public string Content { get; set; }
+
+        /// <summary>
+        /// Whether this message is from the user (true) or AI assistant (false)
+        /// </summary>
+        [Required]
+        public bool IsFromUser { get; set; }
+
+        /// <summary>
+        /// Timestamp when the message was created
+        /// </summary>
+        [Required]
+        public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// Type of message (UserQuestion, AssistantResponse, SystemMessage, etc.)
+        /// </summary>
+        [MaxLength(50)]
+        public string MessageType { get; set; }
+
+        /// <summary>
+        /// Optional stock symbol associated with this chat message
+        /// </summary>
+        [MaxLength(20)]
+        public string Symbol { get; set; }
+
+        /// <summary>
+        /// User identifier for multi-user support (optional)
+        /// </summary>
+        [MaxLength(100)]
+        public string UserId { get; set; }
+
+        /// <summary>
+        /// Navigation property for predictions that reference this chat history record
+        /// </summary>
+        public virtual ICollection<StockPredictionEntity> Predictions { get; set; }
     }
 }

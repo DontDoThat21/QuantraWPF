@@ -50,7 +50,10 @@
             </Grid.RowDefinitions>
 
             <!-- Dispatcher Monitoring Row -->
-            <Grid Grid.Row="0" Background="#1A000000" Margin="0,0,0,2">
+            <Grid Grid.Row="0" Background="#FF1E1E2F" Margin="0,0,0,2"
+                  MouseDown="TitleBar_MouseDown" 
+                  MouseUp="TitleBar_MouseUp" 
+                  MouseMove="TitleBar_MouseMove">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -176,9 +179,6 @@
                 <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Click="MinimizeButton_Click">
                         <Path Data="M0,0 L10,0" Stroke="White" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Button>
-                    <Button x:Name="FullscreenButton" Style="{StaticResource TitleBarButtonStyle}" Click="FullscreenButton_Click" ToolTip="Toggle Fullscreen">
-                        <Path Data="M1,1 L4,1 L4,4 M6,1 L9,1 L9,4 M1,6 L4,6 L4,9 M6,6 L9,6 L9,9" Stroke="White" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <Button x:Name="MaximizeButton" Style="{StaticResource TitleBarButtonStyle}" Click="MaximizeButton_Click">
                         <Path Data="M0,0 L10,0 L10,10 L0,10 Z" Stroke="White" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>

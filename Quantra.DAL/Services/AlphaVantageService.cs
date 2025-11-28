@@ -2115,5 +2115,61 @@ namespace Quantra.DAL.Services
                 }
             }
         }
+
+        /// <summary>
+        /// Searches for symbols using the Alpha Vantage SYMBOL_SEARCH endpoint
+        /// </summary>
+        /// <param name="keywords">Keywords to search for (e.g., "BA", "Boeing", "AAPL")</param>
+        /// <returns>List of matching symbols with details</returns>
+        public async Task<List<SymbolSearchResult>> SearchSymbolsAsync(string keywords)
+        {
+            if (string.IsNullOrWhiteSpace(keywords))
+                return new List<SymbolSearchResult>();
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(keywords)}&apikey={_apiKey}";
+                await LogApiCall("SYMBOL_SEARCH", keywords);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    var results = new List<SymbolSearchResult>();
+
+                    if (data["bestMatches"] is JArray bestMatches)
+                    {
+                        foreach (var match in bestMatches)
+                        {
+                            results.Add(new SymbolSearchResult
+                            {
+                                Symbol = match["1. symbol"]?.ToString() ?? "",
+                                Name = match["2. name"]?.ToString() ?? "",
+                                Type = match["3. type"]?.ToString() ?? "",
+                                Region = match["4. region"]?.ToString() ?? "",
+                                MarketOpen = match["5. marketOpen"]?.ToString() ?? "",
+                                MarketClose = match["6. marketClose"]?.ToString() ?? "",
+                                Timezone = match["7. timezone"]?.ToString() ?? "",
+                                Currency = match["8. currency"]?.ToString() ?? "",
+                                MatchScore = TryParseDouble(match["9. matchScore"])
+                            });
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Symbol search for '{keywords}' returned {results.Count} results");
+                    return results;
+                }
+
+                return new List<SymbolSearchResult>();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error searching symbols for '{keywords}'");
+                return new List<SymbolSearchResult>();
+            }
+        }
     }
 }

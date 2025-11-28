@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
 using Quantra.DAL.Data;
 using Quantra.DAL.Data.Entities;
+using Quantra.Utilities;
 
 namespace Quantra.DAL.Services
 {
@@ -14,6 +15,7 @@ namespace Quantra.DAL.Services
         private readonly QuantraDbContext _dbContext;
         private readonly LoggingService _loggingService;
         private const string USER_SETTINGS_KEY = "UserSettings";
+        private const int COMPRESSION_THRESHOLD = 1000; // Compress strings larger than 1KB
 
         public UserSettingsService(QuantraDbContext dbContext, LoggingService loggingService)
         {
@@ -88,7 +90,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets user preference by key
+        /// Gets user preference by key with automatic decompression
         /// </summary>
         public string GetUserPreference(string key, string defaultValue = null)
         {
@@ -100,7 +102,16 @@ namespace Quantra.DAL.Services
             try
             {
                 var preference = _dbContext.UserPreferences.Find(key);
-                return preference?.Value ?? defaultValue;
+                if (preference?.Value == null)
+                    return defaultValue;
+
+                // Automatically decompress if the value was compressed
+                if (CompressionHelper.IsCompressed(preference.Value))
+                {
+                    return CompressionHelper.DecompressString(preference.Value);
+                }
+
+                return preference.Value;
             }
             catch (Exception ex)
             {
@@ -110,7 +121,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Saves user preference
+        /// Saves user preference with automatic compression for large values
         /// </summary>
         public void SaveUserPreference(string key, string value)
         {
@@ -121,11 +132,19 @@ namespace Quantra.DAL.Services
 
             try
             {
+                // Automatically compress large values to avoid truncation
+                string valueToStore = value;
+                if (!string.IsNullOrEmpty(value) && value.Length > COMPRESSION_THRESHOLD)
+                {
+                    valueToStore = CompressionHelper.CompressString(value);
+                    _loggingService.Log("Info", $"Compressed preference '{key}' from {value.Length} to {valueToStore.Length} characters");
+                }
+
                 var existingPreference = _dbContext.UserPreferences.Find(key);
 
                 if (existingPreference != null)
                 {
-                    existingPreference.Value = value;
+                    existingPreference.Value = valueToStore;
                     existingPreference.LastUpdated = DateTime.Now;
                 }
                 else
@@ -133,7 +152,7 @@ namespace Quantra.DAL.Services
                     _dbContext.UserPreferences.Add(new UserPreference
                     {
                         Key = key,
-                        Value = value,
+                        Value = valueToStore,
                         LastUpdated = DateTime.Now
                     });
                 }

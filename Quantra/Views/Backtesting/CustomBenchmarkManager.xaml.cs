@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.DAL.Services;
@@ -16,6 +17,7 @@ namespace Quantra.Views.Backtesting
     {
         private readonly CustomBenchmarkService _benchmarkService;
         private readonly UserSettingsService _userSettingsService;
+        private readonly AlphaVantageService _alphaVantageService;
         private List<CustomBenchmark> _benchmarks;
         private CustomBenchmark _selectedBenchmark;
         
@@ -31,16 +33,31 @@ namespace Quantra.Views.Backtesting
         {
             InitializeComponent();
             _benchmarks = new List<CustomBenchmark>();
+            
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
         }
         
         /// <summary>
         /// Constructor
         /// </summary>
         public CustomBenchmarkManager(CustomBenchmarkService customBenchmarkService,
-            UserSettingsService userSettingsService)
+            UserSettingsService userSettingsService,
+            AlphaVantageService alphaVantageService)
         {
             InitializeComponent();
             _benchmarkService = customBenchmarkService;
+            _userSettingsService = userSettingsService;
+            _alphaVantageService = alphaVantageService;
+            
+            // Attach resize behavior for borderless window
+            this.SourceInitialized += (s, e) =>
+            {
+                WindowResizeBehavior.AttachResizeBehavior(this);
+            };
             
             // Load benchmarks
             LoadBenchmarks();
@@ -95,7 +112,7 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void CreateNewButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new CustomBenchmarkDialog();
+            var dialog = new CustomBenchmarkDialog(_alphaVantageService);
             bool? result = dialog.ShowDialog();
             
             if (result == true && dialog.Benchmark != null)
@@ -118,7 +135,7 @@ namespace Quantra.Views.Backtesting
                 var benchmark = _benchmarks.FirstOrDefault(b => b.Id == id);
                 if (benchmark != null)
                 {
-                    var dialog = new CustomBenchmarkDialog(benchmark);
+                    var dialog = new CustomBenchmarkDialog(benchmark, _alphaVantageService);
                     bool? result = dialog.ShowDialog();
                     
                     if (result == true && dialog.Benchmark != null)
@@ -158,7 +175,7 @@ namespace Quantra.Views.Backtesting
                     }
                     
                     // Show dialog to allow editing the clone
-                    var dialog = new CustomBenchmarkDialog(clone);
+                    var dialog = new CustomBenchmarkDialog(clone, _alphaVantageService);
                     bool? result = dialog.ShowDialog();
                     
                     if (result == true && dialog.Benchmark != null)

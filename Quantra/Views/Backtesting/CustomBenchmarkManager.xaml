@@ -4,108 +4,172 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:Quantra.Views.Backtesting"
+        xmlns:shared="clr-namespace:Quantra"
         mc:Ignorable="d"
         Title="Custom Benchmark Manager" Height="500" Width="800"
         WindowStartupLocation="CenterOwner"
+        Background="Transparent" 
+        WindowStyle="None" 
+        AllowsTransparency="True"
         ResizeMode="CanResize"
-        Background="#23233A">
+        MinHeight="500" 
+        MinWidth="800">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Resize grip style -->
+            <Style x:Key="ResizeGripStyle" TargetType="Rectangle">
+                <Setter Property="Width" Value="16"/>
+                <Setter Property="Height" Value="16"/>
+                <Setter Property="Fill" Value="Transparent"/>
+                <Setter Property="Stroke" Value="Transparent"/>
+                <Setter Property="StrokeThickness" Value="0"/>
+                <Setter Property="Cursor" Value="SizeNWSE"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Opacity" Value="1"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    
+    <Grid>
+        <!-- Add ResizableBorder for consistent behavior with other windows -->
+        <shared:ResizableBorder/>
         
-        <!-- Header section -->
-        <Grid Grid.Row="0" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" Text="Manage your custom benchmarks" VerticalAlignment="Center" 
-                       Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-            
-            <Button Grid.Column="1" x:Name="CreateNewButton" Content="Create New Benchmark" 
-                    Click="CreateNewButton_Click"/>
-        </Grid>
-        
-        <!-- Benchmarks list -->
-        <DataGrid Grid.Row="1" x:Name="BenchmarksGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                  SelectionMode="Single" SelectionChanged="BenchmarksGrid_SelectionChanged"
-                  Foreground="White"
-                  Background="#23233A"
-                  RowBackground="#23233A"
-                  AlternatingRowBackground="#26264A"
-                  HeadersVisibility="Column"
-                  ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
-                  RowStyle="{StaticResource EnhancedDataGridRowStyle}"
-                  CellStyle="{StaticResource EnhancedDataGridCellStyle}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*"/>
-                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
-                <DataGridTextColumn Header="Components" Binding="{Binding Components.Count}" Width="*"/>
-                <DataGridTextColumn Header="Last Modified" Binding="{Binding ModifiedDate, StringFormat=\{0:MM/dd/yyyy HH:mm\}}" Width="*"/>
-                <DataGridTemplateColumn Header="Actions" Width="2*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Edit" Tag="{Binding Id}"
-                                        Click="EditButton_Click"/>
-                                <Button Content="Clone" Tag="{Binding Id}"
-                                        Click="CloneButton_Click"/>
-                                <Button Content="Delete" Tag="{Binding Id}"
-                                        Click="DeleteButton_Click"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-        
-        <!-- Detail section -->
-        <GroupBox Grid.Row="2" Header="Benchmark Details" Margin="0,10,0,0">
-            <Grid Margin="5">
+        <!-- Main Border with rounded corners -->
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
                 
-                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
-                           x:Name="BenchmarkNameText" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <!-- Custom Title Bar -->
+                <shared:SharedTitleBar Title="Custom Benchmark Manager" Grid.Row="0"/>
                 
-                <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
-                           x:Name="BenchmarkDescriptionText" TextWrapping="Wrap" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <!-- Header section -->
+                <Grid Grid.Row="1" Margin="10,10,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Manage your custom benchmarks" VerticalAlignment="Center" 
+                               Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                    
+                    <Button Grid.Column="1" x:Name="CreateNewButton" Content="Create New Benchmark" 
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            Click="CreateNewButton_Click"/>
+                </Grid>
                 
-                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Vertical">
-                    <TextBlock Text="Components:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                    <ListView x:Name="ComponentsListView" Height="100">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Symbol" DisplayMemberBinding="{Binding Symbol}" Width="80"/>
-                                <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150"/>
-                                <GridViewColumn Header="Weight" DisplayMemberBinding="{Binding WeightPercentage}" Width="80"/>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                </StackPanel>
+                <!-- Benchmarks list -->
+                <DataGrid Grid.Row="2" x:Name="BenchmarksGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                          SelectionMode="Single" SelectionChanged="BenchmarksGrid_SelectionChanged"
+                          Margin="10"
+                          Foreground="White"
+                          Background="#23233A"
+                          RowBackground="#23233A"
+                          AlternatingRowBackground="#26264A"
+                          HeadersVisibility="Column"
+                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                          RowStyle="{StaticResource EnhancedDataGridRowStyle}"
+                          CellStyle="{StaticResource EnhancedDataGridCellStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*"/>
+                        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
+                        <DataGridTextColumn Header="Components" Binding="{Binding Components.Count}" Width="*"/>
+                        <DataGridTextColumn Header="Last Modified" Binding="{Binding ModifiedDate, StringFormat=\{0:MM/dd/yyyy HH:mm\}}" Width="*"/>
+                        <DataGridTemplateColumn Header="Actions" Width="2*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Edit" Tag="{Binding Id}"
+                                                Style="{StaticResource EnhancedButtonStyle}"
+                                                Margin="2"
+                                                Click="EditButton_Click"/>
+                                        <Button Content="Clone" Tag="{Binding Id}"
+                                                Style="{StaticResource EnhancedButtonStyle}"
+                                                Margin="2"
+                                                Click="CloneButton_Click"/>
+                                        <Button Content="Delete" Tag="{Binding Id}"
+                                                Style="{StaticResource EnhancedButtonStyle}"
+                                                Margin="2"
+                                                Click="DeleteButton_Click"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
                 
-                <Button Grid.Row="2" Grid.Column="1" x:Name="UseBenchmarkButton" 
-                        Content="Use Selected Benchmark" Height="30" VerticalAlignment="Bottom"
-                        IsEnabled="False" Click="UseBenchmarkButton_Click"/>
+                <!-- Detail section -->
+                <GroupBox Grid.Row="3" Header="Benchmark Details" Margin="10,0,10,10" Foreground="White">
+                    <Grid Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
+                                   x:Name="BenchmarkNameText" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+                                   x:Name="BenchmarkDescriptionText" TextWrapping="Wrap" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                        
+                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Vertical">
+                            <TextBlock Text="Components:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                            <ListView x:Name="ComponentsListView" Height="100">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Symbol" DisplayMemberBinding="{Binding Symbol}" Width="80"/>
+                                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150"/>
+                                        <GridViewColumn Header="Weight" DisplayMemberBinding="{Binding WeightPercentage}" Width="80"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </StackPanel>
+                        
+                        <Button Grid.Row="2" Grid.Column="1" x:Name="UseBenchmarkButton" 
+                                Content="Use Selected Benchmark" Height="30" VerticalAlignment="Bottom"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                IsEnabled="False" Click="UseBenchmarkButton_Click"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- Resize Grips -->
+                <Grid Grid.Row="4" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Rectangle x:Name="BottomLeftGrip" Grid.Column="0" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNESW"/>
+                    
+                    <Rectangle x:Name="BottomGrip" Grid.Column="1" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Center" VerticalAlignment="Bottom" 
+                             Width="80" Margin="0,0,0,2" Cursor="SizeNS"/>
+                    
+                    <Rectangle x:Name="BottomRightGrip" Grid.Column="2" Style="{StaticResource ResizeGripStyle}" 
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom" 
+                             Margin="6" Cursor="SizeNWSE"/>
+                </Grid>
             </Grid>
-        </GroupBox>
+        </Border>
     </Grid>
 </Window>

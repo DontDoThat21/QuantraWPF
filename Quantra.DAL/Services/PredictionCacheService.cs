@@ -23,13 +23,13 @@ namespace Quantra.DAL.Services
         {
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1); // Default 1 hour cache
             _loggingService = loggingService;
-            EnsureCacheTableExists();
+            //EnsureCacheTableExists();
         }
 
         /// <summary>
         /// Ensures the prediction cache table exists using Entity Framework Core
         /// </summary>
-        private void EnsureCacheTableExists()
+        /*private void EnsureCacheTableExists()
         {
             try
             {
@@ -50,7 +50,7 @@ namespace Quantra.DAL.Services
             {
                 _loggingService.Log("Error", "Failed to ensure prediction cache table exists", ex.ToString());
             }
-        }
+        }*/
 
         /// <summary>
         /// Get cached prediction result if available and valid using Entity Framework

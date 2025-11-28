@@ -14,6 +14,9 @@ namespace Quantra.Models
         private DateTime _timestamp;
         private bool _isLoading;
         private MessageType _messageType;
+        private bool _usesCachedData;
+        private string _cacheStatusDisplay;
+        private TimeSpan? _cacheAge;
 
         /// <summary>
         /// The content of the message
@@ -61,9 +64,42 @@ namespace Quantra.Models
         }
 
         /// <summary>
+        /// Indicates whether this response uses cached prediction data (MarketChat story 3)
+        /// </summary>
+        public bool UsesCachedData
+        {
+            get => _usesCachedData;
+            set => SetProperty(ref _usesCachedData, value);
+        }
+
+        /// <summary>
+        /// Human-readable description of the cache status for display in chat (MarketChat story 3)
+        /// Example: "Based on prediction from 23 minutes ago..."
+        /// </summary>
+        public string CacheStatusDisplay
+        {
+            get => _cacheStatusDisplay;
+            set => SetProperty(ref _cacheStatusDisplay, value);
+        }
+
+        /// <summary>
+        /// The age of the cached prediction data, if applicable (MarketChat story 3)
+        /// </summary>
+        public TimeSpan? CacheAge
+        {
+            get => _cacheAge;
+            set => SetProperty(ref _cacheAge, value);
+        }
+
+        /// <summary>
         /// Formatted timestamp for display
         /// </summary>
         public string TimestampDisplay => Timestamp.ToString("HH:mm:ss");
+
+        /// <summary>
+        /// Indicates whether cache status should be displayed (non-empty and response is from assistant)
+        /// </summary>
+        public bool ShowCacheStatus => !IsFromUser && !IsLoading && !string.IsNullOrEmpty(CacheStatusDisplay);
 
         public event PropertyChangedEventHandler PropertyChanged;
 

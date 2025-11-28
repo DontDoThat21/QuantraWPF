@@ -28,20 +28,11 @@ namespace Quantra.DAL.Services
         {
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
 
-            string sqlConn = Environment.GetEnvironmentVariable("QUANTRA_RELATIONAL_CONNECTION");
-            if (string.IsNullOrWhiteSpace(sqlConn))
+            // Use SQL Server with QuantraRelational database via ConnectionHelper
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
             {
-                sqlConn = Environment.GetEnvironmentVariable("ConnectionStrings__QuantraRelational");
-            }
-
-            if (!string.IsNullOrWhiteSpace(sqlConn))
-            {
-                optionsBuilder.UseSqlServer(sqlConn);
-            }
-            else
-            {
-                optionsBuilder.UseSqlite("Data Source=Quantra.db");
-            }
+                sqlServerOptions.CommandTimeout(30);
+            });
 
             _context = new QuantraDbContext(optionsBuilder.Options);
         }
@@ -54,47 +45,56 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Get the most recent prediction for each symbol using LINQ with EF Core
-                var latestPredictions = await _context.StockPredictions
-          .AsNoTracking()
-       .GroupBy(p => p.Symbol)
-                   .Select(g => g.OrderByDescending(p => p.CreatedDate).FirstOrDefault())
-               .Where(p => p != null)
-       .OrderByDescending(p => p.Confidence)
-             .ToListAsync();
+                // Get all symbols first
+                var symbols = await _context.StockPredictions
+                    .AsNoTracking()
+                    .Select(p => p.Symbol)
+                    .Distinct()
+                    .ToListAsync();
 
                 var result = new List<PredictionModel>();
 
-                foreach (var prediction in latestPredictions)
+                // For each symbol, get the most recent prediction
+                foreach (var symbol in symbols)
                 {
-                    var model = new PredictionModel
-                    {
-                        Symbol = prediction.Symbol,
-                        PredictedAction = prediction.PredictedAction,
-                        Confidence = prediction.Confidence,
-                        CurrentPrice = prediction.CurrentPrice,
-                        TargetPrice = prediction.TargetPrice,
-                        PotentialReturn = prediction.PotentialReturn,
-                        PredictionDate = prediction.CreatedDate,
-                        TradingRule = null, // TradingRule not stored in entity
-                        Indicators = new Dictionary<string, double>()
-                    };
+                    var prediction = await _context.StockPredictions
+                        .AsNoTracking()
+                        .Where(p => p.Symbol == symbol)
+                        .OrderByDescending(p => p.CreatedDate)
+                        .FirstOrDefaultAsync();
 
-                    // Load indicators for this prediction using EF Core
-                    var indicators = await _context.PredictionIndicators
-                               .AsNoTracking()
-                           .Where(i => i.PredictionId == prediction.Id)
-                          .ToListAsync();
-
-                    foreach (var indicator in indicators)
+                    if (prediction != null)
                     {
-                        model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
+                        var model = new PredictionModel
+                        {
+                            Symbol = prediction.Symbol,
+                            PredictedAction = prediction.PredictedAction,
+                            Confidence = prediction.Confidence,
+                            CurrentPrice = prediction.CurrentPrice,
+                            TargetPrice = prediction.TargetPrice,
+                            PotentialReturn = prediction.PotentialReturn,
+                            PredictionDate = prediction.CreatedDate,
+                            TradingRule = null,
+                            Indicators = new Dictionary<string, double>()
+                        };
+
+                        // Load indicators for this prediction using EF Core
+                        var indicators = await _context.PredictionIndicators
+                            .AsNoTracking()
+                            .Where(i => i.PredictionId == prediction.Id)
+                            .ToListAsync();
+
+                        foreach (var indicator in indicators)
+                        {
+                            model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
+                        }
+
+                        result.Add(model);
                     }
-
-                    result.Add(model);
                 }
 
-                return result;
+                // Sort by confidence descending in memory
+                return result.OrderByDescending(p => p.Confidence).ToList();
             }
             catch (Exception ex)
             {
@@ -178,48 +178,57 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Get the most recent prediction for each symbol with the specified action
-                var predictions = await _context.StockPredictions
-                          .AsNoTracking()
-                          .Where(p => p.PredictedAction == action && p.Confidence >= minConfidence)
-               .GroupBy(p => p.Symbol)
-                     .Select(g => g.OrderByDescending(p => p.CreatedDate).FirstOrDefault())
-                     .Where(p => p != null)
-                   .OrderByDescending(p => p.Confidence)
-                      .ToListAsync();
+                // Get all symbols with the specified action and confidence
+                var symbols = await _context.StockPredictions
+                    .AsNoTracking()
+                    .Where(p => p.PredictedAction == action && p.Confidence >= minConfidence)
+                    .Select(p => p.Symbol)
+                    .Distinct()
+                    .ToListAsync();
 
                 var result = new List<PredictionModel>();
 
-                foreach (var prediction in predictions)
+                // For each symbol, get the most recent prediction with the specified action
+                foreach (var symbol in symbols)
                 {
-                    var model = new PredictionModel
-                    {
-                        Symbol = prediction.Symbol,
-                        PredictedAction = prediction.PredictedAction,
-                        Confidence = prediction.Confidence,
-                        CurrentPrice = prediction.CurrentPrice,
-                        TargetPrice = prediction.TargetPrice,
-                        PotentialReturn = prediction.PotentialReturn,
-                        PredictionDate = prediction.CreatedDate,
-                        TradingRule = null, // TradingRule not stored in entity
-                        Indicators = new Dictionary<string, double>()
-                    };
+                    var prediction = await _context.StockPredictions
+                        .AsNoTracking()
+                        .Where(p => p.Symbol == symbol && p.PredictedAction == action && p.Confidence >= minConfidence)
+                        .OrderByDescending(p => p.CreatedDate)
+                        .FirstOrDefaultAsync();
 
-                    // Load indicators
-                    var indicators = await _context.PredictionIndicators
-                    .AsNoTracking()
-               .Where(i => i.PredictionId == prediction.Id)
-                     .ToListAsync();
-
-                    foreach (var indicator in indicators)
+                    if (prediction != null)
                     {
-                        model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
+                        var model = new PredictionModel
+                        {
+                            Symbol = prediction.Symbol,
+                            PredictedAction = prediction.PredictedAction,
+                            Confidence = prediction.Confidence,
+                            CurrentPrice = prediction.CurrentPrice,
+                            TargetPrice = prediction.TargetPrice,
+                            PotentialReturn = prediction.PotentialReturn,
+                            PredictionDate = prediction.CreatedDate,
+                            TradingRule = null,
+                            Indicators = new Dictionary<string, double>()
+                        };
+
+                        // Load indicators
+                        var indicators = await _context.PredictionIndicators
+                            .AsNoTracking()
+                            .Where(i => i.PredictionId == prediction.Id)
+                            .ToListAsync();
+
+                        foreach (var indicator in indicators)
+                        {
+                            model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
+                        }
+
+                        result.Add(model);
                     }
-
-                    result.Add(model);
                 }
 
-                return result;
+                // Sort by confidence descending in memory
+                return result.OrderByDescending(p => p.Confidence).ToList();
             }
             catch (Exception ex)
             {
