@@ -95,7 +95,7 @@ namespace Quantra.DAL.Services
                     // Add indicator interpretation guidance
                     contextBuilder.AppendLine();
                     contextBuilder.AppendLine("Indicator Interpretation:");
-                    AppendIndicatorInterpretation(contextBuilder, indicators, prediction.PredictedAction);
+                    AppendIndicatorInterpretation(contextBuilder, indicators);
                 }
 
                 _logger?.LogInformation("Successfully built prediction context for {Symbol}", symbol);
@@ -111,11 +111,11 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Appends interpretation guidance for common technical indicators
         /// </summary>
-        private void AppendIndicatorInterpretation(StringBuilder builder, System.Collections.Generic.List<Data.Entities.PredictionIndicatorEntity> indicators, string predictedAction)
+        private void AppendIndicatorInterpretation(StringBuilder builder, System.Collections.Generic.List<Data.Entities.PredictionIndicatorEntity> indicators)
         {
             foreach (var indicator in indicators)
             {
-                string interpretation = GetIndicatorInterpretation(indicator.IndicatorName, indicator.IndicatorValue, predictedAction);
+                string interpretation = GetIndicatorInterpretation(indicator.IndicatorName, indicator.IndicatorValue);
                 if (!string.IsNullOrEmpty(interpretation))
                 {
                     builder.AppendLine($"  • {interpretation}");
@@ -126,7 +126,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Gets human-readable interpretation for a specific indicator
         /// </summary>
-        private string GetIndicatorInterpretation(string indicatorName, double value, string predictedAction)
+        private string GetIndicatorInterpretation(string indicatorName, double value)
         {
             var name = indicatorName.ToUpperInvariant();
 

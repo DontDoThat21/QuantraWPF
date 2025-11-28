@@ -323,7 +323,7 @@ namespace Quantra.DAL.Services
                    "When historical data context is provided, reference specific price levels, moving averages, volatility metrics, and volume patterns in your analysis. " +
                    "When ML prediction data is provided, discuss the AI-generated forecast including the predicted action (BUY/SELL/HOLD), target price, and confidence level. " +
                    "Explain the rationale behind predictions based on the technical indicators that were used. " +
-                   "For example: 'Based on your ML model's 78% confidence BUY signal for AAPL targeting $185, supported by RSI oversold conditions and positive MACD momentum...' " +
+                   "For example: 'Based on your ML model's [confidence]% [action] signal for [symbol] targeting $[price], supported by the technical indicators...' " +
                    "Always mention relevant risks and avoid giving direct investment advice. " +
                    "Use professional yet accessible language appropriate for experienced traders.";
         }
