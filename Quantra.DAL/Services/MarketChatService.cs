@@ -20,6 +20,7 @@ namespace Quantra.DAL.Services
     /// Service for handling ChatGPT/OpenAI API calls for market analysis conversations.
     /// Integrates with PredictionCacheService to leverage cached predictions (MarketChat story 3).
     /// Integrates with ModelExplainerService to provide plain English explanations of ML predictions (MarketChat story 4).
+    /// Integrates with NaturalLanguageQueryService for SQL table queries via natural language (MarketChat story 5).
     /// </summary>
     public class MarketChatService
     {
@@ -28,6 +29,7 @@ namespace Quantra.DAL.Services
         private readonly IMarketDataEnrichmentService _marketDataEnrichmentService;
         private readonly IPredictionDataService _predictionDataService;
         private readonly IModelExplainerService _modelExplainerService;
+        private readonly INaturalLanguageQueryService _naturalLanguageQueryService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
@@ -60,6 +62,11 @@ namespace Quantra.DAL.Services
         public PredictionContextResult LastPredictionCacheResult { get; private set; }
 
         /// <summary>
+        /// Gets the most recent natural language query result (MarketChat story 5).
+        /// </summary>
+        public NaturalLanguageQueryResult LastQueryResult { get; private set; }
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -67,12 +74,14 @@ namespace Quantra.DAL.Services
             IMarketDataEnrichmentService marketDataEnrichmentService = null,
             IPredictionDataService predictionDataService = null,
             IModelExplainerService modelExplainerService = null,
+            INaturalLanguageQueryService naturalLanguageQueryService = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
             _predictionDataService = predictionDataService;
             _modelExplainerService = modelExplainerService ?? new ModelExplainerService();
+            _naturalLanguageQueryService = naturalLanguageQueryService;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -96,7 +105,9 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Sends a market analysis question to ChatGPT and returns the response
+        /// Sends a market analysis question to ChatGPT and returns the response.
+        /// If the question is detected as a database query, it will be processed
+        /// by the NaturalLanguageQueryService instead (MarketChat story 5).
         /// </summary>
         /// <param name="userQuestion">The user's market analysis question</param>
         /// <param name="includeContext">Whether to include recent market data as context</param>
@@ -106,6 +117,13 @@ namespace Quantra.DAL.Services
             try
             {
                 _logger.LogInformation($"Processing market analysis request: {userQuestion}");
+
+                // Check if this is a database query request (MarketChat story 5)
+                if (_naturalLanguageQueryService != null && _naturalLanguageQueryService.IsQueryRequest(userQuestion))
+                {
+                    _logger.LogInformation("Detected database query request, processing with NaturalLanguageQueryService");
+                    return await ProcessDatabaseQueryAsync(userQuestion);
+                }
 
                 // Build the system prompt
                 string systemPrompt = BuildSystemPrompt();
@@ -156,6 +174,65 @@ namespace Quantra.DAL.Services
                 _logger.LogError(ex, "Error processing market analysis request");
                 return "I apologize, but I'm currently unable to process your market analysis request due to a technical issue. Please try again in a moment.";
             }
+        }
+
+        /// <summary>
+        /// Processes a database query request using natural language (MarketChat story 5).
+        /// </summary>
+        /// <param name="userQuestion">The user's natural language database query</param>
+        /// <returns>Formatted response with query results</returns>
+        private async Task<string> ProcessDatabaseQueryAsync(string userQuestion)
+        {
+            try
+            {
+                var result = await _naturalLanguageQueryService.ProcessQueryAsync(userQuestion);
+                LastQueryResult = result;
+
+                if (!result.Success)
+                {
+                    return result.WasBlocked
+                        ? $"⚠️ **Query blocked for safety**: {result.BlockedReason}\n\nPlease rephrase your query or ask a different question."
+                        : $"❌ **Query failed**: {result.ErrorMessage}\n\nPlease try rephrasing your question.";
+                }
+
+                // Format the response with markdown table
+                var responseBuilder = new StringBuilder();
+                responseBuilder.AppendLine($"📊 **Database Query Results** ({result.RowCount} rows, {result.ExecutionTimeMs}ms)");
+                responseBuilder.AppendLine();
+                responseBuilder.AppendLine(result.ToMarkdownTable());
+
+                if (!string.IsNullOrEmpty(result.TranslatedSql))
+                {
+                    responseBuilder.AppendLine();
+                    responseBuilder.AppendLine("<details>");
+                    responseBuilder.AppendLine("<summary>SQL Query (click to expand)</summary>");
+                    responseBuilder.AppendLine();
+                    responseBuilder.AppendLine($"```sql");
+                    responseBuilder.AppendLine(result.TranslatedSql);
+                    responseBuilder.AppendLine($"```");
+                    responseBuilder.AppendLine("</details>");
+                }
+
+                // Store the conversation
+                StoreConversationTurn(userQuestion, responseBuilder.ToString());
+
+                return responseBuilder.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing database query");
+                return "I apologize, but I couldn't process your database query. Please try rephrasing your question.";
+            }
+        }
+
+        /// <summary>
+        /// Determines if the user's message is a database query request (MarketChat story 5).
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message appears to be a database query request</returns>
+        public bool IsQueryRequest(string message)
+        {
+            return _naturalLanguageQueryService?.IsQueryRequest(message) ?? false;
         }
 
         /// <summary>
