@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Quantra.Models;
 
 namespace Quantra.DAL.Services.Interfaces

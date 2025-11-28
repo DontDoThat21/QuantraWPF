@@ -224,7 +224,8 @@ namespace Quantra.DAL.Services
             builder.AppendLine();
 
             // Maximum Drawdown
-            builder.AppendLine($"• **Maximum Drawdown:** ${Math.Abs(riskMetrics.MaxDrawdown):F2}");
+            // Note: MaxDrawdown is expected to be positive (Python model applies abs() before sending)
+            builder.AppendLine($"• **Maximum Drawdown:** ${riskMetrics.MaxDrawdown:F2}");
             builder.AppendLine($"  This represents the worst-case decline from peak to trough that could occur.");
             builder.AppendLine();
 
