@@ -49,6 +49,15 @@ namespace Quantra.DAL.Data.Configurations
             builder.HasIndex(s => s.CreatedDate);
             builder.HasIndex(s => new { s.Symbol, s.CreatedDate });
             builder.HasIndex(s => s.Confidence);
+
+            // Index for ChatSessionId for querying predictions by chat session
+            builder.HasIndex(s => s.ChatSessionId);
+
+            // Relationship with ChatHistory
+            builder.HasOne(s => s.ChatSession)
+                   .WithMany(c => c.Predictions)
+                   .HasForeignKey(s => s.ChatSessionId)
+                   .OnDelete(DeleteBehavior.SetNull);
         }
     }
 
@@ -87,6 +96,49 @@ namespace Quantra.DAL.Data.Configurations
 
             // Index for performance
             builder.HasIndex(i => i.ControlId);
+        }
+    }
+
+    public class PredictionCacheConfiguration : IEntityTypeConfiguration<PredictionCacheEntity>
+    {
+        public void Configure(EntityTypeBuilder<PredictionCacheEntity> builder)
+        {
+            // Index for symbol lookups
+            builder.HasIndex(p => p.Symbol);
+
+            // Index for identifying stale entries
+            builder.HasIndex(p => p.LastAccessedAt);
+
+            // Composite index for cache hits
+            builder.HasIndex(p => new { p.Symbol, p.ModelVersion, p.InputDataHash });
+
+            // Set default values
+            builder.Property(p => p.AccessCount).HasDefaultValue(0);
+        }
+    }
+
+    public class ChatHistoryConfiguration : IEntityTypeConfiguration<ChatHistoryEntity>
+    {
+        public void Configure(EntityTypeBuilder<ChatHistoryEntity> builder)
+        {
+            // Index for session lookups
+            builder.HasIndex(c => c.SessionId);
+
+            // Index for timestamp-based queries
+            builder.HasIndex(c => c.Timestamp);
+
+            // Composite index for session and timestamp
+            builder.HasIndex(c => new { c.SessionId, c.Timestamp });
+
+            // Index for user queries
+            builder.HasIndex(c => c.UserId);
+
+            // Index for symbol-specific chat history
+            builder.HasIndex(c => c.Symbol);
+
+            // Configure Content as NVARCHAR(MAX) for large messages
+            builder.Property(c => c.Content)
+                   .HasMaxLength(-1);
         }
     }
 }
