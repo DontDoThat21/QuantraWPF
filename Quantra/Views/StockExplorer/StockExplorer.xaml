@@ -201,6 +201,7 @@
                               Text="{Binding SymbolSearchText, UpdateSourceTrigger=PropertyChanged}"
                               SelectedItem="{Binding SelectedSymbol, Mode=TwoWay}"
                               SelectionChanged="SymbolComboBox_SelectionChanged"
+                              DropDownClosed="SymbolComboBox_DropDownClosed"
                               KeyUp="SymbolComboBox_KeyUp"
                               Style="{StaticResource EnhancedComboBoxStyle}"/>
                     <Button x:Name="RefreshButton" 

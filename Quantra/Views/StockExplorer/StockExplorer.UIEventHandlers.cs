@@ -522,7 +522,12 @@ namespace Quantra.Controls
         }
 
         // SymbolComboBox selection changed event handler
-        private async void SymbolComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        // This handler ONLY enables the Search button when a valid symbol is selected
+        // It does NOT trigger an automatic search - search is only triggered by:
+        // 1. Enter key press (handled in SymbolComboBox_KeyUp)
+        // 2. Clicking on a dropdown item (handled in SymbolComboBox_DropDownClosed)
+        // 3. Clicking the Search button (handled in RefreshButton_Click)
+        private void SymbolComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isHandlingSelectionChanged || sender is not ComboBox comboBox) 
                 return;
@@ -530,9 +535,34 @@ namespace Quantra.Controls
             var selectedSymbol = comboBox.SelectedItem as string;
             if (!string.IsNullOrEmpty(selectedSymbol))
             {
+                // Only enable the Search button - do NOT auto-search
+                // Search is triggered by Enter key, dropdown click, or Search button click
                 EnableStockSearchButton();
-                // Update the title when selecting from ComboBox
-                await HandleSymbolSelectionAsync(selectedSymbol, "ComboBox");
+            }
+        }
+
+        // DropDownClosed event handler - triggers search when user explicitly clicks on a dropdown item
+        private async void SymbolComboBox_DropDownClosed(object sender, EventArgs e)
+        {
+            if (sender is not ComboBox comboBox || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
+                return;
+
+            var selectedSymbol = comboBox.SelectedItem as string;
+            if (!string.IsNullOrEmpty(selectedSymbol))
+            {
+                try
+                {
+                    // User explicitly clicked on a dropdown item, trigger the search
+                    await HandleSymbolSelectionAsync(selectedSymbol, "DropdownSelection");
+                }
+                catch (System.OperationCanceledException)
+                {
+                    // Operation was cancelled - this is expected when user selects quickly
+                }
+                catch (Exception ex)
+                {
+                    CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
+                }
             }
         }
 
