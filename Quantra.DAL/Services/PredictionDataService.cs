@@ -22,8 +22,10 @@ namespace Quantra.DAL.Services
         private readonly ILogger<PredictionDataService> _logger;
         private readonly PredictionCacheService _cacheService;
 
-        // Default model version used for cache key generation
+        // Configuration constants for cache behavior
         private const string DefaultModelVersion = "v1.0";
+        private static readonly TimeSpan CacheExpiryPeriod = TimeSpan.FromHours(1);
+        private const int CacheWarmingDelayMs = 50;
 
         // Popular symbols for cache warming during market hours
         private static readonly string[] PopularSymbols = new[]
@@ -33,7 +35,9 @@ namespace Quantra.DAL.Services
         };
 
         /// <summary>
-        /// Constructor for PredictionDataService with dependency injection
+        /// Constructor for PredictionDataService with dependency injection.
+        /// The cacheService parameter is optional for backward compatibility with existing DI configurations.
+        /// When not provided, a default cache service is created internally.
         /// </summary>
         public PredictionDataService(QuantraDbContext context, ILogger<PredictionDataService> logger, PredictionCacheService cacheService = null)
         {
@@ -138,8 +142,8 @@ namespace Quantra.DAL.Services
                         _logger?.LogDebug("Cache warmed for {Symbol}", symbol);
                     }
 
-                    // Small delay to avoid overwhelming the system
-                    await Task.Delay(50);
+                    // Configurable delay to avoid overwhelming the system
+                    await Task.Delay(CacheWarmingDelayMs);
                 }
                 catch (Exception ex)
                 {
@@ -175,11 +179,12 @@ namespace Quantra.DAL.Services
                     return null;
                 }
 
-                // Check if the cache entry is still valid (default 1 hour expiry)
+                // Check if the cache entry is still valid using configurable expiry period
                 var cacheAge = DateTime.Now - cachedEntry.CreatedAt;
-                if (cacheAge > TimeSpan.FromHours(1))
+                if (cacheAge > CacheExpiryPeriod)
                 {
-                    _logger?.LogDebug("Cache entry for {Symbol} is stale ({Age} old)", symbol, cacheAge);
+                    _logger?.LogDebug("Cache entry for {Symbol} is stale ({Age} old, expiry: {Expiry})", 
+                        symbol, cacheAge, CacheExpiryPeriod);
                     return null;
                 }
 
@@ -341,16 +346,14 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Generates a simple hash for cache key purposes
+        /// Generates a simple hash for cache key purposes.
+        /// Uses SHA256.HashData for better performance (single allocation).
         /// </summary>
         private static string GenerateSimpleHash(string input)
         {
-            using (var sha = System.Security.Cryptography.SHA256.Create())
-            {
-                var bytes = System.Text.Encoding.UTF8.GetBytes(input);
-                var hashBytes = sha.ComputeHash(bytes);
-                return Convert.ToHexString(hashBytes).Substring(0, 32);
-            }
+            var bytes = System.Text.Encoding.UTF8.GetBytes(input);
+            var hashBytes = System.Security.Cryptography.SHA256.HashData(bytes);
+            return Convert.ToHexString(hashBytes).Substring(0, 32);
         }
 
         /// <summary>
