@@ -10,13 +10,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Quantra.CrossCutting.ErrorHandling;
+using Quantra.DAL.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 
 namespace Quantra.DAL.Services
 {
     /// <summary>
-    /// Service for handling ChatGPT/OpenAI API calls for market analysis conversations
+    /// Service for handling ChatGPT/OpenAI API calls for market analysis conversations.
+    /// Integrates with PredictionCacheService to leverage cached predictions (MarketChat story 3).
     /// </summary>
     public class MarketChatService
     {
@@ -27,6 +29,7 @@ namespace Quantra.DAL.Services
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
+        private readonly Dictionary<string, PredictionContextResult> _predictionCacheResults;
         private const string OpenAiBaseUrl = "https://api.openai.com";
         private const string OpenAiModel = "gpt-3.5-turbo";
         private const double OpenAiTemperature = 0.3;
@@ -47,6 +50,13 @@ namespace Quantra.DAL.Services
         };
 
         /// <summary>
+        /// Gets the most recent prediction cache result for determining cache hit/miss status.
+        /// This is populated after each prediction context fetch and can be used by the ViewModel
+        /// to display cache status information in the UI (MarketChat story 3).
+        /// </summary>
+        public PredictionContextResult LastPredictionCacheResult { get; private set; }
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -62,6 +72,7 @@ namespace Quantra.DAL.Services
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _predictionContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _predictionCacheResults = new Dictionary<string, PredictionContextResult>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -279,6 +290,8 @@ namespace Quantra.DAL.Services
             _conversationHistory.Clear();
             _enrichedContextHistory.Clear();
             _predictionContextHistory.Clear();
+            _predictionCacheResults.Clear();
+            LastPredictionCacheResult = null;
             _logger.LogInformation("Conversation history and enriched context cleared");
         }
 
@@ -310,6 +323,90 @@ namespace Quantra.DAL.Services
                 _logger.LogError(ex, "Error fetching prediction context for {Symbol}", symbol);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Gets prediction context with cache metadata for a specific stock symbol (MarketChat story 3).
+        /// Updates LastPredictionCacheResult property with the cache status.
+        /// </summary>
+        /// <param name="symbol">Stock symbol (e.g., "AAPL", "MSFT")</param>
+        /// <returns>PredictionContextResult containing the context and cache metadata</returns>
+        public async Task<PredictionContextResult> GetPredictionContextWithCacheAsync(string symbol)
+        {
+            if (_predictionDataService == null)
+            {
+                _logger.LogWarning("Prediction data service is not configured");
+                return PredictionContextResult.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return PredictionContextResult.Empty;
+            }
+
+            try
+            {
+                var result = await _predictionDataService.GetPredictionContextWithCacheAsync(symbol);
+                LastPredictionCacheResult = result;
+                _predictionCacheResults[symbol.ToUpperInvariant()] = result;
+
+                if (result?.IsCached == true)
+                {
+                    _logger.LogInformation("Retrieved cached prediction for {Symbol} ({CacheAge} old)", 
+                        symbol, result.CacheAge);
+                }
+                else if (result?.Context != null)
+                {
+                    _logger.LogInformation("Retrieved fresh prediction for {Symbol}", symbol);
+                }
+
+                return result ?? PredictionContextResult.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching prediction context with cache for {Symbol}", symbol);
+                return PredictionContextResult.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Warms the prediction cache for popular symbols during market hours (MarketChat story 3).
+        /// </summary>
+        /// <param name="symbols">Optional list of symbols to warm. Uses popular symbols if null.</param>
+        /// <returns>Number of symbols successfully warmed</returns>
+        public async Task<int> WarmPredictionCacheAsync(IEnumerable<string> symbols = null)
+        {
+            if (_predictionDataService == null)
+            {
+                _logger.LogWarning("Prediction data service is not configured - cannot warm cache");
+                return 0;
+            }
+
+            try
+            {
+                return await _predictionDataService.WarmCacheForSymbolsAsync(symbols);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error warming prediction cache");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the cache result for a specific symbol if available (MarketChat story 3).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <returns>The cached result or null if not available</returns>
+        public PredictionContextResult GetCachedPredictionResult(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return null;
+            }
+
+            _predictionCacheResults.TryGetValue(symbol.ToUpperInvariant(), out var result);
+            return result;
         }
 
         /// <summary>
@@ -396,7 +493,7 @@ namespace Quantra.DAL.Services
                             }
                         }
 
-                        // Add ML prediction context
+                        // Add ML prediction context using cache-aware method (MarketChat story 3)
                         if (_predictionDataService != null)
                         {
                             try
@@ -409,16 +506,31 @@ namespace Quantra.DAL.Services
                                 }
                                 else
                                 {
-                                    // Fetch fresh prediction context
-                                    var predictionContext = await _predictionDataService.GetPredictionContextAsync(symbol);
-                                    if (!string.IsNullOrEmpty(predictionContext))
+                                    // Fetch prediction context using cache-aware method
+                                    var predictionResult = await _predictionDataService.GetPredictionContextWithCacheAsync(symbol);
+                                    if (predictionResult != null && !string.IsNullOrEmpty(predictionResult.Context))
                                     {
-                                        promptBuilder.AppendLine(predictionContext);
+                                        promptBuilder.AppendLine(predictionResult.Context);
+
+                                        // Add cache status information to the context
+                                        if (predictionResult.IsCached)
+                                        {
+                                            promptBuilder.AppendLine($"- Data Source: Cached ({predictionResult.CacheStatusDisplay})");
+                                        }
+                                        else
+                                        {
+                                            promptBuilder.AppendLine("- Data Source: Freshly generated prediction");
+                                        }
                                         promptBuilder.AppendLine();
 
                                         // Store in prediction context history for follow-up questions
-                                        _predictionContextHistory[symbol] = predictionContext;
-                                        _logger.LogInformation("Added ML prediction context for {Symbol} to conversation", symbol);
+                                        _predictionContextHistory[symbol] = predictionResult.Context;
+                                        _predictionCacheResults[symbol] = predictionResult;
+                                        LastPredictionCacheResult = predictionResult;
+
+                                        _logger.LogInformation(
+                                            "Added ML prediction context for {Symbol} to conversation (cached: {IsCached})", 
+                                            symbol, predictionResult.IsCached);
                                     }
                                 }
                             }

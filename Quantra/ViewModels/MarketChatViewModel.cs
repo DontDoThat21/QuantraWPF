@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using Quantra.Commands;
 using Quantra.Models;
+using Quantra.DAL.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels.Base;
 using Quantra.DAL.Services;
@@ -13,7 +14,8 @@ using Quantra.DAL.Services;
 namespace Quantra.ViewModels
 {
     /// <summary>
-    /// ViewModel for the Market Chat interface
+    /// ViewModel for the Market Chat interface.
+    /// Supports PredictionCache integration for displaying cache hit/miss status (MarketChat story 3).
     /// </summary>
     public class MarketChatViewModel : ViewModelBase
     {
@@ -41,6 +43,7 @@ namespace Quantra.ViewModels
             SendMessageCommand = new RelayCommand(_ => ExecuteSendMessage(), _ => CanSendMessage());
             ClearHistoryCommand = new RelayCommand(_ => ExecuteClearHistory());
             RequestTradingPlanCommand = new RelayCommand(_ => ExecuteRequestTradingPlan(), _ => !IsProcessing);
+            WarmCacheCommand = new RelayCommand(async _ => await ExecuteWarmCacheAsync(), _ => !IsProcessing);
 
             // Set initial status
             StatusMessage = "Ready to analyze market questions";
@@ -124,6 +127,11 @@ namespace Quantra.ViewModels
         /// </summary>
         public ICommand RequestTradingPlanCommand { get; }
 
+        /// <summary>
+        /// Command to warm the prediction cache for popular symbols (MarketChat story 3)
+        /// </summary>
+        public ICommand WarmCacheCommand { get; }
+
         #endregion
 
         #region Command Methods
@@ -201,17 +209,33 @@ namespace Quantra.ViewModels
                 // Remove loading message
                 Messages.Remove(loadingMessage);
 
-                // Add assistant response
+                // Get cache metadata from the last prediction lookup (MarketChat story 3)
+                var cacheResult = _marketChatService.LastPredictionCacheResult;
+
+                // Add assistant response with cache metadata
                 var assistantMessage = new MarketChatMessage
                 {
                     Content = response,
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
-                    MessageType = MessageType.AssistantResponse
+                    MessageType = MessageType.AssistantResponse,
+                    UsesCachedData = cacheResult?.IsCached ?? false,
+                    CacheStatusDisplay = cacheResult?.CacheStatusDisplay,
+                    CacheAge = cacheResult?.CacheAge
                 };
                 Messages.Add(assistantMessage);
 
-                StatusMessage = "Ready for your next question";
+                // Update status to show cache hit/miss info
+                if (cacheResult?.IsCached == true)
+                {
+                    StatusMessage = $"Ready | {cacheResult.CacheStatusDisplay}";
+                    _logger.LogInformation("Response used cached prediction data ({Age} old)", cacheResult.CacheAge);
+                }
+                else
+                {
+                    StatusMessage = "Ready for your next question";
+                }
+
                 _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
             }
             catch (Exception ex)
@@ -271,6 +295,43 @@ namespace Quantra.ViewModels
         {
             // Set placeholder text to guide user for a trading plan request
             CurrentMessage = "Suggest a trading plan for TICKER for the next month";
+        }
+
+        /// <summary>
+        /// Executes the warm cache command for popular symbols (MarketChat story 3)
+        /// </summary>
+        private async Task ExecuteWarmCacheAsync()
+        {
+            try
+            {
+                IsProcessing = true;
+                StatusMessage = "Warming prediction cache for popular symbols...";
+                _logger.LogInformation("Starting cache warming operation");
+
+                var warmedCount = await _marketChatService.WarmPredictionCacheAsync();
+
+                StatusMessage = $"Cache warmed for {warmedCount} symbols";
+                _logger.LogInformation("Cache warming completed: {Count} symbols warmed", warmedCount);
+
+                // Add system message to show cache warming complete
+                var systemMessage = new MarketChatMessage
+                {
+                    Content = $"Prediction cache warmed for {warmedCount} popular symbols. Future queries for these symbols will have faster response times.",
+                    IsFromUser = false,
+                    Timestamp = DateTime.Now,
+                    MessageType = MessageType.SystemMessage
+                };
+                Messages.Add(systemMessage);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Error warming cache";
+                _logger.LogError(ex, "Error during cache warming operation");
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
         }
 
         #endregion
