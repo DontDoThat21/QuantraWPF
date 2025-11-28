@@ -43,10 +43,14 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(50)]
         public string TimeRange { get; set; }
 
+        [MaxLength(50)]
+        public string Interval { get; set; }
+
         [Required]
         public string Data { get; set; }  // JSON serialized StockData
 
         [Required]
+        [Column("CacheTime")]
         public DateTime CachedAt { get; set; }
 
         public DateTime? ExpiresAt { get; set; }

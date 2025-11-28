@@ -21,23 +21,28 @@ namespace Quantra.Controls
     public partial class TransactionsControl : UserControl
     {
         private TransactionsViewModel _viewModel;
+        private IServiceScope _scope;
 
         public TransactionsControl()
         {
             InitializeComponent();
             
-            // Initialize the ViewModel
-            //_viewModel = new TransactionsViewModel(
-                
-            var serviceProvider = App.ServiceProvider;
+            // Create a scope for scoped services
+            _scope = App.ServiceProvider.CreateScope();
+            var scopedProvider = _scope.ServiceProvider;
 
-            _viewModel = serviceProvider.GetRequiredService<TransactionsViewModel>();
+            _viewModel = scopedProvider.GetRequiredService<TransactionsViewModel>();
 
             DataContext = _viewModel;
 
             // Load data when control is loaded
             Loaded += (s, e) => {
                 _viewModel.LoadTransactions();
+            };
+            
+            // Clean up scope when control is unloaded
+            Unloaded += (s, e) => {
+                _scope?.Dispose();
             };
         }
 

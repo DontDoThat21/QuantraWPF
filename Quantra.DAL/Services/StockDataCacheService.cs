@@ -816,18 +816,18 @@ namespace Quantra.DAL.Services
                     // Get symbols ordered by most recent cache time (proxy for frequency)
                     symbols = dbContext.StockDataCache
                           .Where(c => c.CachedAt > recentThreshold)
-                   .GroupBy(c => c.Symbol)
-                              .Select(g => new
+                          .GroupBy(c => c.Symbol)
+                          .Select(g => new
                               {
                                   Symbol = g.Key,
                                   AccessCount = g.Count(),
                                   LastAccess = g.Max(c => c.CachedAt)
                               })
-                                .OrderByDescending(x => x.AccessCount)
-                        .ThenByDescending(x => x.LastAccess)
-                   .Take(maxCount)
-                      .Select(x => x.Symbol)
-                           .ToList();
+                          .OrderByDescending(x => x.AccessCount)
+                          .ThenByDescending(x => x.LastAccess)
+                          .Take(maxCount)
+                          .Select(x => x.Symbol)
+                          .ToList();
                 }
             }
             catch (Exception ex)
