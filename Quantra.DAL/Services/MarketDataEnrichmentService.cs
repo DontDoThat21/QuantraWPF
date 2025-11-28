@@ -268,14 +268,15 @@ namespace Quantra.DAL.Services
                 }
             }
 
-            if (returns.Count == 0)
+            if (returns.Count < 2)
             {
                 return 0;
             }
 
             var mean = returns.Average();
             var sumOfSquares = returns.Sum(r => Math.Pow(r - mean, 2));
-            return Math.Sqrt(sumOfSquares / returns.Count);
+            // Use sample standard deviation (n-1) for unbiased estimation
+            return Math.Sqrt(sumOfSquares / (returns.Count - 1));
         }
 
         /// <summary>

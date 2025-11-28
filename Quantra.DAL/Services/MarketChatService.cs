@@ -30,6 +30,20 @@ namespace Quantra.DAL.Services
         private const double OpenAiTemperature = 0.3;
         private const int OpenAiTimeout = 60;
 
+        // Compiled regex patterns for symbol extraction (performance optimization)
+        private static readonly Regex DollarSymbolPattern = new Regex(@"\$([A-Z]{1,5})\b", RegexOptions.Compiled);
+        private static readonly Regex StandaloneSymbolPattern = new Regex(@"\b([A-Z]{1,5})\b(?=\s|$|[,.\)])", RegexOptions.Compiled);
+
+        // Common words that should not be treated as stock symbols
+        private static readonly HashSet<string> CommonWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "I", "A", "AN", "THE", "IN", "ON", "AT", "TO", "FOR", "OF", "AND", "OR", "IS", "IT",
+            "BE", "AS", "BY", "IF", "DO", "GO", "SO", "NO", "UP", "MY", "ME", "WE", "US", "AM",
+            "CAN", "ALL", "NEW", "ONE", "TWO", "NOW", "HOW", "WHY", "WHAT", "WHEN", "WHO",
+            "NOT", "BUT", "OUT", "HAS", "HAD", "GET", "GOT", "MAY", "SAY", "SEE", "SET",
+            "RSI", "EMA", "SMA", "MACD", "ATR", "ADX", "PLAN", "RISK", "BUY", "SELL", "HIGH", "LOW"
+        };
+
         /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
@@ -338,17 +352,12 @@ namespace Quantra.DAL.Services
                 return symbols;
             }
 
-            // Pattern to match stock ticker symbols (1-5 uppercase letters)
-            // Common patterns: $AAPL, AAPL, (AAPL), "AAPL"
-            var patterns = new[]
-            {
-                @"\$([A-Z]{1,5})\b",           // $AAPL format
-                @"\b([A-Z]{1,5})\b(?=\s|$|[,.\)])" // Standalone uppercase words
-            };
+            // Use compiled regex patterns for performance
+            var compiledPatterns = new[] { DollarSymbolPattern, StandaloneSymbolPattern };
 
-            foreach (var pattern in patterns)
+            foreach (var pattern in compiledPatterns)
             {
-                var matches = Regex.Matches(question, pattern);
+                var matches = pattern.Matches(question);
                 foreach (Match match in matches)
                 {
                     var symbol = match.Groups[1].Value;
@@ -368,18 +377,9 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Checks if a word is a common English word (not a stock symbol)
         /// </summary>
-        private bool IsCommonWord(string word)
+        private static bool IsCommonWord(string word)
         {
-            var commonWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "I", "A", "AN", "THE", "IN", "ON", "AT", "TO", "FOR", "OF", "AND", "OR", "IS", "IT",
-                "BE", "AS", "BY", "IF", "DO", "GO", "SO", "NO", "UP", "MY", "ME", "WE", "US", "AM",
-                "CAN", "ALL", "NEW", "ONE", "TWO", "NOW", "HOW", "WHY", "WHAT", "WHEN", "WHO",
-                "NOT", "BUT", "OUT", "HAS", "HAD", "GET", "GOT", "MAY", "SAY", "SEE", "SET",
-                "RSI", "EMA", "SMA", "MACD", "ATR", "ADX", "PLAN", "RISK", "BUY", "SELL", "HIGH", "LOW"
-            };
-
-            return commonWords.Contains(word);
+            return CommonWords.Contains(word);
         }
 
         /// <summary>
