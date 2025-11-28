@@ -15,6 +15,10 @@ namespace Quantra.Controls
     public partial class StockExplorer
     {
         private string _lastSearchText = "";
+        
+        // Tracks whether a dropdown selection was made (vs just closing without selection)
+        private bool _dropdownSelectionMade = false;
+        private string _selectedSymbolBeforeDropdown = null;
 
         private void StockExplorer_Loaded(object sender, RoutedEventArgs e)
         {
@@ -538,17 +542,40 @@ namespace Quantra.Controls
                 // Only enable the Search button - do NOT auto-search
                 // Search is triggered by Enter key, dropdown click, or Search button click
                 EnableStockSearchButton();
+                
+                // Track that a selection was made (used by DropDownClosed)
+                if (comboBox.IsDropDownOpen)
+                {
+                    _dropdownSelectionMade = true;
+                }
             }
         }
 
-        // DropDownClosed event handler - triggers search when user explicitly clicks on a dropdown item
+        // DropDownOpened event handler - stores the selection state before dropdown opens
+        private void SymbolComboBox_DropDownOpened(object sender, EventArgs e)
+        {
+            if (sender is ComboBox comboBox)
+            {
+                // Store the current selection before the dropdown opens
+                _selectedSymbolBeforeDropdown = comboBox.SelectedItem as string;
+                _dropdownSelectionMade = false;
+            }
+        }
+
+        // DropDownClosed event handler - triggers search only when user explicitly clicks on a dropdown item
         private async void SymbolComboBox_DropDownClosed(object sender, EventArgs e)
         {
             if (sender is not ComboBox comboBox || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
                 return;
 
             var selectedSymbol = comboBox.SelectedItem as string;
-            if (!string.IsNullOrEmpty(selectedSymbol))
+            
+            // Only trigger search if:
+            // 1. A selection was actually made while dropdown was open, OR
+            // 2. The selection changed from what it was before the dropdown opened
+            bool selectionChanged = !string.Equals(_selectedSymbolBeforeDropdown, selectedSymbol, StringComparison.OrdinalIgnoreCase);
+            
+            if (!string.IsNullOrEmpty(selectedSymbol) && (_dropdownSelectionMade || selectionChanged))
             {
                 try
                 {
@@ -564,6 +591,10 @@ namespace Quantra.Controls
                     CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
                 }
             }
+            
+            // Reset tracking state
+            _dropdownSelectionMade = false;
+            _selectedSymbolBeforeDropdown = null;
         }
 
         private async void SymbolComboBox_KeyUp(object sender, KeyEventArgs e)

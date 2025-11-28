@@ -201,6 +201,7 @@
                               Text="{Binding SymbolSearchText, UpdateSourceTrigger=PropertyChanged}"
                               SelectedItem="{Binding SelectedSymbol, Mode=TwoWay}"
                               SelectionChanged="SymbolComboBox_SelectionChanged"
+                              DropDownOpened="SymbolComboBox_DropDownOpened"
                               DropDownClosed="SymbolComboBox_DropDownClosed"
                               KeyUp="SymbolComboBox_KeyUp"
                               Style="{StaticResource EnhancedComboBoxStyle}"/>
