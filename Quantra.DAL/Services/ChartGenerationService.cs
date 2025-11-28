@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Quantra.DAL.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 
@@ -30,7 +31,7 @@ namespace Quantra.DAL.Services
 
         private static readonly Regex SymbolPattern = new Regex(
             @"\b([A-Z]{1,5})\b",
-            RegexOptions.Compiled);
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex DaysPattern = new Regex(
             @"(\d+)\s*(?:day|week|month)s?",
@@ -194,34 +195,33 @@ namespace Quantra.DAL.Services
                 return parameters;
             }
 
-            // Extract symbols
-            var symbolMatches = SymbolPattern.Matches(message);
-            foreach (Match match in symbolMatches)
+            // Extract symbols - convert message to upper case for symbol extraction
+            var upperMessage = message.ToUpperInvariant();
+            var symbolMatches = SymbolPattern.Matches(upperMessage);
+            var newSymbols = symbolMatches
+                .Cast<Match>()
+                .Select(match => match.Groups[1].Value.ToUpperInvariant())
+                .Where(symbol => !ExcludedWords.Contains(symbol) && !parameters.Symbols.Contains(symbol));
+
+            foreach (var symbol in newSymbols)
             {
-                var symbol = match.Groups[1].Value;
-                if (!ExcludedWords.Contains(symbol) && !parameters.Symbols.Contains(symbol))
-                {
-                    parameters.Symbols.Add(symbol);
-                }
+                parameters.Symbols.Add(symbol);
             }
 
             // Extract forecast days
             var daysMatch = DaysPattern.Match(message);
-            if (daysMatch.Success)
+            if (daysMatch.Success && int.TryParse(daysMatch.Groups[1].Value, out int days))
             {
-                if (int.TryParse(daysMatch.Groups[1].Value, out int days))
+                var unit = daysMatch.Value.ToLower();
+                if (unit.Contains("week"))
                 {
-                    var unit = daysMatch.Value.ToLower();
-                    if (unit.Contains("week"))
-                    {
-                        days *= 7;
-                    }
-                    else if (unit.Contains("month"))
-                    {
-                        days *= 30;
-                    }
-                    parameters.ForecastDays = Math.Min(days, 90); // Cap at 90 days
+                    days *= 7;
                 }
+                else if (unit.Contains("month"))
+                {
+                    days *= 30;
+                }
+                parameters.ForecastDays = Math.Min(days, 90); // Cap at 90 days
             }
 
             // Check for specific indicators
@@ -394,17 +394,21 @@ namespace Quantra.DAL.Services
             var sorted = levels.OrderBy(l => l).ToList();
             var clusters = new List<List<double>>();
             var currentCluster = new List<double> { sorted[0] };
+            double currentSum = sorted[0];
 
             for (int i = 1; i < sorted.Count; i++)
             {
-                if (sorted[i] <= currentCluster.Average() * 1.02)
+                double currentAverage = currentSum / currentCluster.Count;
+                if (sorted[i] <= currentAverage * 1.02)
                 {
                     currentCluster.Add(sorted[i]);
+                    currentSum += sorted[i];
                 }
                 else
                 {
                     clusters.Add(currentCluster);
                     currentCluster = new List<double> { sorted[i] };
+                    currentSum = sorted[i];
                 }
             }
             clusters.Add(currentCluster);
@@ -509,16 +513,18 @@ namespace Quantra.DAL.Services
             double priceChange = (chartData.TargetPrice - chartData.CurrentPrice) / forecastDays;
             double currentPrediction = chartData.CurrentPrice;
 
-            for (int i = 1; i <= forecastDays; i++)
+            // Generate prediction points for trading days only
+            var currentDate = lastDate;
+            int tradingDaysAdded = 0;
+            
+            while (tradingDaysAdded < forecastDays)
             {
-                var date = lastDate.AddDays(i);
-                if (date.DayOfWeek == DayOfWeek.Saturday)
+                currentDate = currentDate.AddDays(1);
+                
+                // Skip weekends
+                if (currentDate.DayOfWeek == DayOfWeek.Saturday || currentDate.DayOfWeek == DayOfWeek.Sunday)
                 {
-                    date = date.AddDays(2);
-                }
-                else if (date.DayOfWeek == DayOfWeek.Sunday)
-                {
-                    date = date.AddDays(1);
+                    continue;
                 }
 
                 // Add some noise to make the prediction curve more realistic
@@ -526,7 +532,8 @@ namespace Quantra.DAL.Services
                 currentPrediction += priceChange + noise;
 
                 chartData.PredictionPrices.Add(Math.Round(currentPrediction, 2));
-                chartData.PredictionDates.Add(date);
+                chartData.PredictionDates.Add(currentDate);
+                tradingDaysAdded++;
             }
 
             // Ensure the last prediction matches the target

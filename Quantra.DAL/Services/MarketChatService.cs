@@ -523,8 +523,8 @@ namespace Quantra.DAL.Services
                 var chartData = await _chartGenerationService.GenerateProjectionChartAsync(symbol, startDate, parameters.ForecastDays);
                 LastChartData = chartData;
 
-                // Cache the chart data for multi-turn conversations
-                _chartDataCache[symbol] = chartData;
+                // Cache the chart data for multi-turn conversations (normalized to uppercase)
+                _chartDataCache[symbol.ToUpperInvariant()] = chartData;
 
                 if (!chartData.IsValid)
                 {

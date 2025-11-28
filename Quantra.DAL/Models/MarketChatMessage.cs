@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Quantra.DAL.Services.Interfaces;
+using Quantra.DAL.Models;
 
 namespace Quantra.Models
 {
@@ -24,7 +24,6 @@ namespace Quantra.Models
         private bool _isComparisonResult;
         private int _comparisonSymbolCount;
         private ProjectionChartData _chartData;
-        private bool _hasChartData;
 
         /// <summary>
         /// The content of the message
@@ -192,11 +191,7 @@ namespace Quantra.Models
         /// <summary>
         /// Indicates whether this message has chart data to display (MarketChat story 8)
         /// </summary>
-        public bool HasChartData
-        {
-            get => _hasChartData || (_chartData?.IsValid ?? false);
-            set => SetProperty(ref _hasChartData, value);
-        }
+        public bool HasChartData => _chartData?.IsValid ?? false;
 
         /// <summary>
         /// Indicates whether chart should be displayed (MarketChat story 8)
