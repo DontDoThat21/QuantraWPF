@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Quantra.CrossCutting.ErrorHandling;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 
 namespace Quantra.DAL.Services
@@ -19,22 +22,41 @@ namespace Quantra.DAL.Services
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<MarketChatService> _logger;
+        private readonly IMarketDataEnrichmentService _marketDataEnrichmentService;
         private readonly List<MarketChatMessage> _conversationHistory;
+        private readonly Dictionary<string, string> _enrichedContextHistory;
         private const string OpenAiBaseUrl = "https://api.openai.com";
         private const string OpenAiModel = "gpt-3.5-turbo";
         private const double OpenAiTemperature = 0.3;
         private const int OpenAiTimeout = 60;
+
+        // Compiled regex patterns for symbol extraction (performance optimization)
+        private static readonly Regex DollarSymbolPattern = new Regex(@"\$([A-Z]{1,5})\b", RegexOptions.Compiled);
+        private static readonly Regex StandaloneSymbolPattern = new Regex(@"\b([A-Z]{1,5})\b(?=\s|$|[,.\)])", RegexOptions.Compiled);
+
+        // Common words that should not be treated as stock symbols
+        private static readonly HashSet<string> CommonWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "I", "A", "AN", "THE", "IN", "ON", "AT", "TO", "FOR", "OF", "AND", "OR", "IS", "IT",
+            "BE", "AS", "BY", "IF", "DO", "GO", "SO", "NO", "UP", "MY", "ME", "WE", "US", "AM",
+            "CAN", "ALL", "NEW", "ONE", "TWO", "NOW", "HOW", "WHY", "WHAT", "WHEN", "WHO",
+            "NOT", "BUT", "OUT", "HAS", "HAD", "GET", "GOT", "MAY", "SAY", "SEE", "SET",
+            "RSI", "EMA", "SMA", "MACD", "ATR", "ADX", "PLAN", "RISK", "BUY", "SELL", "HIGH", "LOW"
+        };
 
         /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
             ILogger<MarketChatService> logger,
+            IMarketDataEnrichmentService marketDataEnrichmentService = null,
             IConfigurationManager configManager = null)
         {
             _logger = logger;
+            _marketDataEnrichmentService = marketDataEnrichmentService;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
+            _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -134,6 +156,27 @@ namespace Quantra.DAL.Services
                 // Build the user prompt
                 var promptBuilder = new StringBuilder();
 
+                // Add historical data context for the ticker
+                if (_marketDataEnrichmentService != null && !string.IsNullOrWhiteSpace(ticker))
+                {
+                    try
+                    {
+                        var historicalContext = await _marketDataEnrichmentService.GetHistoricalContextAsync(ticker.ToUpperInvariant(), 60);
+                        if (!string.IsNullOrEmpty(historicalContext))
+                        {
+                            promptBuilder.AppendLine(historicalContext);
+                            promptBuilder.AppendLine();
+
+                            // Store in enriched context history for follow-up questions
+                            _enrichedContextHistory[ticker.ToUpperInvariant()] = historicalContext;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to fetch historical context for trading plan ticker {Ticker}", ticker);
+                    }
+                }
+
                 promptBuilder.AppendLine($"Suggest a detailed trading plan for {ticker} for the {timeframe}.");
                 promptBuilder.AppendLine($"Include entry and exit criteria, position sizing, stop-loss, and a brief rationale.");
                 promptBuilder.AppendLine($"Assume {riskProfile} risk tolerance.");
@@ -203,12 +246,13 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Clears the conversation history
+        /// Clears the conversation history and enriched context cache
         /// </summary>
         public void ClearConversationHistory()
         {
             _conversationHistory.Clear();
-            _logger.LogInformation("Conversation history cleared");
+            _enrichedContextHistory.Clear();
+            _logger.LogInformation("Conversation history and enriched context cleared");
         }
 
         /// <summary>
@@ -219,6 +263,7 @@ namespace Quantra.DAL.Services
             return "You are a professional financial analyst assistant for Quantra, an advanced algorithmic trading platform. " +
                    "Provide clear, concise, and actionable market analysis to help traders make informed decisions. " +
                    "Focus on technical analysis, market sentiment, risk factors, and actionable insights. " +
+                   "When historical data context is provided, reference specific price levels, moving averages, volatility metrics, and volume patterns in your analysis. " +
                    "Always mention relevant risks and avoid giving direct investment advice. " +
                    "Use professional yet accessible language appropriate for experienced traders.";
         }
@@ -230,6 +275,7 @@ namespace Quantra.DAL.Services
         {
             return "You are a professional trading coach for Quantra, an advanced algorithmic trading platform. " +
                    "Generate detailed, actionable trading plans based on technical analysis, market conditions, and risk management. " +
+                   "When historical data context is provided, use actual price levels, moving averages, volatility, and volume patterns to inform your recommendations. " +
                    "Structure your responses with clear sections for Entry Criteria, Exit Criteria, Position Sizing, " +
                    "Stop-Loss Strategy, Take-Profit Targets, and Rationale. " +
                    "Always consider risk management as a priority and explain your reasoning. " +
@@ -237,7 +283,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Builds an enhanced prompt with market context
+        /// Builds an enhanced prompt with market context and historical data
         /// </summary>
         private async Task<string> BuildEnhancedPromptAsync(string userQuestion, bool includeContext)
         {
@@ -245,17 +291,95 @@ namespace Quantra.DAL.Services
 
             if (includeContext)
             {
-                // Add current market context (simplified for now)
+                // Add current market context
                 promptBuilder.AppendLine("Current Market Context:");
                 promptBuilder.AppendLine($"- Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss} UTC");
                 promptBuilder.AppendLine("- Market Session: " + GetCurrentMarketSession());
                 promptBuilder.AppendLine();
+
+                // Extract symbol(s) from the user question and add historical context
+                var symbols = ExtractSymbolsFromQuestion(userQuestion);
+                if (symbols.Count > 0 && _marketDataEnrichmentService != null)
+                {
+                    foreach (var symbol in symbols)
+                    {
+                        try
+                        {
+                            // Check if we have enriched context in history for follow-up questions
+                            if (_enrichedContextHistory.TryGetValue(symbol, out var cachedContext))
+                            {
+                                promptBuilder.AppendLine(cachedContext);
+                                promptBuilder.AppendLine();
+                            }
+                            else
+                            {
+                                // Fetch fresh historical context
+                                var historicalContext = await _marketDataEnrichmentService.GetHistoricalContextAsync(symbol, 60);
+                                if (!string.IsNullOrEmpty(historicalContext))
+                                {
+                                    promptBuilder.AppendLine(historicalContext);
+                                    promptBuilder.AppendLine();
+
+                                    // Store in enriched context history for follow-up questions
+                                    _enrichedContextHistory[symbol] = historicalContext;
+                                    _logger.LogInformation("Added historical context for {Symbol} to conversation", symbol);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to fetch historical context for {Symbol}", symbol);
+                        }
+                    }
+                }
             }
 
             promptBuilder.AppendLine("User Question:");
             promptBuilder.AppendLine(userQuestion);
 
             return promptBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Extracts stock symbols from a user question
+        /// </summary>
+        private List<string> ExtractSymbolsFromQuestion(string question)
+        {
+            var symbols = new List<string>();
+            
+            if (string.IsNullOrWhiteSpace(question))
+            {
+                return symbols;
+            }
+
+            // Use compiled regex patterns for performance
+            var compiledPatterns = new[] { DollarSymbolPattern, StandaloneSymbolPattern };
+
+            foreach (var pattern in compiledPatterns)
+            {
+                var matches = pattern.Matches(question);
+                foreach (Match match in matches)
+                {
+                    var symbol = match.Groups[1].Value;
+                    
+                    // Filter out common words that might match the pattern
+                    if (!IsCommonWord(symbol) && !symbols.Contains(symbol))
+                    {
+                        symbols.Add(symbol);
+                    }
+                }
+            }
+
+            // Limit to first 3 symbols to avoid overwhelming the context
+            return symbols.Take(3).ToList();
+        }
+
+        /// <summary>
+        /// Checks if a word is a common English word (not a stock symbol)
+        /// </summary>
+        private static bool IsCommonWord(string word)
+        {
+            return CommonWords.Contains(word);
         }
 
         /// <summary>
