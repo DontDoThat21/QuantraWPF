@@ -13,14 +13,14 @@ namespace Quantra.DAL.Services
     {
         private readonly SentimentPriceCorrelationAnalysis _sentimentAnalysis;
         private readonly Dictionary<string, Dictionary<string, double>> _lastSentimentValues;
-        private readonly Models.UserSettings _userSettings;
+        private readonly UserSettings _userSettings;
 
         // Threshold for significant sentiment change that triggers an alert
         private const double DefaultSentimentShiftThreshold = 0.2;
 
-        public SentimentShiftAlertService(Models.UserSettings userSettings = null)
+        public SentimentShiftAlertService(UserSettings userSettings = null)
         {
-            _userSettings = userSettings ?? new Models.UserSettings();
+            _userSettings = userSettings ?? new UserSettings();
             _sentimentAnalysis = new SentimentPriceCorrelationAnalysis();
             _lastSentimentValues = new Dictionary<string, Dictionary<string, double>>();
         }
@@ -135,7 +135,7 @@ namespace Quantra.DAL.Services
             int priority = CalculateAlertPriority(source, Math.Abs(shift));
 
             // Create the alert
-            var alert = new Models.AlertModel
+            var alert = new AlertModel
             {
                 Name = $"Sentiment Shift: {symbol} {source}",
                 Symbol = symbol,

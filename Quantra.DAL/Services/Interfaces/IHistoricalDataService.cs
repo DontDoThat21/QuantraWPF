@@ -1,4 +1,6 @@
-﻿namespace Quantra.DAL.Services.Interfaces
+﻿using Quantra.Models;
+
+namespace Quantra.DAL.Services.Interfaces
 {
     public interface IHistoricalDataService
     {
@@ -9,6 +11,6 @@
         /// <param name="range">The range (e.g., "1mo").</param>
         /// <param name="interval">The interval (e.g., "1d").</param>
         /// <returns>List of HistoricalPrice objects.</returns>
-        Task<List<Models.HistoricalPrice>> GetHistoricalPrices(string symbol, string range, string interval);
+        Task<List<HistoricalPrice>> GetHistoricalPrices(string symbol, string range, string interval);
     }
 }

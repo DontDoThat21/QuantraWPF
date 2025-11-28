@@ -209,7 +209,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <inheritdoc/>
-        public string ExplainRiskMetrics(RiskMetrics riskMetrics)
+        public string ExplainRiskMetrics(Quantra.Models.RiskMetrics riskMetrics)
         {
             if (riskMetrics == null)
             {

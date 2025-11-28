@@ -106,7 +106,7 @@ namespace Quantra.Tests.Services
         {
             // Arrange
             var prediction = CreateTestPrediction("GOOGL");
-            prediction.RiskMetrics = new RiskMetrics
+            prediction.RiskMetrics = new Quantra.Models.RiskMetrics
             {
                 ValueAtRisk = 5.50,
                 MaxDrawdown = 12.00,
@@ -185,7 +185,7 @@ namespace Quantra.Tests.Services
         public void ExplainRiskMetrics_ContainsVaRExplanation()
         {
             // Arrange
-            var metrics = new RiskMetrics
+            var metrics = new Quantra.Models.RiskMetrics
             {
                 ValueAtRisk = 10.00,
                 MaxDrawdown = 20.00,
@@ -205,7 +205,7 @@ namespace Quantra.Tests.Services
         public void ExplainRiskMetrics_HighSharpeRatio_DescribesExcellent()
         {
             // Arrange
-            var metrics = new RiskMetrics
+            var metrics = new Quantra.Models.RiskMetrics
             {
                 ValueAtRisk = 5.00,
                 MaxDrawdown = 10.00,
@@ -224,7 +224,7 @@ namespace Quantra.Tests.Services
         public void ExplainRiskMetrics_HighRiskScore_WarnsAboutRisk()
         {
             // Arrange
-            var metrics = new RiskMetrics
+            var metrics = new Quantra.Models.RiskMetrics
             {
                 ValueAtRisk = 25.00,
                 MaxDrawdown = 40.00,
@@ -473,7 +473,7 @@ namespace Quantra.Tests.Services
                     { "MACD", 0.20 },
                     { "volume", 0.15 }
                 },
-                RiskMetrics = new RiskMetrics
+                RiskMetrics = new Quantra.Models.RiskMetrics
                 {
                     ValueAtRisk = 5.00,
                     MaxDrawdown = 10.00,

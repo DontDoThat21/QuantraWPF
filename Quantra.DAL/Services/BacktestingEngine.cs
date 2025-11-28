@@ -99,7 +99,7 @@ namespace Quantra.DAL.Services
             /// <summary>
             /// Transaction cost model used for this backtest
             /// </summary>
-            public Models.TransactionCostModel CostModel { get; set; }
+            public TransactionCostModel CostModel { get; set; }
 
             /// <summary>
             /// Spread-specific results if this is a spread strategy backtest
@@ -370,10 +370,10 @@ namespace Quantra.DAL.Services
             StrategyProfile strategy,
             double initialCapital = 10000,
             int tradeSize = 1,
-            Models.TransactionCostModel costModel = null)
+            TransactionCostModel costModel = null)
         {
             // Use zero cost model if none provided
-            costModel ??= Models.TransactionCostModel.CreateZeroCostModel();
+            costModel ??= TransactionCostModel.CreateZeroCostModel();
 
             var result = new BacktestResult
             {
@@ -522,10 +522,10 @@ namespace Quantra.DAL.Services
             List<HistoricalPrice> historical,
             SpreadStrategyProfile spreadStrategy,
             double initialCapital = 10000,
-            Models.TransactionCostModel costModel = null)
+            TransactionCostModel costModel = null)
         {
             // Use zero cost model if none provided
-            costModel ??= Models.TransactionCostModel.CreateZeroCostModel();
+            costModel ??= TransactionCostModel.CreateZeroCostModel();
 
             var result = new BacktestResult
             {
@@ -699,7 +699,7 @@ namespace Quantra.DAL.Services
             string assetClass = "auto",
             double initialCapital = 10000,
             int tradeSize = 1,
-            Models.TransactionCostModel costModel = null)
+            TransactionCostModel costModel = null)
         {
             // Get the appropriate historical data based on asset class
             List<HistoricalPrice> historical = await _historicalDataService.GetComprehensiveHistoricalData(symbol, interval, assetClass);
@@ -1173,7 +1173,7 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Calculates transaction costs for spread trades
         /// </summary>
-        private double CalculateSpreadTransactionCosts(SimulatedSpreadTrade spreadTrade, Models.TransactionCostModel costModel)
+        private double CalculateSpreadTransactionCosts(SimulatedSpreadTrade spreadTrade, TransactionCostModel costModel)
         {
             if (spreadTrade?.SpreadConfig?.Legs == null || costModel == null)
                 return 0;

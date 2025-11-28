@@ -30,7 +30,7 @@ namespace Quantra.DAL.Services.Interfaces
         /// </summary>
         /// <param name="riskMetrics">The risk metrics from the prediction</param>
         /// <returns>A plain English explanation of the risk assessment</returns>
-        string ExplainRiskMetrics(RiskMetrics riskMetrics);
+        string ExplainRiskMetrics(Quantra.Models.RiskMetrics riskMetrics);
 
         /// <summary>
         /// Translates a technical indicator name and its weight into plain English.
