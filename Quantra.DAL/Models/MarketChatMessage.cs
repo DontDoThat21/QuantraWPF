@@ -203,6 +203,73 @@ namespace Quantra.Models
         /// </summary>
         public string ChartStatusDisplay => HasChartData ? $"{ChartData?.Symbol} - {ChartData?.PredictedAction} ({ChartData?.Confidence:P0})" : null;
 
+        /// <summary>
+        /// Progress message for Python prediction execution (MarketChat story 9).
+        /// Updated in real-time as the prediction progresses.
+        /// </summary>
+        private string _predictionProgressMessage;
+        public string PredictionProgressMessage
+        {
+            get => _predictionProgressMessage;
+            set
+            {
+                if (SetProperty(ref _predictionProgressMessage, value))
+                {
+                    OnPropertyChanged(nameof(ShowPredictionProgress));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Indicates whether this message is a Python prediction request result (MarketChat story 9).
+        /// </summary>
+        private bool _isPredictionResult;
+        public bool IsPredictionResult
+        {
+            get => _isPredictionResult;
+            set => SetProperty(ref _isPredictionResult, value);
+        }
+
+        /// <summary>
+        /// The symbol for which the prediction was run (MarketChat story 9).
+        /// </summary>
+        private string _predictionSymbol;
+        public string PredictionSymbol
+        {
+            get => _predictionSymbol;
+            set => SetProperty(ref _predictionSymbol, value);
+        }
+
+        /// <summary>
+        /// The model type used for the prediction (MarketChat story 9).
+        /// </summary>
+        private string _predictionModelType;
+        public string PredictionModelType
+        {
+            get => _predictionModelType;
+            set => SetProperty(ref _predictionModelType, value);
+        }
+
+        /// <summary>
+        /// Execution time for the Python prediction in milliseconds (MarketChat story 9).
+        /// </summary>
+        private double _predictionExecutionTimeMs;
+        public double PredictionExecutionTimeMs
+        {
+            get => _predictionExecutionTimeMs;
+            set => SetProperty(ref _predictionExecutionTimeMs, value);
+        }
+
+        /// <summary>
+        /// Indicates whether prediction progress should be displayed (MarketChat story 9).
+        /// </summary>
+        public bool ShowPredictionProgress => !IsFromUser && !string.IsNullOrEmpty(PredictionProgressMessage);
+
+        /// <summary>
+        /// Gets a display string for prediction result status (MarketChat story 9).
+        /// </summary>
+        public string PredictionStatusDisplay => IsPredictionResult ? $"{PredictionSymbol} - {PredictionModelType} ({PredictionExecutionTimeMs:F0}ms)" : null;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -261,6 +328,11 @@ namespace Quantra.Models
         /// <summary>
         /// Chart visualization message with historical + projection data (MarketChat story 8)
         /// </summary>
-        ChartMessage
+        ChartMessage,
+
+        /// <summary>
+        /// Python prediction progress message with streaming updates (MarketChat story 9)
+        /// </summary>
+        PredictionProgress
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using Quantra.Models;
 
 namespace Quantra.DAL.Models
 {
@@ -32,6 +33,11 @@ namespace Quantra.DAL.Models
         /// The model version used to generate the prediction
         /// </summary>
         public string ModelVersion { get; set; }
+
+        /// <summary>
+        /// The actual prediction result, if available (used by ChartGenerationService)
+        /// </summary>
+        public PredictionResult Prediction { get; set; }
 
         /// <summary>
         /// Gets a human-readable description of the cache status for display in chat
@@ -77,7 +83,8 @@ namespace Quantra.DAL.Models
             IsCached = false,
             CacheAge = null,
             PredictionTimestamp = null,
-            ModelVersion = null
+            ModelVersion = null,
+            Prediction = null
         };
     }
 }

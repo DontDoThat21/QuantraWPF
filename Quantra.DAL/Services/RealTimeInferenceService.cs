@@ -7,12 +7,33 @@ using Quantra.Utilities;
 namespace Quantra.DAL.Services
 {
     /// <summary>
+    /// Delegate for reporting progress during Python prediction execution (MarketChat story 9).
+    /// </summary>
+    /// <param name="progressMessage">The progress message to display to the user.</param>
+    public delegate void PredictionProgressCallback(string progressMessage);
+
+    /// <summary>
+    /// Result of a Python prediction execution with detailed status information (MarketChat story 9).
+    /// </summary>
+    public class PythonPredictionExecutionResult
+    {
+        public bool Success { get; set; }
+        public PredictionResult Prediction { get; set; }
+        public string ErrorMessage { get; set; }
+        public double ExecutionTimeMs { get; set; }
+        public string ModelType { get; set; }
+        public bool WasCached { get; set; }
+    }
+
+    /// <summary>
     /// Real-time ML inference service that provides low-latency predictions
     /// for live market data processing and trading decisions.
+    /// Supports Python script orchestration for on-demand predictions (MarketChat story 9).
     /// </summary>
     public class RealTimeInferenceService
     {
         private readonly string _pythonScript;
+        private readonly string _stockPredictorScript;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<PredictionResult>> _pendingRequests;
         private readonly SemaphoreSlim _requestSemaphore;
         private readonly SemaphoreSlim _streamAccessSemaphore;
@@ -31,6 +52,7 @@ namespace Quantra.DAL.Services
         public RealTimeInferenceService(int maxConcurrentRequests = 10)
         {
             _pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "real_time_inference.py");
+            _stockPredictorScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "stock_predictor.py");
             _pendingRequests = new ConcurrentDictionary<string, TaskCompletionSource<PredictionResult>>();
             _requestSemaphore = new SemaphoreSlim(maxConcurrentRequests, maxConcurrentRequests);
             _streamAccessSemaphore = new SemaphoreSlim(1, 1); // Only one stream operation at a time
@@ -450,6 +472,354 @@ namespace Quantra.DAL.Services
             }
         }
 
+        /// <summary>
+        /// Executes Python stock_predictor.py script for on-demand ML predictions with progress reporting (MarketChat story 9).
+        /// This method invokes the Python script, passes parameters via JSON, and streams progress updates back to the caller.
+        /// </summary>
+        /// <param name="symbol">Stock symbol to predict (e.g., "TSLA", "AAPL").</param>
+        /// <param name="modelType">ML model type to use (e.g., "lstm", "gru", "transformer", "random_forest", or "auto").</param>
+        /// <param name="startDate">Optional start date for historical data range.</param>
+        /// <param name="endDate">Optional end date for historical data range.</param>
+        /// <param name="progressCallback">Optional callback for streaming progress updates to the chat UI.</param>
+        /// <param name="cancellationToken">Cancellation token for the operation.</param>
+        /// <returns>PythonPredictionExecutionResult containing the prediction result or error details.</returns>
+        public async Task<PythonPredictionExecutionResult> ExecutePythonPredictionAsync(
+            string symbol,
+            string modelType = "auto",
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            PredictionProgressCallback progressCallback = null,
+            CancellationToken cancellationToken = default)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var result = new PythonPredictionExecutionResult { ModelType = modelType };
+
+            try
+            {
+                // Validate inputs
+                if (string.IsNullOrWhiteSpace(symbol))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Stock symbol is required.";
+                    return result;
+                }
+
+                symbol = symbol.ToUpperInvariant().Trim();
+
+                // Check if stock_predictor.py exists
+                if (!File.Exists(_stockPredictorScript))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Python prediction script not found at: {_stockPredictorScript}";
+                    return result;
+                }
+
+                // Report initial progress
+                progressCallback?.Invoke($"Starting prediction for {symbol}...");
+                await Task.Delay(100, cancellationToken).ConfigureAwait(false); // Allow UI to update
+
+                // Build the request payload
+                var requestData = new Dictionary<string, object>
+                {
+                    ["Symbol"] = symbol,
+                    ["ModelType"] = modelType.ToLowerInvariant(),
+                    ["ArchitectureType"] = modelType.ToLowerInvariant() == "auto" ? "lstm" : modelType.ToLowerInvariant(),
+                    ["UseFeatureEngineering"] = true,
+                    ["FeatureType"] = "balanced",
+                    ["OptimizeHyperparameters"] = false,
+                    ["Features"] = new Dictionary<string, double>
+                    {
+                        ["current_price"] = 100.0,  // Placeholder - will be populated by script
+                        ["volume"] = 1000000.0
+                    }
+                };
+
+                // Add date range if specified
+                if (startDate.HasValue)
+                {
+                    requestData["StartDate"] = startDate.Value.ToString("yyyy-MM-dd");
+                }
+                if (endDate.HasValue)
+                {
+                    requestData["EndDate"] = endDate.Value.ToString("yyyy-MM-dd");
+                }
+
+                // Create temp files for input/output
+                string tempInputPath = Path.GetTempFileName();
+                string tempOutputPath = Path.GetTempFileName();
+
+                try
+                {
+                    // Write request to temp file
+                    var jsonRequest = JsonSerializer.Serialize(requestData);
+                    await File.WriteAllTextAsync(tempInputPath, jsonRequest, cancellationToken).ConfigureAwait(false);
+
+                    progressCallback?.Invoke("Fetching historical data...");
+                    await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+
+                    // Set up Python process
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "python3",
+                        Arguments = $"\"{_stockPredictorScript}\" \"{tempInputPath}\" \"{tempOutputPath}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(_stockPredictorScript)
+                    };
+
+                    // Fallback to python if python3 is not available
+                    try
+                    {
+                        using (var testProcess = Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "python3",
+                            Arguments = "--version",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            CreateNoWindow = true
+                        }))
+                        {
+                            testProcess?.WaitForExit(1000);
+                        }
+                    }
+                    catch
+                    {
+                        psi.FileName = "python";
+                    }
+
+                    progressCallback?.Invoke($"Running {GetModelDisplayName(modelType)} model...");
+                    await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+
+                    using (var process = Process.Start(psi))
+                    {
+                        if (process == null)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Failed to start Python process.";
+                            return result;
+                        }
+
+                        // Read output streams asynchronously
+                        var outputTask = process.StandardOutput.ReadToEndAsync();
+                        var errorTask = process.StandardError.ReadToEndAsync();
+
+                        // Wait for process to complete with timeout
+                        var processTask = process.WaitForExitAsync(cancellationToken);
+                        var timeoutTask = Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+
+                        progressCallback?.Invoke("Processing prediction...");
+
+                        var completedTask = await Task.WhenAny(processTask, timeoutTask).ConfigureAwait(false);
+                        if (completedTask == timeoutTask)
+                        {
+                            try
+                            {
+                                process.Kill();
+                            }
+                            catch { }
+
+                            result.Success = false;
+                            result.ErrorMessage = "Prediction timed out after 5 minutes.";
+                            return result;
+                        }
+
+                        var stdOutput = await outputTask.ConfigureAwait(false);
+                        var stdError = await errorTask.ConfigureAwait(false);
+
+                        if (process.ExitCode != 0)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = FormatPythonError(stdError, stdOutput);
+                            return result;
+                        }
+
+                        progressCallback?.Invoke("Parsing prediction results...");
+
+                        // Read prediction result from output file
+                        if (!File.Exists(tempOutputPath))
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Python script did not produce output file.";
+                            return result;
+                        }
+
+                        var outputJson = await File.ReadAllTextAsync(tempOutputPath, cancellationToken).ConfigureAwait(false);
+                        if (string.IsNullOrWhiteSpace(outputJson))
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Python script produced empty output.";
+                            return result;
+                        }
+
+                        // Parse the prediction result
+                        var pythonResult = JsonSerializer.Deserialize<PythonStockPredictorResult>(outputJson, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (pythonResult == null)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Failed to parse prediction result.";
+                            return result;
+                        }
+
+                        // Convert to PredictionResult
+                        result.Prediction = new PredictionResult
+                        {
+                            Symbol = symbol,
+                            Action = pythonResult.Action ?? "HOLD",
+                            Confidence = pythonResult.Confidence,
+                            TargetPrice = pythonResult.TargetPrice,
+                            CurrentPrice = pythonResult.TargetPrice * 0.95, // Estimate if not provided
+                            PredictionDate = DateTime.Now,
+                            ModelType = pythonResult.ModelType ?? modelType,
+                            FeatureWeights = pythonResult.Weights ?? new Dictionary<string, double>()
+                        };
+
+                        // Map time series if available
+                        if (pythonResult.TimeSeries != null)
+                        {
+                            result.Prediction.TimeSeries = new TimeSeriesPrediction
+                            {
+                                PricePredictions = pythonResult.TimeSeries.Prices ?? new List<double>(),
+                                Confidence = pythonResult.TimeSeries.Confidence,
+                                TimePoints = pythonResult.TimeSeries.Dates?.Select(d =>
+                                    DateTime.TryParse(d, out var dt) ? dt : DateTime.Now.AddDays(1)).ToList() ?? new List<DateTime>()
+                            };
+                        }
+
+                        // Map risk metrics if available
+                        if (pythonResult.Risk != null)
+                        {
+                            result.Prediction.RiskMetrics = new Quantra.Models.RiskMetrics
+                            {
+                                ValueAtRisk = pythonResult.Risk.Var,
+                                MaxDrawdown = pythonResult.Risk.MaxDrawdown,
+                                SharpeRatio = pythonResult.Risk.SharpeRatio,
+                                RiskScore = pythonResult.Risk.RiskScore
+                            };
+                            result.Prediction.RiskScore = pythonResult.Risk.RiskScore;
+                            result.Prediction.ValueAtRisk = pythonResult.Risk.Var;
+                            result.Prediction.MaxDrawdown = pythonResult.Risk.MaxDrawdown;
+                            result.Prediction.SharpeRatio = pythonResult.Risk.SharpeRatio;
+                        }
+
+                        // Map detected patterns if available
+                        if (pythonResult.Patterns != null)
+                        {
+                            result.Prediction.DetectedPatterns = pythonResult.Patterns.Select(p => new TechnicalPattern
+                            {
+                                PatternName = p.Name,
+                                PatternStrength = p.Strength,
+                                ExpectedOutcome = p.Outcome,
+                                DetectionDate = DateTime.TryParse(p.DetectionDate, out var dt) ? dt : DateTime.Now,
+                                HistoricalAccuracy = p.HistoricalAccuracy
+                            }).ToList();
+                        }
+
+                        result.Success = true;
+                        result.ModelType = pythonResult.ModelType ?? modelType;
+
+                        progressCallback?.Invoke($"Prediction complete! {result.Prediction.Action} with {result.Prediction.Confidence:P0} confidence.");
+                    }
+                }
+                finally
+                {
+                    // Cleanup temp files
+                    try
+                    {
+                        if (File.Exists(tempInputPath)) File.Delete(tempInputPath);
+                        if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                result.Success = false;
+                result.ErrorMessage = "Prediction was cancelled.";
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = FormatExceptionMessage(ex);
+                Console.WriteLine($"Error in ExecutePythonPredictionAsync: {ex}");
+            }
+            finally
+            {
+                stopwatch.Stop();
+                result.ExecutionTimeMs = stopwatch.Elapsed.TotalMilliseconds;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets a user-friendly display name for the model type.
+        /// </summary>
+        private static string GetModelDisplayName(string modelType)
+        {
+            return modelType?.ToLowerInvariant() switch
+            {
+                "lstm" => "LSTM",
+                "gru" => "GRU",
+                "transformer" => "Transformer",
+                "random_forest" => "Random Forest",
+                "auto" => "Auto-selected ML",
+                _ => modelType ?? "ML"
+            };
+        }
+
+        /// <summary>
+        /// Formats Python error output into a user-friendly message.
+        /// </summary>
+        private static string FormatPythonError(string stdError, string stdOutput)
+        {
+            if (!string.IsNullOrWhiteSpace(stdError))
+            {
+                // Extract the most relevant error message
+                var lines = stdError.Split('\n');
+                var errorLines = lines.Where(l =>
+                    l.Contains("Error") ||
+                    l.Contains("Exception") ||
+                    l.Contains("error:") ||
+                    l.Contains("ModuleNotFoundError")).ToList();
+
+                if (errorLines.Any())
+                {
+                    return $"Python error: {string.Join(" ", errorLines.Take(2)).Trim()}";
+                }
+
+                return $"Python error: {stdError.Trim().Substring(0, Math.Min(200, stdError.Length))}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(stdOutput))
+            {
+                return $"Script output: {stdOutput.Trim().Substring(0, Math.Min(200, stdOutput.Length))}";
+            }
+
+            return "Unknown Python execution error.";
+        }
+
+        /// <summary>
+        /// Formats an exception into a user-friendly message.
+        /// </summary>
+        private static string FormatExceptionMessage(Exception ex)
+        {
+            if (ex is FileNotFoundException)
+            {
+                return "Python script not found. Please ensure the ML scripts are properly installed.";
+            }
+            if (ex.Message.Contains("python"))
+            {
+                return "Python is not installed or not available in the system PATH.";
+            }
+            return $"An error occurred during prediction: {ex.Message}";
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -506,5 +876,56 @@ namespace Quantra.DAL.Services
         public double ValueAtRisk { get; set; }
         public double MaxDrawdown { get; set; }
         public double SharpeRatio { get; set; }
+    }
+
+    /// <summary>
+    /// Result structure for stock_predictor.py output deserialization (MarketChat story 9).
+    /// </summary>
+    public class PythonStockPredictorResult
+    {
+        public string Action { get; set; }
+        public double Confidence { get; set; }
+        public double TargetPrice { get; set; }
+        public Dictionary<string, double> Weights { get; set; }
+        public PythonTimeSeriesData TimeSeries { get; set; }
+        public PythonRiskData Risk { get; set; }
+        public List<PythonPatternData> Patterns { get; set; }
+        public string ModelType { get; set; }
+        public string ArchitectureType { get; set; }
+        public bool FeatureEngineering { get; set; }
+        public string Error { get; set; }
+    }
+
+    /// <summary>
+    /// Time series data from Python stock predictor.
+    /// </summary>
+    public class PythonTimeSeriesData
+    {
+        public List<double> Prices { get; set; }
+        public List<string> Dates { get; set; }
+        public double Confidence { get; set; }
+    }
+
+    /// <summary>
+    /// Risk metrics data from Python stock predictor.
+    /// </summary>
+    public class PythonRiskData
+    {
+        public double Var { get; set; }
+        public double MaxDrawdown { get; set; }
+        public double SharpeRatio { get; set; }
+        public double RiskScore { get; set; }
+    }
+
+    /// <summary>
+    /// Technical pattern data from Python stock predictor.
+    /// </summary>
+    public class PythonPatternData
+    {
+        public string Name { get; set; }
+        public double Strength { get; set; }
+        public string Outcome { get; set; }
+        public string DetectionDate { get; set; }
+        public double HistoricalAccuracy { get; set; }
     }
 }
