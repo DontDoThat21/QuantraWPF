@@ -21,6 +21,7 @@ namespace Quantra.ViewModels
         private readonly HistoricalDataService _historicalDataService;
         private readonly CustomBenchmarkService _customBenchmarkService;
         private readonly IUserSettingsService _userSettingsService;
+        private readonly IAlphaVantageService _alphaVantageService;
 
         private BacktestingEngine.BacktestResult _currentResult;
         private List<HistoricalPrice> _historicalData;
@@ -81,11 +82,13 @@ namespace Quantra.ViewModels
         public BacktestResultsViewModel(
             HistoricalDataService historicalDataService,
             CustomBenchmarkService customBenchmarkService,
-            IUserSettingsService userSettingsService)
+            IUserSettingsService userSettingsService,
+            IAlphaVantageService alphaVantageService)
         {
             _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
             _customBenchmarkService = customBenchmarkService ?? throw new ArgumentNullException(nameof(customBenchmarkService));
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+            _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
 
             _benchmarkData = new List<BenchmarkComparisonData>();
             CustomBenchmarks = new ObservableCollection<CustomBenchmark>();
@@ -150,6 +153,11 @@ namespace Quantra.ViewModels
         /// User settings service
         /// </summary>
         public IUserSettingsService UserSettingsService => _userSettingsService;
+
+        /// <summary>
+        /// Alpha Vantage service
+        /// </summary>
+        public IAlphaVantageService AlphaVantageService => _alphaVantageService;
 
         #endregion
 

@@ -1140,11 +1140,12 @@ namespace Quantra
                 var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
                 var customBenchmarkService = new CustomBenchmarkService(historicalDataService);
                 
-                // Create ViewModel with proper dependency injection
+                // Create ViewModel with proper dependency injection including IAlphaVantageService
                 var viewModel = new BacktestResultsViewModel(
                     historicalDataService,
                     customBenchmarkService,
-                    _userSettingsService);
+                    _userSettingsService,
+                    _alphaVantageService);
                 
                 var backtestResults = new Views.Backtesting.BacktestResults(viewModel);
                     

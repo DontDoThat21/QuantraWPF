@@ -1543,7 +1543,8 @@ namespace Quantra.Views.Backtesting
             
             var manager = new CustomBenchmarkManager(
                 _viewModel.CustomBenchmarkService,
-                _viewModel.UserSettingsService as UserSettingsService);
+                _viewModel.UserSettingsService as UserSettingsService,
+                _viewModel.AlphaVantageService as AlphaVantageService);
             bool? result = manager.ShowDialog();
             
             if (result == true && manager.SelectedBenchmark != null)

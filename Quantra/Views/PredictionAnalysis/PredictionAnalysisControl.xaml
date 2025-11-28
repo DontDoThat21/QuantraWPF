@@ -16,12 +16,18 @@
 
     <!-- Add reference to the converter in resources section -->
     <UserControl.Resources>
-        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
-        <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
-        <converters:GreaterThanConverter x:Key="GreaterThanConverter"/>
-        <converters:LessThanConverter x:Key="LessThanConverter"/>
-        <!-- Add duration resources for consistent animations -->
-        <Duration x:Key="StandardAnimationDuration">0:0:0.3</Duration>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/EnhancedStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+            <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
+            <converters:GreaterThanConverter x:Key="GreaterThanConverter"/>
+            <converters:LessThanConverter x:Key="LessThanConverter"/>
+            <!-- Add duration resources for consistent animations -->
+            <Duration x:Key="StandardAnimationDuration">0:0:0.3</Duration>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <!-- Main grid needs explicit sizing to ensure proper rendering -->
@@ -49,13 +55,15 @@
             <TextBlock Grid.Column="0" Text="Prediction Analysis" FontSize="22" 
                        FontWeight="Bold" Foreground="White" Margin="5,0,0,10"/>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
 
                 <!-- Selected Trading Strategy -->
                 <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-        CornerRadius="3" Padding="8,4" Width="231">
-                    <ComboBox x:Name="TradingStrategy" Height="20" ToolTip="Select this prediction control's trading strategy"
-                              SelectionChanged="TradingStrategy_SelectionChanged" Margin="21,0,22,0">
+                        CornerRadius="3" Padding="6,6" MinWidth="200">
+                    <ComboBox x:Name="TradingStrategy" ToolTip="Select this prediction control's trading strategy"
+                              SelectionChanged="TradingStrategy_SelectionChanged"
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              VerticalContentAlignment="Center">
                         <ComboBoxItem Content="SMA Crossover" Tag="SMA"/>
                         <ComboBoxItem Content="RSI Divergence" Tag="RSI"/>
                         <ComboBoxItem Content="Bollinger Bands" Tag="BB"/>
@@ -65,11 +73,13 @@
 
                 <!-- Update Rate -->
                 <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-        CornerRadius="3" Padding="8,4" Width="133">
+                        CornerRadius="3" Padding="6,6" MinWidth="130">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Update Rate" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="AutoModeToggle2" Width="60" Height="20"
-                                  ToolTip="Enable/Disable Data updates every 15 minutes during trading hours, or if data is > 15m old.">
+                        <ComboBox x:Name="AutoModeToggle2" MinWidth="60"
+                                  ToolTip="Enable/Disable Data updates every 15 minutes during trading hours, or if data is > 15m old."
+                                  Style="{StaticResource EnhancedComboBoxStyle}"
+                                  VerticalContentAlignment="Center">
                             <ComboBoxItem Content="15m" Tag="15m" IsSelected="True"/>
                             <ComboBoxItem Content="30m" Tag="30m"/>
                             <ComboBoxItem Content="1h" Tag="1h"/>
@@ -81,7 +91,7 @@
 
                 <!-- Auto Mode Toggle -->
                 <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-                        CornerRadius="3" Padding="8,4">
+                        CornerRadius="3" Padding="6,6">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Auto Mode" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ToggleButton x:Name="AutoModeToggle" Width="40" Height="20"
@@ -140,8 +150,8 @@
             <StackPanel Grid.Row="0" Grid.Column="0" Margin="10,5">
                 <TextBlock Text="Symbol List:" Foreground="White" Margin="0,5"/>
                 <ComboBox x:Name="SymbolFilterComboBox" Margin="0,0,5,0"
-                          Background="#2D2D42" Foreground="Black" BorderBrush="#3E3E56"
-                          SelectionChanged="SymbolFilterComboBox_SelectionChanged">
+                          SelectionChanged="SymbolFilterComboBox_SelectionChanged"
+                          Style="{StaticResource EnhancedComboBoxStyle}">
                     <ComboBoxItem Content="All Symbols"/>
                     <ComboBoxItem Content="Top Market Cap" IsSelected="True"/>
                     <ComboBoxItem Content="Tech Sector"/>
@@ -156,7 +166,7 @@
             <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,5">
                 <TextBlock Text="Timeframe:" Foreground="White" Margin="0,5"/>
                 <ComboBox x:Name="TimeframeComboBox" Margin="0,0,5,0"
-                          Background="#2D2D42" Foreground="Black" BorderBrush="#3E3E56">
+                          Style="{StaticResource EnhancedComboBoxStyle}">
                     <ComboBoxItem Content="1 Day" Tag="1day"/>
                     <ComboBoxItem Content="1 Week" Tag="1week"/>
                     <ComboBoxItem Content="1 Month" Tag="1month" IsSelected="True"/>
@@ -176,22 +186,38 @@
                       Orientation="Horizontal" Margin="10,10,10,10">
                 <TextBlock Text="Indicators:" Foreground="White" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <WrapPanel>
-                    <CheckBox x:Name="VwapCheckBox" Content="VWAP" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="MacdCheckBox" Content="MACD" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="RsiCheckBox" Content="RSI" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="BollingerCheckBox" Content="Bollinger" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="MaCheckBox" Content="Moving Avg" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="VolumeCheckBox" Content="Volume" Foreground="White" Margin="5,0" IsChecked="True"/>
-                    <CheckBox x:Name="BreadthThrustCheckBox" Content="Breadth Thrust" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="AdxCheckBox" Content="ADX" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="RocCheckBox" Content="ROC" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="UoCheckBox" Content="Ult. Osc" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="BbpCheckBox" Content="Bull/Bear" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="CciCheckBox" Content="CCI" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="AtrCheckBox" Content="ATR" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="WilliamsRCheckBox" Content="Williams %R" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="StochCheckBox" Content="Stochastic" Foreground="White" Margin="5,0" IsChecked="False"/>
-                    <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Foreground="White" Margin="5,0" IsChecked="False"/>
+                    <CheckBox x:Name="VwapCheckBox" Content="VWAP" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="MacdCheckBox" Content="MACD" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="RsiCheckBox" Content="RSI" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="BollingerCheckBox" Content="Bollinger" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="MaCheckBox" Content="Moving Avg" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="VolumeCheckBox" Content="Volume" Foreground="White" Margin="5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="BreadthThrustCheckBox" Content="Breadth Thrust" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="AdxCheckBox" Content="ADX" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="RocCheckBox" Content="ROC" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="UoCheckBox" Content="Ult. Osc" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="BbpCheckBox" Content="Bull/Bear" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="CciCheckBox" Content="CCI" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="AtrCheckBox" Content="ATR" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="WilliamsRCheckBox" Content="Williams %R" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="StochCheckBox" Content="Stochastic" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Foreground="White" Margin="5,0" IsChecked="False"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
                 </WrapPanel>
             </StackPanel>
 
@@ -199,7 +225,7 @@
             <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="10,10,10,10">
                 <TextBlock Text="Min Confidence:" Foreground="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
                 <ComboBox x:Name="ConfidenceComboBox" Width="60"
-                          Background="#2D2D42" Foreground="Black" BorderBrush="#3E3E56">
+                          Style="{StaticResource EnhancedComboBoxStyle}">
                     <ComboBoxItem Content="50%" Tag="0.5"/>
                     <ComboBoxItem Content="60%" Tag="0.6" IsSelected="True"/>
                     <ComboBoxItem Content="70%" Tag="0.7"/>
