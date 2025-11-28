@@ -667,13 +667,16 @@ namespace Quantra.DAL.Services
                         }
 
                         // Convert to PredictionResult
+                        // Create prediction result
+                        // Note: CurrentPrice is estimated as 95% of TargetPrice if not available
+                        // This is a fallback when the Python script doesn't provide current market price
                         result.Prediction = new PredictionResult
                         {
                             Symbol = symbol,
                             Action = pythonResult.Action ?? "HOLD",
                             Confidence = pythonResult.Confidence,
                             TargetPrice = pythonResult.TargetPrice,
-                            CurrentPrice = pythonResult.TargetPrice * 0.95, // Estimate if not provided
+                            CurrentPrice = pythonResult.TargetPrice > 0 ? pythonResult.TargetPrice * 0.95 : 0,
                             PredictionDate = DateTime.Now,
                             ModelType = pythonResult.ModelType ?? modelType,
                             FeatureWeights = pythonResult.Weights ?? new Dictionary<string, double>()
@@ -793,12 +796,20 @@ namespace Quantra.DAL.Services
                     return $"Python error: {string.Join(" ", errorLines.Take(2)).Trim()}";
                 }
 
-                return $"Python error: {stdError.Trim().Substring(0, Math.Min(200, stdError.Length))}";
+                var trimmedError = stdError.Trim();
+                if (!string.IsNullOrEmpty(trimmedError))
+                {
+                    return $"Python error: {trimmedError.Substring(0, Math.Min(200, trimmedError.Length))}";
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(stdOutput))
             {
-                return $"Script output: {stdOutput.Trim().Substring(0, Math.Min(200, stdOutput.Length))}";
+                var trimmedOutput = stdOutput.Trim();
+                if (!string.IsNullOrEmpty(trimmedOutput))
+                {
+                    return $"Script output: {trimmedOutput.Substring(0, Math.Min(200, trimmedOutput.Length))}";
+                }
             }
 
             return "Unknown Python execution error.";

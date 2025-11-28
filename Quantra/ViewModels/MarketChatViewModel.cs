@@ -223,7 +223,8 @@ namespace Quantra.ViewModels
                 if (isPredictionRequest)
                 {
                     // Process Python prediction request with progress updates (MarketChat story 9)
-                    _logger.LogInformation("Detected Python prediction request: {Message}", userMessage.Substring(0, Math.Min(50, userMessage.Length)));
+                    var truncatedMessage = userMessage.Length > 50 ? userMessage.Substring(0, 50) : userMessage;
+                    _logger.LogInformation("Detected Python prediction request: {Message}", truncatedMessage);
                     
                     // Create progress callback that updates the loading message
                     PredictionProgressCallback progressCallback = (progressMessage) =>
@@ -370,7 +371,8 @@ namespace Quantra.ViewModels
                     StatusMessage = "Ready for your next question";
                 }
 
-                _logger.LogInformation($"Successfully processed {(isPredictionRequest ? "Python prediction" : isTradingPlan ? "trading plan" : isChartResponse ? "chart" : isComparisonResponse ? "comparison" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
+                var logTruncatedMsg = userMessage.Length > 50 ? userMessage.Substring(0, 50) : userMessage;
+                _logger.LogInformation($"Successfully processed {(isPredictionRequest ? "Python prediction" : isTradingPlan ? "trading plan" : isChartResponse ? "chart" : isComparisonResponse ? "comparison" : "market analysis")} question: {logTruncatedMsg}...");
             }
             catch (Exception ex)
             {

@@ -362,7 +362,7 @@ namespace Quantra.DAL.Services
                         {
                             ["symbol_hash"] = symbol.GetHashCode(),
                             ["model_type_hash"] = modelType.GetHashCode(),
-                            ["timestamp"] = DateTime.Now.Ticks / 10000000.0 // Seconds since epoch, rounded
+                            ["timestamp"] = DateTime.Now.Ticks / TimeSpan.TicksPerSecond // Seconds since epoch
                         });
 
                         _predictionCacheService.CachePrediction(symbol, result.ModelType ?? modelType, inputHash, result.Prediction);
