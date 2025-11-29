@@ -6,6 +6,7 @@ using Quantra.DAL.Services.Interfaces;
 using Quantra.Repositories;
 using Quantra.Utilities;
 using Quantra.ViewModels;
+using Quantra.Views.FundamentalData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -612,6 +613,9 @@ namespace Quantra
                             "Backtest Chart" => CreateBacktestingCard(), // Accept alias
                             "Market Chat" => CreateMarketChatCard(),
                             "Spreads Explorer" => CreateSpreadsExplorerCard(),
+                            "Company Overview" => CreateCompanyOverviewCard(),
+                            "Cash Flow" => CreateCashFlowCard(),
+                            "Earnings" => CreateEarningsCard(),
                             _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                         };
                     }
@@ -1056,6 +1060,150 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Spreads Explorer",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateCompanyOverviewCard()
+        {
+            try
+            {
+                // Create a new instance of the CompanyOverviewControl
+                var companyOverviewControl = new Views.FundamentalData.CompanyOverviewControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                companyOverviewControl.Width = double.NaN; // Auto width
+                companyOverviewControl.Height = double.NaN; // Auto height
+                companyOverviewControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                companyOverviewControl.VerticalAlignment = VerticalAlignment.Stretch;
+                companyOverviewControl.MinWidth = 400;
+                companyOverviewControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                companyOverviewControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                companyOverviewControl.Arrange(new Rect(0, 0, companyOverviewControl.DesiredSize.Width, companyOverviewControl.DesiredSize.Height));
+                companyOverviewControl.UpdateLayout();
+
+                return companyOverviewControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Company Overview",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateCashFlowCard()
+        {
+            try
+            {
+                // Create a new instance of the CashFlowControl
+                var cashFlowControl = new Views.FundamentalData.CashFlowControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                cashFlowControl.Width = double.NaN; // Auto width
+                cashFlowControl.Height = double.NaN; // Auto height
+                cashFlowControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                cashFlowControl.VerticalAlignment = VerticalAlignment.Stretch;
+                cashFlowControl.MinWidth = 400;
+                cashFlowControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                cashFlowControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                cashFlowControl.Arrange(new Rect(0, 0, cashFlowControl.DesiredSize.Width, cashFlowControl.DesiredSize.Height));
+                cashFlowControl.UpdateLayout();
+
+                return cashFlowControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Cash Flow",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateEarningsCard()
+        {
+            try
+            {
+                // Create a new instance of the EarningsControl
+                var earningsControl = new Views.FundamentalData.EarningsControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                earningsControl.Width = double.NaN; // Auto width
+                earningsControl.Height = double.NaN; // Auto height
+                earningsControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                earningsControl.VerticalAlignment = VerticalAlignment.Stretch;
+                earningsControl.MinWidth = 400;
+                earningsControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                earningsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                earningsControl.Arrange(new Rect(0, 0, earningsControl.DesiredSize.Width, earningsControl.DesiredSize.Height));
+                earningsControl.UpdateLayout();
+
+                return earningsControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Earnings",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
@@ -1902,6 +2050,9 @@ namespace Quantra
                     "Backtest Chart" => CreateBacktestingCard(), // Accept alias
                     "Market Chat" => CreateMarketChatCard(),
                     "Spreads Explorer" => CreateSpreadsExplorerCard(),
+                    "Company Overview" => CreateCompanyOverviewCard(),
+                    "Cash Flow" => CreateCashFlowCard(),
+                    "Earnings" => CreateEarningsCard(),
                     _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                 };
                 

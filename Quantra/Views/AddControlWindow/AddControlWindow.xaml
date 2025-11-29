@@ -135,6 +135,27 @@
                                                 <TextBlock Text="Spreads Explorer"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add Company Overview control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Domain" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Company Overview"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Cash Flow control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="CashMultiple" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Cash Flow"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Earnings control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="TrendingUp" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Earnings"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>

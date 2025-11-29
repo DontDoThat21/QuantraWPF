@@ -219,7 +219,7 @@ namespace Quantra.DAL.Services
 
             // Try to get default profile
             var entity = await _context.SettingsProfiles
-   .AsNoTracking()
+            .AsNoTracking()
              .FirstOrDefaultAsync(p => p.IsDefault);
 
             if (entity != null)
