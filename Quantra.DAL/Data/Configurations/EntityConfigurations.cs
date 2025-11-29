@@ -59,6 +59,13 @@ namespace Quantra.DAL.Data.Configurations
                    .WithMany(c => c.Predictions)
                    .HasForeignKey(s => s.ChatHistoryId)
                    .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure double properties to use REAL (float) type to match existing database schema
+            // This prevents casting errors when database uses FLOAT (System.Single)
+            builder.Property(s => s.Confidence).HasColumnType("real");
+            builder.Property(s => s.CurrentPrice).HasColumnType("real");
+            builder.Property(s => s.TargetPrice).HasColumnType("real");
+            builder.Property(s => s.PotentialReturn).HasColumnType("real");
         }
     }
 
@@ -74,6 +81,9 @@ namespace Quantra.DAL.Data.Configurations
                  .WithMany(s => s.Indicators)
              .HasForeignKey(p => p.PredictionId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure double property to use REAL (float) type to match existing database schema
+            builder.Property(p => p.IndicatorValue).HasColumnType("real");
         }
     }
 
