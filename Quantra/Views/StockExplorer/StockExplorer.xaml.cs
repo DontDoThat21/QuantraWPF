@@ -1237,12 +1237,6 @@ namespace Quantra.Controls
             if (string.IsNullOrEmpty(symbol))
                 return;
 
-            // Set busy cursor during chart data loading on UI thread
-            await Dispatcher.InvokeAsync(() =>
-            {
-                Mouse.OverrideCursor = Cursors.Wait;
-            });
-            
             try
             {
                 // Use the ViewModel method to load chart data for the time range
@@ -1252,14 +1246,6 @@ namespace Quantra.Controls
             {
                 //DatabaseMonolith.Log("Error", $"Error loading chart data for {symbol} with time range {timeRange}", ex.ToString());
                 throw;
-            }
-            finally
-            {
-                // Always reset cursor back to normal on UI thread
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    Mouse.OverrideCursor = null;
-                });
             }
         }
 

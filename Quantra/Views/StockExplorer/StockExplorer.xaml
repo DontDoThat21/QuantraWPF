@@ -20,7 +20,7 @@ MinWidth="900" MinHeight="700">
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" MinHeight="50"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -34,9 +34,9 @@ MinWidth="900" MinHeight="700">
         </Grid.ColumnDefinitions>
 
         <!-- Symbol Selection Mode and Search -->
-        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="0,0,0,5">
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="0,0,0,10">
             <!-- Mode Selection and Individual Asset Controls Row -->
-            <Grid Margin="0,0,0,2">
+            <Grid Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
@@ -53,7 +53,7 @@ MinWidth="900" MinHeight="700">
                                FontWeight="Bold"/>
                     <ComboBox x:Name="SelectionModeComboBox"
                               Width="200"
-                              Height="32"
+                              Height="36"
                               SelectedIndex="0"
                               SelectionChanged="SelectionModeComboBox_SelectionChanged"
                               Style="{StaticResource EnhancedComboBoxStyle}">
@@ -191,9 +191,9 @@ MinWidth="900" MinHeight="700">
                                Style="{StaticResource EnhancedTextBlockStyle}" 
                                Margin="0,0,10,0" 
                                FontWeight="Bold"/>
-                    <Grid Width="150" Height="32">
+                    <Grid Width="150" Height="36">
                         <TextBox x:Name="SymbolSearchTextBox"
-                                    Height="32"
+                                    Height="36"
                                     VerticalContentAlignment="Center"
                                     Style="{StaticResource EnhancedTextBoxStyle}"
                                     TextChanged="SymbolSearchTextBox_TextChanged"
@@ -250,7 +250,7 @@ MinWidth="900" MinHeight="700">
                             Content="Search" 
                             Margin="5,0,0,0"
                             Padding="8,5"
-                            Height="32"
+                            Height="36"
                             MinWidth="60"
                             Click="RefreshButton_Click"
                             Style="{StaticResource EnhancedButtonStyle}"
@@ -270,7 +270,7 @@ MinWidth="900" MinHeight="700">
             </Grid>
 
             <!-- Mode Status Row -->
-            <StackPanel x:Name="ModeStatusPanel" Orientation="Horizontal" Margin="0,2,0,0" Visibility="Collapsed">
+            <StackPanel x:Name="ModeStatusPanel" Orientation="Horizontal" Margin="0,5,0,0" Visibility="Collapsed">
                 <TextBlock x:Name="ModeStatusText" 
                            Text="Loading..." 
                            Style="{StaticResource EnhancedSmallTextBlockStyle}" 

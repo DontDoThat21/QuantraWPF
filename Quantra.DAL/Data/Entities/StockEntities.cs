@@ -32,9 +32,6 @@ namespace Quantra.DAL.Data.Entities
     [Table("StockDataCache")]
     public class StockDataCache
     {
-        [Key]
-        public int Id { get; set; }
-
         [Required]
         [MaxLength(20)]
         public string Symbol { get; set; }
@@ -52,8 +49,6 @@ namespace Quantra.DAL.Data.Entities
         [Required]
         [Column("CacheTime")]
         public DateTime CachedAt { get; set; }
-
-        public DateTime? ExpiresAt { get; set; }
     }
 
     /// <summary>

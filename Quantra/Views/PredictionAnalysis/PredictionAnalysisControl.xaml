@@ -527,7 +527,7 @@
                 <StackPanel x:Name="sentimentVisualizationContainer" Margin="0" />
             </TabItem>
 
-            <TabItem Header="Technical Indicators" Name="IndicatorsTabItem" FontWeight="SemiBold" Foreground="Black"
+            <TabItem Header="Technical Indicators" Name="IndicatorsTabItem" FontWeight="SemiBold" Foreground="White"
                      Style="{StaticResource TabItemStyle}">
                 <Grid x:Name="indicatorContainer" MinHeight="200"/>
             </TabItem>

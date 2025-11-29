@@ -931,6 +931,9 @@ namespace Quantra.Controls
         {
             if (sender is Button button && button.Tag is string timeRange)
             {
+                // Set waiting cursor immediately on UI thread
+                Mouse.OverrideCursor = Cursors.Wait;
+                
                 try
                 {
                     // Update the current time range in the ViewModel
@@ -949,6 +952,11 @@ namespace Quantra.Controls
                 {
                     //DatabaseMonolith.Log("Error", $"Error changing time range to {timeRange}", ex.ToString());
                     CustomModal.ShowError($"Error changing time range: {ex.Message}", "Error", Window.GetWindow(this));
+                }
+                finally
+                {
+                    // Always reset cursor back to normal on UI thread
+                    Mouse.OverrideCursor = null;
                 }
             }
         }

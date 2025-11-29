@@ -182,7 +182,7 @@ namespace Quantra.Repositories
 
         /// <summary>
         /// Returns historical price data for a symbol, ordered by date ascending (async version)
-        /// Uses Entity Framework Core to query the HistoricalPrices table.
+        /// Retrieves data from StockDataCache table which stores serialized historical prices.
         /// </summary>
         /// <param name="symbol">Stock symbol</param>
         /// <returns>List of historical prices ordered by date</returns>
@@ -190,17 +190,38 @@ namespace Quantra.Repositories
         {
             try
             {
-                // Query the HistoricalPrices table using EF Core with parameterized SQL
-                // Using FromSqlInterpolated for safe parameterization
-                var prices = await _context.Database
-                    .SqlQuery<HistoricalPrice>($@"
-                         SELECT Date, Open, High, Low, Close, Volume, AdjClose 
-                         FROM HistoricalPrices 
-                         WHERE Symbol = {symbol} 
-                         ORDER BY Date ASC")
-                    .ToListAsync();
+                // Query StockDataCache for the most recent cached data for this symbol
+                var cacheEntry = await _context.StockDataCache
+                    .AsNoTracking()
+                    .Where(c => c.Symbol == symbol)
+                    .OrderByDescending(c => c.CachedAt)
+                    .FirstOrDefaultAsync();
 
-                return prices;
+                if (cacheEntry == null)
+                {
+                    Console.WriteLine($"No cached historical data found for {symbol}");
+                    return new List<HistoricalPrice>();
+                }
+
+                // Deserialize the cached data
+                var storedData = cacheEntry.Data;
+                string jsonData;
+
+                // Check if data is compressed and decompress if needed
+                if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                {
+                    jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                }
+                else
+                {
+                    jsonData = storedData;
+                }
+
+                // Deserialize from JSON to HistoricalPrice list
+                var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+
+                // Sort by date ascending as expected
+                return prices?.OrderBy(p => p.Date).ToList() ?? new List<HistoricalPrice>();
             }
             catch (Exception ex)
             {

@@ -81,9 +81,12 @@ namespace Quantra.DAL.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<StockDataCache> builder)
         {
+            // Composite primary key matching database schema
+            builder.HasKey(s => new { s.Symbol, s.TimeRange, s.Interval });
+
             // Indexes
             builder.HasIndex(s => new { s.Symbol, s.TimeRange });
-            builder.HasIndex(s => s.ExpiresAt);
+            builder.HasIndex(s => s.CachedAt);
         }
     }
 

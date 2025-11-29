@@ -145,10 +145,11 @@ namespace Quantra.DAL.Services
                     // Query the cache using LINQ and EF Core
                     var cacheEntry = dbContext.StockDataCache
                      .Where(c => c.Symbol == symbol
-                    && c.TimeRange == range
-                    && c.CachedAt > expiryTime)
+                        && c.TimeRange == range
+                        && c.Interval == interval
+                        && c.CachedAt > expiryTime)
                       .OrderByDescending(c => c.CachedAt)
-                              .FirstOrDefault();
+                      .FirstOrDefault();
 
                     if (cacheEntry != null)
                     {
@@ -201,7 +202,7 @@ namespace Quantra.DAL.Services
                 {
                     // Check if cache entry already exists
                     var existing = dbContext.StockDataCache
-                   .FirstOrDefault(c => c.Symbol == symbol && c.TimeRange == range);
+                   .FirstOrDefault(c => c.Symbol == symbol && c.TimeRange == range && c.Interval == interval);
 
                     if (existing != null)
                     {
@@ -216,6 +217,7 @@ namespace Quantra.DAL.Services
                         {
                             Symbol = symbol,
                             TimeRange = range,
+                            Interval = interval,
                             Data = compressedData,
                             CachedAt = DateTime.Now
                         });
@@ -280,7 +282,7 @@ namespace Quantra.DAL.Services
                 {
                     // Query the cache using LINQ and EF Core
                     var cacheEntry = dbContext.StockDataCache
-          .Where(c => c.Symbol == symbol && c.TimeRange == range)
+          .Where(c => c.Symbol == symbol && c.TimeRange == range && c.Interval == interval)
                           .OrderByDescending(c => c.CachedAt)
                       .FirstOrDefault();
 

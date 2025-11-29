@@ -328,6 +328,9 @@ namespace Quantra.Controls
                     System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
                         new Action(() => _isUserSelectingTab = false),
                         System.Windows.Threading.DispatcherPriority.Background);
+                    
+                    // Note: Removed any automatic tab navigation logic to allow user to freely select tabs
+                    // The IndicatorsTabItem can now be selected and will remain selected
                 }
             }
             catch (Exception ex)
