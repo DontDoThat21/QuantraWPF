@@ -1126,7 +1126,8 @@ namespace Quantra.DAL.Services
                 parameters.Add("interval", avInterval);
             }
 
-            await LogApiCall(function, $"{normalizedSymbol}&interval={avInterval}");
+            var logDetails = string.IsNullOrEmpty(avInterval) ? normalizedSymbol : $"{normalizedSymbol}&interval={avInterval}";
+            await LogApiCall(function, logDetails);
             var responseString = await SendWithSlidingWindowAsync<string>(function, parameters);
             return ParseAlphaVantageResponse(responseString, function);
         }
