@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using Quantra.DAL.Models;
 
 namespace Quantra.Models
 {
@@ -413,54 +414,70 @@ namespace Quantra.Models
 
                 var json = System.Text.Json.JsonSerializer.Serialize(requestData);
 
-                string pythonExe = "python";
+                // Create temporary files for input/output
+                string tempDir = Path.Combine(Path.GetTempPath(), "Quantra_Predictions");
+                Directory.CreateDirectory(tempDir);
+                
+                string inputFile = Path.Combine(tempDir, $"input_{Guid.NewGuid()}.json");
+                string outputFile = Path.Combine(tempDir, $"output_{Guid.NewGuid()}.json");
 
-                var psi = new ProcessStartInfo
+                try
                 {
-                    FileName = pythonExe,
-                    Arguments = $"\"{pythonScript}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    RedirectStandardInput = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Path.GetDirectoryName(pythonScript)
-                };
+                    // Write input JSON to temp file
+                    await File.WriteAllTextAsync(inputFile, json);
 
-                using (var process = Process.Start(psi))
-                {
-                    if (process == null)
-                        throw new Exception("Failed to start Python process");
+                    string pythonExe = "python";
 
-                    // Write JSON request to Python's stdin
-                    await process.StandardInput.WriteLineAsync(json);
-                    process.StandardInput.Close();
-
-                    var outputTask = process.StandardOutput.ReadToEndAsync();
-                    var errorTask = process.StandardError.ReadToEndAsync();
-
-                    await process.WaitForExitAsync();
-
-                    string stdOut = await outputTask;
-                    string stdErr = await errorTask;
-
-                    if (process.ExitCode != 0)
+                    var psi = new ProcessStartInfo
                     {
-                        throw new Exception($"Python prediction failed with exit code {process.ExitCode}: {stdErr}\nOutput: {stdOut}");
-                    }
+                        FileName = pythonExe,
+                        Arguments = $"\"{pythonScript}\" \"{inputFile}\" \"{outputFile}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(pythonScript)
+                    };
 
-                    // Check for empty or invalid output before deserializing
-                    if (string.IsNullOrWhiteSpace(stdOut))
+                    using (var process = Process.Start(psi))
                     {
-                        throw new Exception($"Python script did not return any output. StdErr: {stdErr}");
-                    }
+                        if (process == null)
+                            throw new Exception("Failed to start Python process");
 
-                    Debug.WriteLine($"Python output: {stdOut}");
+                        var outputTask = process.StandardOutput.ReadToEndAsync();
+                        var errorTask = process.StandardError.ReadToEndAsync();
 
-                    try
-                    {
-                        // Parse comprehensive prediction result from stdout
-                        var result = System.Text.Json.JsonSerializer.Deserialize<PythonPredictionResult>(stdOut);
+                        await process.WaitForExitAsync();
+
+                        string stdOut = await outputTask;
+                        string stdErr = await errorTask;
+
+                        if (process.ExitCode != 0)
+                        {
+                            throw new Exception($"Python prediction failed with exit code {process.ExitCode}: {stdErr}\nOutput: {stdOut}");
+                        }
+
+                        // Read the output file
+                        if (!File.Exists(outputFile))
+                        {
+                            throw new Exception($"Python script did not create output file. StdErr: {stdErr}\nStdOut: {stdOut}");
+                        }
+
+                        stdOut = await File.ReadAllTextAsync(outputFile);
+                        stdErr = string.Empty; // Reset since we successfully read output
+
+                        // Check for empty or invalid output before deserializing
+                        if (string.IsNullOrWhiteSpace(stdOut))
+                        {
+                            throw new Exception($"Python script did not return any output. StdErr: {stdErr}");
+                        }
+
+                        Debug.WriteLine($"Python output: {stdOut}");
+
+                        try
+                        {
+                            // Parse comprehensive prediction result from stdout
+                            var result = System.Text.Json.JsonSerializer.Deserialize<PythonPredictionResult>(stdOut);
 
                         if (result == null)
                             throw new Exception($"Failed to deserialize prediction result. Output: {stdOut}\nStdErr: {stdErr}");
@@ -511,11 +528,27 @@ namespace Quantra.Models
                             }).ToList();
                         }
 
-                        return predictionResult;
+                            return predictionResult;
+                        }
+                        catch (Exception jsonEx)
+                        {
+                            throw new Exception($"JSON parsing error: {jsonEx.Message}\nRaw output: {stdOut}", jsonEx);
+                        }
                     }
-                    catch (Exception jsonEx)
+                }
+                finally
+                {
+                    // Clean up temporary files
+                    try
                     {
-                        throw new Exception($"JSON parsing error: {jsonEx.Message}\nRaw output: {stdOut}", jsonEx);
+                        if (File.Exists(inputFile))
+                            File.Delete(inputFile);
+                        if (File.Exists(outputFile))
+                            File.Delete(outputFile);
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        Debug.WriteLine($"Error cleaning up temp files: {cleanupEx.Message}");
                     }
                 }
             }
@@ -605,6 +638,12 @@ namespace Quantra.Models
         public double ValueAtRisk { get; set; }
         public double MaxDrawdown { get; set; }
         public double SharpeRatio { get; set; }
+
+        /// <summary>
+        /// Detailed timing information tracking the prediction lifecycle from request to completion.
+        /// Captured when Python returns the prediction result.
+        /// </summary>
+        public PredictionTimestamp Timestamp { get; set; }
 
         // Helper properties
         public double PotentialReturn => CurrentPrice != 0 ? (TargetPrice - CurrentPrice) / CurrentPrice : 0;

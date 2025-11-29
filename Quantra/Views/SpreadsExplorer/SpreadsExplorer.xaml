@@ -213,8 +213,15 @@
                                                          Style="{StaticResource EnhancedComboBoxStyle}"
                                                          materialDesign:HintAssist.Hint="Action"
                                                          SelectedValue="{Binding Action}"
-                                                         Margin="0,0,5,5"
-                                                         ToolTip="Choose whether to BUY (long position) or SELL (short position) this option leg">
+                                                         Margin="0,0,5,5">
+                                                    <ComboBox.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Action" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Choose whether to BUY (long position) or SELL (short position) this option leg. Buying means you pay a premium and own the right to exercise. Selling means you receive a premium but have the obligation if exercised."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </ComboBox.ToolTip>
                                                     <ComboBoxItem Content="BUY"/>
                                                     <ComboBoxItem Content="SELL"/>
                                                 </ComboBox>
@@ -223,8 +230,15 @@
                                                          Style="{StaticResource EnhancedComboBoxStyle}"
                                                          materialDesign:HintAssist.Hint="Type"
                                                          SelectedValue="{Binding Option.OptionType}"
-                                                         Margin="5,0,0,5"
-                                                         ToolTip="Select CALL (bullish) for the right to buy, or PUT (bearish) for the right to sell">
+                                                         Margin="5,0,0,5">
+                                                    <ComboBox.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Option Type" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Select CALL (bullish) for the right to buy the underlying asset at the strike price, or PUT (bearish) for the right to sell the underlying asset at the strike price. Calls profit when price rises, puts profit when price falls."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </ComboBox.ToolTip>
                                                     <ComboBoxItem Content="CALL"/>
                                                     <ComboBoxItem Content="PUT"/>
                                                 </ComboBox>
@@ -234,30 +248,62 @@
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Strike Price"
                                                         Text="{Binding Option.StrikePrice}"
-                                                        Margin="0,0,5,5"
-                                                        ToolTip="Enter the strike price at which the option can be exercised"/>
+                                                        Margin="0,0,5,5">
+                                                    <TextBox.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Strike Price" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Enter the strike price at which the option can be exercised. This is the predetermined price at which you can buy (call) or sell (put) the underlying asset. Choose strikes relative to the current stock price to create your desired strategy."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
                                                 
                                                 <DatePicker Grid.Row="1" Grid.Column="1"
                                                            Style="{StaticResource EnhancedDatePickerStyle}"
                                                            materialDesign:HintAssist.Hint="Expiry Date"
                                                            SelectedDate="{Binding Option.ExpirationDate}"
-                                                           Margin="5,0,0,5"
-                                                           ToolTip="Select the expiration date when the option contract expires"/>
+                                                           Margin="5,0,0,5">
+                                                    <DatePicker.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Expiration Date" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Select the expiration date when the option contract expires. After this date, the option becomes worthless if not exercised. Longer-dated options (more time) are more expensive due to time value, while near-term options decay faster."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </DatePicker.ToolTip>
+                                                </DatePicker>
 
                                                 <!-- Price and Quantity -->
                                                 <TextBox Grid.Row="2" Grid.Column="0"
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Price"
                                                         Text="{Binding Price}"
-                                                        Margin="0,0,5,0"
-                                                        ToolTip="Enter the premium price per contract (typically per share, multiply by 100 for total cost)"/>
+                                                        Margin="0,0,5,0">
+                                                    <TextBox.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Option Premium" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Enter the premium price per contract (typically quoted per share). Standard option contracts represent 100 shares, so multiply by 100 for total cost. For example, a $2.50 premium equals $250 per contract."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
                                                 
                                                 <TextBox Grid.Row="2" Grid.Column="1"
                                                         Style="{StaticResource EnhancedTextBoxStyle}"
                                                         materialDesign:HintAssist.Hint="Quantity"
                                                         Text="{Binding Quantity}"
-                                                        Margin="5,0,0,0"
-                                                        ToolTip="Enter the number of option contracts for this leg"/>
+                                                        Margin="5,0,0,0">
+                                                    <TextBox.ToolTip>
+                                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                            <StackPanel>
+                                                                <TextBlock Text="Contract Quantity" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                <TextBlock TextWrapping="Wrap" Text="Enter the number of option contracts for this leg. Each contract typically represents 100 shares of the underlying asset. Quantity affects position sizing and risk exposure. For balanced spreads, use equal quantities for each leg."/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

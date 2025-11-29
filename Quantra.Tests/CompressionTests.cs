@@ -76,7 +76,7 @@ namespace Quantra.Tests
 
             // Act
             string compressed = CompressionHelper.CompressString(input);
-            string decompressed = CompressionHelper.DecompressString(compressed);
+            string decompressed = Quantra.CompressionHelper.DecompressString(compressed);
 
             // Assert
             Assert.AreEqual(input, decompressed, "Empty string should be handled correctly");

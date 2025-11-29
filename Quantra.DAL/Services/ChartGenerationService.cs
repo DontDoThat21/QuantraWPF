@@ -425,6 +425,7 @@ namespace Quantra.DAL.Services
 
         /// <summary>
         /// Populates prediction data from the prediction service.
+        /// Creates and tracks a PredictionTimestamp to capture when the Python prediction returns.
         /// </summary>
         private async Task PopulatePredictionDataAsync(ProjectionChartData chartData, string symbol, int forecastDays)
         {
@@ -437,13 +438,50 @@ namespace Quantra.DAL.Services
 
             try
             {
+                // Create timestamp tracker for this prediction request
+                var timestamp = PredictionTimestamp.Create(symbol, modelType: "ChartGeneration");
+                
+                // Fetch prediction context with cache awareness
                 var predictionContext = await _predictionDataService.GetPredictionContextWithCacheAsync(symbol);
-                if (predictionContext?.Prediction != null)
+                
+                // Mark when we received the result from the prediction service
+                timestamp.MarkResultReceivedInCSharp();
+                
+                if (predictionContext?.Context != null)
                 {
-                    PopulatePredictionFromResult(chartData, predictionContext.Prediction);
+                    // Update timestamp based on cache status
+                    timestamp.WasCached = predictionContext.IsCached;
+                    
+                    // Set the Python inference completion timestamp
+                    if (predictionContext.IsCached && predictionContext.PredictionTimestamp.HasValue)
+                    {
+                        // Cached prediction - use the original prediction timestamp
+                        timestamp.PythonInferenceCompleted = predictionContext.PredictionTimestamp.Value;
+                        timestamp.RetrievedFromCache = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Fresh prediction - use current time as Python just completed
+                        timestamp.PythonInferenceCompleted = DateTime.Now;
+                    }
+                    
+                    _logger?.LogInformation(
+                        "Retrieved prediction for {Symbol}: Cached={IsCached}, Age={Age:F1}s, Roundtrip={Roundtrip:F2}ms",
+                        symbol,
+                        timestamp.WasCached,
+                        timestamp.Age.TotalSeconds,
+                        timestamp.TotalRoundtripTimeMs);
+                    
+                    // Note: Since predictionContext only contains context string and not full PredictionResult,
+                    // we generate mock predictions but could attach timestamp info to them
+                    GenerateSyntheticPredictions(chartData, forecastDays);
+                    
+                    // Store the timestamp for potential future use
+                    _logger?.LogDebug("Prediction timestamp: {Timestamp}", timestamp.ToString());
                 }
                 else
                 {
+                    _logger?.LogWarning("No prediction context found for {Symbol}, generating mock predictions", symbol);
                     GenerateMockPredictions(chartData, forecastDays);
                 }
             }

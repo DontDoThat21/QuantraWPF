@@ -1,0 +1,16 @@
+{
+  "Features": {
+    "open": 150.0,
+    "high": 152.0,
+    "low": 149.0,
+    "close": 151.0,
+    "volume": 1000000,
+    "current_price": 151.0,
+    "volatility": 0.02
+  },
+  "ModelType": "tensorflow",
+  "ArchitectureType": "lstm",
+  "UseFeatureEngineering": false,
+  "FeatureType": "balanced",
+  "OptimizeHyperparameters": false
+}

@@ -5,7 +5,26 @@ namespace Quantra.DAL.Services
 {
     /// <summary>
     /// Simple service locator pattern for retrieving application services
+    /// DEPRECATED: New code should use proper dependency injection through constructors.
+    /// This class is maintained only for backward compatibility with legacy code.
+    /// 
+    /// For new services:
+    /// 1. Register services in ServiceCollectionExtensions.AddQuantraServices()
+    /// 2. Inject services through constructor parameters
+    /// 3. Use Microsoft.Extensions.DependencyInjection framework
+    /// 
+    /// Example:
+    /// public class MyService
+    /// {
+    ///     private readonly IAnalystRatingService _analystRatingService;
+    ///     
+    ///     public MyService(IAnalystRatingService analystRatingService)
+    ///     {
+    ///         _analystRatingService = analystRatingService;
+    ///     }
+    /// }
     /// </summary>
+    [Obsolete("Use proper dependency injection through constructors instead. See ServiceCollectionExtensions.AddQuantraServices()")]
     public static class ServiceLocator
     {
         private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();

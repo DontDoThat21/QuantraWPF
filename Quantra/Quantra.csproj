@@ -83,4 +83,8 @@
     <ProjectReference Include="..\Quantra.DAL\Quantra.DAL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Views\Controls\" />
+  </ItemGroup>
+
 </Project>
