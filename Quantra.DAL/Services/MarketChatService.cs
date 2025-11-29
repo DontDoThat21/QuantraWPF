@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,8 @@ namespace Quantra.DAL.Services
     /// Integrates with SentimentPriceCorrelationAnalysis for sentiment-price correlation context (MarketChat story 6).
     /// Integrates with MultiSymbolAnalyzer for multi-symbol comparative analysis (MarketChat story 7).
     /// Integrates with ChartGenerationService for chart visualization in chat (MarketChat story 8).
+    /// Supports Python script orchestration for on-demand predictions (MarketChat story 9).
+    /// Integrates with CacheManagementService for cache management via chat commands (MarketChat story 10).
     /// </summary>
     public class MarketChatService
     {
@@ -36,6 +39,9 @@ namespace Quantra.DAL.Services
         private readonly SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;
         private readonly IMultiSymbolAnalyzer _multiSymbolAnalyzer;
         private readonly IChartGenerationService _chartGenerationService;
+        private readonly RealTimeInferenceService _realTimeInferenceService;
+        private readonly PredictionCacheService _predictionCacheService;
+        private readonly ICacheManagementService _cacheManagementService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
@@ -85,6 +91,21 @@ namespace Quantra.DAL.Services
         public ProjectionChartData LastChartData { get; private set; }
 
         /// <summary>
+        /// Gets the most recent Python prediction execution result (MarketChat story 9).
+        /// </summary>
+        public PythonPredictionExecutionResult LastPythonPredictionResult { get; private set; }
+
+        /// <summary>
+        /// Gets the most recent cache management result (MarketChat story 10).
+        /// </summary>
+        public CacheManagementResult LastCacheManagementResult { get; private set; }
+
+        /// <summary>
+        /// Tracks if a destructive cache operation requires confirmation (MarketChat story 10).
+        /// </summary>
+        private bool _pendingClearAllConfirmation = false;
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -96,7 +117,10 @@ namespace Quantra.DAL.Services
             SentimentPriceCorrelationAnalysis sentimentCorrelationAnalysis = null,
             IMultiSymbolAnalyzer multiSymbolAnalyzer = null,
             IConfigurationManager configManager = null,
-            IChartGenerationService chartGenerationService = null)
+            IChartGenerationService chartGenerationService = null,
+            RealTimeInferenceService realTimeInferenceService = null,
+            PredictionCacheService predictionCacheService = null,
+            ICacheManagementService cacheManagementService = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
@@ -106,6 +130,9 @@ namespace Quantra.DAL.Services
             _sentimentCorrelationAnalysis = sentimentCorrelationAnalysis ?? new SentimentPriceCorrelationAnalysis();
             _multiSymbolAnalyzer = multiSymbolAnalyzer;
             _chartGenerationService = chartGenerationService ?? new ChartGenerationService(null, predictionDataService);
+            _realTimeInferenceService = realTimeInferenceService ?? new RealTimeInferenceService();
+            _predictionCacheService = predictionCacheService;
+            _cacheManagementService = cacheManagementService;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -138,6 +165,10 @@ namespace Quantra.DAL.Services
         /// it will be processed by the MultiSymbolAnalyzer (MarketChat story 7).
         /// If the question is detected as a chart request, it will generate
         /// chart data for visualization (MarketChat story 8).
+        /// If the question is detected as a Python prediction request, it will
+        /// invoke stock_predictor.py and stream progress updates (MarketChat story 9).
+        /// If the question is detected as a cache management request, it will
+        /// be processed by the CacheManagementService (MarketChat story 10).
         /// </summary>
         /// <param name="userQuestion">The user's market analysis question</param>
         /// <param name="includeContext">Whether to include recent market data as context</param>
@@ -147,6 +178,13 @@ namespace Quantra.DAL.Services
             try
             {
                 _logger.LogInformation($"Processing market analysis request: {userQuestion}");
+
+                // Check if this is a cache management request (MarketChat story 10)
+                if (IsCacheManagementRequest(userQuestion))
+                {
+                    _logger.LogInformation("Detected cache management request, processing with CacheManagementService");
+                    return await ProcessCacheManagementRequestAsync(userQuestion);
+                }
 
                 // Check if this is a database query request (MarketChat story 5)
                 if (_naturalLanguageQueryService != null && _naturalLanguageQueryService.IsQueryRequest(userQuestion))
@@ -218,6 +256,330 @@ namespace Quantra.DAL.Services
                 _logger.LogError(ex, "Error processing market analysis request");
                 return "I apologize, but I'm currently unable to process your market analysis request due to a technical issue. Please try again in a moment.";
             }
+        }
+
+        /// <summary>
+        /// Determines if the user's message is a Python prediction request (MarketChat story 9).
+        /// Detects commands like "Run new prediction for TSLA" or "Run LSTM model for AAPL"
+        /// or "Generate fresh prediction for MSFT using transformer".
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message is a prediction execution request</returns>
+        public bool IsPredictionRequest(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            var lowerMessage = message.ToLowerInvariant();
+
+            // Check for prediction execution keywords
+            bool hasPredictionKeyword =
+                lowerMessage.Contains("run prediction") ||
+                lowerMessage.Contains("run new prediction") ||
+                lowerMessage.Contains("generate prediction") ||
+                lowerMessage.Contains("generate new prediction") ||
+                lowerMessage.Contains("run lstm") ||
+                lowerMessage.Contains("run gru") ||
+                lowerMessage.Contains("run transformer") ||
+                lowerMessage.Contains("run random forest") ||
+                lowerMessage.Contains("execute prediction") ||
+                lowerMessage.Contains("fresh prediction") ||
+                lowerMessage.Contains("new ml prediction") ||
+                lowerMessage.Contains("run ml model") ||
+                (lowerMessage.Contains("run") && lowerMessage.Contains("model")) ||
+                (lowerMessage.Contains("predict") && (lowerMessage.Contains("using") || lowerMessage.Contains("with")));
+
+            if (!hasPredictionKeyword)
+            {
+                return false;
+            }
+
+            // Must have at least one symbol
+            var symbols = ExtractSymbolsFromQuestion(message);
+            return symbols.Count >= 1;
+        }
+
+        /// <summary>
+        /// Extracts the model type from a prediction request message (MarketChat story 9).
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>The model type (lstm, gru, transformer, random_forest, or auto)</returns>
+        public string ExtractModelTypeFromRequest(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return "auto";
+            }
+
+            var lowerMessage = message.ToLowerInvariant();
+
+            if (lowerMessage.Contains("lstm"))
+            {
+                return "lstm";
+            }
+            if (lowerMessage.Contains("gru"))
+            {
+                return "gru";
+            }
+            if (lowerMessage.Contains("transformer"))
+            {
+                return "transformer";
+            }
+            if (lowerMessage.Contains("random forest") || lowerMessage.Contains("rf model"))
+            {
+                return "random_forest";
+            }
+
+            return "auto";
+        }
+
+        /// <summary>
+        /// Processes a Python prediction request by invoking stock_predictor.py (MarketChat story 9).
+        /// </summary>
+        /// <param name="userQuestion">The user's prediction request</param>
+        /// <param name="progressCallback">Optional callback for streaming progress updates</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>Formatted response with prediction results</returns>
+        public async Task<string> ProcessPredictionRequestAsync(
+            string userQuestion,
+            PredictionProgressCallback progressCallback = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Extract symbol and model type
+                var symbols = ExtractSymbolsFromQuestion(userQuestion);
+                if (symbols.Count == 0)
+                {
+                    return "Please specify a stock symbol for the prediction. For example: 'Run new prediction for TSLA' or 'Run LSTM model for AAPL'.";
+                }
+
+                var symbol = symbols.First();
+                var modelType = ExtractModelTypeFromRequest(userQuestion);
+
+                _logger.LogInformation("Processing Python prediction request for {Symbol} with model type {ModelType}", symbol, modelType);
+
+                // Execute the Python prediction
+                var result = await _realTimeInferenceService.ExecutePythonPredictionAsync(
+                    symbol,
+                    modelType,
+                    progressCallback: progressCallback,
+                    cancellationToken: cancellationToken);
+
+                LastPythonPredictionResult = result;
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Python prediction failed for {Symbol}: {Error}", symbol, result.ErrorMessage);
+                    return $"❌ **Prediction failed for {symbol}**\n\n{result.ErrorMessage}\n\nPlease try again or check that Python and the required ML libraries are installed.";
+                }
+
+                // Cache the prediction result (MarketChat story 9)
+                if (_predictionCacheService != null && result.Prediction != null)
+                {
+                    try
+                    {
+                        var inputHash = _predictionCacheService.GenerateInputDataHash(new Dictionary<string, double>
+                        {
+                            ["symbol_hash"] = symbol.GetHashCode(),
+                            ["model_type_hash"] = modelType.GetHashCode(),
+                            ["timestamp"] = DateTime.Now.Ticks / TimeSpan.TicksPerSecond // Seconds since epoch
+                        });
+
+                        _predictionCacheService.CachePrediction(symbol, result.ModelType ?? modelType, inputHash, result.Prediction);
+                        _logger.LogInformation("Cached prediction for {Symbol} with model {ModelType}", symbol, result.ModelType);
+                    }
+                    catch (Exception cacheEx)
+                    {
+                        _logger.LogWarning(cacheEx, "Failed to cache prediction for {Symbol}", symbol);
+                    }
+                }
+
+                // Store prediction for follow-up questions
+                _lastPredictionResults[symbol.ToUpperInvariant()] = result.Prediction;
+
+                // Build the response
+                var response = FormatPredictionResponse(symbol, result);
+
+                // Store conversation
+                StoreConversationTurn(userQuestion, response);
+
+                _logger.LogInformation("Successfully completed Python prediction for {Symbol} in {Time:F0}ms", symbol, result.ExecutionTimeMs);
+                return response;
+            }
+            catch (OperationCanceledException)
+            {
+                return "The prediction was cancelled.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing Python prediction request");
+                return "I apologize, but I encountered an error while running the prediction. Please try again.";
+            }
+        }
+
+        /// <summary>
+        /// Formats a Python prediction result into a user-friendly response (MarketChat story 9).
+        /// </summary>
+        private string FormatPredictionResponse(string symbol, PythonPredictionExecutionResult result)
+        {
+            var prediction = result.Prediction;
+            var responseBuilder = new StringBuilder();
+
+            // Header with prediction action
+            var actionEmoji = prediction.Action?.ToUpperInvariant() switch
+            {
+                "BUY" => "📈",
+                "SELL" => "📉",
+                _ => "⏸️"
+            };
+
+            responseBuilder.AppendLine($"{actionEmoji} **ML Prediction for {symbol}**");
+            responseBuilder.AppendLine();
+
+            // Main prediction details
+            responseBuilder.AppendLine($"**Action:** {prediction.Action ?? "HOLD"}");
+            responseBuilder.AppendLine($"**Confidence:** {prediction.Confidence:P0}");
+            responseBuilder.AppendLine($"**Target Price:** ${prediction.TargetPrice:F2}");
+            responseBuilder.AppendLine();
+
+            // Model information
+            responseBuilder.AppendLine($"**Model:** {GetModelDisplayName(result.ModelType)}");
+            responseBuilder.AppendLine($"**Execution Time:** {result.ExecutionTimeMs:F0}ms");
+            responseBuilder.AppendLine();
+
+            // Risk metrics if available
+            if (prediction.RiskMetrics != null || prediction.RiskScore > 0)
+            {
+                responseBuilder.AppendLine("**Risk Assessment:**");
+                responseBuilder.AppendLine($"- Risk Score: {prediction.RiskScore:P0}");
+                if (prediction.ValueAtRisk > 0)
+                {
+                    responseBuilder.AppendLine($"- Value at Risk (95%): ${prediction.ValueAtRisk:F2}");
+                }
+                if (prediction.MaxDrawdown > 0)
+                {
+                    responseBuilder.AppendLine($"- Max Drawdown: {prediction.MaxDrawdown:P1}");
+                }
+                if (prediction.SharpeRatio != 0)
+                {
+                    responseBuilder.AppendLine($"- Sharpe Ratio: {prediction.SharpeRatio:F2}");
+                }
+                responseBuilder.AppendLine();
+            }
+
+            // Time series predictions if available
+            if (prediction.TimeSeries?.PricePredictions?.Count > 0)
+            {
+                responseBuilder.AppendLine("**Price Projections:**");
+                for (int i = 0; i < Math.Min(5, prediction.TimeSeries.PricePredictions.Count); i++)
+                {
+                    var date = prediction.TimeSeries.TimePoints?.Count > i
+                        ? prediction.TimeSeries.TimePoints[i].ToString("MMM dd")
+                        : $"Day {i + 1}";
+                    responseBuilder.AppendLine($"- {date}: ${prediction.TimeSeries.PricePredictions[i]:F2}");
+                }
+                responseBuilder.AppendLine();
+            }
+
+            // Technical patterns if available
+            if (prediction.DetectedPatterns?.Count > 0)
+            {
+                responseBuilder.AppendLine("**Detected Patterns:**");
+                foreach (var pattern in prediction.DetectedPatterns.Take(3))
+                {
+                    responseBuilder.AppendLine($"- {pattern.PatternName}: {pattern.ExpectedOutcome} ({pattern.PatternStrength:P0} strength)");
+                }
+                responseBuilder.AppendLine();
+            }
+
+            // Feature weights if available (top 5)
+            if (prediction.FeatureWeights?.Count > 0)
+            {
+                responseBuilder.AppendLine("**Key Factors:**");
+                var topWeights = prediction.FeatureWeights
+                    .OrderByDescending(w => Math.Abs(w.Value))
+                    .Take(5);
+                foreach (var weight in topWeights)
+                {
+                    var direction = weight.Value > 0 ? "↑" : "↓";
+                    responseBuilder.AppendLine($"- {FormatFeatureName(weight.Key)}: {direction} {Math.Abs(weight.Value):P0}");
+                }
+                responseBuilder.AppendLine();
+            }
+
+            // Footer
+            responseBuilder.AppendLine("_This prediction was generated by the Quantra ML engine. Past performance does not guarantee future results._");
+
+            return responseBuilder.ToString();
+        }
+
+        /// <summary>
+        /// Gets a user-friendly display name for the model type.
+        /// </summary>
+        private static string GetModelDisplayName(string modelType)
+        {
+            return modelType?.ToLowerInvariant() switch
+            {
+                "lstm" => "LSTM Neural Network",
+                "gru" => "GRU Neural Network",
+                "transformer" => "Transformer",
+                "random_forest" => "Random Forest",
+                "pytorch" => "PyTorch LSTM",
+                "tensorflow" => "TensorFlow LSTM",
+                "auto" => "Auto-selected ML Model",
+                _ => modelType ?? "ML Model"
+            };
+        }
+
+        /// <summary>
+        /// Formats a feature name into a user-friendly display string.
+        /// </summary>
+        private static string FormatFeatureName(string featureName)
+        {
+            if (string.IsNullOrWhiteSpace(featureName))
+            {
+                return "Unknown";
+            }
+
+            // Handle common technical indicator names
+            var mappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["rsi"] = "RSI (Relative Strength Index)",
+                ["macd"] = "MACD",
+                ["sma"] = "Simple Moving Average",
+                ["ema"] = "Exponential Moving Average",
+                ["volume"] = "Trading Volume",
+                ["momentum"] = "Price Momentum",
+                ["volatility"] = "Volatility",
+                ["atr"] = "Average True Range",
+                ["bb_upper"] = "Bollinger Upper Band",
+                ["bb_lower"] = "Bollinger Lower Band",
+                ["bb_width"] = "Bollinger Band Width",
+                ["roc"] = "Rate of Change",
+                ["returns"] = "Price Returns"
+            };
+
+            // Check for exact match first
+            if (mappings.TryGetValue(featureName, out var mapped))
+            {
+                return mapped;
+            }
+
+            // Check for partial matches
+            foreach (var kvp in mappings)
+            {
+                if (featureName.ToLowerInvariant().Contains(kvp.Key))
+                {
+                    return kvp.Value;
+                }
+            }
+
+            // Default: Title case the feature name
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
+                featureName.Replace("_", " ").ToLowerInvariant());
         }
 
         /// <summary>
@@ -496,6 +858,147 @@ namespace Quantra.DAL.Services
         public bool IsChartRequest(string message)
         {
             return _chartGenerationService?.IsChartRequest(message) ?? false;
+        }
+
+        /// <summary>
+        /// Determines if the user's message is a cache management request (MarketChat story 10).
+        /// Detects commands like "Clear cache for AAPL" or "Show cache statistics".
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message appears to be a cache management request</returns>
+        public bool IsCacheManagementRequest(string message)
+        {
+            // If there's a pending confirmation, check for confirmation response
+            if (_pendingClearAllConfirmation)
+            {
+                var lowerMessage = message?.ToLowerInvariant() ?? "";
+                if (lowerMessage.Contains("yes") || lowerMessage.Contains("confirm"))
+                {
+                    return true;
+                }
+            }
+
+            return _cacheManagementService?.IsCacheManagementRequest(message) ?? false;
+        }
+
+        /// <summary>
+        /// Processes a cache management request (MarketChat story 10).
+        /// Handles commands like "Clear cache for AAPL" or "Show cache statistics".
+        /// </summary>
+        /// <param name="userQuestion">The user's cache management command</param>
+        /// <returns>Response with cache operation results</returns>
+        private async Task<string> ProcessCacheManagementRequestAsync(string userQuestion)
+        {
+            try
+            {
+                if (_cacheManagementService == null)
+                {
+                    return "Cache management service is not available. Please try again later.";
+                }
+
+                // Check for confirmation of pending clear all operation
+                if (_pendingClearAllConfirmation)
+                {
+                    var lowerMessage = userQuestion?.ToLowerInvariant() ?? "";
+                    if (lowerMessage.Contains("yes") || lowerMessage.Contains("confirm"))
+                    {
+                        _pendingClearAllConfirmation = false;
+                        var confirmResult = await _cacheManagementService.ClearAllCacheAsync(confirmed: true);
+                        LastCacheManagementResult = confirmResult;
+                        StoreConversationTurn(userQuestion, confirmResult.MarkdownContent ?? confirmResult.Message);
+                        _logger.LogInformation("Cache clear all operation confirmed and executed");
+                        return confirmResult.MarkdownContent ?? confirmResult.Message;
+                    }
+                    else
+                    {
+                        // Not a confirmation, reset the pending flag
+                        _pendingClearAllConfirmation = false;
+                    }
+                }
+
+                var operationType = _cacheManagementService.ExtractOperationType(userQuestion);
+                var symbol = _cacheManagementService.ExtractSymbol(userQuestion);
+
+                CacheManagementResult result;
+                string response;
+
+                switch (operationType)
+                {
+                    case "clearsymbol":
+                        if (string.IsNullOrWhiteSpace(symbol))
+                        {
+                            response = "Please specify a stock symbol to clear cache for. For example: \"Clear cache for AAPL\"";
+                            result = new CacheManagementResult
+                            {
+                                Success = false,
+                                Message = response,
+                                OperationType = "Clear"
+                            };
+                        }
+                        else
+                        {
+                            result = await _cacheManagementService.ClearCacheAsync(symbol);
+                            response = result.MarkdownContent ?? result.Message;
+                        }
+                        break;
+
+                    case "clearexpired":
+                        result = await _cacheManagementService.ClearExpiredCacheAsync();
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "clearall":
+                        result = await _cacheManagementService.ClearAllCacheAsync(confirmed: false);
+                        if (result.RequiresConfirmation)
+                        {
+                            _pendingClearAllConfirmation = true;
+                        }
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "clearall_confirmed":
+                        _pendingClearAllConfirmation = false;
+                        result = await _cacheManagementService.ClearAllCacheAsync(confirmed: true);
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "symbolinfo":
+                        var symbolInfo = await _cacheManagementService.GetSymbolCacheInfoAsync(symbol);
+                        response = _cacheManagementService.FormatSymbolInfoAsMarkdown(symbolInfo);
+                        result = new CacheManagementResult
+                        {
+                            Success = symbolInfo != null,
+                            Message = response,
+                            OperationType = "SymbolInfo",
+                            Symbol = symbol,
+                            Recommendation = symbolInfo?.Recommendation
+                        };
+                        break;
+
+                    case "stats":
+                    default:
+                        var stats = await _cacheManagementService.GetCacheStatsAsync();
+                        response = _cacheManagementService.FormatStatsAsMarkdown(stats);
+                        result = new CacheManagementResult
+                        {
+                            Success = true,
+                            Message = response,
+                            OperationType = "Stats",
+                            MarkdownContent = response
+                        };
+                        break;
+                }
+
+                LastCacheManagementResult = result;
+                StoreConversationTurn(userQuestion, response);
+                _logger.LogInformation("Cache management request processed: {OperationType}", operationType);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing cache management request");
+                return "I apologize, but I couldn't process your cache management request. Please try again.";
+            }
         }
 
         /// <summary>

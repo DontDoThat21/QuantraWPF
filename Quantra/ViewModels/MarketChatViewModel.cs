@@ -169,13 +169,23 @@ namespace Quantra.ViewModels
                 // Show processing state
                 IsProcessing = true;
 
-                // Check if this is a trading plan request, database query, multi-symbol comparison, or chart request
+                // Check if this is a trading plan request, database query, multi-symbol comparison, chart request, Python prediction request, or cache management request
                 bool isTradingPlan = IsTradingPlanRequestMessage(userMessage);
                 bool isQueryRequest = _marketChatService.IsQueryRequest(userMessage);
                 bool isComparisonRequest = _marketChatService.IsMultiSymbolComparisonRequest(userMessage);
                 bool isChartRequest = _marketChatService.IsChartRequest(userMessage);
+                bool isPredictionRequest = _marketChatService.IsPredictionRequest(userMessage);
+                bool isCacheManagementRequest = _marketChatService.IsCacheManagementRequest(userMessage);
 
-                if (isQueryRequest)
+                if (isCacheManagementRequest)
+                {
+                    StatusMessage = "Managing cache...";
+                }
+                else if (isPredictionRequest)
+                {
+                    StatusMessage = "Running ML prediction...";
+                }
+                else if (isQueryRequest)
                 {
                     StatusMessage = "Querying database...";
                 }
@@ -196,17 +206,16 @@ namespace Quantra.ViewModels
                     StatusMessage = "Analyzing your question...";
                 }
 
-                // Add loading message
-                string loadingContent = isQueryRequest ? "Querying database..." : 
-                                       (isComparisonRequest ? "Comparing symbols..." :
-                                        (isChartRequest ? "Generating chart..." :
-                                         (isTradingPlan ? "Creating trading plan..." : "Thinking...")));
+                // Add loading message (for prediction requests, we'll update it with progress)
+                string loadingContent = GetLoadingContent(
+                    isCacheManagementRequest, isPredictionRequest, isQueryRequest, 
+                    isComparisonRequest, isChartRequest, isTradingPlan);
                 var loadingMessage = new MarketChatMessage
                 {
                     Content = loadingContent,
                     IsFromUser = false,
                     Timestamp = DateTime.Now,
-                    MessageType = MessageType.LoadingMessage,
+                    MessageType = isPredictionRequest ? MessageType.PredictionProgress : MessageType.LoadingMessage,
                     IsLoading = true
                 };
                 Messages.Add(loadingMessage);
@@ -214,7 +223,34 @@ namespace Quantra.ViewModels
                 // Get response based on message type
                 string response;
 
-                if (isTradingPlan)
+                if (isPredictionRequest)
+                {
+                    // Process Python prediction request with progress updates (MarketChat story 9)
+                    var truncatedMessage = userMessage.Length > 50 ? userMessage.Substring(0, 50) : userMessage;
+                    _logger.LogInformation("Detected Python prediction request: {Message}", truncatedMessage);
+                    
+                    // Create progress callback that updates the loading message
+                    PredictionProgressCallback progressCallback = (progressMessage) =>
+                    {
+                        // Update on UI thread
+                        try
+                        {
+                            if (loadingMessage != null)
+                            {
+                                loadingMessage.Content = progressMessage;
+                                loadingMessage.PredictionProgressMessage = progressMessage;
+                                StatusMessage = progressMessage;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error updating prediction progress");
+                        }
+                    };
+
+                    response = await _marketChatService.ProcessPredictionRequestAsync(userMessage, progressCallback);
+                }
+                else if (isTradingPlan)
                 {
                     // Extract parameters from the message
                     string ticker = ExtractTickerSymbol(userMessage);
@@ -253,9 +289,25 @@ namespace Quantra.ViewModels
                 var chartData = _marketChatService.LastChartData;
                 bool isChartResponse = chartData != null && chartData.IsValid && isChartRequest;
 
+                // Get Python prediction result metadata (MarketChat story 9)
+                var pythonPredictionResult = _marketChatService.LastPythonPredictionResult;
+                bool isPredictionResponse = pythonPredictionResult != null && isPredictionRequest;
+
+                // Get cache management result metadata (MarketChat story 10)
+                var cacheManagementResult = _marketChatService.LastCacheManagementResult;
+                bool isCacheManagementResponse = cacheManagementResult != null && isCacheManagementRequest;
+
                 // Determine message type
                 MessageType messageType = MessageType.AssistantResponse;
-                if (queryResult?.Success == true)
+                if (isCacheManagementResponse)
+                {
+                    messageType = MessageType.CacheManagementResult;
+                }
+                else if (isPredictionResponse)
+                {
+                    messageType = pythonPredictionResult.Success ? MessageType.AssistantResponse : MessageType.SystemMessage;
+                }
+                else if (queryResult?.Success == true)
                 {
                     messageType = MessageType.QueryResult;
                 }
@@ -268,7 +320,7 @@ namespace Quantra.ViewModels
                     messageType = MessageType.ChartMessage;
                 }
 
-                // Add assistant response with cache/query/comparison/chart metadata
+                // Add assistant response with cache/query/comparison/chart/prediction/cacheManagement metadata
                 var assistantMessage = new MarketChatMessage
                 {
                     Content = response,
@@ -283,12 +335,46 @@ namespace Quantra.ViewModels
                     QueryExecutionTimeMs = queryResult?.ExecutionTimeMs ?? 0,
                     IsComparisonResult = isComparisonResponse,
                     ComparisonSymbolCount = comparisonResult?.Symbols?.Count ?? 0,
-                    ChartData = isChartResponse ? chartData : null
+                    ChartData = isChartResponse ? chartData : null,
+                    // Python prediction result metadata (MarketChat story 9)
+                    IsPredictionResult = isPredictionResponse && pythonPredictionResult.Success,
+                    PredictionSymbol = isPredictionResponse && pythonPredictionResult.Success ? pythonPredictionResult.Prediction?.Symbol : null,
+                    PredictionModelType = isPredictionResponse ? pythonPredictionResult.ModelType : null,
+                    PredictionExecutionTimeMs = isPredictionResponse ? pythonPredictionResult.ExecutionTimeMs : 0,
+                    // Cache management result metadata (MarketChat story 10)
+                    IsCacheManagementResult = isCacheManagementResponse,
+                    CacheOperationType = isCacheManagementResponse ? cacheManagementResult.OperationType : null,
+                    CacheEntriesAffected = isCacheManagementResponse ? cacheManagementResult.EntriesAffected : 0,
+                    CacheRecommendation = isCacheManagementResponse ? cacheManagementResult.Recommendation : null
                 };
                 Messages.Add(assistantMessage);
 
                 // Update status to show appropriate info
-                if (queryResult?.Success == true)
+                if (isCacheManagementResponse)
+                {
+                    var statusText = cacheManagementResult.Success
+                        ? $"Cache operation complete | {cacheManagementResult.OperationType}"
+                        : "Cache operation requires confirmation";
+                    if (cacheManagementResult.EntriesAffected > 0)
+                    {
+                        statusText += $" ({cacheManagementResult.EntriesAffected} entries)";
+                    }
+                    StatusMessage = statusText;
+                    _logger.LogInformation("Cache management operation: {Operation}, Success: {Success}, Entries: {Entries}",
+                        cacheManagementResult.OperationType, cacheManagementResult.Success, cacheManagementResult.EntriesAffected);
+                }
+                else if (isPredictionResponse && pythonPredictionResult.Success)
+                {
+                    StatusMessage = $"Prediction complete | {pythonPredictionResult.Prediction?.Symbol} - {pythonPredictionResult.Prediction?.Action} ({pythonPredictionResult.ExecutionTimeMs:F0}ms)";
+                    _logger.LogInformation("Python prediction completed for {Symbol} with action {Action} in {Time:F0}ms",
+                        pythonPredictionResult.Prediction?.Symbol, pythonPredictionResult.Prediction?.Action, pythonPredictionResult.ExecutionTimeMs);
+                }
+                else if (isPredictionResponse && !pythonPredictionResult.Success)
+                {
+                    StatusMessage = "Prediction failed - see response for details";
+                    _logger.LogWarning("Python prediction failed: {Error}", pythonPredictionResult.ErrorMessage);
+                }
+                else if (queryResult?.Success == true)
                 {
                     StatusMessage = $"Query complete | {queryResult.RowCount} rows in {queryResult.ExecutionTimeMs}ms";
                     _logger.LogInformation("Database query completed: {RowCount} rows in {TimeMs}ms", queryResult.RowCount, queryResult.ExecutionTimeMs);
@@ -314,7 +400,8 @@ namespace Quantra.ViewModels
                     StatusMessage = "Ready for your next question";
                 }
 
-                _logger.LogInformation($"Successfully processed {(isTradingPlan ? "trading plan" : isChartResponse ? "chart" : isComparisonResponse ? "comparison" : "market analysis")} question: {userMessage.Substring(0, Math.Min(50, userMessage.Length))}...");
+                var logTruncatedMsg = userMessage.Length > 50 ? userMessage.Substring(0, 50) : userMessage;
+                _logger.LogInformation($"Successfully processed {(isCacheManagementRequest ? "cache management" : isPredictionRequest ? "Python prediction" : isTradingPlan ? "trading plan" : isChartResponse ? "chart" : isComparisonResponse ? "comparison" : "market analysis")} question: {logTruncatedMsg}...");
             }
             catch (Exception ex)
             {
@@ -431,6 +518,18 @@ namespace Quantra.ViewModels
                          "**Trading Plans:**\n" +
                          "• \"Suggest a trading plan for MSFT for the next month\"\n" +
                          "• \"Give me a trading plan for TSLA in a volatile market\"\n\n" +
+                         "**Run ML Predictions (MarketChat story 9):**\n" +
+                         "• \"Run new prediction for TSLA\"\n" +
+                         "• \"Run LSTM model for AAPL\"\n" +
+                         "• \"Generate fresh prediction for NVDA using transformer\"\n" +
+                         "• \"Run GRU prediction for MSFT\"\n" +
+                         "• \"Execute random forest model for GOOGL\"\n\n" +
+                         "**Cache Management (MarketChat story 10):**\n" +
+                         "• \"Show cache statistics\"\n" +
+                         "• \"Clear cache for AAPL\"\n" +
+                         "• \"Show cache info for TSLA\"\n" +
+                         "• \"Clear expired cache\"\n" +
+                         "• \"Clear all cache\" (requires confirmation)\n\n" +
                          "**Multi-Symbol Comparison:**\n" +
                          "• \"Compare predictions for AAPL, MSFT, and GOOGL\"\n" +
                          "• \"Which is better: NVDA vs AMD vs INTC?\"\n" +
@@ -536,6 +635,22 @@ namespace Quantra.ViewModels
                 contextBuilder.Append("with low volatility ");
 
             return contextBuilder.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Gets the appropriate loading content based on the request type.
+        /// </summary>
+        private static string GetLoadingContent(
+            bool isCacheManagementRequest, bool isPredictionRequest, bool isQueryRequest,
+            bool isComparisonRequest, bool isChartRequest, bool isTradingPlan)
+        {
+            if (isCacheManagementRequest) return "Processing cache request...";
+            if (isPredictionRequest) return "Starting prediction...";
+            if (isQueryRequest) return "Querying database...";
+            if (isComparisonRequest) return "Comparing symbols...";
+            if (isChartRequest) return "Generating chart...";
+            if (isTradingPlan) return "Creating trading plan...";
+            return "Thinking...";
         }
 
         #endregion
