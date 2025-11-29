@@ -1,49 +1,92 @@
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace Quantra.DAL.Utilities
 {
-    // Local DAL Utilities to avoid cross-project dependency for API key retrieval
+    // Local DAL Utilities for API key retrieval from database
     public static class Utilities
     {
         private const string SettingsFile = "alphaVantageSettings.json";
-        private const string AlphaVantageApiKeyProperty = "AlphaVantageApiKey";
         private const string OpenAiApiKeyProperty = "OpenAiApiKey";
 
+        // Cache for Alpha Vantage API key to avoid repeated database calls
+        private static string _cachedAlphaVantageApiKey;
+        private static DateTime _cacheExpiration = DateTime.MinValue;
+        private static readonly object _cacheLock = new object();
+        private const int CacheExpirationMinutes = 5;
+
+        /// <summary>
+        /// Gets the Alpha Vantage API key from the database (default settings profile).
+        /// Uses caching to avoid repeated database calls.
+        /// </summary>
+        /// <returns>Alpha Vantage API key or empty string if not found</returns>
         public static string GetAlphaVantageApiKey()
         {
-            // Prefer environment variable
-            var envKey = Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY");
-            if (!string.IsNullOrWhiteSpace(envKey))
+            lock (_cacheLock)
             {
-                return envKey;
-            }
-
-            // Fallback to local settings file
-            try
-            {
-                if (File.Exists(SettingsFile))
+                // Return cached value if still valid
+                if (!string.IsNullOrEmpty(_cachedAlphaVantageApiKey) && DateTime.UtcNow < _cacheExpiration)
                 {
-                    var json = File.ReadAllText(SettingsFile);
-                    using var doc = JsonDocument.Parse(json);
-                    if (doc.RootElement.TryGetProperty(AlphaVantageApiKeyProperty, out var apiKeyElement))
+                    return _cachedAlphaVantageApiKey;
+                }
+
+                try
+                {
+                    var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                    using (var context = new QuantraDbContext(optionsBuilder.Options))
                     {
-                        var key = apiKeyElement.GetString();
-                        if (!string.IsNullOrWhiteSpace(key))
+                        // Ensure database is created
+                        context.Database.EnsureCreated();
+
+                        // Get the default profile (IsDefault = true), or fall back to first profile
+                        var defaultProfile = context.SettingsProfiles
+                            .AsNoTracking()
+                            .FirstOrDefault(p => p.IsDefault);
+
+                        if (defaultProfile == null)
                         {
-                            return key;
+                            defaultProfile = context.SettingsProfiles
+                                .AsNoTracking()
+                                .FirstOrDefault();
+                        }
+
+                        if (defaultProfile != null && !string.IsNullOrWhiteSpace(defaultProfile.AlphaVantageApiKey))
+                        {
+                            _cachedAlphaVantageApiKey = defaultProfile.AlphaVantageApiKey;
+                            _cacheExpiration = DateTime.UtcNow.AddMinutes(CacheExpirationMinutes);
+                            return _cachedAlphaVantageApiKey;
                         }
                     }
                 }
-            }
-            catch
-            {
-                // Swallow and fallback below
-            }
+                catch (Microsoft.Data.SqlClient.SqlException)
+                {
+                    // Database connection error - return empty
+                }
+                catch (InvalidOperationException)
+                {
+                    // EF Core operation error - return empty
+                }
 
-            // Last resort
-            return string.Empty;
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Clears the cached API key, forcing a fresh database lookup on next call.
+        /// </summary>
+        public static void ClearApiKeyCache()
+        {
+            lock (_cacheLock)
+            {
+                _cachedAlphaVantageApiKey = null;
+                _cacheExpiration = DateTime.MinValue;
+            }
         }
 
         public static string GetOpenAiApiKey()
