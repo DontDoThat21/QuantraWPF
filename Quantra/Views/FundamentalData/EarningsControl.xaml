@@ -81,7 +81,7 @@
         </Border>
         
         <!-- Content Area with Tabs -->
-        <TabControl Grid.Row="3" Background="#2D2D42" BorderBrush="#3E3E56">
+        <TabControl x:Name="EarningsTabControl" Grid.Row="3" Background="#2D2D42" BorderBrush="#3E3E56">
             <TabItem Header="Quarterly Earnings" Style="{StaticResource TabItemStyle}">
                 <DataGrid x:Name="QuarterlyEarningsGrid" 
                           AutoGenerateColumns="False"
