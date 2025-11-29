@@ -1,48 +1,57 @@
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace Quantra.DAL.Utilities
 {
-    // Local DAL Utilities to avoid cross-project dependency for API key retrieval
+    // Local DAL Utilities for API key retrieval from database
     public static class Utilities
     {
         private const string SettingsFile = "alphaVantageSettings.json";
-        private const string AlphaVantageApiKeyProperty = "AlphaVantageApiKey";
         private const string OpenAiApiKeyProperty = "OpenAiApiKey";
 
+        /// <summary>
+        /// Gets the Alpha Vantage API key from the database (default settings profile).
+        /// </summary>
+        /// <returns>Alpha Vantage API key or empty string if not found</returns>
         public static string GetAlphaVantageApiKey()
         {
-            // Prefer environment variable
-            var envKey = Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY");
-            if (!string.IsNullOrWhiteSpace(envKey))
-            {
-                return envKey;
-            }
-
-            // Fallback to local settings file
             try
             {
-                if (File.Exists(SettingsFile))
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var context = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    var json = File.ReadAllText(SettingsFile);
-                    using var doc = JsonDocument.Parse(json);
-                    if (doc.RootElement.TryGetProperty(AlphaVantageApiKeyProperty, out var apiKeyElement))
+                    // Ensure database is created
+                    context.Database.EnsureCreated();
+
+                    // Get the default profile (IsDefault = true), or fall back to first profile
+                    var defaultProfile = context.SettingsProfiles
+                        .AsNoTracking()
+                        .FirstOrDefault(p => p.IsDefault);
+
+                    if (defaultProfile == null)
                     {
-                        var key = apiKeyElement.GetString();
-                        if (!string.IsNullOrWhiteSpace(key))
-                        {
-                            return key;
-                        }
+                        defaultProfile = context.SettingsProfiles
+                            .AsNoTracking()
+                            .FirstOrDefault();
+                    }
+
+                    if (defaultProfile != null && !string.IsNullOrWhiteSpace(defaultProfile.AlphaVantageApiKey))
+                    {
+                        return defaultProfile.AlphaVantageApiKey;
                     }
                 }
             }
             catch
             {
-                // Swallow and fallback below
+                // Swallow and return empty
             }
 
-            // Last resort
             return string.Empty;
         }
 

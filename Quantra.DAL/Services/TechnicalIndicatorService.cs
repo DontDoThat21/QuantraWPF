@@ -37,19 +37,12 @@ namespace Quantra.DAL.Services
         {
             _alphaVantageService = alphaVantageService;
 
-            // Read API key from JSON file
-            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "alphaVantageSettings.json");
-            if (!File.Exists(configPath))
-                throw new FileNotFoundException("AlphaVantage settings file not found.", configPath);
-
-            using var jsonStream = File.OpenRead(configPath);
-            using var doc = JsonDocument.Parse(jsonStream);
-            if (!doc.RootElement.TryGetProperty("AlphaVantageApiKey", out var apiKeyElement))
-                throw new InvalidOperationException("AlphaVantageApiKey not found in settings file.");
-
-            _apiKey = apiKeyElement.GetString();
+            // Get API key from database via AlphaVantageService
+            _apiKey = AlphaVantageService.GetApiKey();
             if (string.IsNullOrWhiteSpace(_apiKey))
-                throw new InvalidOperationException("AlphaVantageApiKey is empty in settings file.");
+            {
+                throw new InvalidOperationException("AlphaVantageApiKey not found in database settings profile.");
+            }
 
             _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
 

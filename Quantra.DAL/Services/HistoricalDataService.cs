@@ -15,10 +15,6 @@ namespace Quantra.DAL.Services
     {
         private static readonly HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
 
-        // Add your Alpha Vantage API key here or load from config
-        // todo: retrieve from appsettings.json
-        private readonly string alphaVantageApiKey = "686FIILJC6K24MAS"; // 8TPRQTB7TYA90DLT
-
         // Add AlphaVantageService field
         private readonly AlphaVantageService _alphaVantageService;
 
@@ -198,7 +194,7 @@ namespace Quantra.DAL.Services
                 {
                     { "symbol", symbol },
                     { "outputsize", "full" },
-                    { "apikey", alphaVantageApiKey }
+                    { "apikey", AlphaVantageService.GetApiKey() }
                 };
                 if (function == "TIME_SERIES_INTRADAY")
                 {

@@ -296,26 +296,8 @@ namespace Quantra
                 _selectedProfile.AlertEmail = AlertEmailTextBox.Text.Trim();
                 // VIX monitoring setting
                 _selectedProfile.EnableVixMonitoring = EnableVixMonitoring.IsChecked == true;
-                // Alpha Vantage API Key setting
+                // Alpha Vantage API Key setting - saved to database only (no environment variable)
                 _selectedProfile.AlphaVantageApiKey = AlphaVantageApiKeyBox.Password.Trim();
-
-                // Save API key to environment variable
-                if (!string.IsNullOrWhiteSpace(_selectedProfile.AlphaVantageApiKey))
-                {
-                    try
-                    {
-                        Environment.SetEnvironmentVariable("ALPHA_VANTAGE_API_KEY", _selectedProfile.AlphaVantageApiKey, EnvironmentVariableTarget.User);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the exception for debugging purposes
-                        System.Diagnostics.Debug.WriteLine($"Failed to set environment variable in User scope: {ex.Message}");
-                        System.Diagnostics.Debug.WriteLine(ex.StackTrace);
-
-                        // If User scope fails, try Process scope as fallback
-                        Environment.SetEnvironmentVariable("ALPHA_VANTAGE_API_KEY", _selectedProfile.AlphaVantageApiKey, EnvironmentVariableTarget.Process);
-                    }
-                }
 
                 _selectedProfile.ModifiedDate = DateTime.Now;
                 _settingsService.UpdateSettingsProfile(_selectedProfile);
