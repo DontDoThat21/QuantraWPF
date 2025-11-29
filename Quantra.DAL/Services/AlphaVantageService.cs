@@ -2805,5 +2805,299 @@ namespace Quantra.DAL.Services
         #endregion
 
         #endregion
+
+        #region Intelligence and News API Methods
+
+        /// <summary>
+        /// Gets news sentiment data from Alpha Vantage NEWS_SENTIMENT endpoint
+        /// </summary>
+        /// <param name="tickers">Optional comma-separated list of stock symbols (e.g., "AAPL,MSFT")</param>
+        /// <param name="topics">Optional comma-separated list of topics (e.g., "technology,earnings")</param>
+        /// <param name="timeFrom">Optional start time in YYYYMMDDTHHMM format</param>
+        /// <param name="timeTo">Optional end time in YYYYMMDDTHHMM format</param>
+        /// <param name="sort">Sort order: LATEST, EARLIEST, RELEVANCE (default: LATEST)</param>
+        /// <param name="limit">Number of results (1-1000, default: 50)</param>
+        /// <returns>NewsSentimentResponse with list of news items</returns>
+        public async Task<NewsSentimentResponse> GetNewsSentimentAsync(
+            string tickers = null,
+            string topics = null,
+            string timeFrom = null,
+            string timeTo = null,
+            string sort = "LATEST",
+            int limit = 50)
+        {
+            try
+            {
+                await WaitForApiLimit();
+
+                var queryParams = new List<string> { $"function=NEWS_SENTIMENT", $"apikey={_apiKey}" };
+
+                if (!string.IsNullOrEmpty(tickers))
+                    queryParams.Add($"tickers={Uri.EscapeDataString(tickers)}");
+
+                if (!string.IsNullOrEmpty(topics))
+                    queryParams.Add($"topics={Uri.EscapeDataString(topics)}");
+
+                if (!string.IsNullOrEmpty(timeFrom))
+                    queryParams.Add($"time_from={timeFrom}");
+
+                if (!string.IsNullOrEmpty(timeTo))
+                    queryParams.Add($"time_to={timeTo}");
+
+                if (!string.IsNullOrEmpty(sort))
+                    queryParams.Add($"sort={sort}");
+
+                queryParams.Add($"limit={Math.Min(1000, Math.Max(1, limit))}");
+
+                var endpoint = $"query?{string.Join("&", queryParams)}";
+                await LogApiCall("NEWS_SENTIMENT", tickers ?? "all");
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    var result = new NewsSentimentResponse
+                    {
+                        ItemsCount = (int?)data["items"] ?? 0,
+                        SentimentScoreDefinition = data["sentiment_score_definition"]?.ToString(),
+                        RelevanceScoreDefinition = data["relevance_score_definition"]?.ToString()
+                    };
+
+                    if (data["feed"] is JArray feed)
+                    {
+                        foreach (var item in feed)
+                        {
+                            var newsItem = new NewsSentimentItem
+                            {
+                                Title = item["title"]?.ToString(),
+                                Url = item["url"]?.ToString(),
+                                Summary = item["summary"]?.ToString(),
+                                BannerImage = item["banner_image"]?.ToString(),
+                                Source = item["source"]?.ToString(),
+                                CategoryWithinSource = item["category_within_source"]?.ToString(),
+                                OverallSentimentScore = TryParseDouble(item["overall_sentiment_score"]),
+                                OverallSentimentLabel = item["overall_sentiment_label"]?.ToString()
+                            };
+
+                            // Parse time_published
+                            if (item["time_published"] != null)
+                            {
+                                var timeStr = item["time_published"].ToString();
+                                if (DateTime.TryParseExact(timeStr, "yyyyMMddTHHmmss",
+                                    System.Globalization.CultureInfo.InvariantCulture,
+                                    System.Globalization.DateTimeStyles.None, out DateTime publishedTime))
+                                {
+                                    newsItem.TimePublished = publishedTime;
+                                }
+                            }
+
+                            // Parse authors
+                            if (item["authors"] is JArray authors)
+                            {
+                                foreach (var author in authors)
+                                {
+                                    newsItem.Authors.Add(author.ToString());
+                                }
+                            }
+
+                            // Parse topics
+                            if (item["topics"] is JArray topics_array)
+                            {
+                                foreach (var topic in topics_array)
+                                {
+                                    newsItem.Topics.Add(new TopicInfo
+                                    {
+                                        Topic = topic["topic"]?.ToString(),
+                                        RelevanceScore = TryParseDouble(topic["relevance_score"])
+                                    });
+                                }
+                            }
+
+                            // Parse ticker sentiment
+                            if (item["ticker_sentiment"] is JArray tickerSentiments)
+                            {
+                                foreach (var ts in tickerSentiments)
+                                {
+                                    newsItem.TickerSentiments.Add(new TickerSentiment
+                                    {
+                                        Ticker = ts["ticker"]?.ToString(),
+                                        RelevanceScore = TryParseDouble(ts["relevance_score"]),
+                                        SentimentScore = TryParseDouble(ts["ticker_sentiment_score"]),
+                                        SentimentLabel = ts["ticker_sentiment_label"]?.ToString()
+                                    });
+                                }
+                            }
+
+                            result.Feed.Add(newsItem);
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved {result.Feed.Count} news sentiment items");
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error getting news sentiment data");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets top gainers, losers, and most actively traded stocks from Alpha Vantage TOP_GAINERS_LOSERS endpoint
+        /// </summary>
+        /// <returns>TopMoversResponse with lists of gainers, losers, and most active stocks</returns>
+        public async Task<TopMoversResponse> GetTopMoversAsync()
+        {
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
+                await LogApiCall("TOP_GAINERS_LOSERS", null);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    var result = new TopMoversResponse
+                    {
+                        Metadata = data["metadata"]?.ToString(),
+                        LastUpdated = DateTime.Now
+                    };
+
+                    // Parse top gainers
+                    if (data["top_gainers"] is JArray gainers)
+                    {
+                        foreach (var item in gainers)
+                        {
+                            result.TopGainers.Add(ParseMarketMover(item, MarketMoverCategory.Gainer));
+                        }
+                    }
+
+                    // Parse top losers
+                    if (data["top_losers"] is JArray losers)
+                    {
+                        foreach (var item in losers)
+                        {
+                            result.TopLosers.Add(ParseMarketMover(item, MarketMoverCategory.Loser));
+                        }
+                    }
+
+                    // Parse most actively traded
+                    if (data["most_actively_traded"] is JArray mostActive)
+                    {
+                        foreach (var item in mostActive)
+                        {
+                            result.MostActivelyTraded.Add(ParseMarketMover(item, MarketMoverCategory.MostActive));
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved top movers: {result.TopGainers.Count} gainers, {result.TopLosers.Count} losers, {result.MostActivelyTraded.Count} most active");
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error getting top movers data");
+                return null;
+            }
+        }
+
+        private MarketMover ParseMarketMover(JToken item, MarketMoverCategory category)
+        {
+            return new MarketMover
+            {
+                Ticker = item["ticker"]?.ToString(),
+                Price = TryParseDouble(item["price"]),
+                ChangeAmount = TryParseDouble(item["change_amount"]),
+                ChangePercentage = TryParsePercentage(item["change_percentage"]),
+                Volume = (long)TryParseDouble(item["volume"]),
+                Category = category
+            };
+        }
+
+        /// <summary>
+        /// Gets insider transactions from Alpha Vantage INSIDER_TRANSACTIONS endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>InsiderTransactionsResponse with list of insider transactions</returns>
+        public async Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=INSIDER_TRANSACTIONS&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("INSIDER_TRANSACTIONS", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    var result = new InsiderTransactionsResponse
+                    {
+                        Symbol = symbol
+                    };
+
+                    if (data["data"] is JArray transactions)
+                    {
+                        foreach (var item in transactions)
+                        {
+                            var transaction = new InsiderTransactionData
+                            {
+                                Symbol = symbol,
+                                OwnerName = item["owner_name"]?.ToString(),
+                                OwnerCik = item["owner_cik"]?.ToString(),
+                                OwnerTitle = item["owner_title"]?.ToString(),
+                                SecurityType = item["security_type"]?.ToString(),
+                                TransactionCode = item["transaction_code"]?.ToString(),
+                                SharesTraded = (int)TryParseDouble(item["shares"]),
+                                PricePerShare = TryParseDouble(item["share_price"]),
+                                SharesOwnedFollowing = (int)TryParseDouble(item["shares_owned_following"]),
+                                AcquisitionOrDisposal = item["acquisition_or_disposal"]?.ToString()
+                            };
+
+                            // Parse filing date
+                            if (DateTime.TryParse(item["filing_date"]?.ToString(), out DateTime filingDate))
+                            {
+                                transaction.FilingDate = filingDate;
+                            }
+
+                            // Parse transaction date
+                            if (DateTime.TryParse(item["transaction_date"]?.ToString(), out DateTime transactionDate))
+                            {
+                                transaction.TransactionDate = transactionDate;
+                            }
+
+                            result.Transactions.Add(transaction);
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved {result.Transactions.Count} insider transactions for {symbol}");
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting insider transactions for {symbol}");
+                return null;
+            }
+        }
+
+        #endregion
     }
 }
