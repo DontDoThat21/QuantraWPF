@@ -49,5 +49,16 @@ namespace Quantra.DAL.Services.Interfaces
         
         // Property to check if using premium API
         bool IsPremiumKey { get; }
+
+        // Intelligence and News API Methods
+        Task<NewsSentimentResponse> GetNewsSentimentAsync(
+            string tickers = null,
+            string topics = null,
+            string timeFrom = null,
+            string timeTo = null,
+            string sort = "LATEST",
+            int limit = 50);
+        Task<TopMoversResponse> GetTopMoversAsync();
+        Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(string symbol);
     }
 }
