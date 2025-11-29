@@ -179,6 +179,54 @@ namespace Quantra.Extensions
                 return new AnalystAlertService(analystRatingService);
             });
 
+            // Register SectorMomentumService
+            services.AddSingleton<SectorMomentumService>(sp =>
+            {
+                var userSettingsService = sp.GetRequiredService<UserSettingsService>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new SectorMomentumService(userSettingsService, loggingService);
+            });
+
+            // Register SectorSentimentAnalysisService
+            services.AddSingleton<SectorSentimentAnalysisService>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                return new SectorSentimentAnalysisService(userSettings);
+            });
+
+            // Register PredictionAnalysisRepository
+            services.AddScoped<Quantra.Repositories.PredictionAnalysisRepository>(sp =>
+            {
+                var dbContext = sp.GetRequiredService<QuantraDbContext>();
+                return new Quantra.Repositories.PredictionAnalysisRepository(dbContext);
+            });
+
+            // Register SentimentPriceCorrelationAnalysis
+            services.AddSingleton<Quantra.Modules.SentimentPriceCorrelationAnalysis>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                var userSettingsService = sp.GetRequiredService<UserSettingsService>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                var financialNewsSentimentService = sp.GetRequiredService<FinancialNewsSentimentService>();
+                var socialMediaSentimentService = sp.GetRequiredService<ISocialMediaSentimentService>();
+                var analystRatingService = sp.GetRequiredService<IAnalystRatingService>();
+                var insiderTradingService = sp.GetRequiredService<IInsiderTradingService>();
+                var sectorSentimentService = sp.GetRequiredService<SectorSentimentAnalysisService>();
+                var predictionAnalysisRepository = sp.GetRequiredService<Quantra.Repositories.PredictionAnalysisRepository>();
+                var sectorMomentumService = sp.GetRequiredService<SectorMomentumService>();
+                return new Quantra.Modules.SentimentPriceCorrelationAnalysis(
+                    userSettings,
+                    userSettingsService,
+                    loggingService,
+                    financialNewsSentimentService,
+                    socialMediaSentimentService,
+                    analystRatingService,
+                    insiderTradingService,
+                    sectorSentimentService,
+                    predictionAnalysisRepository,
+                    sectorMomentumService);
+            });
+
             // Register prediction enhancement service via factory to satisfy its constructor
             services.AddSingleton<OpenAIPredictionEnhancementService>(sp =>
             {
@@ -201,14 +249,24 @@ namespace Quantra.Extensions
                 var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
                 var userSettingsService = sp.GetRequiredService<UserSettingsService>();
                 var loggingService = sp.GetRequiredService<LoggingService>();
+                var financialNewsSentimentService = sp.GetRequiredService<FinancialNewsSentimentService>();
+                var socialMediaSentimentService = sp.GetRequiredService<ISocialMediaSentimentService>();
                 var analystRatingService = sp.GetRequiredService<IAnalystRatingService>();
                 var insiderTradingService = sp.GetRequiredService<IInsiderTradingService>();
+                var sectorSentimentService = sp.GetRequiredService<SectorSentimentAnalysisService>();
+                var predictionAnalysisRepository = sp.GetRequiredService<Quantra.Repositories.PredictionAnalysisRepository>();
+                var sectorMomentumService = sp.GetRequiredService<SectorMomentumService>();
                 return new SentimentDashboardControlViewModel(
                     userSettings,
                     userSettingsService,
                     loggingService,
+                    financialNewsSentimentService,
+                    socialMediaSentimentService,
                     analystRatingService,
-                    insiderTradingService);
+                    insiderTradingService,
+                    sectorSentimentService,
+                    predictionAnalysisRepository,
+                    sectorMomentumService);
             });
             services.AddTransient<StockExplorerViewModel>();
             services.AddTransient<BacktestResultsViewModel>();

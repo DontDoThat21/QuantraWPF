@@ -8,6 +8,7 @@ using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Modules;
+using Quantra.Repositories;
 using Quantra.ViewModels.Base;
 
 namespace Quantra.ViewModels
@@ -35,8 +36,13 @@ namespace Quantra.ViewModels
             UserSettings userSettings,
             UserSettingsService userSettingsService,
             LoggingService loggingService,
+            FinancialNewsSentimentService financialNewsSentimentService,
+            ISocialMediaSentimentService socialMediaSentimentService,
             IAnalystRatingService analystRatingService,
-            IInsiderTradingService insiderTradingService)
+            IInsiderTradingService insiderTradingService,
+            SectorSentimentAnalysisService sectorSentimentService,
+            PredictionAnalysisRepository predictionAnalysisRepository,
+            SectorMomentumService sectorMomentumService)
         {
             if (userSettings == null) throw new ArgumentNullException(nameof(userSettings));
             if (userSettingsService == null) throw new ArgumentNullException(nameof(userSettingsService));
@@ -45,7 +51,17 @@ namespace Quantra.ViewModels
             _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
             _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
 
-            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(userSettings, userSettingsService, loggingService);
+            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(
+                userSettings, 
+                userSettingsService, 
+                loggingService,
+                financialNewsSentimentService,
+                socialMediaSentimentService,
+                analystRatingService,
+                insiderTradingService,
+                sectorSentimentService,
+                predictionAnalysisRepository,
+                sectorMomentumService);
 
             // Initialize chart collections
             SentimentSeries = new SeriesCollection();

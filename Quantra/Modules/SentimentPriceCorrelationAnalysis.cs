@@ -26,19 +26,28 @@ namespace Quantra.Modules
         private readonly UserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
 
-        public SentimentPriceCorrelationAnalysis(UserSettings userSettings, UserSettingsService userSettingsService, LoggingService loggingService)
+        public SentimentPriceCorrelationAnalysis(
+            UserSettings userSettings,
+            UserSettingsService userSettingsService,
+            LoggingService loggingService,
+            FinancialNewsSentimentService financialNewsSentimentService,
+            ISocialMediaSentimentService twitterSentimentService,
+            IAnalystRatingService analystRatingService,
+            IInsiderTradingService insiderTradingService,
+            SectorSentimentAnalysisService sectorSentimentService,
+            PredictionAnalysisRepository predictionAnalysisRepository,
+            SectorMomentumService sectorMomentumService)
         {
-            _financialNewsSentimentService = new FinancialNewsSentimentService(userSettings);
-            _twitterSentimentService = new TwitterSentimentService();
-            _analystRatingService = ServiceLocator.Resolve<IAnalystRatingService>();
-            _insiderTradingService = ServiceLocator.Resolve<IInsiderTradingService>();
-            _sectorSentimentService = new SectorSentimentAnalysisService(userSettings);
-            _predictionAnalysisRepository = new PredictionAnalysisRepository();
-            _loggingService = loggingService;
-            _sectorMomentumService = new SectorMomentumService(userSettingsService, loggingService);
-            _userSettings = userSettings ?? new UserSettings();
-            _userSettingsService = userSettingsService;
-            _loggingService = loggingService;
+            _userSettings = userSettings ?? throw new ArgumentNullException(nameof(userSettings));
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
+            _financialNewsSentimentService = financialNewsSentimentService ?? throw new ArgumentNullException(nameof(financialNewsSentimentService));
+            _twitterSentimentService = twitterSentimentService ?? throw new ArgumentNullException(nameof(twitterSentimentService));
+            _analystRatingService = analystRatingService ?? throw new ArgumentNullException(nameof(analystRatingService));
+            _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
+            _sectorSentimentService = sectorSentimentService ?? throw new ArgumentNullException(nameof(sectorSentimentService));
+            _predictionAnalysisRepository = predictionAnalysisRepository ?? throw new ArgumentNullException(nameof(predictionAnalysisRepository));
+            _sectorMomentumService = sectorMomentumService ?? throw new ArgumentNullException(nameof(sectorMomentumService));
         }
 
         /// <summary>

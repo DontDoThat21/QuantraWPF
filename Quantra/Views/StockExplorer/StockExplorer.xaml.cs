@@ -1546,7 +1546,8 @@ namespace Quantra.Controls
                 var stochResult = stochTask.Result;
 
                 // Now update UI thread once with all collected results
-                await Dispatcher.InvokeAsync(() =>
+                // Use fire-and-forget to avoid deadlock when UI thread is busy
+                _ = Dispatcher.InvokeAsync(() =>
                 {
                     SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
                     
@@ -1562,19 +1563,19 @@ namespace Quantra.Controls
                     MfiValue = mfiResult.Item2;
                     StochKValue = stochResult.Item2;
                     StochDValue = stochResult.Item3;
-                });
+                }, System.Windows.Threading.DispatcherPriority.Background);
 
                 // Keep the CurrentIndicators collection for backward compatibility
                 // Note: We can gradually phase out this collection in favor of the individual properties
                 // For now, keep it empty to avoid any flashing while maintaining compatibility
                 cancellationToken.ThrowIfCancellationRequested();
-                await Dispatcher.InvokeAsync(() =>
+                _ = Dispatcher.InvokeAsync(() =>
                 {
                     if (CurrentIndicators.Count > 0)
                     {
                         CurrentIndicators.Clear();
                     }
-                });
+                }, System.Windows.Threading.DispatcherPriority.Background);
             }
             catch (System.OperationCanceledException)
             {

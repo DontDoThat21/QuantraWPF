@@ -10,6 +10,7 @@ using Quantra.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Modules;
 using Quantra.DAL.Services;
+using Quantra.Repositories;
 using Quantra.ViewModels;
 
 namespace Quantra.Controls
@@ -64,14 +65,24 @@ namespace Quantra.Controls
             UserSettings userSettings,
             UserSettingsService userSettingsService,
             LoggingService loggingService,
+            FinancialNewsSentimentService financialNewsSentimentService,
+            ISocialMediaSentimentService socialMediaSentimentService,
             IAnalystRatingService analystRatingService,
-            IInsiderTradingService insiderTradingService)
+            IInsiderTradingService insiderTradingService,
+            SectorSentimentAnalysisService sectorSentimentService,
+            Quantra.Repositories.PredictionAnalysisRepository predictionAnalysisRepository,
+            SectorMomentumService sectorMomentumService)
             : this(new SentimentDashboardControlViewModel(
                 userSettings, 
                 userSettingsService, 
                 loggingService, 
+                financialNewsSentimentService,
+                socialMediaSentimentService,
                 analystRatingService, 
-                insiderTradingService))
+                insiderTradingService,
+                sectorSentimentService,
+                predictionAnalysisRepository,
+                sectorMomentumService))
         {
         }
 
