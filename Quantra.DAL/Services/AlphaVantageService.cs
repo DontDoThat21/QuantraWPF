@@ -2170,5 +2170,524 @@ namespace Quantra.DAL.Services
                 return new List<SymbolSearchResult>();
             }
         }
+
+        #region Fundamental Data API Methods
+
+        /// <summary>
+        /// Gets company overview data from Alpha Vantage OVERVIEW endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>CompanyOverview object with fundamental data</returns>
+        public async Task<CompanyOverview> GetCompanyOverviewAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=OVERVIEW&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("OVERVIEW", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    if (data["Symbol"] == null || string.IsNullOrEmpty(data["Symbol"].ToString()))
+                    {
+                        _loggingService.Log("Warning", $"No overview data found for {symbol}");
+                        return null;
+                    }
+
+                    var overview = new CompanyOverview
+                    {
+                        Symbol = data["Symbol"]?.ToString(),
+                        Name = data["Name"]?.ToString(),
+                        Description = data["Description"]?.ToString(),
+                        Exchange = data["Exchange"]?.ToString(),
+                        Currency = data["Currency"]?.ToString(),
+                        Country = data["Country"]?.ToString(),
+                        Sector = data["Sector"]?.ToString(),
+                        Industry = data["Industry"]?.ToString(),
+                        Address = data["Address"]?.ToString(),
+                        FiscalYearEnd = data["FiscalYearEnd"]?.ToString(),
+                        MarketCapitalization = TryParseDecimal(data["MarketCapitalization"]),
+                        EBITDA = TryParseDecimal(data["EBITDA"]),
+                        PERatio = TryParseDecimal(data["PERatio"]),
+                        PEGRatio = TryParseDecimal(data["PEGRatio"]),
+                        BookValue = TryParseDecimal(data["BookValue"]),
+                        DividendPerShare = TryParseDecimal(data["DividendPerShare"]),
+                        DividendYield = TryParseDecimal(data["DividendYield"]),
+                        EPS = TryParseDecimal(data["EPS"]),
+                        RevenuePerShareTTM = TryParseDecimal(data["RevenuePerShareTTM"]),
+                        ProfitMargin = TryParseDecimal(data["ProfitMargin"]),
+                        OperatingMarginTTM = TryParseDecimal(data["OperatingMarginTTM"]),
+                        ReturnOnAssetsTTM = TryParseDecimal(data["ReturnOnAssetsTTM"]),
+                        ReturnOnEquityTTM = TryParseDecimal(data["ReturnOnEquityTTM"]),
+                        RevenueTTM = TryParseDecimal(data["RevenueTTM"]),
+                        GrossProfitTTM = TryParseDecimal(data["GrossProfitTTM"]),
+                        DilutedEPSTTM = TryParseDecimal(data["DilutedEPSTTM"]),
+                        QuarterlyEarningsGrowthYOY = TryParseDecimal(data["QuarterlyEarningsGrowthYOY"]),
+                        QuarterlyRevenueGrowthYOY = TryParseDecimal(data["QuarterlyRevenueGrowthYOY"]),
+                        AnalystTargetPrice = TryParseDecimal(data["AnalystTargetPrice"]),
+                        TrailingPE = TryParseDecimal(data["TrailingPE"]),
+                        ForwardPE = TryParseDecimal(data["ForwardPE"]),
+                        PriceToSalesRatioTTM = TryParseDecimal(data["PriceToSalesRatioTTM"]),
+                        PriceToBookRatio = TryParseDecimal(data["PriceToBookRatio"]),
+                        EVToRevenue = TryParseDecimal(data["EVToRevenue"]),
+                        EVToEBITDA = TryParseDecimal(data["EVToEBITDA"]),
+                        Beta = TryParseDecimal(data["Beta"]),
+                        Week52High = TryParseDecimal(data["52WeekHigh"]),
+                        Week52Low = TryParseDecimal(data["52WeekLow"]),
+                        Day50MovingAverage = TryParseDecimal(data["50DayMovingAverage"]),
+                        Day200MovingAverage = TryParseDecimal(data["200DayMovingAverage"]),
+                        SharesOutstanding = TryParseLong(data["SharesOutstanding"]),
+                        DividendDate = data["DividendDate"]?.ToString(),
+                        ExDividendDate = data["ExDividendDate"]?.ToString(),
+                        LastUpdated = DateTime.Now
+                    };
+
+                    _loggingService.Log("Info", $"Retrieved company overview for {symbol}");
+                    return overview;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting company overview for '{symbol}'");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets income statement data from Alpha Vantage INCOME_STATEMENT endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>IncomeStatement object with annual and quarterly reports</returns>
+        public async Task<IncomeStatement> GetIncomeStatementAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=INCOME_STATEMENT&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("INCOME_STATEMENT", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    if (data["symbol"] == null && data["Symbol"] == null)
+                    {
+                        _loggingService.Log("Warning", $"No income statement data found for {symbol}");
+                        return null;
+                    }
+
+                    var incomeStatement = new IncomeStatement
+                    {
+                        Symbol = data["symbol"]?.ToString() ?? symbol,
+                        LastUpdated = DateTime.Now
+                    };
+
+                    // Parse annual reports
+                    if (data["annualReports"] is JArray annualReports)
+                    {
+                        foreach (var report in annualReports)
+                        {
+                            incomeStatement.AnnualReports.Add(ParseIncomeStatementReport(report));
+                        }
+                    }
+
+                    // Parse quarterly reports
+                    if (data["quarterlyReports"] is JArray quarterlyReports)
+                    {
+                        foreach (var report in quarterlyReports)
+                        {
+                            incomeStatement.QuarterlyReports.Add(ParseIncomeStatementReport(report));
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved income statement for {symbol}: {incomeStatement.AnnualReports.Count} annual, {incomeStatement.QuarterlyReports.Count} quarterly reports");
+                    return incomeStatement;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting income statement for '{symbol}'");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets balance sheet data from Alpha Vantage BALANCE_SHEET endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>BalanceSheet object with annual and quarterly reports</returns>
+        public async Task<BalanceSheet> GetBalanceSheetAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=BALANCE_SHEET&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("BALANCE_SHEET", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    if (data["symbol"] == null && data["Symbol"] == null)
+                    {
+                        _loggingService.Log("Warning", $"No balance sheet data found for {symbol}");
+                        return null;
+                    }
+
+                    var balanceSheet = new BalanceSheet
+                    {
+                        Symbol = data["symbol"]?.ToString() ?? symbol,
+                        LastUpdated = DateTime.Now
+                    };
+
+                    // Parse annual reports
+                    if (data["annualReports"] is JArray annualReports)
+                    {
+                        foreach (var report in annualReports)
+                        {
+                            balanceSheet.AnnualReports.Add(ParseBalanceSheetReport(report));
+                        }
+                    }
+
+                    // Parse quarterly reports
+                    if (data["quarterlyReports"] is JArray quarterlyReports)
+                    {
+                        foreach (var report in quarterlyReports)
+                        {
+                            balanceSheet.QuarterlyReports.Add(ParseBalanceSheetReport(report));
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved balance sheet for {symbol}: {balanceSheet.AnnualReports.Count} annual, {balanceSheet.QuarterlyReports.Count} quarterly reports");
+                    return balanceSheet;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting balance sheet for '{symbol}'");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets cash flow data from Alpha Vantage CASH_FLOW endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>CashFlowStatement object with annual and quarterly reports</returns>
+        public async Task<CashFlowStatement> GetCashFlowAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=CASH_FLOW&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("CASH_FLOW", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    if (data["symbol"] == null && data["Symbol"] == null)
+                    {
+                        _loggingService.Log("Warning", $"No cash flow data found for {symbol}");
+                        return null;
+                    }
+
+                    var cashFlow = new CashFlowStatement
+                    {
+                        Symbol = data["symbol"]?.ToString() ?? symbol,
+                        LastUpdated = DateTime.Now
+                    };
+
+                    // Parse annual reports
+                    if (data["annualReports"] is JArray annualReports)
+                    {
+                        foreach (var report in annualReports)
+                        {
+                            cashFlow.AnnualReports.Add(ParseCashFlowReport(report));
+                        }
+                    }
+
+                    // Parse quarterly reports
+                    if (data["quarterlyReports"] is JArray quarterlyReports)
+                    {
+                        foreach (var report in quarterlyReports)
+                        {
+                            cashFlow.QuarterlyReports.Add(ParseCashFlowReport(report));
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved cash flow for {symbol}: {cashFlow.AnnualReports.Count} annual, {cashFlow.QuarterlyReports.Count} quarterly reports");
+                    return cashFlow;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting cash flow for '{symbol}'");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets earnings data from Alpha Vantage EARNINGS endpoint
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>EarningsData object with annual and quarterly earnings</returns>
+        public async Task<EarningsData> GetEarningsAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+                return null;
+
+            try
+            {
+                await WaitForApiLimit();
+                var endpoint = $"query?function=EARNINGS&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                await LogApiCall("EARNINGS", symbol);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    if (data["symbol"] == null && data["Symbol"] == null)
+                    {
+                        _loggingService.Log("Warning", $"No earnings data found for {symbol}");
+                        return null;
+                    }
+
+                    var earnings = new EarningsData
+                    {
+                        Symbol = data["symbol"]?.ToString() ?? symbol,
+                        LastUpdated = DateTime.Now
+                    };
+
+                    // Parse annual earnings
+                    if (data["annualEarnings"] is JArray annualEarnings)
+                    {
+                        foreach (var report in annualEarnings)
+                        {
+                            earnings.AnnualEarnings.Add(new AnnualEarningsReport
+                            {
+                                FiscalDateEnding = report["fiscalDateEnding"]?.ToString(),
+                                ReportedEPS = TryParseDecimal(report["reportedEPS"])
+                            });
+                        }
+                    }
+
+                    // Parse quarterly earnings
+                    if (data["quarterlyEarnings"] is JArray quarterlyEarnings)
+                    {
+                        foreach (var report in quarterlyEarnings)
+                        {
+                            earnings.QuarterlyEarnings.Add(new QuarterlyEarningsReport
+                            {
+                                FiscalDateEnding = report["fiscalDateEnding"]?.ToString(),
+                                ReportedDate = report["reportedDate"]?.ToString(),
+                                ReportedEPS = TryParseDecimal(report["reportedEPS"]),
+                                EstimatedEPS = TryParseDecimal(report["estimatedEPS"]),
+                                Surprise = TryParseDecimal(report["surprise"]),
+                                SurprisePercentage = TryParseDecimal(report["surprisePercentage"])
+                            });
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved earnings for {symbol}: {earnings.AnnualEarnings.Count} annual, {earnings.QuarterlyEarnings.Count} quarterly reports");
+                    return earnings;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting earnings for '{symbol}'");
+                return null;
+            }
+        }
+
+        #region Fundamental Data Helper Methods
+
+        private IncomeStatementReport ParseIncomeStatementReport(JToken report)
+        {
+            return new IncomeStatementReport
+            {
+                FiscalDateEnding = report["fiscalDateEnding"]?.ToString(),
+                ReportedCurrency = report["reportedCurrency"]?.ToString(),
+                GrossProfit = TryParseDecimal(report["grossProfit"]),
+                TotalRevenue = TryParseDecimal(report["totalRevenue"]),
+                CostOfRevenue = TryParseDecimal(report["costOfRevenue"]),
+                CostOfGoodsAndServicesSold = TryParseDecimal(report["costofGoodsAndServicesSold"]),
+                OperatingIncome = TryParseDecimal(report["operatingIncome"]),
+                SellingGeneralAndAdministrative = TryParseDecimal(report["sellingGeneralAndAdministrative"]),
+                ResearchAndDevelopment = TryParseDecimal(report["researchAndDevelopment"]),
+                OperatingExpenses = TryParseDecimal(report["operatingExpenses"]),
+                InvestmentIncomeNet = TryParseDecimal(report["investmentIncomeNet"]),
+                NetInterestIncome = TryParseDecimal(report["netInterestIncome"]),
+                InterestIncome = TryParseDecimal(report["interestIncome"]),
+                InterestExpense = TryParseDecimal(report["interestExpense"]),
+                NonInterestIncome = TryParseDecimal(report["nonInterestIncome"]),
+                OtherNonOperatingIncome = TryParseDecimal(report["otherNonOperatingIncome"]),
+                Depreciation = TryParseDecimal(report["depreciation"]),
+                DepreciationAndAmortization = TryParseDecimal(report["depreciationAndAmortization"]),
+                IncomeBeforeTax = TryParseDecimal(report["incomeBeforeTax"]),
+                IncomeTaxExpense = TryParseDecimal(report["incomeTaxExpense"]),
+                InterestAndDebtExpense = TryParseDecimal(report["interestAndDebtExpense"]),
+                NetIncomeFromContinuingOperations = TryParseDecimal(report["netIncomeFromContinuingOperations"]),
+                ComprehensiveIncomeNetOfTax = TryParseDecimal(report["comprehensiveIncomeNetOfTax"]),
+                EBIT = TryParseDecimal(report["ebit"]),
+                EBITDA = TryParseDecimal(report["ebitda"]),
+                NetIncome = TryParseDecimal(report["netIncome"])
+            };
+        }
+
+        private BalanceSheetReport ParseBalanceSheetReport(JToken report)
+        {
+            return new BalanceSheetReport
+            {
+                FiscalDateEnding = report["fiscalDateEnding"]?.ToString(),
+                ReportedCurrency = report["reportedCurrency"]?.ToString(),
+                TotalAssets = TryParseDecimal(report["totalAssets"]),
+                TotalCurrentAssets = TryParseDecimal(report["totalCurrentAssets"]),
+                CashAndCashEquivalentsAtCarryingValue = TryParseDecimal(report["cashAndCashEquivalentsAtCarryingValue"]),
+                CashAndShortTermInvestments = TryParseDecimal(report["cashAndShortTermInvestments"]),
+                Inventory = TryParseDecimal(report["inventory"]),
+                CurrentNetReceivables = TryParseDecimal(report["currentNetReceivables"]),
+                TotalNonCurrentAssets = TryParseDecimal(report["totalNonCurrentAssets"]),
+                PropertyPlantEquipment = TryParseDecimal(report["propertyPlantEquipment"]),
+                AccumulatedDepreciationAmortizationPPE = TryParseDecimal(report["accumulatedDepreciationAmortizationPPE"]),
+                IntangibleAssets = TryParseDecimal(report["intangibleAssets"]),
+                IntangibleAssetsExcludingGoodwill = TryParseDecimal(report["intangibleAssetsExcludingGoodwill"]),
+                Goodwill = TryParseDecimal(report["goodwill"]),
+                Investments = TryParseDecimal(report["investments"]),
+                LongTermInvestments = TryParseDecimal(report["longTermInvestments"]),
+                ShortTermInvestments = TryParseDecimal(report["shortTermInvestments"]),
+                OtherCurrentAssets = TryParseDecimal(report["otherCurrentAssets"]),
+                OtherNonCurrentAssets = TryParseDecimal(report["otherNonCurrrentAssets"]),
+                TotalLiabilities = TryParseDecimal(report["totalLiabilities"]),
+                TotalCurrentLiabilities = TryParseDecimal(report["totalCurrentLiabilities"]),
+                CurrentAccountsPayable = TryParseDecimal(report["currentAccountsPayable"]),
+                DeferredRevenue = TryParseDecimal(report["deferredRevenue"]),
+                CurrentDebt = TryParseDecimal(report["currentDebt"]),
+                ShortTermDebt = TryParseDecimal(report["shortTermDebt"]),
+                TotalNonCurrentLiabilities = TryParseDecimal(report["totalNonCurrentLiabilities"]),
+                CapitalLeaseObligations = TryParseDecimal(report["capitalLeaseObligations"]),
+                LongTermDebt = TryParseDecimal(report["longTermDebt"]),
+                CurrentLongTermDebt = TryParseDecimal(report["currentLongTermDebt"]),
+                LongTermDebtNoncurrent = TryParseDecimal(report["longTermDebtNoncurrent"]),
+                ShortLongTermDebtTotal = TryParseDecimal(report["shortLongTermDebtTotal"]),
+                OtherCurrentLiabilities = TryParseDecimal(report["otherCurrentLiabilities"]),
+                OtherNonCurrentLiabilities = TryParseDecimal(report["otherNonCurrentLiabilities"]),
+                TotalShareholderEquity = TryParseDecimal(report["totalShareholderEquity"]),
+                TreasuryStock = TryParseDecimal(report["treasuryStock"]),
+                RetainedEarnings = TryParseDecimal(report["retainedEarnings"]),
+                CommonStock = TryParseDecimal(report["commonStock"]),
+                CommonStockSharesOutstanding = TryParseDecimal(report["commonStockSharesOutstanding"])
+            };
+        }
+
+        private CashFlowReport ParseCashFlowReport(JToken report)
+        {
+            return new CashFlowReport
+            {
+                FiscalDateEnding = report["fiscalDateEnding"]?.ToString(),
+                ReportedCurrency = report["reportedCurrency"]?.ToString(),
+                OperatingCashflow = TryParseDecimal(report["operatingCashflow"]),
+                PaymentsForOperatingActivities = TryParseDecimal(report["paymentsForOperatingActivities"]),
+                ProceedsFromOperatingActivities = TryParseDecimal(report["proceedsFromOperatingActivities"]),
+                ChangeInOperatingLiabilities = TryParseDecimal(report["changeInOperatingLiabilities"]),
+                ChangeInOperatingAssets = TryParseDecimal(report["changeInOperatingAssets"]),
+                DepreciationDepletionAndAmortization = TryParseDecimal(report["depreciationDepletionAndAmortization"]),
+                CapitalExpenditures = TryParseDecimal(report["capitalExpenditures"]),
+                ChangeInReceivables = TryParseDecimal(report["changeInReceivables"]),
+                ChangeInInventory = TryParseDecimal(report["changeInInventory"]),
+                ProfitLoss = TryParseDecimal(report["profitLoss"]),
+                CashflowFromInvestment = TryParseDecimal(report["cashflowFromInvestment"]),
+                CashflowFromFinancing = TryParseDecimal(report["cashflowFromFinancing"]),
+                ProceedsFromRepaymentsOfShortTermDebt = TryParseDecimal(report["proceedsFromRepaymentsOfShortTermDebt"]),
+                PaymentsForRepurchaseOfCommonStock = TryParseDecimal(report["paymentsForRepurchaseOfCommonStock"]),
+                PaymentsForRepurchaseOfEquity = TryParseDecimal(report["paymentsForRepurchaseOfEquity"]),
+                PaymentsForRepurchaseOfPreferredStock = TryParseDecimal(report["paymentsForRepurchaseOfPreferredStock"]),
+                DividendPayout = TryParseDecimal(report["dividendPayout"]),
+                DividendPayoutCommonStock = TryParseDecimal(report["dividendPayoutCommonStock"]),
+                DividendPayoutPreferredStock = TryParseDecimal(report["dividendPayoutPreferredStock"]),
+                ProceedsFromIssuanceOfCommonStock = TryParseDecimal(report["proceedsFromIssuanceOfCommonStock"]),
+                ProceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet = TryParseDecimal(report["proceedsFromIssuanceOfLongTermDebtAndCapitalSecuritiesNet"]),
+                ProceedsFromIssuanceOfPreferredStock = TryParseDecimal(report["proceedsFromIssuanceOfPreferredStock"]),
+                ProceedsFromRepurchaseOfEquity = TryParseDecimal(report["proceedsFromRepurchaseOfEquity"]),
+                ProceedsFromSaleOfTreasuryStock = TryParseDecimal(report["proceedsFromSaleOfTreasuryStock"]),
+                ChangeInCashAndCashEquivalents = TryParseDecimal(report["changeInCashAndCashEquivalents"]),
+                ChangeInExchangeRate = TryParseDecimal(report["changeInExchangeRate"]),
+                NetIncome = TryParseDecimal(report["netIncome"])
+            };
+        }
+
+        /// <summary>
+        /// Safely parse a JSON token to decimal, returning null if null or invalid
+        /// </summary>
+        private static decimal? TryParseDecimal(JToken token)
+        {
+            if (token == null || token.Type == JTokenType.Null)
+                return null;
+
+            var value = token.ToString();
+            if (string.IsNullOrEmpty(value) || value == "None" || value == "-")
+                return null;
+
+            if (decimal.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out decimal result))
+                return result;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Safely parse a JSON token to long, returning null if null or invalid
+        /// </summary>
+        private static long? TryParseLong(JToken token)
+        {
+            if (token == null || token.Type == JTokenType.Null)
+                return null;
+
+            var value = token.ToString();
+            if (string.IsNullOrEmpty(value) || value == "None" || value == "-")
+                return null;
+
+            if (long.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out long result))
+                return result;
+
+            return null;
+        }
+
+        #endregion
+
+        #endregion
     }
 }
