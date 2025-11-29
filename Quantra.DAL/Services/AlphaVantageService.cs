@@ -789,8 +789,8 @@ namespace Quantra.DAL.Services
 
         public static string GetApiKey()
         {
-            // Get API key from configuration or environment
-            return null; // come from EF Database call
+            // Get API key from database using the Utilities helper
+            return Quantra.DAL.Utilities.Utilities.GetAlphaVantageApiKey();
         }
 
         /// <summary>

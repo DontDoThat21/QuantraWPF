@@ -193,7 +193,8 @@ namespace Quantra.DAL.Services
                 var parameters = new Dictionary<string, string>
                 {
                     { "symbol", symbol },
-                    { "outputsize", "full" }
+                    { "outputsize", "full" },
+                    { "apikey", AlphaVantageService.GetApiKey() }
                 };
                 if (function == "TIME_SERIES_INTRADAY")
                 {
