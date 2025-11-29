@@ -101,9 +101,14 @@ namespace Quantra.DAL.Services
                 _loggingService.Log("Warning", "AlphaVantageApiKey not found in database settings profile");
                 return string.Empty;
             }
-            catch (Exception ex)
+            catch (Microsoft.Data.SqlClient.SqlException ex)
             {
-                _loggingService.Log("Error", "Error loading AlphaVantageApiKey from database", ex.ToString());
+                _loggingService.Log("Error", "Database connection error loading AlphaVantageApiKey", ex.ToString());
+                return string.Empty;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _loggingService.Log("Error", "EF Core operation error loading AlphaVantageApiKey", ex.ToString());
                 return string.Empty;
             }
         }
