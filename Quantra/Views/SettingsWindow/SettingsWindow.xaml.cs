@@ -301,6 +301,9 @@ namespace Quantra
 
                 _selectedProfile.ModifiedDate = DateTime.Now;
                 _settingsService.UpdateSettingsProfile(_selectedProfile);
+
+                // Clear API key cache to ensure updated key is used
+                Quantra.DAL.Utilities.Utilities.ClearApiKeyCache();
             }
             catch (Exception ex)
             {
