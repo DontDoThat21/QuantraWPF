@@ -525,7 +525,7 @@ namespace Quantra.Controls
         public StockExplorer(StockDataCacheService stockDataCacheService,
                             UserSettingsService userSettingsService, LoggingService loggingService,
                             AlphaVantageService alphaVantageService, RealTimeInferenceService inferenceService,
-                            PredictionCacheService predictionCacheService)
+                            PredictionCacheService predictionCacheService, StockSymbolCacheService stockSymbolCacheService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
@@ -534,6 +534,7 @@ namespace Quantra.Controls
             _viewModel = new StockExplorerViewModel(stockDataCacheService, alphaVantageService, inferenceService, predictionCacheService);
             _cacheService = stockDataCacheService;
             _alphaVantageService = alphaVantageService;
+            _stockSymbolCacheService = stockSymbolCacheService ?? throw new ArgumentNullException(nameof(stockSymbolCacheService));
 
             // Initialize sentiment analysis services with null checks
             try
@@ -1350,261 +1351,218 @@ namespace Quantra.Controls
                 
                 // Instead of clearing and rebuilding, update individual indicator properties
                 // This eliminates the flashing UI by maintaining consistent elements
-                // Collect all indicator calculation tasks to await them together
-                var indicatorTasks = new List<Task>();
-
-                // RSI, MACD, VWAP and most influential indicators should be first
-                indicatorTasks.Add(Task.Run(async () =>
+                // Collect indicator values in a dictionary to update UI once after all data is loaded
+                var indicatorResults = new Dictionary<string, string>();
+                
+                // Create tasks that collect results without marshaling to UI thread
+                var rsiTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var rsi = await _alphaVantageService.GetRSI(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            RsiValue = FormatIndicatorValue("RSI", rsi);
-                        });
+                        return ("RSI", FormatIndicatorValue("RSI", rsi));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load RSI for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            RsiValue = "N/A";
-                        });
+                        return ("RSI", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                // Get P/E Ratio (fundamental indicator)
-                indicatorTasks.Add(Task.Run(async () =>
+                var peTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var peRatio = await _alphaVantageService.GetPERatioAsync(symbol).ConfigureAwait(false);
-                        if (peRatio.HasValue)
-                        {
-                            await Dispatcher.InvokeAsync(() => {
-                                SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                                PeRatioValue = FormatIndicatorValue("P/E Ratio", peRatio.Value);
-                            });
-                        }
-                        else
-                        {
-                            await Dispatcher.InvokeAsync(() => {
-                                SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                                PeRatioValue = "N/A";
-                            });
-                        }
+                        return ("PE", peRatio.HasValue ? FormatIndicatorValue("P/E Ratio", peRatio.Value) : "N/A");
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load P/E Ratio for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            PeRatioValue = "N/A";
-                        });
+                        return ("PE", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                // Get MACD components
-                indicatorTasks.Add(Task.Run(async () =>
+                var macdTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var macdData = await _alphaVantageService.GetMACD(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            MacdValue = FormatIndicatorValue("MACD", macdData.Macd);
-                            MacdSignalValue = FormatIndicatorValue("MACD Signal", macdData.MacdSignal);
-                            MacdHistValue = FormatIndicatorValue("MACD Hist", macdData.MacdHist);
-                        });
+                        return ("MACD", 
+                            FormatIndicatorValue("MACD", macdData.Macd),
+                            FormatIndicatorValue("MACD Signal", macdData.MacdSignal),
+                            FormatIndicatorValue("MACD Hist", macdData.MacdHist));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load MACD for {symbol}", ex.ToString());
-                        // If MACD fails, set placeholder values
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            MacdValue = "N/A";
-                            MacdSignalValue = "N/A";
-                            MacdHistValue = "N/A";
-                        });
+                        return ("MACD", "N/A", "N/A", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                // Get VWAP
-                indicatorTasks.Add(Task.Run(async () =>
+                var vwapTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var vwap = await _alphaVantageService.GetVWAP(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            VwapValue = FormatIndicatorValue("VWAP", vwap);
-                        });
+                        return ("VWAP", FormatIndicatorValue("VWAP", vwap));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load VWAP for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            VwapValue = "N/A";
-                        });
+                        return ("VWAP", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                // Add other influential indicators
-                indicatorTasks.Add(Task.Run(async () =>
+                var adxTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var adx = await _alphaVantageService.GetLatestADX(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            AdxValue = FormatIndicatorValue("ADX", adx);
-                        });
+                        return ("ADX", FormatIndicatorValue("ADX", adx));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load ADX for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            AdxValue = "N/A";
-                        });
+                        return ("ADX", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                indicatorTasks.Add(Task.Run(async () =>
+                var cciTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var cci = await _alphaVantageService.GetCCI(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            CciValue = FormatIndicatorValue("CCI", cci);
-                        });
+                        return ("CCI", FormatIndicatorValue("CCI", cci));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load CCI for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            CciValue = "N/A";
-                        });
+                        return ("CCI", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                // Add additional indicators
-                indicatorTasks.Add(Task.Run(async () =>
+                var atrTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var atr = await _alphaVantageService.GetATR(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            AtrValue = FormatIndicatorValue("ATR", atr);
-                        });
+                        return ("ATR", FormatIndicatorValue("ATR", atr));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load ATR for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            AtrValue = "N/A";
-                        });
+                        return ("ATR", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                indicatorTasks.Add(Task.Run(async () =>
+                var mfiTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var mfi = await _alphaVantageService.GetMFI(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            MfiValue = FormatIndicatorValue("MFI", mfi);
-                        });
+                        return ("MFI", FormatIndicatorValue("MFI", mfi));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load MFI for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() => {
-                            SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
-                            MfiValue = "N/A";
-                        });
+                        return ("MFI", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
-                indicatorTasks.Add(Task.Run(async () =>
+                var stochTask = Task.Run(async () =>
                 {
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         var stoch = await _alphaVantageService.GetSTOCH(symbol).ConfigureAwait(false);
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            StochKValue = FormatIndicatorValue("Stoch K", stoch.StochK);
-                            StochDValue = FormatIndicatorValue("Stoch D", stoch.StochD);
-                        });
+                        return ("STOCH", 
+                            FormatIndicatorValue("Stoch K", stoch.StochK),
+                            FormatIndicatorValue("Stoch D", stoch.StochD));
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Indicator loading was cancelled - this is fine
+                        throw;
                     }
                     catch (Exception ex)
                     {
                         //DatabaseMonolith.Log("Warning", $"Failed to load STOCH for {symbol}", ex.ToString());
-                        await Dispatcher.InvokeAsync(() =>
-                        {
-                            StochKValue = "N/A";
-                            StochDValue = "N/A";
-                        });
+                        return ("STOCH", "N/A", "N/A");
                     }
-                }, cancellationToken));
+                }, cancellationToken);
 
                 // Wait for all indicator tasks to complete
-                await Task.WhenAll(indicatorTasks);
+                await Task.WhenAll(rsiTask, peTask, macdTask, vwapTask, adxTask, cciTask, atrTask, mfiTask, stochTask).ConfigureAwait(false);
+
+                // Extract results BEFORE marshaling to UI thread to avoid any potential deadlock
+                var rsiResult = rsiTask.Result;
+                var peResult = peTask.Result;
+                var macdResult = macdTask.Result;
+                var vwapResult = vwapTask.Result;
+                var adxResult = adxTask.Result;
+                var cciResult = cciTask.Result;
+                var atrResult = atrTask.Result;
+                var mfiResult = mfiTask.Result;
+                var stochResult = stochTask.Result;
+
+                // Now update UI thread once with all collected results
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    SharedTitleBar.UpdateDispatcherMonitoring("LoadIndicatorDataAsync");
+                    
+                    RsiValue = rsiResult.Item2;
+                    PeRatioValue = peResult.Item2;
+                    MacdValue = macdResult.Item2;
+                    MacdSignalValue = macdResult.Item3;
+                    MacdHistValue = macdResult.Item4;
+                    VwapValue = vwapResult.Item2;
+                    AdxValue = adxResult.Item2;
+                    CciValue = cciResult.Item2;
+                    AtrValue = atrResult.Item2;
+                    MfiValue = mfiResult.Item2;
+                    StochKValue = stochResult.Item2;
+                    StochDValue = stochResult.Item3;
+                });
 
                 // Keep the CurrentIndicators collection for backward compatibility
                 // Note: We can gradually phase out this collection in favor of the individual properties

@@ -326,7 +326,14 @@ namespace Quantra.Controls
                         var itemToRemove = viewModel.CachedStocks.FirstOrDefault(s => s.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase));
                         if (itemToRemove != null)
                         {
+                            // Dispose the QuoteData object to free resources
+                            itemToRemove.Dispose();
+                            
+                            // Remove from the ObservableCollection (this should trigger UI update)
                             viewModel.CachedStocks.Remove(itemToRemove);
+                            
+                            // Force DataGrid refresh to ensure the row is visually removed
+                            StockDataGrid?.Items.Refresh();
                         }
                     }
                     

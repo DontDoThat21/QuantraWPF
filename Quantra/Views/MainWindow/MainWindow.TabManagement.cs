@@ -47,6 +47,7 @@ namespace Quantra
         private IEarningsTranscriptService _earningsTranscriptService;
         private IAnalystRatingService _analystRatingService;
         private IInsiderTradingService _insiderTradingService;
+        private StockSymbolCacheService _stockSymbolCacheService;
         #endregion
 
         #region Constructor
@@ -655,7 +656,8 @@ namespace Quantra
                     _loggingService,
                     _alphaVantageService,
                     _inferenceService,
-                    _predictionCacheService);
+                    _predictionCacheService,
+                    _stockSymbolCacheService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width

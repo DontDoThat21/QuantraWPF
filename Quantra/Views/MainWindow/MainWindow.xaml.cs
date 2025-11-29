@@ -170,6 +170,8 @@ namespace Quantra
                 ?? throw new InvalidOperationException("RealTimeInferenceService not registered in DI container");
             _predictionCacheService = App.ServiceProvider.GetService<PredictionCacheService>()
                 ?? throw new InvalidOperationException("PredictionCacheService not registered in DI container");
+            _stockSymbolCacheService = App.ServiceProvider.GetService<StockSymbolCacheService>()
+                ?? throw new InvalidOperationException("StockSymbolCacheService not registered in DI container");
 
             // Initialize debounce timer - increased interval to reduce UI load
             debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
