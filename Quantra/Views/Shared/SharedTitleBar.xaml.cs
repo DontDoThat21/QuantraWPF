@@ -136,6 +136,60 @@ namespace Quantra
             }
         }
 
+        // Load All Historicals counter property
+        private string _loadAllHistoricalsCounter = "";
+        public string LoadAllHistoricalsCounter
+        {
+            get => _loadAllHistoricalsCounter;
+            set
+            {
+                if (_loadAllHistoricalsCounter != value)
+                {
+                    // Ensure property updates happen on UI thread
+                    if (Dispatcher.CheckAccess())
+                    {
+                        _loadAllHistoricalsCounter = value;
+                        OnPropertyChanged(nameof(LoadAllHistoricalsCounter));
+                    }
+                    else
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            _loadAllHistoricalsCounter = value;
+                            OnPropertyChanged(nameof(LoadAllHistoricalsCounter));
+                        });
+                    }
+                }
+            }
+        }
+
+        // Is Load All Historicals operation active
+        private bool _isLoadAllHistoricalsActive = false;
+        public bool IsLoadAllHistoricalsActive
+        {
+            get => _isLoadAllHistoricalsActive;
+            set
+            {
+                if (_isLoadAllHistoricalsActive != value)
+                {
+                    // Ensure property updates happen on UI thread
+                    if (Dispatcher.CheckAccess())
+                    {
+                        _isLoadAllHistoricalsActive = value;
+                        OnPropertyChanged(nameof(IsLoadAllHistoricalsActive));
+                    }
+                    else
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            _isLoadAllHistoricalsActive = value;
+                            OnPropertyChanged(nameof(IsLoadAllHistoricalsActive));
+                        });
+                    }
+                }
+            }
+        }
+
         // Callee property for monitoring dispatcher calls
         private string _currentCallee = "None";
         public string CurrentCallee
@@ -782,6 +836,41 @@ namespace Quantra
             {
                 _currentInstance.CurrentCall = "None";
                 _currentInstance.CurrentCallee = "None";
+            }
+        }
+        
+        /// <summary>
+        /// Updates the Load All Historicals counter display from any part of the application
+        /// </summary>
+        /// <param name="remainingCount">Number of stocks remaining to load</param>
+        /// <param name="totalCount">Total number of stocks to load</param>
+        public static void UpdateLoadAllHistoricalsCounter(int remainingCount, int totalCount)
+        {
+            if (_currentInstance != null)
+            {
+                _currentInstance.LoadAllHistoricalsCounter = $"Loading: {totalCount - remainingCount}/{totalCount}";
+                _currentInstance.IsLoadAllHistoricalsActive = true;
+            }
+        }
+        
+        /// <summary>
+        /// Sets whether the Load All Historicals operation is active
+        /// </summary>
+        /// <param name="isActive">True if operation is running, false otherwise</param>
+        /// <param name="message">Optional message to display</param>
+        public static void SetLoadAllHistoricalsActive(bool isActive, string message = "")
+        {
+            if (_currentInstance != null)
+            {
+                _currentInstance.IsLoadAllHistoricalsActive = isActive;
+                if (!string.IsNullOrEmpty(message))
+                {
+                    _currentInstance.LoadAllHistoricalsCounter = message;
+                }
+                else if (!isActive)
+                {
+                    _currentInstance.LoadAllHistoricalsCounter = "";
+                }
             }
         }
         

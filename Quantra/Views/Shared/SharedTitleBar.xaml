@@ -140,6 +140,17 @@
                                Margin="0,0,15,0"
                                ToolTip="VIX Volatility Index - Updates every minute during trading hours" />
                     
+                    <!-- Load All Historicals Counter Display -->
+                    <TextBlock x:Name="LoadAllHistoricalsCounterTextBlock"
+                               Text="{Binding LoadAllHistoricalsCounter, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                               Foreground="LimeGreen"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="0,0,15,0"
+                               Visibility="{Binding IsLoadAllHistoricalsActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               ToolTip="Stocks remaining to load historical data" />
+                    
                     <!-- Global Loading Status Indicator -->
                     <Grid Width="16" Height="16" Margin="0,0,8,0">
                         <!-- Background element that shows royal blue when idle -->

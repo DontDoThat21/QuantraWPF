@@ -233,6 +233,18 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Caches historical price data asynchronously
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="range">Time range</param>
+        /// <param name="interval">Data interval</param>
+        /// <param name="data">Historical price data to cache</param>
+        public async Task CacheHistoricalDataAsync(string symbol, string range, string interval, List<HistoricalPrice> data)
+        {
+            await Task.Run(() => CacheStockData(symbol, range, interval, data)).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Checks if data exists for a symbol in the cache
         /// </summary>
         /// <param name="symbol">Stock symbol to check</param>
