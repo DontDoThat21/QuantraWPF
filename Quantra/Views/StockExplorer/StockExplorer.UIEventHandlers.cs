@@ -961,13 +961,14 @@ namespace Quantra.Controls
                 int errorCount = 0;
                 int totalCount = tickers.Count;
 
-                // Process in batches to respect API rate limits
-                const int batchSize = 5;
-                const int delayBetweenBatchesMs = 2000;
+                // Batch processing constants for API rate limiting
+                const int BATCH_SIZE = 5;
+                const int DELAY_BETWEEN_BATCHES_MS = 2000;
+                const int COMPLETION_MESSAGE_DELAY_MS = 3000;
 
-                for (int i = 0; i < tickers.Count; i += batchSize)
+                for (int i = 0; i < tickers.Count; i += BATCH_SIZE)
                 {
-                    var batch = tickers.Skip(i).Take(batchSize).ToList();
+                    var batch = tickers.Skip(i).Take(BATCH_SIZE).ToList();
                     var batchTasks = new List<Task<bool>>();
 
                     foreach (var ticker in batch)
@@ -981,8 +982,8 @@ namespace Quantra.Controls
                                 
                                 if (historicalData != null && historicalData.Count > 0)
                                 {
-                                    // Store the historical data in the cache
-                                    await _cacheService.CacheHistoricalDataAsync(ticker, "daily", "1d", historicalData);
+                                    // Store the historical data in the cache using consistent parameters
+                                    await _cacheService.CacheHistoricalDataAsync(ticker, "daily", "daily", historicalData);
                                     return true;
                                 }
                                 return false;
@@ -1002,7 +1003,7 @@ namespace Quantra.Controls
                     errorCount += batchResults.Count(r => !r);
 
                     // Update counter in SharedTitleBar
-                    int processedCount = Math.Min(i + batchSize, totalCount);
+                    int processedCount = Math.Min(i + BATCH_SIZE, totalCount);
                     int remainingCount = totalCount - processedCount;
                     SharedTitleBar.UpdateLoadAllHistoricalsCounter(remainingCount, totalCount);
                     
@@ -1014,9 +1015,9 @@ namespace Quantra.Controls
                     });
 
                     // Add delay between batches to respect API limits
-                    if (i + batchSize < tickers.Count)
+                    if (i + BATCH_SIZE < tickers.Count)
                     {
-                        await Task.Delay(delayBetweenBatchesMs);
+                        await Task.Delay(DELAY_BETWEEN_BATCHES_MS);
                     }
                 }
 
@@ -1030,7 +1031,7 @@ namespace Quantra.Controls
                 SharedTitleBar.SetLoadAllHistoricalsActive(false, $"Complete: {successCount}/{totalCount}");
                 
                 // Show completion message after a delay then hide counter
-                await Task.Delay(3000);
+                await Task.Delay(COMPLETION_MESSAGE_DELAY_MS);
                 SharedTitleBar.SetLoadAllHistoricalsActive(false);
             }
             catch (Exception ex)
