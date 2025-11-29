@@ -960,14 +960,127 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets extended historical data with adjusted prices for more accurate backtesting
+        /// Gets intraday price data using the TIME_SERIES_INTRADAY Alpha Vantage API endpoint
         /// </summary>
         /// <param name="symbol">Stock symbol</param>
-        /// <param name="interval">Data interval</param>
+        /// <param name="interval">Intraday interval: 1min, 5min, 15min, 30min, or 60min</param>
+        /// <param name="outputSize">Output size: compact (latest 100 data points) or full (trailing 30 days)</param>
+        /// <param name="dataType">Response format: json or csv</param>
+        /// <returns>List of intraday historical prices</returns>
+        public async Task<List<HistoricalPrice>> GetIntradayData(string symbol, string interval = "5min", string outputSize = "compact", string dataType = "json")
+        {
+            await WaitForApiLimit();
+
+            // Normalize symbol for API call
+            string normalizedSymbol = NormalizeSymbol(symbol);
+
+            // Validate interval - AlphaVantage TIME_SERIES_INTRADAY supports: 1min, 5min, 15min, 30min, 60min
+            var validIntervals = new[] { "1min", "5min", "15min", "30min", "60min" };
+            if (!validIntervals.Contains(interval))
+            {
+                _loggingService.Log("Warning", $"Invalid intraday interval '{interval}'. Defaulting to 5min.");
+                interval = "5min";
+            }
+
+            var parameters = new Dictionary<string, string>
+            {
+                { "symbol", normalizedSymbol },
+                { "interval", interval },
+                { "outputsize", outputSize },
+                { "datatype", dataType },
+                { "apikey", _apiKey }
+            };
+
+            await LogApiCall("TIME_SERIES_INTRADAY", $"{normalizedSymbol}&interval={interval}");
+            var responseString = await SendWithSlidingWindowAsync<string>("TIME_SERIES_INTRADAY", parameters);
+            return ParseAlphaVantageResponse(responseString, "TIME_SERIES_INTRADAY");
+        }
+
+        /// <summary>
+        /// Gets daily price data using the TIME_SERIES_DAILY Alpha Vantage API endpoint (non-adjusted)
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="outputSize">Output size: compact (latest 100 data points) or full (20+ years)</param>
+        /// <param name="dataType">Response format: json or csv</param>
+        /// <returns>List of daily historical prices (non-adjusted)</returns>
+        public async Task<List<HistoricalPrice>> GetDailyData(string symbol, string outputSize = "full", string dataType = "json")
+        {
+            await WaitForApiLimit();
+
+            string normalizedSymbol = NormalizeSymbol(symbol);
+
+            var parameters = new Dictionary<string, string>
+            {
+                { "symbol", normalizedSymbol },
+                { "outputsize", outputSize },
+                { "datatype", dataType },
+                { "apikey", _apiKey }
+            };
+
+            await LogApiCall("TIME_SERIES_DAILY", normalizedSymbol);
+            var responseString = await SendWithSlidingWindowAsync<string>("TIME_SERIES_DAILY", parameters);
+            return ParseAlphaVantageResponse(responseString, "TIME_SERIES_DAILY");
+        }
+
+        /// <summary>
+        /// Gets weekly price data using the TIME_SERIES_WEEKLY Alpha Vantage API endpoint (non-adjusted)
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="dataType">Response format: json or csv</param>
+        /// <returns>List of weekly historical prices (non-adjusted)</returns>
+        public async Task<List<HistoricalPrice>> GetWeeklyData(string symbol, string dataType = "json")
+        {
+            await WaitForApiLimit();
+
+            string normalizedSymbol = NormalizeSymbol(symbol);
+
+            var parameters = new Dictionary<string, string>
+            {
+                { "symbol", normalizedSymbol },
+                { "datatype", dataType },
+                { "apikey", _apiKey }
+            };
+
+            await LogApiCall("TIME_SERIES_WEEKLY", normalizedSymbol);
+            var responseString = await SendWithSlidingWindowAsync<string>("TIME_SERIES_WEEKLY", parameters);
+            return ParseAlphaVantageResponse(responseString, "TIME_SERIES_WEEKLY");
+        }
+
+        /// <summary>
+        /// Gets monthly price data using the TIME_SERIES_MONTHLY Alpha Vantage API endpoint (non-adjusted)
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="dataType">Response format: json or csv</param>
+        /// <returns>List of monthly historical prices (non-adjusted)</returns>
+        public async Task<List<HistoricalPrice>> GetMonthlyData(string symbol, string dataType = "json")
+        {
+            await WaitForApiLimit();
+
+            string normalizedSymbol = NormalizeSymbol(symbol);
+
+            var parameters = new Dictionary<string, string>
+            {
+                { "symbol", normalizedSymbol },
+                { "datatype", dataType },
+                { "apikey", _apiKey }
+            };
+
+            await LogApiCall("TIME_SERIES_MONTHLY", normalizedSymbol);
+            var responseString = await SendWithSlidingWindowAsync<string>("TIME_SERIES_MONTHLY", parameters);
+            return ParseAlphaVantageResponse(responseString, "TIME_SERIES_MONTHLY");
+        }
+
+        /// <summary>
+        /// Gets extended historical data with adjusted prices for more accurate backtesting
+        /// Supports both adjusted and non-adjusted endpoints based on the useAdjusted parameter
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="interval">Data interval: supports intraday (1min, 5min, 15min, 30min, 60min), daily, weekly, monthly, or their aliases (1d, 1wk, 1mo)</param>
         /// <param name="outputSize">Output size (compact/full)</param>
         /// <param name="dataType">Type of data (json/csv)</param>
-        /// <returns>List of historical prices with adjusted values</returns>
-        public async Task<List<HistoricalPrice>> GetExtendedHistoricalData(string symbol, string interval = "daily", string outputSize = "full", string dataType = "json")
+        /// <param name="useAdjusted">Whether to use adjusted prices (default: true for daily/weekly/monthly, always false for intraday)</param>
+        /// <returns>List of historical prices</returns>
+        public async Task<List<HistoricalPrice>> GetExtendedHistoricalData(string symbol, string interval = "daily", string outputSize = "full", string dataType = "json", bool useAdjusted = true)
         {
             await WaitForApiLimit();
 
@@ -977,6 +1090,7 @@ namespace Quantra.DAL.Services
             string function;
             string avInterval = "";
 
+            // Handle intraday intervals (1min, 5min, 15min, 30min, 60min)
             if (interval.EndsWith("min"))
             {
                 function = "TIME_SERIES_INTRADAY";
@@ -984,19 +1098,19 @@ namespace Quantra.DAL.Services
             }
             else if (interval == "daily" || interval == "1d")
             {
-                function = "TIME_SERIES_DAILY_ADJUSTED";
+                function = useAdjusted ? "TIME_SERIES_DAILY_ADJUSTED" : "TIME_SERIES_DAILY";
             }
             else if (interval == "weekly" || interval == "1wk")
             {
-                function = "TIME_SERIES_WEEKLY_ADJUSTED";
+                function = useAdjusted ? "TIME_SERIES_WEEKLY_ADJUSTED" : "TIME_SERIES_WEEKLY";
             }
             else if (interval == "monthly" || interval == "1mo")
             {
-                function = "TIME_SERIES_MONTHLY_ADJUSTED";
+                function = useAdjusted ? "TIME_SERIES_MONTHLY_ADJUSTED" : "TIME_SERIES_MONTHLY";
             }
             else
             {
-                function = "TIME_SERIES_DAILY_ADJUSTED";
+                function = useAdjusted ? "TIME_SERIES_DAILY_ADJUSTED" : "TIME_SERIES_DAILY";
             }
 
             var parameters = new Dictionary<string, string>
@@ -1012,6 +1126,8 @@ namespace Quantra.DAL.Services
                 parameters.Add("interval", avInterval);
             }
 
+            var logDetails = string.IsNullOrEmpty(avInterval) ? normalizedSymbol : $"{normalizedSymbol}&interval={avInterval}";
+            await LogApiCall(function, logDetails);
             var responseString = await SendWithSlidingWindowAsync<string>(function, parameters);
             return ParseAlphaVantageResponse(responseString, function);
         }

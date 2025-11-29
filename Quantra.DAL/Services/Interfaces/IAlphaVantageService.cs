@@ -31,10 +31,21 @@ namespace Quantra.DAL.Services.Interfaces
         Task<List<StockIndicator>> GetIndicatorsAsync(string symbol);
         Task<List<double>> GetHistoricalClosingPricesAsync(string symbol, int count);
         
-        // New methods for Premium API
+        // Time Series Data Methods based on AlphaVantage API
+        // Intraday: TIME_SERIES_INTRADAY (1min, 5min, 15min, 30min, 60min)
+        Task<List<HistoricalPrice>> GetIntradayData(string symbol, string interval = "5min", string outputSize = "compact", string dataType = "json");
+        
+        // Daily/Weekly/Monthly non-adjusted endpoints
+        Task<List<HistoricalPrice>> GetDailyData(string symbol, string outputSize = "full", string dataType = "json");
+        Task<List<HistoricalPrice>> GetWeeklyData(string symbol, string dataType = "json");
+        Task<List<HistoricalPrice>> GetMonthlyData(string symbol, string dataType = "json");
+        
+        // Extended historical data with optional adjusted prices
+        Task<List<HistoricalPrice>> GetExtendedHistoricalData(string symbol, string interval = "daily", string outputSize = "full", string dataType = "json", bool useAdjusted = true);
+        
+        // Forex and Crypto data methods
         Task<List<HistoricalPrice>> GetForexHistoricalData(string fromSymbol, string toSymbol, string interval = "daily");
         Task<List<HistoricalPrice>> GetCryptoHistoricalData(string symbol, string market = "USD", string interval = "daily");
-        Task<List<HistoricalPrice>> GetExtendedHistoricalData(string symbol, string interval = "daily", string outputSize = "full", string dataType = "json");
         
         // Property to check if using premium API
         bool IsPremiumKey { get; }
