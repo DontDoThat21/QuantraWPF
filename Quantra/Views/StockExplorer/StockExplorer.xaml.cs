@@ -534,6 +534,12 @@ namespace Quantra.Controls
             _viewModel = new StockExplorerViewModel(stockDataCacheService, alphaVantageService, inferenceService, predictionCacheService);
             _cacheService = stockDataCacheService;
             _alphaVantageService = alphaVantageService;
+            
+            // Initialize the SymbolSearchTextBox with the AlphaVantageService
+            SymbolSearchTextBox.SetAlphaVantageService(alphaVantageService);
+            
+            // Subscribe to symbol selection event
+            SymbolSearchTextBox.SymbolSelected += SymbolSearchTextBox_SymbolSelected;
 
             // Initialize sentiment analysis services with null checks
             try

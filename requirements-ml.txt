@@ -1,0 +1,35 @@
+# Python ML Dependencies for Quantra Stock Predictor
+# Compatible with Python 3.9.x
+# Last updated: 2025-11-29
+
+# Core ML Libraries
+tensorflow==2.11.0
+tensorflow-intel==2.11.0
+tensorflow-estimator==2.11.0
+tensorflow-io-gcs-filesystem==0.31.0
+keras==2.11.0
+
+torch==2.8.0
+
+scikit-learn>=1.3.0
+
+# Data Processing
+numpy==1.23.5  # Must be < 1.24 for TensorFlow 2.11 compatibility
+pandas>=2.0.0
+scipy>=1.11.0
+
+# Model Persistence
+joblib>=1.3.0
+
+# Optional but Recommended
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Notes:
+# - NumPy MUST be < 1.24 for TensorFlow 2.11 compatibility
+# - TensorFlow 2.11 is the recommended version for Python 3.9
+# - PyTorch version can be updated independently
+# - For Python 3.10+, consider TensorFlow 2.12+
+
+# Installation:
+# pip install -r requirements-ml.txt

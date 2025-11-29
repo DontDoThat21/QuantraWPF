@@ -525,107 +525,26 @@ namespace Quantra.Controls
             }
         }
 
-        // SymbolComboBox selection changed event handler
-        // This handler ONLY enables the Search button when a valid symbol is selected
-        // It does NOT trigger an automatic search - search is only triggered by:
-        // 1. Enter key press (handled in SymbolComboBox_KeyUp)
-        // 2. Clicking on a dropdown item (handled in SymbolComboBox_DropDownClosed)
-        // 3. Clicking the Search button (handled in RefreshButton_Click)
-        private void SymbolComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        /// <summary>
+        /// Handles symbol selection from the SymbolSearchTextBox control
+        /// </summary>
+        private async void SymbolSearchTextBox_SymbolSelected(object sender, string symbol)
         {
-            if (_isHandlingSelectionChanged || sender is not ComboBox comboBox) 
+            if (string.IsNullOrWhiteSpace(symbol) || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
                 return;
 
-            var selectedSymbol = comboBox.SelectedItem as string;
-            if (!string.IsNullOrEmpty(selectedSymbol))
+            try
             {
-                // Only enable the Search button - do NOT auto-search
-                // Search is triggered by Enter key, dropdown click, or Search button click
-                EnableStockSearchButton();
-                
-                // Track that a selection was made (used by DropDownClosed)
-                if (comboBox.IsDropDownOpen)
-                {
-                    _dropdownSelectionMade = true;
-                }
+                // Use the modular symbol selection method
+                await HandleSymbolSelectionAsync(symbol.ToUpper(), "SymbolSearchTextBox");
             }
-        }
-
-        // DropDownOpened event handler - stores the selection state before dropdown opens
-        private void SymbolComboBox_DropDownOpened(object sender, EventArgs e)
-        {
-            if (sender is ComboBox comboBox)
+            catch (System.OperationCanceledException)
             {
-                // Store the current selection before the dropdown opens
-                _selectedSymbolBeforeDropdown = comboBox.SelectedItem as string;
-                _dropdownSelectionMade = false;
+                // Operation was cancelled - this is expected when user selects quickly
             }
-        }
-
-        // DropDownClosed event handler - triggers search only when user explicitly clicks on a dropdown item
-        private async void SymbolComboBox_DropDownClosed(object sender, EventArgs e)
-        {
-            if (sender is not ComboBox comboBox || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
-                return;
-
-            var selectedSymbol = comboBox.SelectedItem as string;
-            
-            // Only trigger search if:
-            // 1. A selection was actually made while dropdown was open, OR
-            // 2. The selection changed from what it was before the dropdown opened
-            bool selectionChanged = !string.Equals(_selectedSymbolBeforeDropdown, selectedSymbol, StringComparison.OrdinalIgnoreCase);
-            
-            if (!string.IsNullOrEmpty(selectedSymbol) && (_dropdownSelectionMade || selectionChanged))
+            catch (Exception ex)
             {
-                try
-                {
-                    // User explicitly clicked on a dropdown item, trigger the search
-                    await HandleSymbolSelectionAsync(selectedSymbol, "DropdownSelection");
-                }
-                catch (System.OperationCanceledException)
-                {
-                    // Operation was cancelled - this is expected when user selects quickly
-                }
-                catch (Exception ex)
-                {
-                    CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
-                }
-            }
-            
-            // Reset tracking state
-            _dropdownSelectionMade = false;
-            _selectedSymbolBeforeDropdown = null;
-        }
-
-        private async void SymbolComboBox_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (sender is ComboBox comboBox)
-            {
-                // If Enter key is pressed and there's a selected/filtered symbol, and we're in Individual Asset mode, select it immediately
-                if (e.Key == Key.Enter && !string.IsNullOrEmpty(comboBox.Text) && 
-                    CurrentSelectionMode == Quantra.Enums.SymbolSelectionMode.IndividualAsset)
-                {
-                    var symbolToSelect = comboBox.Text.ToUpper();
-                    if (_viewModel.FilteredSymbols.Contains(symbolToSelect))
-                    {
-                        try
-                        {
-                            // Use the modular symbol selection method
-                            await HandleSymbolSelectionAsync(symbolToSelect, "KeyboardEntry");
-                        }
-                        catch (System.OperationCanceledException)
-                        {
-                            // Operation was cancelled - this is expected when user types quickly
-                            //DatabaseMonolith.Log("Info", $"Keyboard symbol selection for {symbolToSelect} was cancelled");
-                        }
-                        catch (Exception ex)
-                        {
-                            //DatabaseMonolith.Log("Error", "Error selecting symbol via keyboard", ex.ToString());
-                            CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
-                        }
-                    }
-                }
-                // Note: Validation is now handled through ViewModel SymbolSearchText property changes
+                CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
             }
         }
 
@@ -1104,32 +1023,40 @@ namespace Quantra.Controls
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            // In Individual Asset mode, search for the typed symbol
+            // In Individual Asset mode, refresh the currently loaded symbol
             if (CurrentSelectionMode == Quantra.Enums.SymbolSelectionMode.IndividualAsset)
             {
-                var searchText = _viewModel.SymbolSearchText?.ToUpper().Trim();
-                if (!string.IsNullOrEmpty(searchText) && _viewModel.FilteredSymbols.Contains(searchText))
+                var selectedSymbol = SymbolSearchTextBox?.SelectedSymbol ?? _viewModel?.SelectedSymbol;
+                
+                if (!string.IsNullOrWhiteSpace(selectedSymbol))
                 {
+                    // Create a new cancellation token source for the refresh operation
+                    using var refreshCancellation = new System.Threading.CancellationTokenSource();
+                    var refreshToken = refreshCancellation.Token;
+                    
                     try
                     {
-                        // Load data for the typed symbol
-                        await HandleSymbolSelectionAsync(searchText, "SearchButton");
+                        // Refresh the data for the currently selected symbol from API
+                        await RefreshSymbolDataFromAPI(selectedSymbol, refreshToken);
+                        
+                        // Update the price and RSI labels
+                        await UpdatePriceAndRsiLabels(selectedSymbol);
+                        
+                        // Reload indicator data asynchronously to avoid blocking UI
+                        await LoadIndicatorDataAsync(selectedSymbol, refreshToken);
                     }
                     catch (System.OperationCanceledException)
                     {
-                        // Operation was cancelled - handle gracefully for search
-                        //DatabaseMonolith.Log("Info", "Stock symbol search was cancelled");
-                        CustomModal.ShowWarning("Symbol search was cancelled.", "Operation Cancelled", Window.GetWindow(this));
+                        CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
                     }
                     catch (Exception ex)
                     {
-                        //DatabaseMonolith.Log("Error", "Error searching for stock data", ex.ToString());
-                        CustomModal.ShowError($"Error searching for data: {ex.Message}", "Error", Window.GetWindow(this));
+                        CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
                     }
                 }
                 else
                 {
-                    CustomModal.ShowWarning("Please enter a valid stock symbol to search.", "Invalid Symbol", Window.GetWindow(this));
+                    CustomModal.ShowWarning("Please select a stock symbol to refresh.", "No Symbol Selected", Window.GetWindow(this));
                 }
             }
             else if (!string.IsNullOrEmpty(_viewModel.SelectedSymbol))
@@ -1151,13 +1078,10 @@ namespace Quantra.Controls
                 }
                 catch (System.OperationCanceledException)
                 {
-                    // Operation was cancelled - this shouldn't normally happen for refresh but handle gracefully
-                    //DatabaseMonolith.Log("Info", "Stock data refresh was cancelled");
                     CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
                 }
                 catch (Exception ex)
                 {
-                    //DatabaseMonolith.Log("Error", "Error refreshing stock data", ex.ToString());
                     CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
                 }
             }

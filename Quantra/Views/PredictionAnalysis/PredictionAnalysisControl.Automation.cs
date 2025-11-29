@@ -374,8 +374,8 @@ if (LastUpdatedText != null)
                         {
                             // Collect results for batched UI update
                             batchedResults.Add(analysisResult);
-                            // Save to database immediately for data persistence
-                            SavePredictionToDatabase(analysisResult);
+                            // Save to database immediately for data persistence (async, non-blocking)
+                            await SavePredictionToDatabaseAsync(analysisResult).ConfigureAwait(false);
                         }
                     }
                     catch (OperationCanceledException) {
@@ -466,31 +466,41 @@ if (LastUpdatedText != null)
             }
         }
 
-        private void SavePredictionToDatabase(Models.PredictionModel prediction)
+        private async Task SavePredictionToDatabaseAsync(Models.PredictionModel prediction)
         {
             try
- {
-      // Validate required fields before attempting to insert
-       if (string.IsNullOrWhiteSpace(prediction.Symbol) ||
-       string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
-    double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
-      double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
-   double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
-     double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
-    {
-        //_loggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
-     return;
-     }
+            {
+                // Validate required fields before attempting to insert
+                if (string.IsNullOrWhiteSpace(prediction.Symbol) ||
+                    string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
+                    double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
+                    double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
+                    double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
+                    double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
+                {
+                    //_loggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+                    return;
+                }
 
-       // Use the service to save the prediction using Entity Framework (async method)
-            // Run synchronously since we're in a sync method - this is acceptable for background processing
-  _predictionService?.SavePredictionAsync(prediction).GetAwaiter().GetResult();
-         }
-   catch (Exception ex)
-     {
-  //_loggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
-  }
-    }
+                // Save with timeout protection (10 seconds)
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    if (_predictionService != null)
+                    {
+                        // ConfigureAwait(false) prevents deadlock by not capturing synchronization context
+                        await _predictionService.SavePredictionAsync(prediction).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                //_loggingService.Log("Warning", $"Timeout saving prediction for {prediction?.Symbol ?? "<null>"}");
+            }
+            catch (Exception ex)
+            {
+                //_loggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
+            }
+        }
 
         private async Task<List<string>> FetchMajorUSStocks(CancellationToken token)
         {

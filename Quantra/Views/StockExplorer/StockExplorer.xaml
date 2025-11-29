@@ -1,12 +1,12 @@
 ﻿<UserControl x:Class="Quantra.Controls.StockExplorer"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
-             xmlns:local="clr-namespace:Quantra.Controls"
-             xmlns:converters="clr-namespace:Quantra.Converters"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             Background="#23233A"
-             MinWidth="900" MinHeight="700">
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+xmlns:local="clr-namespace:Quantra.Controls"
+xmlns:converters="clr-namespace:Quantra.Converters"
+xmlns:sys="clr-namespace:System;assembly=mscorlib"
+Background="#23233A"
+MinWidth="900" MinHeight="700">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <converters:VwapColorConverter x:Key="VwapColorConverter"/>
@@ -191,29 +191,19 @@
                                Style="{StaticResource EnhancedTextBlockStyle}" 
                                Margin="0,0,10,0" 
                                FontWeight="Bold"/>
-                    <ComboBox x:Name="SymbolComboBox"
-                              Width="150"
-                              Height="32"
-                              MinWidth="100"
-                              IsEditable="True"
-                              IsTextSearchEnabled="True"
-                              ItemsSource="{Binding FilteredSymbols}"
-                              Text="{Binding SymbolSearchText, UpdateSourceTrigger=PropertyChanged}"
-                              SelectedItem="{Binding SelectedSymbol, Mode=TwoWay}"
-                              SelectionChanged="SymbolComboBox_SelectionChanged"
-                              DropDownOpened="SymbolComboBox_DropDownOpened"
-                              DropDownClosed="SymbolComboBox_DropDownClosed"
-                              KeyUp="SymbolComboBox_KeyUp"
-                              Style="{StaticResource EnhancedComboBoxStyle}"/>
+                    <local:SymbolSearchTextBox x:Name="SymbolSearchTextBox"
+                                               Width="200"
+                                               Height="32"
+                                               MinWidth="100"
+                                               VerticalAlignment="Center"/>
                     <Button x:Name="RefreshButton" 
-                            Content="Search" 
+                            Content="Refresh" 
                             Margin="5,0,0,0"
                             Padding="8,5"
                             Height="32"
                             MinWidth="60"
                             Click="RefreshButton_Click"
-                            Style="{StaticResource EnhancedButtonStyle}"
-                            IsEnabled="False"/>
+                            Style="{StaticResource EnhancedButtonStyle}"/>
                 </StackPanel>
                 
                 <!-- Symbol and Price Display (in the flexible space) -->

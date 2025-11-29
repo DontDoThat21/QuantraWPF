@@ -163,6 +163,13 @@ namespace Quantra.Extensions
             });
             services.AddSingleton<IInsiderTradingService>(sp => sp.GetRequiredService<InsiderTradingService>());
 
+            // Register AnalystAlertService
+            services.AddSingleton<AnalystAlertService>(sp =>
+            {
+                var analystRatingService = sp.GetRequiredService<IAnalystRatingService>();
+                return new AnalystAlertService(analystRatingService);
+            });
+
             // Register prediction enhancement service via factory to satisfy its constructor
             services.AddSingleton<OpenAIPredictionEnhancementService>(sp =>
             {
@@ -180,7 +187,20 @@ namespace Quantra.Extensions
             services.AddTransient<TradingRulesControlViewModel>();
             services.AddTransient<TransactionsViewModel>();
             services.AddTransient<ResizeControlWindowViewModel>();
-            services.AddTransient<SentimentDashboardControlViewModel>();
+            services.AddTransient<SentimentDashboardControlViewModel>(sp =>
+            {
+                var userSettings = sp.GetRequiredService<IUserSettingsService>().GetUserSettings();
+                var userSettingsService = sp.GetRequiredService<UserSettingsService>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                var analystRatingService = sp.GetRequiredService<IAnalystRatingService>();
+                var insiderTradingService = sp.GetRequiredService<IInsiderTradingService>();
+                return new SentimentDashboardControlViewModel(
+                    userSettings,
+                    userSettingsService,
+                    loggingService,
+                    analystRatingService,
+                    insiderTradingService);
+            });
             services.AddTransient<StockExplorerViewModel>();
             services.AddTransient<BacktestResultsViewModel>();
 

@@ -790,8 +790,7 @@ namespace Quantra.DAL.Services
         public static string GetApiKey()
         {
             // Get API key from configuration or environment
-            return Environment.GetEnvironmentVariable("ALPHA_VANTAGE_API_KEY")
-                ?? "686FIILJC6K24MAS"; // TODO: remove me
+            return null; // come from EF Database call
         }
 
         /// <summary>

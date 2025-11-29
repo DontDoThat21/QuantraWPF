@@ -50,7 +50,8 @@ namespace Quantra.DAL.Services
                     .AsNoTracking()
                     .Select(p => p.Symbol)
                     .Distinct()
-                    .ToListAsync();
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 var result = new List<PredictionModel>();
 
@@ -61,7 +62,8 @@ namespace Quantra.DAL.Services
                         .AsNoTracking()
                         .Where(p => p.Symbol == symbol)
                         .OrderByDescending(p => p.CreatedDate)
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync()
+                        .ConfigureAwait(false);
 
                     if (prediction != null)
                     {
@@ -82,7 +84,8 @@ namespace Quantra.DAL.Services
                         var indicators = await _context.PredictionIndicators
                             .AsNoTracking()
                             .Where(i => i.PredictionId == prediction.Id)
-                            .ToListAsync();
+                            .ToListAsync()
+                            .ConfigureAwait(false);
 
                         foreach (var indicator in indicators)
                         {
@@ -122,11 +125,12 @@ namespace Quantra.DAL.Services
             try
             {
                 var predictions = await _context.StockPredictions
-                   .AsNoTracking()
-                   .Where(p => p.Symbol == symbol)
+                    .AsNoTracking()
+                    .Where(p => p.Symbol == symbol)
                     .OrderByDescending(p => p.CreatedDate)
-             .Take(count)
-                        .ToListAsync();
+                    .Take(count)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 var result = new List<PredictionModel>();
 
@@ -147,9 +151,10 @@ namespace Quantra.DAL.Services
 
                     // Load indicators
                     var indicators = await _context.PredictionIndicators
-                   .AsNoTracking()
-                .Where(i => i.PredictionId == prediction.Id)
-                          .ToListAsync();
+                        .AsNoTracking()
+                        .Where(i => i.PredictionId == prediction.Id)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
 
                     foreach (var indicator in indicators)
                     {
@@ -184,7 +189,8 @@ namespace Quantra.DAL.Services
                     .Where(p => p.PredictedAction == action && p.Confidence >= minConfidence)
                     .Select(p => p.Symbol)
                     .Distinct()
-                    .ToListAsync();
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 var result = new List<PredictionModel>();
 
@@ -195,7 +201,8 @@ namespace Quantra.DAL.Services
                         .AsNoTracking()
                         .Where(p => p.Symbol == symbol && p.PredictedAction == action && p.Confidence >= minConfidence)
                         .OrderByDescending(p => p.CreatedDate)
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync()
+                        .ConfigureAwait(false);
 
                     if (prediction != null)
                     {
@@ -216,7 +223,8 @@ namespace Quantra.DAL.Services
                         var indicators = await _context.PredictionIndicators
                             .AsNoTracking()
                             .Where(i => i.PredictionId == prediction.Id)
-                            .ToListAsync();
+                            .ToListAsync()
+                            .ConfigureAwait(false);
 
                         foreach (var indicator in indicators)
                         {
@@ -241,19 +249,20 @@ namespace Quantra.DAL.Services
         /// Saves a prediction to the database using Entity Framework
         /// </summary>
         /// <param name="prediction">The prediction model to save</param>
+        /// <param name="cancellationToken">Optional cancellation token for timeout control</param>
         /// <returns>The ID of the saved prediction</returns>
-        public async Task<int> SavePredictionAsync(PredictionModel prediction)
+        public async Task<int> SavePredictionAsync(PredictionModel prediction, CancellationToken cancellationToken = default)
         {
             if (prediction == null)
                 throw new ArgumentNullException(nameof(prediction));
 
             // Validate required fields
             if (string.IsNullOrWhiteSpace(prediction.Symbol) ||
-             string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
-        double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
-        double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
-              double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
-                      double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
+                string.IsNullOrWhiteSpace(prediction.PredictedAction) ||
+                double.IsNaN(prediction.Confidence) || double.IsInfinity(prediction.Confidence) ||
+                double.IsNaN(prediction.CurrentPrice) || double.IsInfinity(prediction.CurrentPrice) ||
+                double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
+                double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
             {
                 throw new ArgumentException("Invalid prediction data. Required fields are missing or contain invalid values.");
             }
@@ -262,7 +271,9 @@ namespace Quantra.DAL.Services
             {
                 // Ensure the stock symbol exists in the database
                 var stockSymbol = await _context.StockSymbols
-                 .FirstOrDefaultAsync(s => s.Symbol == prediction.Symbol);
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Symbol == prediction.Symbol, cancellationToken)
+                    .ConfigureAwait(false);
 
                 if (stockSymbol == null)
                 {
@@ -272,7 +283,7 @@ namespace Quantra.DAL.Services
                         LastUpdated = DateTime.Now
                     };
                     _context.StockSymbols.Add(stockSymbol);
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 // Create prediction entity (TradingRule not saved since it's not in the entity)
@@ -288,7 +299,7 @@ namespace Quantra.DAL.Services
                 };
 
                 _context.StockPredictions.Add(predictionEntity);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
                 // Save indicators if any
                 if (prediction.Indicators != null && prediction.Indicators.Any())
@@ -303,10 +314,20 @@ namespace Quantra.DAL.Services
                         };
                         _context.PredictionIndicators.Add(indicatorEntity);
                     }
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 return predictionEntity.Id;
+            }
+            catch (OperationCanceledException)
+            {
+                _loggingService.Log("Warning", $"Save operation timed out for {prediction.Symbol}", "Operation was cancelled or timed out");
+                throw;
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _loggingService.Log("Error", $"Database error saving prediction for {prediction.Symbol}", dbEx.ToString());
+                throw new InvalidOperationException($"Database error: {dbEx.Message}", dbEx);
             }
             catch (Exception ex)
             {
@@ -325,21 +346,23 @@ namespace Quantra.DAL.Services
             try
             {
                 var oldPredictions = await _context.StockPredictions
-             .Where(p => p.CreatedDate < olderThan)
-                   .ToListAsync();
+                    .Where(p => p.CreatedDate < olderThan)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
 
                 if (oldPredictions.Any())
                 {
                     // Delete associated indicators first
                     var predictionIds = oldPredictions.Select(p => p.Id).ToList();
                     var indicators = await _context.PredictionIndicators
-                               .Where(i => predictionIds.Contains(i.PredictionId))
-                  .ToListAsync();
+                        .Where(i => predictionIds.Contains(i.PredictionId))
+                        .ToListAsync()
+                        .ConfigureAwait(false);
 
                     _context.PredictionIndicators.RemoveRange(indicators);
                     _context.StockPredictions.RemoveRange(oldPredictions);
 
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync().ConfigureAwait(false);
 
                     _loggingService.Log("Info", $"Deleted {oldPredictions.Count} old predictions");
                     return oldPredictions.Count;
