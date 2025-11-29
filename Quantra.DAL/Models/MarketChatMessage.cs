@@ -270,6 +270,56 @@ namespace Quantra.Models
         /// </summary>
         public string PredictionStatusDisplay => IsPredictionResult ? $"{PredictionSymbol} - {PredictionModelType} ({PredictionExecutionTimeMs:F0}ms)" : null;
 
+        /// <summary>
+        /// Indicates whether this message is a cache management result (MarketChat story 10).
+        /// </summary>
+        private bool _isCacheManagementResult;
+        public bool IsCacheManagementResult
+        {
+            get => _isCacheManagementResult;
+            set => SetProperty(ref _isCacheManagementResult, value);
+        }
+
+        /// <summary>
+        /// The cache operation type (Clear, Stats, SymbolInfo) (MarketChat story 10).
+        /// </summary>
+        private string _cacheOperationType;
+        public string CacheOperationType
+        {
+            get => _cacheOperationType;
+            set => SetProperty(ref _cacheOperationType, value);
+        }
+
+        /// <summary>
+        /// Number of cache entries affected by the operation (MarketChat story 10).
+        /// </summary>
+        private int _cacheEntriesAffected;
+        public int CacheEntriesAffected
+        {
+            get => _cacheEntriesAffected;
+            set => SetProperty(ref _cacheEntriesAffected, value);
+        }
+
+        /// <summary>
+        /// Recommendation based on cache analysis (MarketChat story 10).
+        /// </summary>
+        private string _cacheRecommendation;
+        public string CacheRecommendation
+        {
+            get => _cacheRecommendation;
+            set => SetProperty(ref _cacheRecommendation, value);
+        }
+
+        /// <summary>
+        /// Indicates whether cache management status should be displayed (MarketChat story 10).
+        /// </summary>
+        public bool ShowCacheManagementStatus => !IsFromUser && !IsLoading && IsCacheManagementResult;
+
+        /// <summary>
+        /// Gets a display string for cache management result status (MarketChat story 10).
+        /// </summary>
+        public string CacheManagementStatusDisplay => IsCacheManagementResult ? $"{CacheOperationType} - {CacheEntriesAffected} entries" : null;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
@@ -333,6 +383,11 @@ namespace Quantra.Models
         /// <summary>
         /// Python prediction progress message with streaming updates (MarketChat story 9)
         /// </summary>
-        PredictionProgress
+        PredictionProgress,
+
+        /// <summary>
+        /// Cache management result with statistics, clear operations, or recommendations (MarketChat story 10)
+        /// </summary>
+        CacheManagementResult
     }
 }

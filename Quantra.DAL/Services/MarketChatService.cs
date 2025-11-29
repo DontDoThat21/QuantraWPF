@@ -26,6 +26,7 @@ namespace Quantra.DAL.Services
     /// Integrates with MultiSymbolAnalyzer for multi-symbol comparative analysis (MarketChat story 7).
     /// Integrates with ChartGenerationService for chart visualization in chat (MarketChat story 8).
     /// Supports Python script orchestration for on-demand predictions (MarketChat story 9).
+    /// Integrates with CacheManagementService for cache management via chat commands (MarketChat story 10).
     /// </summary>
     public class MarketChatService
     {
@@ -40,6 +41,7 @@ namespace Quantra.DAL.Services
         private readonly IChartGenerationService _chartGenerationService;
         private readonly RealTimeInferenceService _realTimeInferenceService;
         private readonly PredictionCacheService _predictionCacheService;
+        private readonly ICacheManagementService _cacheManagementService;
         private readonly List<MarketChatMessage> _conversationHistory;
         private readonly Dictionary<string, string> _enrichedContextHistory;
         private readonly Dictionary<string, string> _predictionContextHistory;
@@ -94,6 +96,16 @@ namespace Quantra.DAL.Services
         public PythonPredictionExecutionResult LastPythonPredictionResult { get; private set; }
 
         /// <summary>
+        /// Gets the most recent cache management result (MarketChat story 10).
+        /// </summary>
+        public CacheManagementResult LastCacheManagementResult { get; private set; }
+
+        /// <summary>
+        /// Tracks if a destructive cache operation requires confirmation (MarketChat story 10).
+        /// </summary>
+        private bool _pendingClearAllConfirmation = false;
+
+        /// <summary>
         /// Constructor for MarketChatService
         /// </summary>
         public MarketChatService(
@@ -107,7 +119,8 @@ namespace Quantra.DAL.Services
             IConfigurationManager configManager = null,
             IChartGenerationService chartGenerationService = null,
             RealTimeInferenceService realTimeInferenceService = null,
-            PredictionCacheService predictionCacheService = null)
+            PredictionCacheService predictionCacheService = null,
+            ICacheManagementService cacheManagementService = null)
         {
             _logger = logger;
             _marketDataEnrichmentService = marketDataEnrichmentService;
@@ -119,6 +132,7 @@ namespace Quantra.DAL.Services
             _chartGenerationService = chartGenerationService ?? new ChartGenerationService(null, predictionDataService);
             _realTimeInferenceService = realTimeInferenceService ?? new RealTimeInferenceService();
             _predictionCacheService = predictionCacheService;
+            _cacheManagementService = cacheManagementService;
             _httpClient = new HttpClient();
             _conversationHistory = new List<MarketChatMessage>();
             _enrichedContextHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -153,6 +167,8 @@ namespace Quantra.DAL.Services
         /// chart data for visualization (MarketChat story 8).
         /// If the question is detected as a Python prediction request, it will
         /// invoke stock_predictor.py and stream progress updates (MarketChat story 9).
+        /// If the question is detected as a cache management request, it will
+        /// be processed by the CacheManagementService (MarketChat story 10).
         /// </summary>
         /// <param name="userQuestion">The user's market analysis question</param>
         /// <param name="includeContext">Whether to include recent market data as context</param>
@@ -162,6 +178,13 @@ namespace Quantra.DAL.Services
             try
             {
                 _logger.LogInformation($"Processing market analysis request: {userQuestion}");
+
+                // Check if this is a cache management request (MarketChat story 10)
+                if (IsCacheManagementRequest(userQuestion))
+                {
+                    _logger.LogInformation("Detected cache management request, processing with CacheManagementService");
+                    return await ProcessCacheManagementRequestAsync(userQuestion);
+                }
 
                 // Check if this is a database query request (MarketChat story 5)
                 if (_naturalLanguageQueryService != null && _naturalLanguageQueryService.IsQueryRequest(userQuestion))
@@ -835,6 +858,147 @@ namespace Quantra.DAL.Services
         public bool IsChartRequest(string message)
         {
             return _chartGenerationService?.IsChartRequest(message) ?? false;
+        }
+
+        /// <summary>
+        /// Determines if the user's message is a cache management request (MarketChat story 10).
+        /// Detects commands like "Clear cache for AAPL" or "Show cache statistics".
+        /// </summary>
+        /// <param name="message">The user's message</param>
+        /// <returns>True if the message appears to be a cache management request</returns>
+        public bool IsCacheManagementRequest(string message)
+        {
+            // If there's a pending confirmation, check for confirmation response
+            if (_pendingClearAllConfirmation)
+            {
+                var lowerMessage = message?.ToLowerInvariant() ?? "";
+                if (lowerMessage.Contains("yes") || lowerMessage.Contains("confirm"))
+                {
+                    return true;
+                }
+            }
+
+            return _cacheManagementService?.IsCacheManagementRequest(message) ?? false;
+        }
+
+        /// <summary>
+        /// Processes a cache management request (MarketChat story 10).
+        /// Handles commands like "Clear cache for AAPL" or "Show cache statistics".
+        /// </summary>
+        /// <param name="userQuestion">The user's cache management command</param>
+        /// <returns>Response with cache operation results</returns>
+        private async Task<string> ProcessCacheManagementRequestAsync(string userQuestion)
+        {
+            try
+            {
+                if (_cacheManagementService == null)
+                {
+                    return "Cache management service is not available. Please try again later.";
+                }
+
+                // Check for confirmation of pending clear all operation
+                if (_pendingClearAllConfirmation)
+                {
+                    var lowerMessage = userQuestion?.ToLowerInvariant() ?? "";
+                    if (lowerMessage.Contains("yes") || lowerMessage.Contains("confirm"))
+                    {
+                        _pendingClearAllConfirmation = false;
+                        var confirmResult = await _cacheManagementService.ClearAllCacheAsync(confirmed: true);
+                        LastCacheManagementResult = confirmResult;
+                        StoreConversationTurn(userQuestion, confirmResult.MarkdownContent ?? confirmResult.Message);
+                        _logger.LogInformation("Cache clear all operation confirmed and executed");
+                        return confirmResult.MarkdownContent ?? confirmResult.Message;
+                    }
+                    else
+                    {
+                        // Not a confirmation, reset the pending flag
+                        _pendingClearAllConfirmation = false;
+                    }
+                }
+
+                var operationType = _cacheManagementService.ExtractOperationType(userQuestion);
+                var symbol = _cacheManagementService.ExtractSymbol(userQuestion);
+
+                CacheManagementResult result;
+                string response;
+
+                switch (operationType)
+                {
+                    case "clearsymbol":
+                        if (string.IsNullOrWhiteSpace(symbol))
+                        {
+                            response = "Please specify a stock symbol to clear cache for. For example: \"Clear cache for AAPL\"";
+                            result = new CacheManagementResult
+                            {
+                                Success = false,
+                                Message = response,
+                                OperationType = "Clear"
+                            };
+                        }
+                        else
+                        {
+                            result = await _cacheManagementService.ClearCacheAsync(symbol);
+                            response = result.MarkdownContent ?? result.Message;
+                        }
+                        break;
+
+                    case "clearexpired":
+                        result = await _cacheManagementService.ClearExpiredCacheAsync();
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "clearall":
+                        result = await _cacheManagementService.ClearAllCacheAsync(confirmed: false);
+                        if (result.RequiresConfirmation)
+                        {
+                            _pendingClearAllConfirmation = true;
+                        }
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "clearall_confirmed":
+                        _pendingClearAllConfirmation = false;
+                        result = await _cacheManagementService.ClearAllCacheAsync(confirmed: true);
+                        response = result.MarkdownContent ?? result.Message;
+                        break;
+
+                    case "symbolinfo":
+                        var symbolInfo = await _cacheManagementService.GetSymbolCacheInfoAsync(symbol);
+                        response = _cacheManagementService.FormatSymbolInfoAsMarkdown(symbolInfo);
+                        result = new CacheManagementResult
+                        {
+                            Success = symbolInfo != null,
+                            Message = response,
+                            OperationType = "SymbolInfo",
+                            Symbol = symbol,
+                            Recommendation = symbolInfo?.Recommendation
+                        };
+                        break;
+
+                    case "stats":
+                    default:
+                        var stats = await _cacheManagementService.GetCacheStatsAsync();
+                        response = _cacheManagementService.FormatStatsAsMarkdown(stats);
+                        result = new CacheManagementResult
+                        {
+                            Success = true,
+                            Message = response,
+                            OperationType = "Stats",
+                            MarkdownContent = response
+                        };
+                        break;
+                }
+
+                LastCacheManagementResult = result;
+                StoreConversationTurn(userQuestion, response);
+                _logger.LogInformation("Cache management request processed: {OperationType}", operationType);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing cache management request");
+                return "I apologize, but I couldn't process your cache management request. Please try again.";
+            }
         }
 
         /// <summary>

@@ -122,6 +122,15 @@ namespace Quantra.Extensions
             // Register PredictionCacheService
             services.AddSingleton<PredictionCacheService>();
 
+            // Register CacheManagementService (MarketChat story 10)
+            services.AddSingleton<CacheManagementService>(sp =>
+            {
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                var predictionCacheService = sp.GetService<PredictionCacheService>();
+                return new CacheManagementService(loggingService, predictionCacheService);
+            });
+            services.AddSingleton<ICacheManagementService>(sp => sp.GetRequiredService<CacheManagementService>());
+
             // Register sentiment services and OpenAI helpers
             // Prefer OpenAI-backed implementation for ISocialMediaSentimentService
             services.AddSingleton<ISocialMediaSentimentService>(sp =>
