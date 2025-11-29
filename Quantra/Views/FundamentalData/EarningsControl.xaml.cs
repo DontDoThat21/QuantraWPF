@@ -156,6 +156,7 @@ namespace Quantra.Views.FundamentalData
             try
             {
                 // Get the last 12 quarters for the chart (most recent first, so reverse for chronological order)
+                // Filter to only include entries with valid ReportedEPS values
                 var quarterlyData = _earningsData.QuarterlyEarnings
                     .Where(q => q.ReportedEPS.HasValue)
                     .Take(12)
@@ -170,8 +171,14 @@ namespace Quantra.Views.FundamentalData
 
                 foreach (var quarter in quarterlyData)
                 {
-                    reportedValues.Add((double)(quarter.ReportedEPS ?? 0));
-                    estimatedValues.Add((double)(quarter.EstimatedEPS ?? 0));
+                    // ReportedEPS is guaranteed to have value due to Where filter above
+                    reportedValues.Add((double)quarter.ReportedEPS.Value);
+                    
+                    // For estimated, only add if it has a value, otherwise use NaN to create a gap
+                    // LiveCharts handles NaN by not drawing that point
+                    estimatedValues.Add(quarter.EstimatedEPS.HasValue 
+                        ? (double)quarter.EstimatedEPS.Value 
+                        : double.NaN);
                     
                     // Format the date label
                     if (DateTime.TryParse(quarter.FiscalDateEnding, out var date))

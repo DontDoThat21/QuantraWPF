@@ -149,7 +149,7 @@ namespace Quantra.Views.FundamentalData
             return $"{percentValue:F2}%";
         }
 
-        private async void IncomeStatementButton_Click(object sender, RoutedEventArgs e)
+        private void IncomeStatementButton_Click(object sender, RoutedEventArgs e)
         {
             if (_currentOverview == null || string.IsNullOrEmpty(_currentOverview.Symbol))
             {
@@ -172,7 +172,7 @@ namespace Quantra.Views.FundamentalData
             }
         }
 
-        private async void BalanceSheetButton_Click(object sender, RoutedEventArgs e)
+        private void BalanceSheetButton_Click(object sender, RoutedEventArgs e)
         {
             if (_currentOverview == null || string.IsNullOrEmpty(_currentOverview.Symbol))
             {

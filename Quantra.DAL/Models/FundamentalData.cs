@@ -251,14 +251,23 @@ namespace Quantra.Models
 
         /// <summary>
         /// Free Cash Flow = Operating Cash Flow - Capital Expenditures
+        /// Note: CapEx is typically reported as negative, so we add it (subtracting a negative = adding)
+        /// If CapEx is positive, we subtract it
         /// </summary>
         public decimal? FreeCashFlow
         {
             get
             {
                 if (!OperatingCashflow.HasValue) return null;
-                var capex = CapitalExpenditures ?? 0;
-                return OperatingCashflow.Value - Math.Abs(capex);
+                if (!CapitalExpenditures.HasValue) return OperatingCashflow.Value;
+                
+                // CapEx is typically negative in cash flow statements
+                // If negative, add it (which effectively subtracts the absolute value)
+                // If positive, subtract it
+                var capex = CapitalExpenditures.Value;
+                return capex < 0 
+                    ? OperatingCashflow.Value + capex  // CapEx is negative, so adding reduces operating cash flow
+                    : OperatingCashflow.Value - capex; // CapEx is positive, subtract it
             }
         }
     }

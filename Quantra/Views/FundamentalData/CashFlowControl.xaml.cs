@@ -129,16 +129,17 @@ namespace Quantra.Views.FundamentalData
             if (!value.HasValue) return "N/A";
             
             var absValue = Math.Abs(value.Value);
+            var isNegative = value.Value < 0;
             string formatted;
             
             if (absValue >= 1_000_000_000)
-                formatted = $"{value.Value / 1_000_000_000:F2}B";
+                formatted = $"{absValue / 1_000_000_000:F2}B";
             else if (absValue >= 1_000_000)
-                formatted = $"{value.Value / 1_000_000:F2}M";
+                formatted = $"{absValue / 1_000_000:F2}M";
             else
-                formatted = $"{value.Value:N0}";
+                formatted = $"{absValue:N0}";
             
-            return value.Value >= 0 ? $"${formatted}" : $"-${formatted.TrimStart('-')}";
+            return isNegative ? $"-${formatted}" : $"${formatted}";
         }
 
         private void ReportTypeChanged(object sender, RoutedEventArgs e)
