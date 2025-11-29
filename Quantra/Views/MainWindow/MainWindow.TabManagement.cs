@@ -616,6 +616,9 @@ namespace Quantra
                             "Company Overview" => CreateCompanyOverviewCard(),
                             "Cash Flow" => CreateCashFlowCard(),
                             "Earnings" => CreateEarningsCard(),
+                            "News Sentiment" => CreateNewsSentimentCard(),
+                            "Top Movers" => CreateTopMoversCard(),
+                            "Insider Transactions" => CreateInsiderTransactionsCard(),
                             _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                         };
                     }
@@ -2053,6 +2056,9 @@ namespace Quantra
                     "Company Overview" => CreateCompanyOverviewCard(),
                     "Cash Flow" => CreateCashFlowCard(),
                     "Earnings" => CreateEarningsCard(),
+                    "News Sentiment" => CreateNewsSentimentCard(),
+                    "Top Movers" => CreateTopMoversCard(),
+                    "Insider Transactions" => CreateInsiderTransactionsCard(),
                     _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                 };
                 
@@ -2362,6 +2368,149 @@ namespace Quantra
             //DatabaseMonolith.Log("Info", $"Opened AddControlWindow for cell ({row+1},{col+1}) in tab '{tabName}'");
         }
 
+        private UIElement CreateNewsSentimentCard()
+        {
+            try
+            {
+                // Create a new instance of the NewsSentimentControl
+                var newsSentimentControl = new Views.Intelligence.NewsSentimentControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                newsSentimentControl.Width = double.NaN; // Auto width
+                newsSentimentControl.Height = double.NaN; // Auto height
+                newsSentimentControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                newsSentimentControl.VerticalAlignment = VerticalAlignment.Stretch;
+                newsSentimentControl.MinWidth = 400;
+                newsSentimentControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                newsSentimentControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                newsSentimentControl.Arrange(new Rect(0, 0, newsSentimentControl.DesiredSize.Width, newsSentimentControl.DesiredSize.Height));
+                newsSentimentControl.UpdateLayout();
+
+                return newsSentimentControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load News Sentiment",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateTopMoversCard()
+        {
+            try
+            {
+                // Create a new instance of the TopMoversControl
+                var topMoversControl = new Views.Intelligence.TopMoversControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                topMoversControl.Width = double.NaN; // Auto width
+                topMoversControl.Height = double.NaN; // Auto height
+                topMoversControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                topMoversControl.VerticalAlignment = VerticalAlignment.Stretch;
+                topMoversControl.MinWidth = 400;
+                topMoversControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                topMoversControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                topMoversControl.Arrange(new Rect(0, 0, topMoversControl.DesiredSize.Width, topMoversControl.DesiredSize.Height));
+                topMoversControl.UpdateLayout();
+
+                return topMoversControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Top Movers",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateInsiderTransactionsCard()
+        {
+            try
+            {
+                // Create a new instance of the InsiderTransactionsControl
+                var insiderTransactionsControl = new Views.Intelligence.InsiderTransactionsControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                insiderTransactionsControl.Width = double.NaN; // Auto width
+                insiderTransactionsControl.Height = double.NaN; // Auto height
+                insiderTransactionsControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                insiderTransactionsControl.VerticalAlignment = VerticalAlignment.Stretch;
+                insiderTransactionsControl.MinWidth = 400;
+                insiderTransactionsControl.MinHeight = 300;
+
+                // Force layout calculation to ensure control is properly sized
+                insiderTransactionsControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                insiderTransactionsControl.Arrange(new Rect(0, 0, insiderTransactionsControl.DesiredSize.Width, insiderTransactionsControl.DesiredSize.Height));
+                insiderTransactionsControl.UpdateLayout();
+
+                return insiderTransactionsControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Insider Transactions",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
 
     }
 }

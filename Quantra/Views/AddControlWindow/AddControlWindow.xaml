@@ -156,6 +156,27 @@
                                                 <TextBlock Text="Earnings"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add News Sentiment control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Newspaper" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="News Sentiment"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Top Movers control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="TrendingUp" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Top Movers"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Add Insider Transactions control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="AccountSwitch" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Insider Transactions"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>
