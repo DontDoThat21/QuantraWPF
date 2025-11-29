@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.EntityFrameworkCore;
 using Quantra.Controls;
 using Quantra.DAL.Data;
 using Quantra.DAL.Services;
@@ -222,12 +223,12 @@ namespace Quantra.Utilities
 
             var removeMenuItem = new MenuItem { Header = "Remove Tab" };
             removeMenuItem.Style = (Style)Application.Current.FindResource("EnhancedMenuItemStyle");
-            removeMenuItem.Click += (s, e) => RemoveCustomTab(tabItem, tabName);
+            removeMenuItem.Click += (s, e) => RemoveCustomTab(tabItem, tabItem.Header.ToString());
             contextMenu.Items.Add(removeMenuItem);
 
             var editMenuItem = new MenuItem { Header = "Edit Tab" };
             editMenuItem.Style = (Style)Application.Current.FindResource("EnhancedMenuItemStyle");
-            editMenuItem.Click += (s, e) => EditCustomTab(tabItem, tabName);
+            editMenuItem.Click += (s, e) => EditCustomTab(tabItem, tabItem.Header.ToString());
             contextMenu.Items.Add(editMenuItem);
 
             tabItem.ContextMenu = contextMenu;
@@ -392,22 +393,48 @@ namespace Quantra.Utilities
             string newTabName = Microsoft.VisualBasic.Interaction.InputBox("Enter the new name for the tab:", "Edit Tab", oldTabName);
             if (!string.IsNullOrEmpty(newTabName) && newTabName != oldTabName)
             {
-                // Update the tab name in the UI
-                tabItem.Header = newTabName;
-
-                // Update the tab name in the database
-                using (var connection = ConnectionHelper.GetConnection())
+                try
                 {
-                    connection.Open();
-                    var updateQuery = "UPDATE UserAppSettings SET TabName = @NewTabName WHERE TabName = @OldTabName";
-                    connection.Execute(updateQuery, new { NewTabName = newTabName, OldTabName = oldTabName });
+                    // Update the tab name in the UI
+                    tabItem.Header = newTabName;
 
-                    // Ensure grid dimensions are at least 4x4
-                    var gridQuery = "UPDATE UserAppSettings SET GridRows = MAX(GridRows, 4), GridColumns = MAX(GridColumns, 4) WHERE TabName = @NewTabName";
-                    connection.Execute(gridQuery, new { NewTabName = newTabName });
+                    // Update the tab name in the database using Entity Framework Core
+                    using (var dbContext = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options))
+                    {
+                        // Find the existing tab configuration
+                        var tabConfig = dbContext.UserAppSettings
+                            .FirstOrDefault(t => t.TabName == oldTabName);
+
+                        if (tabConfig != null)
+                        {
+                            // Update the tab name
+                            tabConfig.TabName = newTabName;
+
+                            // Ensure grid dimensions are at least 4x4
+                            if (tabConfig.GridRows < 4)
+                                tabConfig.GridRows = 4;
+                            if (tabConfig.GridColumns < 4)
+                                tabConfig.GridColumns = 4;
+
+                            // Save changes to database
+                            dbContext.SaveChanges();
+
+                            _mainWindow.AppendAlert($"Renamed tab from {oldTabName} to {newTabName}");
+                        }
+                        else
+                        {
+                            _mainWindow.AppendAlert($"Warning: Tab '{oldTabName}' not found in database", "warning");
+                        }
+                    }
                 }
-
-                _mainWindow.AppendAlert($"Renamed tab from {oldTabName} to {newTabName}");
+                catch (Exception ex)
+                {
+                    _mainWindow.AppendAlert($"Error renaming tab: {ex.Message}", "negative");
+                    // Revert the UI change if database update failed
+                    tabItem.Header = oldTabName;
+                }
             }
         }
 
