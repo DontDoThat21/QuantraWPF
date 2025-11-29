@@ -7,6 +7,7 @@ using Quantra.Models;
 using Quantra.Modules;
 using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
+using Quantra.Repositories;
 
 namespace Quantra.Controls
 {
@@ -27,25 +28,55 @@ namespace Quantra.Controls
         /// </summary>
         private void InitializeSentimentCorrelationAnalysis()
         {
-            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(_userSettings, _userSettingsService, _loggingService);
+            // Get or create required services for SentimentPriceCorrelationAnalysis
+            var financialNewsSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<FinancialNewsSentimentService>() 
+                ?? new FinancialNewsSentimentService(_userSettings);
             
-            // Create the sentiment visualization control
-            _sentimentVisualizationControl = new SentimentVisualizationControl();
+            var socialMediaSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<ISocialMediaSentimentService>() 
+                ?? new TwitterSentimentService();
             
-            // Get or create required services for SentimentDashboardControl
             var analystRatingService = Quantra.DAL.Services.ServiceLocator.Resolve<IAnalystRatingService>() 
                 ?? new Quantra.DAL.Services.AnalystRatingService(_userSettings, null, _loggingService);
             
             var insiderTradingService = Quantra.DAL.Services.ServiceLocator.Resolve<IInsiderTradingService>() 
                 ?? new Quantra.DAL.Services.InsiderTradingService(_userSettings);
             
+            var sectorSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<SectorSentimentAnalysisService>() 
+                ?? new SectorSentimentAnalysisService(_userSettings);
+            
+            var predictionAnalysisRepository = Quantra.DAL.Services.ServiceLocator.Resolve<Quantra.Repositories.PredictionAnalysisRepository>() 
+                ?? new Quantra.Repositories.PredictionAnalysisRepository();
+            
+            var sectorMomentumService = Quantra.DAL.Services.ServiceLocator.Resolve<SectorMomentumService>() 
+                ?? new SectorMomentumService(_userSettingsService, _loggingService);
+            
+            _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(
+                _userSettings, 
+                _userSettingsService, 
+                _loggingService,
+                financialNewsSentimentService,
+                socialMediaSentimentService,
+                analystRatingService,
+                insiderTradingService,
+                sectorSentimentService,
+                predictionAnalysisRepository,
+                sectorMomentumService);
+            
+            // Create the sentiment visualization control
+            _sentimentVisualizationControl = new SentimentVisualizationControl();
+            
             // Create the sentiment dashboard control (new interactive dashboard)
             _sentimentDashboardControl = new SentimentDashboardControl(
                 _userSettings, 
                 _userSettingsService, 
                 _loggingService,
+                financialNewsSentimentService,
+                socialMediaSentimentService,
                 analystRatingService,
-                insiderTradingService);
+                insiderTradingService,
+                sectorSentimentService,
+                predictionAnalysisRepository,
+                sectorMomentumService);
             
             // Add them to the UI if sentiment visualization container exists
             var sentimentVisualizationContainer = this.FindName("sentimentVisualizationContainer") as Panel;

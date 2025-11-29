@@ -38,15 +38,21 @@ namespace Quantra.DAL.Data.Entities
         public DateTime CreatedDate { get; set; }
 
         /// <summary>
-        /// Links prediction to a chat history record (optional foreign key to ChatHistory.Id)
+        /// Trading rule or strategy name that generated this prediction (optional)
         /// </summary>
-        public int? ChatHistoryId { get; set; }
+        [MaxLength(200)]
+        public string? TradingRule { get; set; }
 
         /// <summary>
         /// Original user query that triggered this prediction (optional)
         /// </summary>
         [MaxLength(1000)]
-        public string UserQuery { get; set; }
+        public string? UserQuery { get; set; }
+
+        /// <summary>
+        /// Links prediction to a chat history record (optional foreign key to ChatHistory.Id)
+        /// </summary>
+        public int? ChatHistoryId { get; set; }
 
         // Navigation properties
         public virtual ICollection<PredictionIndicatorEntity> Indicators { get; set; }
@@ -103,7 +109,7 @@ namespace Quantra.DAL.Data.Entities
         public double? PredictedPrice { get; set; }
 
         [MaxLength(20)]
-        public string PredictedAction { get; set; }
+        public string? PredictedAction { get; set; }
 
         public double? Confidence { get; set; }
 
@@ -161,19 +167,19 @@ namespace Quantra.DAL.Data.Entities
         /// Type of message (UserQuestion, AssistantResponse, SystemMessage, etc.)
         /// </summary>
         [MaxLength(50)]
-        public string MessageType { get; set; }
+        public string? MessageType { get; set; }
 
         /// <summary>
         /// Optional stock symbol associated with this chat message
         /// </summary>
         [MaxLength(20)]
-        public string Symbol { get; set; }
+        public string? Symbol { get; set; }
 
         /// <summary>
         /// User identifier for multi-user support (optional)
         /// </summary>
         [MaxLength(100)]
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
 
         /// <summary>
         /// Navigation property for predictions that reference this chat history record
