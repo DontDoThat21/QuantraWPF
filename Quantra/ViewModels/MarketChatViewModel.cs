@@ -207,12 +207,9 @@ namespace Quantra.ViewModels
                 }
 
                 // Add loading message (for prediction requests, we'll update it with progress)
-                string loadingContent = isCacheManagementRequest ? "Processing cache request..." :
-                                        (isPredictionRequest ? "Starting prediction..." :
-                                        (isQueryRequest ? "Querying database..." : 
-                                        (isComparisonRequest ? "Comparing symbols..." :
-                                         (isChartRequest ? "Generating chart..." :
-                                          (isTradingPlan ? "Creating trading plan..." : "Thinking...")))));
+                string loadingContent = GetLoadingContent(
+                    isCacheManagementRequest, isPredictionRequest, isQueryRequest, 
+                    isComparisonRequest, isChartRequest, isTradingPlan);
                 var loadingMessage = new MarketChatMessage
                 {
                     Content = loadingContent,
@@ -638,6 +635,22 @@ namespace Quantra.ViewModels
                 contextBuilder.Append("with low volatility ");
 
             return contextBuilder.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Gets the appropriate loading content based on the request type.
+        /// </summary>
+        private static string GetLoadingContent(
+            bool isCacheManagementRequest, bool isPredictionRequest, bool isQueryRequest,
+            bool isComparisonRequest, bool isChartRequest, bool isTradingPlan)
+        {
+            if (isCacheManagementRequest) return "Processing cache request...";
+            if (isPredictionRequest) return "Starting prediction...";
+            if (isQueryRequest) return "Querying database...";
+            if (isComparisonRequest) return "Comparing symbols...";
+            if (isChartRequest) return "Generating chart...";
+            if (isTradingPlan) return "Creating trading plan...";
+            return "Thinking...";
         }
 
         #endregion

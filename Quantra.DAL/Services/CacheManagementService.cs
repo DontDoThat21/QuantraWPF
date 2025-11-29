@@ -22,6 +22,10 @@ namespace Quantra.DAL.Services
         private readonly PredictionCacheService _predictionCacheService;
         private readonly TimeSpan _cacheValidityPeriod;
 
+        // Constants
+        private const string DatabaseConnectionString = "Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;";
+        private const long EstimatedBytesPerEntry = 200L;
+
         // Compiled regex patterns for cache command detection
         private static readonly Regex ClearCachePattern = new Regex(
             @"\b(clear|delete|remove|purge|flush)\s+(cache|cached|prediction\s*cache)\b",
@@ -67,6 +71,16 @@ namespace Quantra.DAL.Services
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1);
         }
 
+        /// <summary>
+        /// Creates a new DbContext with the configured connection string.
+        /// </summary>
+        private QuantraDbContext CreateDbContext()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+            optionsBuilder.UseSqlite(DatabaseConnectionString);
+            return new QuantraDbContext(optionsBuilder.Options);
+        }
+
         /// <inheritdoc/>
         public async Task<CacheManagementResult> ClearCacheAsync(string symbol)
         {
@@ -85,10 +99,7 @@ namespace Quantra.DAL.Services
                 var normalizedSymbol = symbol.ToUpperInvariant().Trim();
                 var entriesRemoved = 0;
 
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var cacheEntries = await dbContext.PredictionCache
                         .Where(pc => pc.Symbol == normalizedSymbol)
@@ -140,10 +151,7 @@ namespace Quantra.DAL.Services
                 var expiryDate = DateTime.Now - _cacheValidityPeriod;
                 var entriesRemoved = 0;
 
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var expiredEntries = await dbContext.PredictionCache
                         .Where(pc => pc.CreatedAt < expiryDate)
@@ -213,10 +221,7 @@ namespace Quantra.DAL.Services
             {
                 var entriesRemoved = 0;
 
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var allEntries = await dbContext.PredictionCache.ToListAsync();
                     entriesRemoved = allEntries.Count;
@@ -257,10 +262,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var now = DateTime.Now;
                     var expiryDate = now - _cacheValidityPeriod;
@@ -286,8 +288,8 @@ namespace Quantra.DAL.Services
                     var totalHits = allEntries.Sum(e => e.AccessCount);
                     var ages = allEntries.Select(e => now - e.CreatedAt).ToList();
 
-                    // Estimate storage: roughly 200 bytes per entry
-                    var estimatedStorage = allEntries.Count * 200L;
+                    // Estimate storage based on constant bytes per entry
+                    var estimatedStorage = allEntries.Count * EstimatedBytesPerEntry;
 
                     var avgConfidence = allEntries
                         .Where(e => e.Confidence.HasValue)
@@ -337,10 +339,7 @@ namespace Quantra.DAL.Services
 
                 var normalizedSymbol = symbol.ToUpperInvariant().Trim();
 
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var entries = await dbContext.PredictionCache
                         .Where(pc => pc.Symbol == normalizedSymbol)
