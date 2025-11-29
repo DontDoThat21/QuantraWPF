@@ -74,7 +74,6 @@ namespace Quantra.Views.Intelligence
         public InsiderTransactionsControl()
         {
             InitializeComponent();
-
             // Get services from DI if available
             try
             {
@@ -177,6 +176,9 @@ namespace Quantra.Views.Intelligence
 
         private void ApplyFilters()
         {
+            if (TransactionsGrid == null)
+                return;
+
             if (_allTransactions == null || _allTransactions.Count == 0)
             {
                 _filteredTransactions = new List<InsiderTransactionData>();
