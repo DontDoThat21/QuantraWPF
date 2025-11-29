@@ -475,8 +475,11 @@ This document provides a comprehensive guide for creating XAML markup forms in a
 
 ### 8.1 Stock Quote Card Template
 
+**Note:** This template uses styles from `EnhancedStyles.xaml`. Ensure the ResourceDictionary is properly merged.
+
 ```xml
-<Border Background="#2D2D42" CornerRadius="5" Padding="10">
+<Border Background="#262638" BorderBrush="#3E3E56" BorderThickness="1" 
+        CornerRadius="5" Padding="10">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -486,23 +489,24 @@ This document provides a comprehensive guide for creating XAML markup forms in a
         
         <StackPanel Grid.Row="0" Orientation="Horizontal">
             <TextBlock Text="{Binding Symbol}" 
-                       FontSize="18" FontWeight="Bold" 
-                       Foreground="White"/>
+                       Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
             <TextBlock Text="{Binding CompanyName}" 
-                       FontSize="12" Foreground="Gray" 
+                       Style="{StaticResource EnhancedSmallTextBlockStyle}"
                        Margin="10,0,0,0"/>
         </StackPanel>
         
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5">
             <TextBlock Text="{Binding Price, StringFormat=C2}" 
-                       FontSize="24" Foreground="White"/>
+                       Style="{StaticResource EnhancedTextBlockStyle}"
+                       FontSize="24"/>
             <TextBlock Text="{Binding ChangePercent, StringFormat=P2}"
-                       FontSize="14" Margin="10,0,0,0"/>
+                       Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                       Margin="10,0,0,0"/>
         </StackPanel>
         
         <StackPanel Grid.Row="2" Orientation="Horizontal">
             <TextBlock Text="{Binding Volume, StringFormat='Vol: {0:N0}'}" 
-                       FontSize="10" Foreground="Gray"/>
+                       Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
         </StackPanel>
     </Grid>
 </Border>
@@ -512,15 +516,18 @@ This document provides a comprehensive guide for creating XAML markup forms in a
 
 ### 8.2 Indicator Badge Template
 
+**Note:** Uses standardized styles and the application's color scheme.
+
 ```xml
-<Border Width="50" Height="50" CornerRadius="5" Padding="5">
+<Border Width="50" Height="50" CornerRadius="5" Padding="5"
+        Background="#2A2A3B" BorderBrush="#3E3E56" BorderThickness="1">
     <StackPanel VerticalAlignment="Center">
         <TextBlock Text="{Binding Name}" 
-                   FontSize="10" FontWeight="Bold"
-                   Foreground="White" 
+                   Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                   FontWeight="Bold"
                    HorizontalAlignment="Center"/>
         <TextBlock Text="{Binding Value, StringFormat={}{0:F1}}" 
-                   FontSize="9" Foreground="White"
+                   Style="{StaticResource EnhancedSmallTextBlockStyle}"
                    HorizontalAlignment="Center"/>
     </StackPanel>
 </Border>
@@ -529,6 +536,8 @@ This document provides a comprehensive guide for creating XAML markup forms in a
 ---
 
 ### 8.3 Prediction Row Template
+
+**Note:** Uses styles compatible with `EnhancedDataGridColumnStyle` for consistent DataGrid styling.
 
 ```xml
 <DataTemplate>
@@ -543,26 +552,31 @@ This document provides a comprehensive guide for creating XAML markup forms in a
         </Grid.ColumnDefinitions>
         
         <TextBlock Grid.Column="0" Text="{Binding Symbol}" 
-                   Foreground="White" FontWeight="Bold"/>
+                   Style="{StaticResource EnhancedTextBlockStyle}"
+                   FontWeight="Bold"/>
         
-        <TextBlock Grid.Column="1" Text="{Binding PredictedAction}"/>
+        <TextBlock Grid.Column="1" Text="{Binding PredictedAction}"
+                   Style="{StaticResource EnhancedTextBlockStyle}"/>
         
         <Grid Grid.Column="2">
             <ProgressBar Value="{Binding Confidence}" Maximum="1" Height="15"/>
             <TextBlock Text="{Binding Confidence, StringFormat={}{0:P0}}"
-                       HorizontalAlignment="Center" FontSize="10"/>
+                       Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                       HorizontalAlignment="Center"/>
         </Grid>
         
         <TextBlock Grid.Column="3" 
                    Text="{Binding CurrentPrice, StringFormat=C2}"
-                   Foreground="White"/>
+                   Style="{StaticResource EnhancedTextBlockStyle}"/>
         
         <TextBlock Grid.Column="4" 
                    Text="{Binding TargetPrice, StringFormat=C2}"
-                   Foreground="Cyan"/>
+                   Foreground="Cyan"
+                   Style="{StaticResource EnhancedTextBlockStyle}"/>
         
         <TextBlock Grid.Column="5" 
-                   Text="{Binding PotentialReturn, StringFormat={}{0:P2}}"/>
+                   Text="{Binding PotentialReturn, StringFormat={}{0:P2}}"
+                   Style="{StaticResource EnhancedTextBlockStyle}"/>
     </Grid>
 </DataTemplate>
 ```
@@ -599,30 +613,55 @@ This document provides a comprehensive guide for creating XAML markup forms in a
 
 ## Design Guidelines
 
-### Color Scheme (Dark Theme)
+**IMPORTANT:** Always reference the existing `EnhancedStyles.xaml` resource dictionary for consistent styling across all components.
 
-| Element | Color |
-|---------|-------|
-| Background | `#1E1E30` |
-| Card Background | `#2D2D42` |
-| Border | `#3E3E56` |
-| Text Primary | `White` |
-| Text Secondary | `#AAAAAA` |
-| Accent | `Cyan` |
-| Bullish/Buy | `#20C040` |
-| Bearish/Sell | `#C02020` |
-| Neutral | `#3E3E56` |
-| Strong Trend | `#3E90FF` |
+### Using Existing Styles
+
+The application has standardized styles defined in `Quantra/Styles/EnhancedStyles.xaml`. Always use these styles instead of hardcoding properties:
+
+| Style Name | Component Type | Usage |
+|------------|----------------|-------|
+| `EnhancedButtonStyle` | Button | All buttons |
+| `EnhancedComboBoxStyle` | ComboBox | All dropdown selectors |
+| `EnhancedTextBoxStyle` | TextBox | All text inputs |
+| `EnhancedCheckBoxStyle` | CheckBox | All checkboxes |
+| `EnhancedTextBlockStyle` | TextBlock | Standard text |
+| `EnhancedSmallTextBlockStyle` | TextBlock | Labels and small text |
+| `EnhancedHeaderTextBlockStyle` | TextBlock | Section headers |
+| `EnhancedDataGridColumnHeaderStyle` | DataGridColumnHeader | Grid headers |
+| `EnhancedDataGridRowStyle` | DataGridRow | Grid rows |
+| `EnhancedDataGridCellStyle` | DataGridCell | Grid cells |
+
+### Color Scheme (Quantra Dark Theme)
+
+These colors match the existing application color scheme from `EnhancedStyles.xaml`:
+
+| Element | Color | Notes |
+|---------|-------|-------|
+| Background | `#2A2A3B` | Main application background |
+| Card Background | `#262638` | Panel/card backgrounds |
+| Border | `#3E3E56` | Standard borders |
+| Border (Accent) | `#007ACC` | Accent borders |
+| Border (Hover) | `#1E90FF` | Hover state borders |
+| Text Primary | `GhostWhite` | Main text color |
+| Text Secondary | `#CCCCCC` | Secondary text |
+| Text Disabled | `#666677` | Disabled text |
+| Bullish/Buy | `#20C040` | Positive indicators |
+| Bearish/Sell | `#C02020` | Negative indicators |
+| Neutral | `#3E3E56` | Neutral indicators |
+| Strong Trend | `#3E90FF` | Trend strength |
 
 ### Font Guidelines
 
-| Element | Size | Weight |
-|---------|------|--------|
-| Headers | 18-22 | Bold |
-| Subheaders | 14-16 | SemiBold |
-| Body | 12 | Normal |
-| Small/Labels | 10 | Normal |
-| Data Values | 12-14 | Normal/Bold |
+The application uses **Franklin Gothic Medium** as the standard font family:
+
+| Element | Size | Weight | Style Reference |
+|---------|------|--------|-----------------|
+| Headers | 18-22 | Bold | `EnhancedHeaderTextBlockStyle` |
+| Subheaders | 14-16 | SemiBold | Custom or inherited |
+| Body | 12 | Normal | `EnhancedTextBlockStyle` |
+| Small/Labels | 10 | Normal | `EnhancedSmallTextBlockStyle` |
+| Data Values | 12-14 | Normal/Bold | `EnhancedDataGridColumnStyle` |
 
 ### Responsive Design
 
@@ -630,6 +669,7 @@ This document provides a comprehensive guide for creating XAML markup forms in a
 - Implement `ScrollViewer` for overflow content
 - Use `WrapPanel` for indicator badges
 - Enable column resizing in `DataGrid`
+- Reference existing styles from `EnhancedStyles.xaml` ResourceDictionary
 
 ---
 
