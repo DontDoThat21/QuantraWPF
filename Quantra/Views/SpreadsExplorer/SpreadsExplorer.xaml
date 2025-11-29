@@ -425,22 +425,62 @@
                         
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                             <StackPanel Margin="0,0,20,0">
+                                <StackPanel.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Delta (Δ)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Measures the rate of change in option price relative to a $1 change in the underlying asset price. Delta ranges from 0 to 1 for calls and 0 to -1 for puts. A delta of 0.50 means the option price moves $0.50 for every $1 move in the stock."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
                                 <TextBlock Text="Delta" Foreground="LightGray" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding TotalDelta}" Foreground="Cyan" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,20,0">
+                                <StackPanel.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Gamma (Γ)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Measures the rate of change in delta for a $1 change in the underlying asset price. Gamma indicates how stable your delta is. Higher gamma means delta changes more rapidly, increasing risk and potential reward as the stock price moves."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
                                 <TextBlock Text="Gamma" Foreground="LightGray" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding TotalGamma}" Foreground="Cyan" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,20,0">
+                                <StackPanel.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Theta (Θ)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Measures the rate of time decay in option value per day. Theta is typically negative for long positions, indicating the dollar amount the position loses each day due to time decay. Selling options benefits from positive theta as time passes."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
                                 <TextBlock Text="Theta" Foreground="LightGray" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding TotalTheta}" Foreground="Red" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Margin="0,0,20,0">
+                                <StackPanel.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Vega (ν)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Measures sensitivity to changes in implied volatility. Vega indicates how much the option price will change for a 1% change in implied volatility. Higher vega means the position is more sensitive to volatility changes. Long options have positive vega."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
                                 <TextBlock Text="Vega" Foreground="LightGray" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding TotalVega}" Foreground="Orange" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel>
+                                <StackPanel.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Implied Volatility (IV)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="The market's expectation of future volatility, derived from option prices. Higher IV means options are more expensive and the market expects larger price swings. IV typically rises before earnings or major events and contracts afterward (volatility crush)."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
                                 <TextBlock Text="Implied Vol" Foreground="LightGray" HorizontalAlignment="Center"/>
                                 <TextBlock Text="{Binding AverageImpliedVolatility}" Foreground="Yellow" FontWeight="Bold" HorizontalAlignment="Center"/>
                             </StackPanel>

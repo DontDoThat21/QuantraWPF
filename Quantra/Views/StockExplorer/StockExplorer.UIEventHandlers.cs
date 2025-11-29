@@ -525,29 +525,6 @@ namespace Quantra.Controls
             }
         }
 
-        /// <summary>
-        /// Handles symbol selection from the SymbolSearchTextBox control
-        /// </summary>
-        private async void SymbolSearchTextBox_SymbolSelected(object sender, string symbol)
-        {
-            if (string.IsNullOrWhiteSpace(symbol) || CurrentSelectionMode != Quantra.Enums.SymbolSelectionMode.IndividualAsset)
-                return;
-
-            try
-            {
-                // Use the modular symbol selection method
-                await HandleSymbolSelectionAsync(symbol.ToUpper(), "SymbolSearchTextBox");
-            }
-            catch (System.OperationCanceledException)
-            {
-                // Operation was cancelled - this is expected when user selects quickly
-            }
-            catch (Exception ex)
-            {
-                CustomModal.ShowError($"Error selecting symbol: {ex.Message}", "Error", Window.GetWindow(this));
-            }
-        }
-
         // RSI Oversold button click event handler
         private async void RsiOversoldButton_Click(object sender, RoutedEventArgs e)
         {
@@ -1023,40 +1000,29 @@ namespace Quantra.Controls
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            // In Individual Asset mode, refresh the currently loaded symbol
+            // In Individual Asset mode, search for the typed symbol
             if (CurrentSelectionMode == Quantra.Enums.SymbolSelectionMode.IndividualAsset)
             {
-                var selectedSymbol = SymbolSearchTextBox?.SelectedSymbol ?? _viewModel?.SelectedSymbol;
-                
-                if (!string.IsNullOrWhiteSpace(selectedSymbol))
+                var searchText = _viewModel.SymbolSearchText?.ToUpper().Trim();
+                if (!string.IsNullOrEmpty(searchText) && _viewModel.FilteredSymbols.Contains(searchText))
                 {
-                    // Create a new cancellation token source for the refresh operation
-                    using var refreshCancellation = new System.Threading.CancellationTokenSource();
-                    var refreshToken = refreshCancellation.Token;
-                    
                     try
                     {
-                        // Refresh the data for the currently selected symbol from API
-                        await RefreshSymbolDataFromAPI(selectedSymbol, refreshToken);
-                        
-                        // Update the price and RSI labels
-                        await UpdatePriceAndRsiLabels(selectedSymbol);
-                        
-                        // Reload indicator data asynchronously to avoid blocking UI
-                        await LoadIndicatorDataAsync(selectedSymbol, refreshToken);
+                        // Load data for the typed symbol
+                        await HandleSymbolSelectionAsync(searchText, "SearchButton");
                     }
                     catch (System.OperationCanceledException)
                     {
-                        CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
+                        CustomModal.ShowWarning("Symbol search was cancelled.", "Operation Cancelled", Window.GetWindow(this));
                     }
                     catch (Exception ex)
                     {
-                        CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
+                        CustomModal.ShowError($"Error searching for data: {ex.Message}", "Error", Window.GetWindow(this));
                     }
                 }
                 else
                 {
-                    CustomModal.ShowWarning("Please select a stock symbol to refresh.", "No Symbol Selected", Window.GetWindow(this));
+                    CustomModal.ShowWarning("Please enter a valid stock symbol to search.", "Invalid Symbol", Window.GetWindow(this));
                 }
             }
             else if (!string.IsNullOrEmpty(_viewModel.SelectedSymbol))
@@ -1171,14 +1137,39 @@ namespace Quantra.Controls
             }
         }
 
-        private void SymbolSearchTimer_Tick(object sender, EventArgs e)
+        private async void SymbolSearchTimer_Tick(object sender, EventArgs e)
         {
             _symbolSearchTimer?.Stop();
             
-            // Handle delayed symbol search logic
-            if (CurrentSelectionMode == SymbolSelectionMode.IndividualAsset && _viewModel != null)
+            var searchText = SymbolSearchTextBox?.Text?.Trim();
+            if (string.IsNullOrEmpty(searchText) || searchText == _lastSearchText || searchText.Length < 1)
+                return;
+                
+            _lastSearchText = searchText;
+            
+            try
             {
-                ValidateSearchButtonState();
+                if (SearchLoadingText != null)
+                    SearchLoadingText.Visibility = Visibility.Visible;
+                    
+                var results = await _alphaVantageService.SearchSymbolsAsync(searchText);
+                
+                if (SearchResultsListBox != null)
+                    SearchResultsListBox.ItemsSource = results;
+                    
+                if (SearchLoadingText != null)
+                    SearchLoadingText.Visibility = Visibility.Collapsed;
+                
+                if (results.Count > 0 && SearchResultsPopup != null)
+                {
+                    SearchResultsPopup.IsOpen = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (SearchLoadingText != null)
+                    SearchLoadingText.Visibility = Visibility.Collapsed;
+                CustomModal.ShowError($"Error searching symbols: {ex.Message}", "Search Error", Window.GetWindow(this));
             }
         }
     }

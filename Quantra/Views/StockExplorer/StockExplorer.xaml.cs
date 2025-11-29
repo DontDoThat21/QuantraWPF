@@ -534,12 +534,6 @@ namespace Quantra.Controls
             _viewModel = new StockExplorerViewModel(stockDataCacheService, alphaVantageService, inferenceService, predictionCacheService);
             _cacheService = stockDataCacheService;
             _alphaVantageService = alphaVantageService;
-            
-            // Initialize the SymbolSearchTextBox with the AlphaVantageService
-            SymbolSearchTextBox.SetAlphaVantageService(alphaVantageService);
-            
-            // Subscribe to symbol selection event
-            SymbolSearchTextBox.SymbolSelected += SymbolSearchTextBox_SymbolSelected;
 
             // Initialize sentiment analysis services with null checks
             try
@@ -1280,9 +1274,9 @@ namespace Quantra.Controls
             try
             {
                 // Update ComboBox selection if source was not ComboBox
-                if (source != "ComboBox" && SymbolComboBox != null)
+                if (source != "ComboBox" && SymbolSearchTextBox != null)
                 {
-                    SymbolComboBox.SelectedItem = selectedSymbol;
+                    SymbolSearchTextBox.Text = selectedSymbol;
                 }
                 
                 // TODO Future: Add other UI synchronization logic here
@@ -3626,6 +3620,81 @@ namespace Quantra.Controls
                 //DatabaseMonolith.Log("Warning", $"Failed to generate sentiment summary", ex.ToString());
                 return "Sentiment analysis completed.";
             }
+        }
+
+        private void SymbolSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _symbolSearchTimer?.Stop();
+            _symbolSearchTimer?.Start();
+        }
+
+        private void SymbolSearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Down && SearchResultsListBox?.Items.Count > 0)
+            {
+                SearchResultsListBox.SelectedIndex = 0;
+                SearchResultsListBox.Focus();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Enter && SearchResultsListBox?.SelectedItem is SymbolSearchResult selected)
+            {
+                SelectSymbol(selected);
+                e.Handled = true;
+            }
+        }
+
+        private void SymbolSearchTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (SearchResultsListBox?.Items.Count > 0 && SearchResultsPopup != null)
+            {
+                SearchResultsPopup.IsOpen = true;
+            }
+        }
+
+        private void SymbolSearchTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            // Delay closing to allow click on results
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (SearchResultsListBox != null && SymbolSearchTextBox != null && SearchResultsPopup != null)
+                {
+                    if (!SearchResultsListBox.IsMouseOver && !SymbolSearchTextBox.IsKeyboardFocusWithin)
+                    {
+                        SearchResultsPopup.IsOpen = false;
+                    }
+                }
+            }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private async void SearchResultsListBox_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (SearchResultsListBox?.SelectedItem is SymbolSearchResult selected)
+            {
+                SelectSymbol(selected);
+            }
+        }
+
+        private void SearchResultsListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && SearchResultsListBox?.SelectedItem is SymbolSearchResult selected)
+            {
+                SelectSymbol(selected);
+                e.Handled = true;
+            }
+        }
+
+        private async void SelectSymbol(SymbolSearchResult result)
+        {
+            if (SymbolSearchTextBox != null)
+                SymbolSearchTextBox.Text = result.Symbol;
+                
+            if (SearchResultsPopup != null)
+                SearchResultsPopup.IsOpen = false;
+                
+            if (RefreshButton != null)
+                RefreshButton.IsEnabled = true;
+            
+            await HandleSymbolSelectionAsync(result.Symbol, "TypeAheadSearch");
         }
     }
 }
