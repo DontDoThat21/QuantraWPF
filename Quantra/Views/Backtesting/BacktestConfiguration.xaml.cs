@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,9 +23,15 @@ namespace Quantra.Views.Backtesting
         private readonly LoggingService _loggingService;
         private readonly IAlphaVantageService _alphaVantageService;
         private HistoricalDataService _historicalDataService;
+        private StockDataCacheService _stockDataCacheService;
+        private BacktestResultService _backtestResultService;
         private List<TradingStrategyProfile> _availableStrategies;
         private TradingStrategyProfile _selectedStrategy;
         private BacktestResults _resultsControl;
+        private BacktestingEngine.BacktestResult _currentBacktestResult;
+        private List<HistoricalPrice> _currentHistoricalData;
+        private double _currentInitialCapital;
+        private ObservableCollection<CachedSymbolInfo> _cachedSymbols;
 
         /// <summary>
         /// Parameterless constructor for XAML designer support
@@ -32,6 +39,7 @@ namespace Quantra.Views.Backtesting
         public BacktestConfiguration()
         {
             InitializeComponent();
+            _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
         }
 
         /// <summary>
@@ -48,10 +56,26 @@ namespace Quantra.Views.Backtesting
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
 
             _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
+            _stockDataCacheService = new StockDataCacheService(_userSettingsService, _loggingService);
+            _backtestResultService = new BacktestResultService(_loggingService);
+            _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
 
             // Initialize UI
             InitializeStrategies();
             InitializeDatePickers();
+            
+            // Load cached symbols asynchronously after UI is loaded
+            this.Loaded += BacktestConfiguration_Loaded;
+        }
+
+        /// <summary>
+        /// Handle control loaded event to initialize async operations
+        /// </summary>
+        private async void BacktestConfiguration_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only load once
+            this.Loaded -= BacktestConfiguration_Loaded;
+            await LoadCachedSymbolsAsync();
         }
 
         /// <summary>
@@ -264,6 +288,9 @@ namespace Quantra.Views.Backtesting
                 DateTime startDate = useQuickTest ? DateTime.Today.AddMonths(-6) : (StartDatePicker.SelectedDate ?? DateTime.Today.AddYears(-1));
                 DateTime endDate = EndDatePicker.SelectedDate ?? DateTime.Today;
 
+                // Store initial capital for saving
+                _currentInitialCapital = initialCapital;
+
                 // Update progress
                 ShowProgress($"Fetching historical data for {symbol}...");
 
@@ -425,6 +452,10 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         private void DisplayResults(BacktestingEngine.BacktestResult result, List<HistoricalPrice> historical)
         {
+            // Store current results for potential saving
+            _currentBacktestResult = result;
+            _currentHistoricalData = historical;
+
             // Create or reuse results control
             if (_resultsControl == null)
             {
@@ -444,6 +475,9 @@ namespace Quantra.Views.Backtesting
             // Display the control
             ResultsContainer.Content = _resultsControl;
             EmptyStatePanel.Visibility = Visibility.Collapsed;
+
+            // Enable the save button
+            SaveResultButton.IsEnabled = true;
         }
 
         /// <summary>
@@ -453,7 +487,132 @@ namespace Quantra.Views.Backtesting
         {
             ResultsContainer.Content = null;
             EmptyStatePanel.Visibility = Visibility.Visible;
+            _currentBacktestResult = null;
+            _currentHistoricalData = null;
+            SaveResultButton.IsEnabled = false;
             ShowStatus("Results cleared. Ready to run backtest");
+        }
+
+        /// <summary>
+        /// Load cached symbols from StockDataCache for dropdown selection (async version)
+        /// </summary>
+        private async Task LoadCachedSymbolsAsync()
+        {
+            try
+            {
+                // Show loading indicator
+                RefreshCacheButton.IsEnabled = false;
+                RefreshCacheButton.Content = "Loading...";
+
+                _cachedSymbols.Clear();
+
+                if (_stockDataCacheService == null)
+                {
+                    return;
+                }
+
+                // Get all cached symbols asynchronously
+                var symbols = await Task.Run(() => _stockDataCacheService.GetAllCachedSymbolsAsync());
+
+                foreach (var symbol in symbols)
+                {
+                    _cachedSymbols.Add(new CachedSymbolInfo
+                    {
+                        Symbol = symbol,
+                        CacheInfo = "cached"
+                    });
+                }
+
+                // Set the ItemsSource for the ComboBox
+                CachedSymbolsComboBox.ItemsSource = _cachedSymbols;
+
+                _loggingService?.Log("Info", $"Loaded {_cachedSymbols.Count} cached symbols for backtest selection");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", $"Failed to load cached symbols: {ex.Message}", ex.ToString());
+            }
+            finally
+            {
+                // Restore button state
+                RefreshCacheButton.IsEnabled = true;
+                RefreshCacheButton.Content = "↻";
+            }
+        }
+
+        /// <summary>
+        /// Handle cached symbol selection from dropdown
+        /// </summary>
+        private void CachedSymbolsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (CachedSymbolsComboBox.SelectedItem is CachedSymbolInfo selectedItem)
+            {
+                // Update the symbol textbox with the selected cached symbol
+                SymbolTextBox.Text = selectedItem.Symbol;
+                ShowStatus($"Selected cached symbol: {selectedItem.Symbol}");
+            }
+        }
+
+        /// <summary>
+        /// Refresh the cached symbols list
+        /// </summary>
+        private async void RefreshCacheButton_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadCachedSymbolsAsync();
+            ShowStatus($"Refreshed cached symbols. Found {_cachedSymbols.Count} symbols.");
+        }
+
+        /// <summary>
+        /// Save the current backtest result to the database
+        /// </summary>
+        private async void SaveResultButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentBacktestResult == null)
+            {
+                ShowError("No backtest result to save. Please run a backtest first.");
+                return;
+            }
+
+            if (_backtestResultService == null)
+            {
+                ShowError("Backtest result service not available.");
+                return;
+            }
+
+            try
+            {
+                ShowProgress("Saving backtest result...");
+
+                // Get optional run name from user
+                string runName = null;
+                var inputDialog = new InputDialog("Save Backtest Result", "Enter a name for this backtest run (optional):");
+                if (inputDialog.ShowDialog() == true)
+                {
+                    runName = inputDialog.ResponseText;
+                }
+
+                // Convert engine result to entity
+                var entity = _backtestResultService.ConvertFromEngineResult(
+                    _currentBacktestResult,
+                    _selectedStrategy?.Name ?? "Unknown Strategy",
+                    _currentInitialCapital,
+                    runName);
+
+                // Save to database
+                var savedEntity = await _backtestResultService.SaveResultAsync(entity);
+
+                ShowStatus($"Backtest result saved successfully with ID {savedEntity.Id}");
+                MessageBox.Show($"Backtest result saved successfully!\n\nSymbol: {savedEntity.Symbol}\nStrategy: {savedEntity.StrategyName}\nTotal Return: {savedEntity.TotalReturn:P2}",
+                    "Result Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to save backtest result: {ex.Message}");
+            }
+            finally
+            {
+                HideProgress();
+            }
         }
 
         #region UI Helpers
@@ -490,5 +649,71 @@ namespace Quantra.Views.Backtesting
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Simple input dialog for getting user text input
+    /// </summary>
+    public class InputDialog : Window
+    {
+        private TextBox _responseTextBox;
+
+        public string ResponseText => _responseTextBox.Text;
+
+        public InputDialog(string title, string prompt)
+        {
+            Title = title;
+            Width = 400;
+            Height = 150;
+            WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            Background = new SolidColorBrush(Color.FromRgb(35, 35, 58));
+
+            var stackPanel = new StackPanel { Margin = new Thickness(15) };
+
+            var promptLabel = new TextBlock
+            {
+                Text = prompt,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            stackPanel.Children.Add(promptLabel);
+
+            _responseTextBox = new TextBox
+            {
+                Height = 25,
+                Margin = new Thickness(0, 0, 0, 15)
+            };
+            stackPanel.Children.Add(_responseTextBox);
+
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 75,
+                Height = 30,
+                Margin = new Thickness(0, 0, 10, 0),
+                IsDefault = true
+            };
+            okButton.Click += (s, e) => { DialogResult = true; };
+            buttonPanel.Children.Add(okButton);
+
+            var cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 75,
+                Height = 30,
+                IsCancel = true
+            };
+            cancelButton.Click += (s, e) => { DialogResult = false; };
+            buttonPanel.Children.Add(cancelButton);
+
+            stackPanel.Children.Add(buttonPanel);
+            Content = stackPanel;
+        }
     }
 }

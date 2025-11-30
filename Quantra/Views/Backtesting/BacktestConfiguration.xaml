@@ -38,6 +38,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="150"/>
@@ -46,19 +47,45 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Symbol -->
+                <!-- Symbol Entry (Manual) -->
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Symbol:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
                 <TextBox x:Name="SymbolTextBox" Grid.Row="0" Grid.Column="1"
                          Text="AAPL" Style="{StaticResource EnhancedTextBoxStyle}"
                          ToolTip="Stock symbol to backtest (e.g., AAPL, MSFT, GOOGL)" Margin="0,0,10,10"/>
 
-                <!-- Strategy Selection -->
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Strategy:" VerticalAlignment="Center"
+                <!-- Cached Symbols Dropdown -->
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Load from Cache:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <ComboBox x:Name="StrategyComboBox" Grid.Row="0" Grid.Column="3"
+                <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Margin="0,0,0,10">
+                    <ComboBox x:Name="CachedSymbolsComboBox"
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              Width="150"
+                              SelectionChanged="CachedSymbolsComboBox_SelectionChanged"
+                              ToolTip="Select a symbol with cached historical data from Stock Explorer">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Symbol}" FontWeight="Bold"/>
+                                    <TextBlock Text=" - " Foreground="Gray"/>
+                                    <TextBlock Text="{Binding CacheInfo}" Foreground="Gray"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button x:Name="RefreshCacheButton" Content="↻"
+                            Click="RefreshCacheButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            Width="30" Margin="5,0,0,0"
+                            ToolTip="Refresh cached symbols list"/>
+                </StackPanel>
+
+                <!-- Strategy Selection -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Strategy:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <ComboBox x:Name="StrategyComboBox" Grid.Row="1" Grid.Column="1"
                           Style="{StaticResource EnhancedComboBoxStyle}"
-                          SelectionChanged="StrategyComboBox_SelectionChanged" Margin="0,0,0,10">
+                          SelectionChanged="StrategyComboBox_SelectionChanged" Margin="0,0,10,10">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name}" />
@@ -67,34 +94,34 @@
                 </ComboBox>
 
                 <!-- Initial Capital -->
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Initial Capital:" VerticalAlignment="Center"
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="Initial Capital:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <TextBox x:Name="InitialCapitalTextBox" Grid.Row="1" Grid.Column="1"
+                <TextBox x:Name="InitialCapitalTextBox" Grid.Row="1" Grid.Column="3"
                          Text="10000" Style="{StaticResource EnhancedTextBoxStyle}"
-                         ToolTip="Starting capital amount ($)" Margin="0,0,10,10"/>
+                         ToolTip="Starting capital amount ($)" Margin="0,0,0,10"/>
 
                 <!-- Trade Size -->
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="Trade Size (Shares):" VerticalAlignment="Center"
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Trade Size (Shares):" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <TextBox x:Name="TradeSizeTextBox" Grid.Row="1" Grid.Column="3"
+                <TextBox x:Name="TradeSizeTextBox" Grid.Row="2" Grid.Column="1"
                          Text="100" Style="{StaticResource EnhancedTextBoxStyle}"
-                         ToolTip="Number of shares per trade" Margin="0,0,0,10"/>
+                         ToolTip="Number of shares per trade" Margin="0,0,10,10"/>
 
                 <!-- Date Range -->
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Start Date:" VerticalAlignment="Center"
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Start Date:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <DatePicker x:Name="StartDatePicker" Grid.Row="2" Grid.Column="1"
-                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,10,10"/>
-
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="End Date:" VerticalAlignment="Center"
-                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <DatePicker x:Name="EndDatePicker" Grid.Row="2" Grid.Column="3"
+                <DatePicker x:Name="StartDatePicker" Grid.Row="2" Grid.Column="3"
                             Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,0,10"/>
 
-                <!-- Transaction Costs -->
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Cost Model:" VerticalAlignment="Center"
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="End Date:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
-                <ComboBox x:Name="CostModelComboBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                <DatePicker x:Name="EndDatePicker" Grid.Row="3" Grid.Column="1"
+                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,10,10"/>
+
+                <!-- Transaction Costs -->
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="Cost Model:" VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
+                <ComboBox x:Name="CostModelComboBox" Grid.Row="3" Grid.Column="3"
                           Style="{StaticResource EnhancedComboBoxStyle}" SelectedIndex="1" 
                           SelectionChanged="CostModelComboBox_SelectionChanged" Margin="0,0,0,10">
                     <ComboBoxItem Content="Zero Cost (No commissions or slippage)"/>
@@ -127,6 +154,12 @@
                     Click="QuickTestButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
                     Padding="15,10" Margin="0,0,10,0"/>
+            <Button x:Name="SaveResultButton" Content="Save Result"
+                    Click="SaveResultButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Padding="15,10" Margin="0,0,10,0"
+                    IsEnabled="False"
+                    ToolTip="Save the current backtest result to database for comparison"/>
             <Button x:Name="ClearButton" Content="Clear Results"
                     Click="ClearButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
