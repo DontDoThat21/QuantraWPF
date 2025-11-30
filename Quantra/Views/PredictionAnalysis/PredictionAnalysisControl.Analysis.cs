@@ -707,5 +707,135 @@ namespace Quantra.Controls
             // No clear signal, return neutral with current price as target
             return ("HOLD", confidence, currentPrice);
         }
+
+        // Model Training Service
+        private ModelTrainingService _modelTrainingService;
+
+        // Initialize training service - call this in the main constructor
+        private void InitializeTrainingService()
+        {
+            _modelTrainingService = new ModelTrainingService(_loggingService);
+        }
+
+        /// <summary>
+        /// Train ML model using all cached historical data from database
+        /// </summary>
+        private async Task TrainModelFromDatabaseAsync()
+        {
+            if (StatusText != null)
+                StatusText.Text = "Preparing to train model from database...";
+
+            // Disable buttons during training
+            if (AnalyzeButton != null)
+                AnalyzeButton.IsEnabled = false;
+            
+            // Note: TrainModelButton will be available after XAML compilation
+            var trainButton = this.FindName("TrainModelButton") as Button;
+            if (trainButton != null)
+                trainButton.IsEnabled = false;
+
+            try
+            {
+                // Get selected model type and architecture from UI
+                string modelType = GetSelectedModelType();
+                string architectureType = GetSelectedArchitectureType();
+                
+                // Optional: Ask user if they want to limit the number of symbols
+                int? maxSymbols = null; // Set to a number to limit, or null for all symbols
+                
+                // Progress callback to update UI
+                Action<string> progressCallback = (message) =>
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        if (StatusText != null)
+                            StatusText.Text = message;
+                        
+                        _loggingService?.Log("Info", $"Training: {message}");
+                    });
+                };
+
+                // Start training
+                var result = await _modelTrainingService.TrainModelFromDatabaseAsync(
+                    modelType: modelType,
+                    architectureType: architectureType,
+                    maxSymbols: maxSymbols,
+                    progressCallback: progressCallback
+                );
+
+                // Display results
+                if (result.Success)
+                {
+                    var message = $"Model Training Complete!\n\n" +
+                                 $"Model Type: {result.ModelType}\n" +
+                                 $"Architecture: {result.ArchitectureType}\n" +
+                                 $"Symbols Used: {result.SymbolsCount}\n" +
+                                 $"Training Samples: {result.TrainingSamples}\n" +
+                                 $"Test Samples: {result.TestSamples}\n" +
+                                 $"Training Time: {result.TrainingTimeSeconds:F1}s\n\n" +
+                                 $"Performance Metrics:\n" +
+                                 $"  MAE: {result.Performance?.Mae:F6}\n" +
+                                 $"  RMSE: {result.Performance?.Rmse:F6}\n" +
+                                 $"  R² Score: {result.Performance?.R2Score:F4}";
+
+                    MessageBox.Show(message, "Training Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    if (StatusText != null)
+                        StatusText.Text = $"Model trained successfully with {result.SymbolsCount} symbols";
+                }
+                else
+                {
+                    MessageBox.Show($"Training failed: {result.Error}", "Training Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    
+                    if (StatusText != null)
+                        StatusText.Text = "Model training failed";
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error during model training");
+                MessageBox.Show($"Training error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                
+                if (StatusText != null)
+                    StatusText.Text = "Training error occurred";
+            }
+            finally
+            {
+                // Re-enable buttons
+                if (AnalyzeButton != null)
+                    AnalyzeButton.IsEnabled = true;
+                    
+                var trainBtn = this.FindName("TrainModelButton") as Button;
+                if (trainBtn != null)
+                    trainBtn.IsEnabled = true;
+            }
+        }
+
+        // Helper methods to get UI selections
+        private string GetSelectedModelType()
+        {
+            var comboBox = this.FindName("ModelTypeComboBox") as ComboBox;
+            if (comboBox?.SelectedItem is ComboBoxItem modelItem)
+            {
+                return modelItem.Tag?.ToString() ?? "auto";
+            }
+            return "auto";
+        }
+
+        private string GetSelectedArchitectureType()
+        {
+            var comboBox = this.FindName("ArchitectureComboBox") as ComboBox;
+            if (comboBox?.SelectedItem is ComboBoxItem archItem)
+            {
+                return archItem.Tag?.ToString() ?? "lstm";
+            }
+            return "lstm";
+        }
+
+        // Event handler for Train Model button
+        private async void TrainModelButton_Click(object sender, RoutedEventArgs e)
+        {
+            await TrainModelFromDatabaseAsync();
+        }
     }
 }
