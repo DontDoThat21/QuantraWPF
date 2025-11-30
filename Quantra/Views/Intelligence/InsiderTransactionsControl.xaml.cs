@@ -334,16 +334,35 @@ namespace Quantra.Views.Intelligence
                 // Capture the actual cache time once for this batch
                 var cacheTime = DateTime.Now;
 
+                // Get all existing transactions for the symbols in this batch to minimize database queries
+                var symbols = transactions.Select(t => t.Symbol).Distinct().ToList();
+                var existingTransactions = context.InsiderTransactions
+                    .Where(t => symbols.Contains(t.Symbol))
+                    .ToList();
+
+                // Create a lookup for faster duplicate checking
+                // Handle NULL OwnerCik by using empty string as key
+                var existingLookup = existingTransactions
+                    .GroupBy(t => new 
+                    { 
+                        t.Symbol, 
+                        t.FilingDate, 
+                        t.TransactionDate, 
+                        OwnerCik = t.OwnerCik ?? string.Empty 
+                    })
+                    .ToDictionary(g => g.Key, g => g.First());
+
                 foreach (var transaction in transactions)
                 {
-                    // Check if transaction already exists
-                    var existing = context.InsiderTransactions.FirstOrDefault(t =>
-                        t.Symbol == transaction.Symbol &&
-                        t.FilingDate == transaction.FilingDate &&
-                        t.TransactionDate == transaction.TransactionDate &&
-                        t.OwnerCik == transaction.OwnerCik);
+                    var key = new 
+                    { 
+                        transaction.Symbol, 
+                        transaction.FilingDate, 
+                        transaction.TransactionDate, 
+                        OwnerCik = transaction.OwnerCik ?? string.Empty 
+                    };
 
-                    if (existing != null)
+                    if (existingLookup.TryGetValue(key, out var existing))
                     {
                         // Update existing record
                         existing.OwnerName = transaction.OwnerName;
@@ -359,7 +378,7 @@ namespace Quantra.Views.Intelligence
                     else
                     {
                         // Add new record
-                        context.InsiderTransactions.Add(new InsiderTransactionEntity
+                        var newEntity = new InsiderTransactionEntity
                         {
                             Symbol = transaction.Symbol,
                             FilingDate = transaction.FilingDate,
@@ -374,7 +393,10 @@ namespace Quantra.Views.Intelligence
                             SharesOwnedFollowing = transaction.SharesOwnedFollowing,
                             AcquisitionOrDisposal = transaction.AcquisitionOrDisposal,
                             LastUpdated = cacheTime
-                        });
+                        };
+                        context.InsiderTransactions.Add(newEntity);
+                        // Add to lookup to catch duplicates within the same batch
+                        existingLookup[key] = newEntity;
                     }
                 }
 
