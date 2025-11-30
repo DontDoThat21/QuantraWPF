@@ -630,15 +630,6 @@ namespace Quantra.Views.Backtesting
     }
 
     /// <summary>
-    /// Helper class for cached symbol information display
-    /// </summary>
-    public class CachedSymbolInfo
-    {
-        public string Symbol { get; set; }
-        public string CacheInfo { get; set; }
-    }
-
-    /// <summary>
     /// Simple input dialog for getting user text input
     /// </summary>
     public class InputDialog : Window

@@ -22,6 +22,16 @@ namespace Quantra.DAL.Services
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
         }
 
+        /// <summary>
+        /// Creates a new QuantraDbContext with SQL Server connection
+        /// </summary>
+        private QuantraDbContext CreateDbContext()
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+            return new QuantraDbContext(optionsBuilder.Options);
+        }
+
         /// <inheritdoc/>
         public async Task<BacktestResultEntity> SaveResultAsync(BacktestResultEntity result)
         {
@@ -32,10 +42,7 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     result.CreatedAt = DateTime.Now;
                     dbContext.BacktestResults.Add(result);
@@ -57,10 +64,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .FirstOrDefaultAsync(b => b.Id == id);
@@ -83,10 +87,7 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .Where(b => b.Symbol == symbol)
@@ -111,10 +112,7 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .Where(b => b.StrategyName == strategyName)
@@ -134,10 +132,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .Where(b => b.CreatedAt >= startDate && b.CreatedAt <= endDate)
@@ -157,10 +152,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .OrderByDescending(b => b.CreatedAt)
@@ -180,10 +172,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     return await dbContext.BacktestResults
                         .OrderByDescending(b => b.CreatedAt)
@@ -202,10 +191,7 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var result = await dbContext.BacktestResults.FindAsync(id);
                     if (result == null)
@@ -237,10 +223,7 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     var results = await dbContext.BacktestResults
                         .Where(b => b.Symbol == symbol)
@@ -271,10 +254,7 @@ namespace Quantra.DAL.Services
 
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var dbContext = CreateDbContext())
                 {
                     dbContext.BacktestResults.Update(result);
                     await dbContext.SaveChangesAsync();
