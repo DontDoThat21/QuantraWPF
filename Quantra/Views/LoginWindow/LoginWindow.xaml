@@ -52,7 +52,7 @@
                                    Style="{StaticResource EnhancedHeaderTextBlockStyle}" 
                                    HorizontalAlignment="Center" Margin="0,0,0,5"/>
                         
-                        <TextBlock Text="Webull Login" FontSize="18" FontWeight="SemiBold" 
+                        <TextBlock Text="Quantra Login" FontSize="18" FontWeight="SemiBold" 
                                    Style="{StaticResource EnhancedTextBlockStyle}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
                         
                         <!-- Login Fields -->
