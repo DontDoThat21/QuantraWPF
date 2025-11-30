@@ -1396,10 +1396,8 @@ namespace Quantra.Controls
 
             try
             {
-                // Set busy cursor during refresh
-                Mouse.OverrideCursor = Cursors.Wait;
-
                 // Refresh the data for the currently selected symbol from API
+                // Note: RefreshSymbolDataFromAPI handles cursor state internally
                 await RefreshSymbolDataFromAPI(selectedSymbol, refreshToken);
 
                 // Update the cache timestamp display
@@ -1421,8 +1419,7 @@ namespace Quantra.Controls
             }
             finally
             {
-                // Reset cursor and re-enable the button
-                Mouse.OverrideCursor = null;
+                // Re-enable the button
                 if (RefreshSymbolDataButton != null)
                     RefreshSymbolDataButton.IsEnabled = true;
             }
