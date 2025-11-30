@@ -104,7 +104,7 @@ namespace Quantra.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
 
         // Pagination constants
-        private const int DEFAULT_PAGE_SIZE = 20;
+        private const int DEFAULT_PAGE_SIZE = 25;
         
         // Pagination state
         private int _currentPage = 1;
@@ -134,11 +134,14 @@ namespace Quantra.ViewModels
                     _totalCachedStocksCount = value;
                     OnPropertyChanged(nameof(TotalCachedStocksCount));
                     OnPropertyChanged(nameof(HasMorePages));
+                    OnPropertyChanged(nameof(TotalPages));
                 }
             }
         }
         
-        public bool HasMorePages => CachedStocks.Count < TotalCachedStocksCount;
+        public int TotalPages => TotalCachedStocksCount > 0 ? (int)Math.Ceiling((double)TotalCachedStocksCount / DEFAULT_PAGE_SIZE) : 1;
+        
+        public bool HasMorePages => CurrentPage < TotalPages;
 
         public StockExplorerViewModel(
             StockDataCacheService stockDataCacheService,
@@ -213,20 +216,13 @@ namespace Quantra.ViewModels
                 var nextPage = CurrentPage + 1;
                 var (stocks, totalCount) = await _stockDataCacheService.GetCachedStocksPaginatedAsync(nextPage, DEFAULT_PAGE_SIZE).ConfigureAwait(false);
                 
-                // Update on UI thread
+                // Update on UI thread - replace existing page data for pagination
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // Build HashSet of existing symbols for O(1) lookup
-                    var existingSymbols = new HashSet<string>(CachedStocks.Select(s => s.Symbol));
-                    
+                    CachedStocks.Clear();
                     foreach (var stock in stocks)
                     {
-                        // Only add if not already in the collection - O(1) lookup
-                        if (!existingSymbols.Contains(stock.Symbol))
-                        {
-                            CachedStocks.Add(stock);
-                            existingSymbols.Add(stock.Symbol);
-                        }
+                        CachedStocks.Add(stock);
                     }
                     
                     CurrentPage = nextPage;
@@ -237,6 +233,44 @@ namespace Quantra.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error loading more cached stocks: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Loads the previous page of cached stocks
+        /// </summary>
+        public async Task LoadPreviousPageAsync()
+        {
+            if (CurrentPage <= 1 || IsLoading)
+                return;
+                
+            IsLoading = true;
+            try
+            {
+                var previousPage = CurrentPage - 1;
+                var (stocks, totalCount) = await _stockDataCacheService.GetCachedStocksPaginatedAsync(previousPage, DEFAULT_PAGE_SIZE).ConfigureAwait(false);
+                
+                // Update on UI thread - replace existing page data
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    CachedStocks.Clear();
+                    foreach (var stock in stocks)
+                    {
+                        CachedStocks.Add(stock);
+                    }
+                    
+                    CurrentPage = previousPage;
+                    TotalCachedStocksCount = totalCount;
+                    OnPropertyChanged(nameof(CanRunPredictions));
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading previous page: {ex.Message}");
             }
             finally
             {

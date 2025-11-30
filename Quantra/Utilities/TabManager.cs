@@ -724,7 +724,20 @@ namespace Quantra.Utilities
                 {
                     return (T)current;
                 }
-                current = VisualTreeHelper.GetParent(current);
+                current = GetParent(current);
+            }
+            return null;
+        }
+
+        private static DependencyObject GetParent(DependencyObject element)
+        {
+            if (element is Visual || element is System.Windows.Media.Media3D.Visual3D)
+            {
+                return VisualTreeHelper.GetParent(element);
+            }
+            else if (element is FrameworkContentElement contentElement)
+            {
+                return contentElement.Parent;
             }
             return null;
         }

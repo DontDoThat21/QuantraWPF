@@ -22,7 +22,25 @@ namespace Quantra.Utilities
                 {
                     return (T)current;
                 }
-                current = VisualTreeHelper.GetParent(current);
+                current = GetParent(current);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the parent of a DependencyObject, handling both visual and logical tree elements
+        /// </summary>
+        /// <param name="element">The element to get the parent of</param>
+        /// <returns>The parent element if found; otherwise, null</returns>
+        private static DependencyObject GetParent(DependencyObject element)
+        {
+            if (element is Visual || element is System.Windows.Media.Media3D.Visual3D)
+            {
+                return VisualTreeHelper.GetParent(element);
+            }
+            else if (element is FrameworkContentElement contentElement)
+            {
+                return contentElement.Parent;
             }
             return null;
         }

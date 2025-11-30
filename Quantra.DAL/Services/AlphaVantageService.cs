@@ -3027,18 +3027,34 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Gets insider transactions from Alpha Vantage INSIDER_TRANSACTIONS endpoint
         /// </summary>
-        /// <param name="symbol">Stock ticker symbol</param>
+        /// <param name="symbol">Stock ticker symbol (optional - if null, returns all transactions)</param>
+        /// <param name="dateFrom">Optional start date for filtering transactions</param>
+        /// <param name="dateTo">Optional end date for filtering transactions</param>
         /// <returns>InsiderTransactionsResponse with list of insider transactions</returns>
-        public async Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(string symbol)
+        public async Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(
+            string symbol = null, 
+            DateTime? dateFrom = null, 
+            DateTime? dateTo = null)
         {
-            if (string.IsNullOrWhiteSpace(symbol))
-                return null;
-
             try
             {
                 await WaitForApiLimit();
-                var endpoint = $"query?function=INSIDER_TRANSACTIONS&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
-                await LogApiCall("INSIDER_TRANSACTIONS", symbol);
+                
+                // Build query parameters
+                var queryParams = new List<string>
+                {
+                    "function=INSIDER_TRANSACTIONS",
+                    $"apikey={_apiKey}"
+                };
+
+                // Add symbol if provided
+                if (!string.IsNullOrWhiteSpace(symbol))
+                {
+                    queryParams.Add($"symbol={Uri.EscapeDataString(symbol)}");
+                }
+
+                var endpoint = $"query?{string.Join("&", queryParams)}";
+                await LogApiCall("INSIDER_TRANSACTIONS", symbol ?? "all");
 
                 var response = await _client.GetAsync(endpoint);
                 if (response.IsSuccessStatusCode)
@@ -3048,16 +3064,36 @@ namespace Quantra.DAL.Services
 
                     var result = new InsiderTransactionsResponse
                     {
-                        Symbol = symbol
+                        Symbol = symbol ?? "ALL"
                     };
 
                     if (data["data"] is JArray transactions)
                     {
                         foreach (var item in transactions)
                         {
+                            // Parse dates first for filtering
+                            DateTime? transactionDate = null;
+                            if (DateTime.TryParse(item["transaction_date"]?.ToString(), out DateTime parsedTransactionDate))
+                            {
+                                transactionDate = parsedTransactionDate;
+                            }
+
+                            DateTime? filingDate = null;
+                            if (DateTime.TryParse(item["filing_date"]?.ToString(), out DateTime parsedFilingDate))
+                            {
+                                filingDate = parsedFilingDate;
+                            }
+
+                            // Apply date range filtering if specified
+                            if (dateFrom.HasValue && transactionDate.HasValue && transactionDate.Value < dateFrom.Value)
+                                continue;
+
+                            if (dateTo.HasValue && transactionDate.HasValue && transactionDate.Value > dateTo.Value)
+                                continue;
+
                             var transaction = new InsiderTransactionData
                             {
-                                Symbol = symbol,
+                                Symbol = item["symbol"]?.ToString() ?? symbol ?? "N/A",
                                 OwnerName = item["owner_name"]?.ToString(),
                                 OwnerCik = item["owner_cik"]?.ToString(),
                                 OwnerTitle = item["owner_title"]?.ToString(),
@@ -3066,26 +3102,25 @@ namespace Quantra.DAL.Services
                                 SharesTraded = (int)TryParseDouble(item["shares"]),
                                 PricePerShare = TryParseDouble(item["share_price"]),
                                 SharesOwnedFollowing = (int)TryParseDouble(item["shares_owned_following"]),
-                                AcquisitionOrDisposal = item["acquisition_or_disposal"]?.ToString()
+                                AcquisitionOrDisposal = item["acquisition_or_disposal"]?.ToString(),
+                                FilingDate = filingDate ?? DateTime.MinValue,
+                                TransactionDate = transactionDate ?? DateTime.MinValue
                             };
-
-                            // Parse filing date
-                            if (DateTime.TryParse(item["filing_date"]?.ToString(), out DateTime filingDate))
-                            {
-                                transaction.FilingDate = filingDate;
-                            }
-
-                            // Parse transaction date
-                            if (DateTime.TryParse(item["transaction_date"]?.ToString(), out DateTime transactionDate))
-                            {
-                                transaction.TransactionDate = transactionDate;
-                            }
 
                             result.Transactions.Add(transaction);
                         }
                     }
 
-                    _loggingService.Log("Info", $"Retrieved {result.Transactions.Count} insider transactions for {symbol}");
+                    var logMessage = string.IsNullOrWhiteSpace(symbol) 
+                        ? $"Retrieved {result.Transactions.Count} insider transactions across all symbols"
+                        : $"Retrieved {result.Transactions.Count} insider transactions for {symbol}";
+                    
+                    if (dateFrom.HasValue || dateTo.HasValue)
+                    {
+                        logMessage += $" (date range: {dateFrom?.ToString("yyyy-MM-dd") ?? "any"} to {dateTo?.ToString("yyyy-MM-dd") ?? "any"})";
+                    }
+
+                    _loggingService.Log("Info", logMessage);
                     return result;
                 }
 
@@ -3093,7 +3128,40 @@ namespace Quantra.DAL.Services
             }
             catch (Exception ex)
             {
-                _loggingService.LogErrorWithContext(ex, $"Error getting insider transactions for {symbol}");
+                var errorContext = string.IsNullOrWhiteSpace(symbol) ? "all symbols" : symbol;
+                _loggingService.LogErrorWithContext(ex, $"Error getting insider transactions for {errorContext}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the latest insider transactions across all symbols (convenience method)
+        /// </summary>
+        /// <param name="limit">Maximum number of transactions to return (default: 100)</param>
+        /// <returns>InsiderTransactionsResponse with list of latest insider transactions sorted by transaction date</returns>
+        public async Task<InsiderTransactionsResponse> GetLatestInsiderTransactionsAsync(int limit = 100)
+        {
+            try
+            {
+                // Get transactions without symbol filter
+                var result = await GetInsiderTransactionsAsync(symbol: null, dateFrom: null, dateTo: null);
+
+                if (result != null && result.Transactions.Count > 0)
+                {
+                    // Sort by transaction date descending (most recent first) and limit
+                    result.Transactions = result.Transactions
+                        .OrderByDescending(t => t.TransactionDate)
+                        .Take(limit)
+                        .ToList();
+
+                    _loggingService.Log("Info", $"Retrieved {result.Transactions.Count} latest insider transactions (limited to {limit})");
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error getting latest insider transactions");
                 return null;
             }
         }
