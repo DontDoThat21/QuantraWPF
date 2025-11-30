@@ -707,18 +707,20 @@ namespace Quantra.ViewModels
                     BetaText = beta.ToString("F3");
                     System.Diagnostics.Debug.WriteLine($"Calculated Beta: {beta:F3}");
 
-                    // Calculate Alpha (excess return over expected return based on beta)
-                    // Alpha = StrategyReturn - (RiskFreeRate + Beta * (MarketReturn - RiskFreeRate))
-                    // Using simplified approach: Alpha = StrategyReturn - Beta * MarketReturn
+                    // Calculate Alpha (Jensen's Alpha approximation)
+                    // True Jensen's Alpha = Portfolio Return - [Risk-Free Rate + Beta × (Market Return - Risk-Free Rate)]
+                    // This is a simplified approximation using mean price change as market indicator.
+                    // Limitations: 
+                    // - Uses mean closing price instead of actual market returns
+                    // - Risk-free rate assumed to be 0%
+                    // - For more accurate alpha, use actual period returns data
                     var spyMean = analytics.MeanValues?.ContainsKey("SPY") == true
                         ? analytics.MeanValues["SPY"]
                         : 0;
 
-                    // Approximate market return from mean closing price change
-                    // This is simplified - in production you'd calculate actual return
                     double alpha = _currentResult.TotalReturn - (beta * spyMean);
                     AlphaText = alpha.ToString("P2");
-                    System.Diagnostics.Debug.WriteLine($"Calculated Alpha: {alpha:P2}");
+                    System.Diagnostics.Debug.WriteLine($"Calculated Alpha (approximation): {alpha:P2}");
                 }
             }
 

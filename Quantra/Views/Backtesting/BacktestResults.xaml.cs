@@ -26,6 +26,7 @@ namespace Quantra.Views.Backtesting
         private List<BenchmarkComparisonData> _benchmarkData = new List<BenchmarkComparisonData>();
         private double _strategyEquityVolatility;
         private bool _showRelativeReturns = false;
+        private bool _isPropertyChangedSubscribed = false;
         private readonly Dictionary<string, Brush> _benchmarkColors = new Dictionary<string, Brush>
         {
             { "SPY", Brushes.DarkGreen },
@@ -116,29 +117,30 @@ namespace Quantra.Views.Backtesting
         {
             if (_viewModel == null) return;
             
-            // Update UI when Alpha Vantage Analytics properties change
+            // Update UI asynchronously when Alpha Vantage Analytics properties change
+            // Using BeginInvoke for non-blocking UI updates
             switch (e.PropertyName)
             {
                 case nameof(_viewModel.AnnualizedVolatilityText):
-                    Dispatcher.Invoke(() => AnnualizedVolatilityText.Text = _viewModel.AnnualizedVolatilityText);
+                    Dispatcher.BeginInvoke(() => AnnualizedVolatilityText.Text = _viewModel.AnnualizedVolatilityText);
                     break;
                 case nameof(_viewModel.CorrelationSPYText):
-                    Dispatcher.Invoke(() => CorrelationSPYText.Text = _viewModel.CorrelationSPYText);
+                    Dispatcher.BeginInvoke(() => CorrelationSPYText.Text = _viewModel.CorrelationSPYText);
                     break;
                 case nameof(_viewModel.CorrelationQQQText):
-                    Dispatcher.Invoke(() => CorrelationQQQText.Text = _viewModel.CorrelationQQQText);
+                    Dispatcher.BeginInvoke(() => CorrelationQQQText.Text = _viewModel.CorrelationQQQText);
                     break;
                 case nameof(_viewModel.CorrelationIWMText):
-                    Dispatcher.Invoke(() => CorrelationIWMText.Text = _viewModel.CorrelationIWMText);
+                    Dispatcher.BeginInvoke(() => CorrelationIWMText.Text = _viewModel.CorrelationIWMText);
                     break;
                 case nameof(_viewModel.BetaText):
-                    Dispatcher.Invoke(() => BetaText.Text = _viewModel.BetaText);
+                    Dispatcher.BeginInvoke(() => BetaText.Text = _viewModel.BetaText);
                     break;
                 case nameof(_viewModel.AlphaText):
-                    Dispatcher.Invoke(() => AlphaText.Text = _viewModel.AlphaText);
+                    Dispatcher.BeginInvoke(() => AlphaText.Text = _viewModel.AlphaText);
                     break;
                 case nameof(_viewModel.SharpeRatioText):
-                    Dispatcher.Invoke(() => SharpeRatioText.Text = _viewModel.SharpeRatioText);
+                    Dispatcher.BeginInvoke(() => SharpeRatioText.Text = _viewModel.SharpeRatioText);
                     break;
             }
         }
@@ -160,8 +162,12 @@ namespace Quantra.Views.Backtesting
             {
                 _viewModel.LoadResults(result, historical);
                 
-                // Subscribe to property changes for analytics data updates
-                _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+                // Subscribe to property changes for analytics data updates (only once)
+                if (!_isPropertyChangedSubscribed)
+                {
+                    _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+                    _isPropertyChangedSubscribed = true;
+                }
             }
             
             // Calculate equity volatility for later use
