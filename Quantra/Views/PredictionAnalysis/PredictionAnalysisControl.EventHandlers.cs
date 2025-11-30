@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Collections.ObjectModel; // Added for ObservableCollection
 using System.Windows.Data;
 using Quantra.DAL.Services; // Added for CollectionViewSource
+using System.Windows.Input; // Added for KeyEventArgs
 
 namespace Quantra.Controls
 {
@@ -25,8 +26,201 @@ namespace Quantra.Controls
         private bool _isUserSelectingTab = false;
         private int _lastUserSelectedTabIndex = 0;
 
+        // Symbol selection mode fields
+        private ObservableCollection<CachedSymbolInfo> _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
+        private SymbolSelectionMode _currentSymbolMode = SymbolSelectionMode.Individual;
+
+        /// <summary>
+        /// Enum to track symbol selection mode
+        /// </summary>
+        public enum SymbolSelectionMode
+        {
+            Individual,
+            Category
+        }
+
+        /// <summary>
+        /// Handles symbol selection mode changes
+        /// </summary>
+        private void SymbolModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (SymbolModeComboBox?.SelectedItem is ComboBoxItem selectedItem)
+            {
+                var mode = selectedItem.Content?.ToString();
+
+                if (mode == "Individual Symbol")
+                {
+                    _currentSymbolMode = SymbolSelectionMode.Individual;
+                    if (IndividualSymbolPanel != null)
+                        IndividualSymbolPanel.Visibility = Visibility.Visible;
+                    if (CategoryFilterPanel != null)
+                        CategoryFilterPanel.Visibility = Visibility.Collapsed;
+                    if (StatusText != null)
+                        StatusText.Text = "Individual symbol mode - Enter a symbol or select from cache";
+
+                    // Load cached symbols when entering individual mode
+                    LoadCachedSymbols();
+                }
+                else if (mode == "Category Filter")
+                {
+                    _currentSymbolMode = SymbolSelectionMode.Category;
+                    if (IndividualSymbolPanel != null)
+                        IndividualSymbolPanel.Visibility = Visibility.Collapsed;
+                    if (CategoryFilterPanel != null)
+                        CategoryFilterPanel.Visibility = Visibility.Visible;
+                    if (StatusText != null)
+                        StatusText.Text = "Category mode - Select a category to analyze multiple symbols";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Load cached symbols from StockDataCacheService
+        /// </summary>
+        private void LoadCachedSymbols()
+        {
+            try
+            {
+                _cachedSymbols.Clear();
+
+                if (_stockDataCacheService == null)
+                {
+                    if (StatusText != null)
+                        StatusText.Text = "Cache service not available";
+                    return;
+                }
+
+                var symbols = _stockDataCacheService.GetAllCachedSymbols();
+
+                foreach (var symbol in symbols)
+                {
+                    _cachedSymbols.Add(new CachedSymbolInfo
+                    {
+                        Symbol = symbol,
+                        CacheInfo = "cached"
+                    });
+                }
+
+                if (CachedSymbolsComboBox != null)
+                    CachedSymbolsComboBox.ItemsSource = _cachedSymbols;
+
+                _loggingService?.Log("Info", $"Loaded {_cachedSymbols.Count} cached symbols for prediction analysis");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to load cached symbols");
+                if (StatusText != null)
+                    StatusText.Text = "Error loading cached symbols";
+            }
+        }
+
+        /// <summary>
+        /// Handle cached symbol selection from dropdown
+        /// </summary>
+        private void CachedSymbolsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (CachedSymbolsComboBox?.SelectedItem is CachedSymbolInfo selectedItem)
+            {
+                if (ManualSymbolTextBox != null)
+                    ManualSymbolTextBox.Text = selectedItem.Symbol;
+                if (StatusText != null)
+                    StatusText.Text = $"Selected cached symbol: {selectedItem.Symbol}";
+            }
+        }
+
+        /// <summary>
+        /// Refresh the cached symbols list
+        /// </summary>
+        private void RefreshCacheButton_Click(object sender, RoutedEventArgs e)
+        {
+            LoadCachedSymbols();
+            if (StatusText != null)
+                StatusText.Text = $"Refreshed cached symbols. Found {_cachedSymbols.Count} symbols.";
+        }
+
+        /// <summary>
+        /// Handle Enter key press in manual symbol textbox
+        /// </summary>
+        private async void ManualSymbolTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                var symbol = ManualSymbolTextBox?.Text?.Trim().ToUpper();
+                if (!string.IsNullOrEmpty(symbol))
+                {
+                    await AnalyzeIndividualSymbol(symbol);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Analyze a single individual symbol
+        /// </summary>
+        private async Task AnalyzeIndividualSymbol(string symbol)
+        {
+            try
+            {
+                if (AnalyzeButton != null)
+                    AnalyzeButton.IsEnabled = false;
+
+                if (StatusText != null)
+                    StatusText.Text = $"Analyzing {symbol}...";
+
+                // Clear previous predictions
+                Predictions.Clear();
+
+                // Run prediction analysis for the individual symbol
+                var prediction = await AnalyzeStockWithAllAlgorithms(symbol);
+
+                if (prediction != null && prediction.PredictedAction != "ERROR")
+                {
+                    Predictions.Add(prediction);
+
+                    if (PredictionDataGrid != null)
+                        PredictionDataGrid.ItemsSource = Predictions;
+
+                    if (StatusText != null)
+                        StatusText.Text = $"Analysis complete for {symbol}. Action: {prediction.PredictedAction}, Confidence: {prediction.Confidence:P0}";
+                }
+                else
+                {
+                    if (StatusText != null)
+                        StatusText.Text = $"No prediction generated for {symbol}. Check if valid symbol.";
+                }
+
+                if (LastUpdatedText != null)
+                    LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm}";
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, $"Error analyzing {symbol}");
+                if (StatusText != null)
+                    StatusText.Text = $"Error analyzing {symbol}: {ex.Message}";
+            }
+            finally
+            {
+                if (AnalyzeButton != null)
+                    AnalyzeButton.IsEnabled = true;
+            }
+        }
+
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
+            // Check if individual symbol mode is selected
+            if (_currentSymbolMode == SymbolSelectionMode.Individual)
+            {
+                var symbol = ManualSymbolTextBox?.Text?.Trim().ToUpper();
+                if (string.IsNullOrEmpty(symbol))
+                {
+                    if (StatusText != null)
+                        StatusText.Text = "Please enter a valid symbol";
+                    return;
+                }
+                await AnalyzeIndividualSymbol(symbol);
+                return;
+            }
+
+            // Category mode - original implementation
             try
             {
                 if (AnalyzeButton != null)

@@ -134,7 +134,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Analysis Parameters - no changes -->
+        <!-- Analysis Parameters -->
         <Grid Grid.Row="1" Margin="0,5" Background="#2D2D42">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -142,14 +142,76 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>  <!-- Symbol selection row -->
+                <RowDefinition Height="Auto"/>  <!-- Indicators row -->
             </Grid.RowDefinitions>
 
-            <!-- Symbol Selection -->
+            <!-- Symbol Selection Mode -->
             <StackPanel Grid.Row="0" Grid.Column="0" Margin="10,5">
-                <TextBlock Text="Symbol List:" Foreground="White" Margin="0,5"/>
-                <ComboBox x:Name="SymbolFilterComboBox" Margin="0,0,5,0"
+                <TextBlock Text="Symbol Selection Mode:" Foreground="White" Margin="0,5"/>
+                <ComboBox x:Name="SymbolModeComboBox"
+                          SelectionChanged="SymbolModeComboBox_SelectionChanged"
+                          Style="{StaticResource EnhancedComboBoxStyle}"
+                          ToolTip="Choose how to select symbols for analysis">
+                    <ComboBoxItem Content="Individual Symbol" IsSelected="True"/>
+                    <ComboBoxItem Content="Category Filter"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Individual Symbol Controls (visible when Individual Symbol mode is selected) -->
+            <Grid x:Name="IndividualSymbolPanel" Grid.Row="0" Grid.Column="1" Margin="10,5" Visibility="Visible">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Manual Symbol Entry -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+                    <TextBlock Text="Enter Symbol:" Foreground="White" Margin="0,5"/>
+                    <TextBox x:Name="ManualSymbolTextBox"
+                             Text="AAPL"
+                             Style="{StaticResource EnhancedTextBoxStyle}"
+                             ToolTip="Enter a stock symbol (e.g., AAPL, MSFT, GOOGL)"
+                             KeyDown="ManualSymbolTextBox_KeyDown"/>
+                </StackPanel>
+
+                <!-- Cached Symbols Dropdown -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,5,5,0">
+                    <TextBlock Text="Or Load from Cache:" Foreground="White" Margin="0,5"/>
+                    <ComboBox x:Name="CachedSymbolsComboBox"
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              SelectionChanged="CachedSymbolsComboBox_SelectionChanged"
+                              ToolTip="Select a symbol with cached data from Stock Explorer">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Symbol}" FontWeight="Bold"/>
+                                    <TextBlock Text=" - " Foreground="Gray"/>
+                                    <TextBlock Text="{Binding CacheInfo}" Foreground="Gray"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Refresh Cache Button -->
+                <Button Grid.Row="1" Grid.Column="1" x:Name="RefreshCacheButton"
+                        Content="↻"
+                        Click="RefreshCacheButton_Click"
+                        Style="{StaticResource EnhancedButtonStyle}"
+                        Width="30" Height="30"
+                        Margin="0,25,0,0"
+                        ToolTip="Refresh cached symbols list"/>
+            </Grid>
+
+            <!-- Category Filter Controls (visible when Category Filter mode is selected) -->
+            <StackPanel x:Name="CategoryFilterPanel" Grid.Row="0" Grid.Column="1" Margin="10,5" Visibility="Collapsed">
+                <TextBlock Text="Symbol Category:" Foreground="White" Margin="0,5"/>
+                <ComboBox x:Name="SymbolFilterComboBox"
                           SelectionChanged="SymbolFilterComboBox_SelectionChanged"
                           Style="{StaticResource EnhancedComboBoxStyle}">
                     <ComboBoxItem Content="All Symbols"/>
@@ -158,12 +220,13 @@
                     <ComboBoxItem Content="Financial Sector"/>
                     <ComboBoxItem Content="Healthcare Sector"/>
                     <ComboBoxItem Content="Watchlist"/>
-                    <ComboBoxItem Content="Custom"/>
                 </ComboBox>
+                <TextBlock Text="This will analyze multiple symbols based on the selected category"
+                           Foreground="#AAAAAA" FontSize="11" Margin="0,5" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Timeframe Selection -->
-            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,5">
+            <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,5">
                 <TextBlock Text="Timeframe:" Foreground="White" Margin="0,5"/>
                 <ComboBox x:Name="TimeframeComboBox" Margin="0,0,5,0"
                           Style="{StaticResource EnhancedComboBoxStyle}">
@@ -176,8 +239,8 @@
             </StackPanel>
 
             <!-- Analyze Button -->
-            <Button Grid.Row="0" Grid.Column="2" x:Name="AnalyzeButton" Content="Analyze" 
-                    Width="100" Height="30" Margin="10,25,10,0" 
+            <Button Grid.Row="1" Grid.Column="2" x:Name="AnalyzeButton" Content="Analyze" 
+                    Width="100" Height="30" Margin="10,10,10,10" 
                     Click="AnalyzeButton_Click"
                     Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
 
