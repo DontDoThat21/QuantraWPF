@@ -1491,7 +1491,7 @@ namespace Quantra.Controls
         }
 
         /// <summary>
-        /// Handles scroll events on the StockDataGrid to implement infinite scroll / load more functionality
+        /// Handles scroll events on the StockDataGrid to implement auto-pagination on scroll
         /// </summary>
         private void StockDataGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
@@ -1504,7 +1504,7 @@ namespace Quantra.Controls
             if (scrollViewer == null)
                 return;
                 
-            // Calculate if we're within 80% of the bottom
+            // Calculate if we're within 90% of the bottom
             var verticalOffset = scrollViewer.VerticalOffset;
             var scrollableHeight = scrollViewer.ScrollableHeight;
             
@@ -1513,8 +1513,9 @@ namespace Quantra.Controls
                 
             var scrollPercentage = verticalOffset / scrollableHeight;
             
-            // If scrolled past 80% and we have more pages, schedule a debounced load
-            if (scrollPercentage >= 0.8 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading && !_scrollLoadPending)
+            // If scrolled past 90% and we have more pages, schedule a debounced load
+            // This will automatically load the next page when user scrolls to bottom
+            if (scrollPercentage >= 0.9 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading && !_scrollLoadPending)
             {
                 _scrollLoadPending = true;
                 
@@ -1523,7 +1524,7 @@ namespace Quantra.Controls
                 {
                     _scrollDebounceTimer = new DispatcherTimer
                     {
-                        Interval = TimeSpan.FromMilliseconds(200)
+                        Interval = TimeSpan.FromMilliseconds(300)
                     };
                     _scrollDebounceTimer.Tick += async (s, args) =>
                     {

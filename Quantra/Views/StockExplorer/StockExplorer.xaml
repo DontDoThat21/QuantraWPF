@@ -18,6 +18,7 @@ MinWidth="900" MinHeight="700">
         <converters:PredictionConfidenceColorConverter x:Key="PredictionConfidenceColorConverter"/>
         <converters:PredictedPriceColorConverter x:Key="PredictedPriceColorConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:PageNavigationConverter x:Key="PageNavigationConverter"/>
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -448,19 +449,43 @@ MinWidth="900" MinHeight="700">
                 </DataGrid.Columns>
             </DataGrid>
             
-            <!-- Load More Button Panel -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5,5,5,5"
-                        Visibility="{Binding HasMorePages, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <Button x:Name="LoadMoreButton"
-                        Content="{Binding TotalCachedStocksCount, StringFormat='Load More ({0} total)'}"
-                        Padding="15,8"
+            <!-- Pagination Control Panel -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5,10,5,5">
+                <!-- Previous Page Button -->
+                <Button x:Name="PreviousPageButton"
+                        Content="◀ Previous"
+                        Padding="12,8"
+                        Margin="0,0,10,0"
                         Style="{StaticResource EnhancedButtonStyle}"
-                        Command="{Binding LoadMoreCommand}"
-                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"/>
+                        Click="PreviousPageButton_Click"
+                        IsEnabled="{Binding CurrentPage, Converter={StaticResource PageNavigationConverter}, ConverterParameter=Previous}"/>
+                
+                <!-- Page Info -->
+                <TextBlock VerticalAlignment="Center"
+                           Style="{StaticResource EnhancedTextBlockStyle}"
+                           Margin="0,0,10,0">
+                    <Run Text="Page "/>
+                    <Run Text="{Binding CurrentPage, Mode=OneWay}" FontWeight="Bold"/>
+                    <Run Text=" of "/>
+                    <Run Text="{Binding TotalPages, Mode=OneWay}" FontWeight="Bold"/>
+                    <Run Text=" ("/>
+                    <Run Text="{Binding TotalCachedStocksCount, Mode=OneWay}"/>
+                    <Run Text=" stocks)"/>
+                </TextBlock>
+                
+                <!-- Next Page Button -->
+                <Button x:Name="NextPageButton"
+                        Content="Next ▶"
+                        Padding="12,8"
+                        Style="{StaticResource EnhancedButtonStyle}"
+                        Click="NextPageButton_Click"
+                        IsEnabled="{Binding HasMorePages}"/>
+                
+                <!-- Loading Indicator -->
                 <TextBlock Text="Loading..." 
                            Style="{StaticResource EnhancedSmallTextBlockStyle}" 
                            VerticalAlignment="Center"
-                           Margin="10,0,0,0"
+                           Margin="15,0,0,0"
                            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </StackPanel>
         </Grid>

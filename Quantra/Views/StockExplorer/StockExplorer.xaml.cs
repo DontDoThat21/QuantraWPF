@@ -3659,5 +3659,22 @@ namespace Quantra.Controls
             
             await HandleSymbolSelectionAsync(result.Symbol, "TypeAheadSearch");
         }
+
+        // Pagination button handlers
+        private async void PreviousPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && _viewModel.CurrentPage > 1)
+            {
+                await _viewModel.LoadPreviousPageAsync();
+            }
+        }
+
+        private async void NextPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null && _viewModel.HasMorePages)
+            {
+                await _viewModel.LoadMoreCachedStocksAsync();
+            }
+        }
     }
 }

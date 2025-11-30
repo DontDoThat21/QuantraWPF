@@ -585,7 +585,7 @@ namespace Quantra.DAL.Services
         /// <param name="page">Page number (1-based)</param>
         /// <param name="pageSize">Number of items per page</param>
         /// <returns>Paginated result with stocks and total count</returns>
-        public async Task<(List<QuoteData> Stocks, int TotalCount)> GetCachedStocksPaginatedAsync(int page = 1, int pageSize = 20)
+        public async Task<(List<QuoteData> Stocks, int TotalCount)> GetCachedStocksPaginatedAsync(int page = 1, int pageSize = 25)
         {
             var stocks = new List<QuoteData>();
             int totalCount = 0;
@@ -618,15 +618,18 @@ namespace Quantra.DAL.Services
                         return (stocks, totalCount);
                     }
 
-                    // Fetch latest cache entries for all paginated symbols in one query
-                    // Using a subquery approach to get latest entry per symbol
-                    var latestEntries = await dbContext.StockDataCache
+                    // Fetch latest cache entries for all paginated symbols
+                    // Get all entries for paginated symbols, then filter in memory to get latest per symbol
+                    var allEntriesForSymbols = await dbContext.StockDataCache
                         .Where(c => paginatedSymbols.Contains(c.Symbol))
-                        .GroupBy(c => c.Symbol)
-                        .Select(g => g.OrderByDescending(c => c.CachedAt).FirstOrDefault())
-                        .Where(e => e != null)
                         .ToListAsync()
                         .ConfigureAwait(false);
+
+                    // Group in memory and get the latest entry for each symbol
+                    var latestEntries = allEntriesForSymbols
+                        .GroupBy(c => c.Symbol)
+                        .Select(g => g.OrderByDescending(c => c.CachedAt).First())
+                        .ToList();
 
                     // Process entries to build QuoteData list
                     foreach (var entry in latestEntries)
