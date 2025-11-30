@@ -3167,5 +3167,251 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
+
+        #region Analytics API Methods
+
+        /// <summary>
+        /// Get fixed window analytics from Alpha Vantage ANALYTICS_FIXED_WINDOW endpoint
+        /// Calculates statistical metrics across a fixed date range for multiple symbols
+        /// </summary>
+        /// <param name="symbols">Comma-separated list of symbols (e.g., "AAPL,SPY,QQQ")</param>
+        /// <param name="startDate">Start date for the analysis window</param>
+        /// <param name="interval">Time interval (DAILY, WEEKLY, MONTHLY)</param>
+        /// <param name="calculations">Comma-separated list of calculations to perform</param>
+        /// <param name="ohlcType">Price type to use (close, open, high, low)</param>
+        /// <returns>Analytics result with calculated metrics</returns>
+        public async Task<AnalyticsFixedWindowResult> GetAnalyticsFixedWindowAsync(
+            string symbols,
+            DateTime startDate,
+            string interval = "DAILY",
+            string calculations = "MEAN_VALUE,STDDEV,CORRELATION",
+            string ohlcType = "close")
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(symbols))
+                    throw new ArgumentException("Symbols cannot be null or empty", nameof(symbols));
+
+                await WaitForApiLimit();
+
+                // Format date as YYYY-MM-DD
+                string rangeParam = startDate.ToString("yyyy-MM-dd");
+
+                // Add annualized parameter to STDDEV if not already present
+                if (calculations.Contains("STDDEV") && !calculations.Contains("annualized"))
+                {
+                    calculations = calculations.Replace("STDDEV", "STDDEV,STDDEV(annualized=True)");
+                }
+
+                // Build the API endpoint
+                var endpoint = $"query?function=ANALYTICS_FIXED_WINDOW" +
+                    $"&SYMBOLS={Uri.EscapeDataString(symbols)}" +
+                    $"&RANGE={rangeParam}" +
+                    $"&INTERVAL={interval}" +
+                    $"&OHLC={ohlcType}" +
+                    $"&CALCULATIONS={Uri.EscapeDataString(calculations)}" +
+                    $"&apikey={_apiKey}";
+
+                await LogApiCall("ANALYTICS_FIXED_WINDOW", $"{symbols}, {rangeParam}");
+
+                var response = await _client.GetAsync(endpoint);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _loggingService.Log("Error", $"Analytics API request failed with status {response.StatusCode}: {content}");
+                    return null;
+                }
+
+                // Parse the response
+                var result = ParseAnalyticsFixedWindowResponse(content);
+
+                if (result != null && result.IsValid)
+                {
+                    _loggingService.Log("Info", $"Retrieved analytics for {symbols} from {rangeParam}: " +
+                        $"{result.MeanValues?.Count ?? 0} symbols analyzed");
+                }
+                else if (result?.Metadata?.HasError == true)
+                {
+                    _loggingService.Log("Warning", $"Analytics API returned error/note: {result.Metadata.Error ?? result.Metadata.Note}");
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Error getting analytics for '{symbols}'");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Parse ANALYTICS_FIXED_WINDOW API response
+        /// </summary>
+        private AnalyticsFixedWindowResult ParseAnalyticsFixedWindowResponse(string jsonResponse)
+        {
+            var result = new AnalyticsFixedWindowResult();
+
+            try
+            {
+                var json = JObject.Parse(jsonResponse);
+
+                // Check for errors or rate limit messages
+                if (json["Error Message"] != null)
+                {
+                    result.Metadata.Error = json["Error Message"].ToString();
+                    _loggingService.Log("Error", $"Analytics API Error: {result.Metadata.Error}");
+                    return result;
+                }
+
+                if (json["Note"] != null)
+                {
+                    result.Metadata.Note = json["Note"].ToString();
+                    _loggingService.Log("Warning", $"Analytics API Note: {result.Metadata.Note}");
+                    return result;
+                }
+
+                if (json["Information"] != null)
+                {
+                    result.Metadata.Information = json["Information"].ToString();
+                }
+
+                // Parse the main analytics data
+                var analytics = json["ANALYTICS_FIXED_WINDOW"];
+                if (analytics == null)
+                {
+                    _loggingService.Log("Warning", "No ANALYTICS_FIXED_WINDOW data in response");
+                    return result;
+                }
+
+                // Parse metadata
+                result.Symbols = analytics["symbol"]?.ToString();
+                result.Range = analytics["range"]?.ToString();
+                result.Interval = analytics["interval"]?.ToString();
+                result.OhlcType = analytics["ohlc"]?.ToString() ?? "close";
+                result.Metadata.ResponseTime = DateTime.Now;
+
+                // Parse calculations
+                var calculationsNode = analytics["calculations"];
+                if (calculationsNode != null)
+                {
+                    // Parse MEAN_VALUE
+                    if (calculationsNode["MEAN_VALUE"] != null)
+                    {
+                        result.MeanValues = ParseSymbolValues(calculationsNode["MEAN_VALUE"]);
+                    }
+
+                    // Parse STDDEV (regular)
+                    if (calculationsNode["STDDEV"] != null)
+                    {
+                        result.StdDev = ParseSymbolValues(calculationsNode["STDDEV"]);
+                    }
+
+                    // Parse STDDEV (annualized)
+                    var annualizedStdDevKey = calculationsNode.Children<JProperty>()
+                        .FirstOrDefault(p => p.Name.Contains("STDDEV") && p.Name.Contains("annualized"))?.Name;
+
+                    if (annualizedStdDevKey != null)
+                    {
+                        result.AnnualizedStdDev = ParseSymbolValues(calculationsNode[annualizedStdDevKey]);
+                    }
+
+                    // Parse VARIANCE
+                    if (calculationsNode["VARIANCE"] != null)
+                    {
+                        result.Variance = ParseSymbolValues(calculationsNode["VARIANCE"]);
+                    }
+
+                    // Parse VARIANCE (annualized)
+                    var annualizedVarianceKey = calculationsNode.Children<JProperty>()
+                        .FirstOrDefault(p => p.Name.Contains("VARIANCE") && p.Name.Contains("annualized"))?.Name;
+
+                    if (annualizedVarianceKey != null)
+                    {
+                        result.AnnualizedVariance = ParseSymbolValues(calculationsNode[annualizedVarianceKey]);
+                    }
+
+                    // Parse CORRELATION matrix
+                    if (calculationsNode["CORRELATION"] != null)
+                    {
+                        result.CorrelationMatrix = ParseCorrelationMatrix(calculationsNode["CORRELATION"]);
+                    }
+
+                    // Parse COVARIANCE matrix
+                    if (calculationsNode["COVARIANCE"] != null)
+                    {
+                        result.CovarianceMatrix = ParseCorrelationMatrix(calculationsNode["COVARIANCE"]);
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error parsing analytics response");
+                result.Metadata.Error = $"Parse error: {ex.Message}";
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Parse symbol->value dictionary from JSON
+        /// </summary>
+        private Dictionary<string, double> ParseSymbolValues(JToken token)
+        {
+            var result = new Dictionary<string, double>();
+
+            try
+            {
+                foreach (var property in token.Children<JProperty>())
+                {
+                    if (double.TryParse(property.Value.ToString(), out double value))
+                    {
+                        result[property.Name] = value;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error parsing symbol values");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Parse correlation or covariance matrix from JSON
+        /// </summary>
+        private Dictionary<string, Dictionary<string, double>> ParseCorrelationMatrix(JToken token)
+        {
+            var matrix = new Dictionary<string, Dictionary<string, double>>();
+
+            try
+            {
+                foreach (var symbolProperty in token.Children<JProperty>())
+                {
+                    var symbolName = symbolProperty.Name;
+                    var correlations = new Dictionary<string, double>();
+
+                    foreach (var correlationProperty in symbolProperty.Value.Children<JProperty>())
+                    {
+                        if (double.TryParse(correlationProperty.Value.ToString(), out double value))
+                        {
+                            correlations[correlationProperty.Name] = value;
+                        }
+                    }
+
+                    matrix[symbolName] = correlations;
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Error parsing correlation matrix");
+            }
+
+            return matrix;
+        }
+
+        #endregion
     }
 }

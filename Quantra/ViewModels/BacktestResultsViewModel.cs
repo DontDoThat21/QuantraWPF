@@ -544,6 +544,137 @@ namespace Quantra.ViewModels
             {
                 UpdateMonteCarloStatistics(result.MonteCarloResults);
             }
+
+            // Asynchronously load analytics data from Alpha Vantage
+            _ = LoadAnalyticsDataAsync();
+        }
+
+        /// <summary>
+        /// Load analytics data from Alpha Vantage to enhance performance metrics
+        /// </summary>
+        private async Task LoadAnalyticsDataAsync()
+        {
+            if (_currentResult == null || _alphaVantageService == null)
+                return;
+
+            try
+            {
+                // Build symbol list: strategy symbol + benchmarks
+                var symbols = new List<string> { _currentResult.Symbol };
+
+                // Add common benchmarks for comparison
+                symbols.Add("SPY");  // S&P 500
+                symbols.Add("QQQ");  // NASDAQ
+                symbols.Add("IWM");  // Russell 2000
+
+                string symbolsParam = string.Join(",", symbols);
+
+                // Call Analytics API
+                var analyticsResult = await _alphaVantageService.GetAnalyticsFixedWindowAsync(
+                    symbolsParam,
+                    _currentResult.StartDate,
+                    "DAILY",
+                    "MEAN_VALUE,STDDEV,CORRELATION",
+                    "close");
+
+                if (analyticsResult != null && analyticsResult.IsValid)
+                {
+                    // Update BacktestResult with analytics data
+                    UpdateResultWithAnalytics(analyticsResult);
+
+                    // Refresh the UI
+                    UpdatePerformanceMetrics(_currentResult);
+                }
+                else if (analyticsResult?.Metadata?.HasError == true)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"Analytics API error: {analyticsResult.Metadata.Error ?? analyticsResult.Metadata.Note}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - analytics data is supplementary
+                System.Diagnostics.Debug.WriteLine($"Error loading analytics data: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Update backtest result with analytics data from Alpha Vantage
+        /// </summary>
+        private void UpdateResultWithAnalytics(AnalyticsFixedWindowResult analytics)
+        {
+            if (_currentResult == null || analytics == null)
+                return;
+
+            string symbol = _currentResult.Symbol;
+
+            // Get volatility from API
+            var volatility = analytics.GetVolatility(symbol, annualized: true);
+            if (volatility.HasValue)
+            {
+                // Store annualized volatility
+                // Note: You may want to add this as a property to BacktestResult
+                System.Diagnostics.Debug.WriteLine(
+                    $"Annualized Volatility from Alpha Vantage: {volatility.Value:P2}");
+
+                // Update Sharpe Ratio using API volatility if significantly different
+                if (_currentResult.SharpeRatio == 0 || Math.Abs(_currentResult.SharpeRatio) < 0.01)
+                {
+                    // Recalculate Sharpe ratio using API volatility
+                    // Sharpe = (Return - RiskFreeRate) / Volatility
+                    double riskFreeRate = 0.0;  // Assuming 0% for simplicity
+                    if (volatility.Value > 0)
+                    {
+                        _currentResult.SharpeRatio = (_currentResult.TotalReturn - riskFreeRate) / volatility.Value;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"Updated Sharpe Ratio from Alpha Vantage: {_currentResult.SharpeRatio:F2}");
+                    }
+                }
+            }
+
+            // Get correlation with SPY
+            var correlationSPY = analytics.GetCorrelation(symbol, "SPY");
+            if (correlationSPY.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Correlation with SPY: {correlationSPY.Value:F3}");
+
+                // Calculate Beta if we have correlation and volatilities
+                var symbolVol = analytics.GetVolatility(symbol, annualized: true);
+                var spyVol = analytics.GetVolatility("SPY", annualized: true);
+
+                if (symbolVol.HasValue && spyVol.HasValue && spyVol.Value > 0)
+                {
+                    double beta = correlationSPY.Value * (symbolVol.Value / spyVol.Value);
+                    System.Diagnostics.Debug.WriteLine($"Calculated Beta: {beta:F3}");
+
+                    // Calculate Alpha (excess return over expected return based on beta)
+                    // Alpha = StrategyReturn - (RiskFreeRate + Beta * (MarketReturn - RiskFreeRate))
+                    var spyMean = analytics.MeanValues?.ContainsKey("SPY") == true
+                        ? analytics.MeanValues["SPY"]
+                        : 0;
+
+                    // Approximate market return from mean closing price change
+                    // This is simplified - in production you'd calculate actual return
+                    double alpha = _currentResult.TotalReturn - (beta * spyMean);
+                    System.Diagnostics.Debug.WriteLine($"Calculated Alpha: {alpha:P2}");
+                }
+            }
+
+            // Get correlations with other benchmarks
+            var correlationQQQ = analytics.GetCorrelation(symbol, "QQQ");
+            if (correlationQQQ.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Correlation with QQQ (NASDAQ): {correlationQQQ.Value:F3}");
+            }
+
+            var correlationIWM = analytics.GetCorrelation(symbol, "IWM");
+            if (correlationIWM.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"Correlation with IWM (Russell 2000): {correlationIWM.Value:F3}");
+            }
         }
 
         /// <summary>

@@ -60,5 +60,23 @@ namespace Quantra.DAL.Services.Interfaces
             int limit = 50);
         Task<TopMoversResponse> GetTopMoversAsync();
         Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(string symbol);
+
+        // Analytics API Methods
+        /// <summary>
+        /// Get fixed window analytics for performance metrics calculation
+        /// Uses ANALYTICS_FIXED_WINDOW endpoint from Alpha Vantage
+        /// </summary>
+        /// <param name="symbols">Comma-separated list of symbols (e.g., "AAPL,SPY,QQQ")</param>
+        /// <param name="startDate">Start date for analysis window</param>
+        /// <param name="interval">Time interval (DAILY, WEEKLY, MONTHLY)</param>
+        /// <param name="calculations">Comma-separated calculations (e.g., "MEAN_VALUE,STDDEV,CORRELATION")</param>
+        /// <param name="ohlcType">Price type to use (close, open, high, low)</param>
+        /// <returns>Analytics result with calculated metrics</returns>
+        Task<AnalyticsFixedWindowResult> GetAnalyticsFixedWindowAsync(
+            string symbols,
+            DateTime startDate,
+            string interval = "DAILY",
+            string calculations = "MEAN_VALUE,STDDEV,CORRELATION",
+            string ohlcType = "close");
     }
 }

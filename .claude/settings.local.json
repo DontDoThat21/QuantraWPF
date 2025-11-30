@@ -6,7 +6,10 @@
       "Bash(powershell -Command \"Get-ChildItem -Path ''python'' -Directory | Select-Object Name\")",
       "Bash(dotnet build:*)",
       "Bash(rm:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebFetch(domain:www.alphavantage.co)",
+      "WebSearch",
+      "WebFetch(domain:pypi.org)"
     ],
     "deny": [],
     "ask": []
