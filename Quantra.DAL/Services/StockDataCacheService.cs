@@ -669,7 +669,8 @@ namespace Quantra.DAL.Services
                                 PERatio = 0,
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
-                                LastAccessed = DateTime.Now
+                                LastAccessed = DateTime.Now,
+                                CacheTime = entry.CachedAt // Set from database cache timestamp
                             });
                         }
                     }
@@ -775,7 +776,8 @@ namespace Quantra.DAL.Services
                                 PERatio = 0,
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
-                                LastAccessed = DateTime.Now
+                                LastAccessed = DateTime.Now,
+                                CacheTime = latest.CachedAt // Set from database cache timestamp
                             };
                         }
                     }
