@@ -93,15 +93,18 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Basic Metrics -->
+                <!-- Row 0-1: Basic Metrics -->
                 <TextBlock Grid.Column="0" Grid.Row="0" Text="Total Return:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
                 <TextBlock Grid.Column="0" Grid.Row="1" x:Name="TotalReturnText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
@@ -114,21 +117,40 @@
                 <TextBlock Grid.Column="3" Grid.Row="0" Text="CAGR:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
                 <TextBlock Grid.Column="3" Grid.Row="1" x:Name="CAGRText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
-                <!-- Advanced Metrics -->
-                <TextBlock Grid.Column="0" Grid.Row="2" Text="Sharpe Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="0" Grid.Row="3" x:Name="SharpeRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="4" Grid.Row="0" Text="Sharpe Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="4" Grid.Row="1" x:Name="SharpeRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
-                <TextBlock Grid.Column="1" Grid.Row="2" Text="Sortino Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="1" Grid.Row="3" x:Name="SortinoRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="5" Grid.Row="0" Text="Sortino Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="5" Grid.Row="1" x:Name="SortinoRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
-                <TextBlock Grid.Column="2" Grid.Row="2" Text="Calmar Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="2" Grid.Row="3" x:Name="CalmarRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <!-- Row 2-3: Advanced Metrics -->
+                <TextBlock Grid.Column="0" Grid.Row="2" Text="Calmar Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="3" x:Name="CalmarRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
-                <TextBlock Grid.Column="3" Grid.Row="2" Text="Profit Factor:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="3" Grid.Row="3" x:Name="ProfitFactorText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="2" Text="Profit Factor:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="3" x:Name="ProfitFactorText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
-                <TextBlock Grid.Column="4" Grid.Row="2" Text="Information Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="4" Grid.Row="3" x:Name="InformationRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="2" Text="Information Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="3" x:Name="InformationRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="3" Grid.Row="2" Text="Ann. Volatility:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Annualized Volatility from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="3" Grid.Row="3" x:Name="AnnualizedVolatilityText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="4" Grid.Row="2" Text="Beta:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Beta relative to S&amp;P 500 (SPY) from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="4" Grid.Row="3" x:Name="BetaText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="5" Grid.Row="2" Text="Alpha:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Jensen's Alpha relative to S&amp;P 500 (SPY) from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="5" Grid.Row="3" x:Name="AlphaText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <!-- Row 4-5: Correlation Metrics from Alpha Vantage Analytics API -->
+                <TextBlock Grid.Column="0" Grid.Row="4" Text="Correlation SPY:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with S&amp;P 500 from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="0" Grid.Row="5" x:Name="CorrelationSPYText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="1" Grid.Row="4" Text="Correlation QQQ:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with NASDAQ 100 from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CorrelationQQQText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+
+                <TextBlock Grid.Column="2" Grid.Row="4" Text="Correlation IWM:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with Russell 2000 from Alpha Vantage Analytics API"/>
+                <TextBlock Grid.Column="2" Grid.Row="5" x:Name="CorrelationIWMText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
             </Grid>
         </GroupBox>
 

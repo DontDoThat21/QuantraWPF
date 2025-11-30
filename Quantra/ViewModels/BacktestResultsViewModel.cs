@@ -44,6 +44,14 @@ namespace Quantra.ViewModels
         private string _profitFactorText;
         private string _informationRatioText;
 
+        // Alpha Vantage Analytics metrics
+        private string _annualizedVolatilityText;
+        private string _correlationSPYText;
+        private string _correlationQQQText;
+        private string _correlationIWMText;
+        private string _betaText;
+        private string _alphaText;
+
         // Monte Carlo statistics
         private string _return5PercentText;
         private string _return25PercentText;
@@ -109,6 +117,14 @@ namespace Quantra.ViewModels
             _calmarRatioText = "0.00";
             _profitFactorText = "0.00";
             _informationRatioText = "0.00";
+
+            // Initialize Alpha Vantage Analytics metrics
+            _annualizedVolatilityText = "--";
+            _correlationSPYText = "--";
+            _correlationQQQText = "--";
+            _correlationIWMText = "--";
+            _betaText = "--";
+            _alphaText = "--";
 
             // Initialize Monte Carlo statistics
             _return5PercentText = "0.0%";
@@ -385,6 +401,46 @@ namespace Quantra.ViewModels
 
         #endregion
 
+        #region Alpha Vantage Analytics Metrics
+
+        public string AnnualizedVolatilityText
+        {
+            get => _annualizedVolatilityText;
+            set => SetProperty(ref _annualizedVolatilityText, value);
+        }
+
+        public string CorrelationSPYText
+        {
+            get => _correlationSPYText;
+            set => SetProperty(ref _correlationSPYText, value);
+        }
+
+        public string CorrelationQQQText
+        {
+            get => _correlationQQQText;
+            set => SetProperty(ref _correlationQQQText, value);
+        }
+
+        public string CorrelationIWMText
+        {
+            get => _correlationIWMText;
+            set => SetProperty(ref _correlationIWMText, value);
+        }
+
+        public string BetaText
+        {
+            get => _betaText;
+            set => SetProperty(ref _betaText, value);
+        }
+
+        public string AlphaText
+        {
+            get => _alphaText;
+            set => SetProperty(ref _alphaText, value);
+        }
+
+        #endregion
+
         #region Monte Carlo Statistics
 
         public string Return5PercentText
@@ -612,8 +668,8 @@ namespace Quantra.ViewModels
             var volatility = analytics.GetVolatility(symbol, annualized: true);
             if (volatility.HasValue)
             {
-                // Store annualized volatility
-                // Note: You may want to add this as a property to BacktestResult
+                // Update UI with annualized volatility
+                AnnualizedVolatilityText = volatility.Value.ToString("P2");
                 System.Diagnostics.Debug.WriteLine(
                     $"Annualized Volatility from Alpha Vantage: {volatility.Value:P2}");
 
@@ -626,16 +682,18 @@ namespace Quantra.ViewModels
                     if (volatility.Value > 0)
                     {
                         _currentResult.SharpeRatio = (_currentResult.TotalReturn - riskFreeRate) / volatility.Value;
+                        SharpeRatioText = _currentResult.SharpeRatio.ToString("F2");
                         System.Diagnostics.Debug.WriteLine(
                             $"Updated Sharpe Ratio from Alpha Vantage: {_currentResult.SharpeRatio:F2}");
                     }
                 }
             }
 
-            // Get correlation with SPY
+            // Get correlation with SPY and calculate Beta/Alpha
             var correlationSPY = analytics.GetCorrelation(symbol, "SPY");
             if (correlationSPY.HasValue)
             {
+                CorrelationSPYText = correlationSPY.Value.ToString("F3");
                 System.Diagnostics.Debug.WriteLine(
                     $"Correlation with SPY: {correlationSPY.Value:F3}");
 
@@ -646,32 +704,40 @@ namespace Quantra.ViewModels
                 if (symbolVol.HasValue && spyVol.HasValue && spyVol.Value > 0)
                 {
                     double beta = correlationSPY.Value * (symbolVol.Value / spyVol.Value);
+                    BetaText = beta.ToString("F3");
                     System.Diagnostics.Debug.WriteLine($"Calculated Beta: {beta:F3}");
 
-                    // Calculate Alpha (excess return over expected return based on beta)
-                    // Alpha = StrategyReturn - (RiskFreeRate + Beta * (MarketReturn - RiskFreeRate))
+                    // Calculate Alpha (Jensen's Alpha approximation)
+                    // True Jensen's Alpha = Portfolio Return - [Risk-Free Rate + Beta × (Market Return - Risk-Free Rate)]
+                    // This is a simplified approximation using mean price change as market indicator.
+                    // Limitations: 
+                    // - Uses mean closing price instead of actual market returns
+                    // - Risk-free rate assumed to be 0%
+                    // - For more accurate alpha, use actual period returns data
                     var spyMean = analytics.MeanValues?.ContainsKey("SPY") == true
                         ? analytics.MeanValues["SPY"]
                         : 0;
 
-                    // Approximate market return from mean closing price change
-                    // This is simplified - in production you'd calculate actual return
                     double alpha = _currentResult.TotalReturn - (beta * spyMean);
-                    System.Diagnostics.Debug.WriteLine($"Calculated Alpha: {alpha:P2}");
+                    AlphaText = alpha.ToString("P2");
+                    System.Diagnostics.Debug.WriteLine($"Calculated Alpha (approximation): {alpha:P2}");
                 }
             }
 
-            // Get correlations with other benchmarks
+            // Get correlation with QQQ
             var correlationQQQ = analytics.GetCorrelation(symbol, "QQQ");
             if (correlationQQQ.HasValue)
             {
+                CorrelationQQQText = correlationQQQ.Value.ToString("F3");
                 System.Diagnostics.Debug.WriteLine(
                     $"Correlation with QQQ (NASDAQ): {correlationQQQ.Value:F3}");
             }
 
+            // Get correlation with IWM
             var correlationIWM = analytics.GetCorrelation(symbol, "IWM");
             if (correlationIWM.HasValue)
             {
+                CorrelationIWMText = correlationIWM.Value.ToString("F3");
                 System.Diagnostics.Debug.WriteLine(
                     $"Correlation with IWM (Russell 2000): {correlationIWM.Value:F3}");
             }

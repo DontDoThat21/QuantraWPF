@@ -239,4 +239,20 @@ namespace Quantra.DAL.Data.Configurations
             builder.Property(b => b.FinalEquity).HasColumnType("real");
         }
     }
+
+    public class InsiderTransactionConfiguration : IEntityTypeConfiguration<InsiderTransactionEntity>
+    {
+        public void Configure(EntityTypeBuilder<InsiderTransactionEntity> builder)
+        {
+            // Unique constraint to prevent duplicate transactions
+            builder.HasIndex(i => new { i.Symbol, i.FilingDate, i.TransactionDate, i.OwnerCik })
+                   .IsUnique()
+                   .HasDatabaseName("UQ_InsiderTransactions");
+
+            // Additional indexes for performance
+            builder.HasIndex(i => i.Symbol);
+            builder.HasIndex(i => i.TransactionDate);
+            builder.HasIndex(i => i.LastUpdated);
+        }
+    }
 }
