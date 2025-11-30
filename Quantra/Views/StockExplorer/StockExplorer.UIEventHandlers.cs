@@ -1485,5 +1485,35 @@ namespace Quantra.Controls
                 CustomModal.ShowError($"Error searching symbols: {ex.Message}", "Search Error", Window.GetWindow(this));
             }
         }
+
+        /// <summary>
+        /// Handles scroll events on the StockDataGrid to implement infinite scroll / load more functionality
+        /// </summary>
+        private async void StockDataGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            // Only trigger load more when scrolling vertically and near the bottom
+            if (e.VerticalChange <= 0)
+                return;
+                
+            // Check if we're at or near the bottom of the scroll area
+            var scrollViewer = e.OriginalSource as ScrollViewer;
+            if (scrollViewer == null)
+                return;
+                
+            // Calculate if we're within 80% of the bottom
+            var verticalOffset = scrollViewer.VerticalOffset;
+            var scrollableHeight = scrollViewer.ScrollableHeight;
+            
+            if (scrollableHeight <= 0)
+                return;
+                
+            var scrollPercentage = verticalOffset / scrollableHeight;
+            
+            // If scrolled past 80% and we have more pages, load more
+            if (scrollPercentage >= 0.8 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading)
+            {
+                await _viewModel.LoadMoreCachedStocksAsync();
+            }
+        }
     }
 }
