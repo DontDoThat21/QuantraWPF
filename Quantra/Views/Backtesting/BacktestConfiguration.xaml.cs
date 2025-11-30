@@ -63,7 +63,19 @@ namespace Quantra.Views.Backtesting
             // Initialize UI
             InitializeStrategies();
             InitializeDatePickers();
-            LoadCachedSymbols();
+            
+            // Load cached symbols asynchronously after UI is loaded
+            this.Loaded += BacktestConfiguration_Loaded;
+        }
+
+        /// <summary>
+        /// Handle control loaded event to initialize async operations
+        /// </summary>
+        private async void BacktestConfiguration_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only load once
+            this.Loaded -= BacktestConfiguration_Loaded;
+            await LoadCachedSymbolsAsync();
         }
 
         /// <summary>
@@ -482,12 +494,16 @@ namespace Quantra.Views.Backtesting
         }
 
         /// <summary>
-        /// Load cached symbols from StockDataCache for dropdown selection
+        /// Load cached symbols from StockDataCache for dropdown selection (async version)
         /// </summary>
-        private void LoadCachedSymbols()
+        private async Task LoadCachedSymbolsAsync()
         {
             try
             {
+                // Show loading indicator
+                RefreshCacheButton.IsEnabled = false;
+                RefreshCacheButton.Content = "Loading...";
+
                 _cachedSymbols.Clear();
 
                 if (_stockDataCacheService == null)
@@ -495,8 +511,8 @@ namespace Quantra.Views.Backtesting
                     return;
                 }
 
-                // Get all cached symbols
-                var symbols = _stockDataCacheService.GetAllCachedSymbols();
+                // Get all cached symbols asynchronously
+                var symbols = await Task.Run(() => _stockDataCacheService.GetAllCachedSymbolsAsync());
 
                 foreach (var symbol in symbols)
                 {
@@ -516,6 +532,12 @@ namespace Quantra.Views.Backtesting
             {
                 _loggingService?.Log("Error", $"Failed to load cached symbols: {ex.Message}", ex.ToString());
             }
+            finally
+            {
+                // Restore button state
+                RefreshCacheButton.IsEnabled = true;
+                RefreshCacheButton.Content = "↻";
+            }
         }
 
         /// <summary>
@@ -534,9 +556,9 @@ namespace Quantra.Views.Backtesting
         /// <summary>
         /// Refresh the cached symbols list
         /// </summary>
-        private void RefreshCacheButton_Click(object sender, RoutedEventArgs e)
+        private async void RefreshCacheButton_Click(object sender, RoutedEventArgs e)
         {
-            LoadCachedSymbols();
+            await LoadCachedSymbolsAsync();
             ShowStatus($"Refreshed cached symbols. Found {_cachedSymbols.Count} symbols.");
         }
 
