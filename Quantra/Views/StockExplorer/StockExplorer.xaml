@@ -17,6 +17,7 @@ MinWidth="900" MinHeight="700">
         <converters:PredictionActionColorConverter x:Key="PredictionActionColorConverter"/>
         <converters:PredictionConfidenceColorConverter x:Key="PredictionConfidenceColorConverter"/>
         <converters:PredictedPriceColorConverter x:Key="PredictedPriceColorConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -294,6 +295,7 @@ MinWidth="900" MinHeight="700">
             <Grid.RowDefinitions>
                 <RowDefinition Height="3*"/>
                 <RowDefinition Height="2*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- DataGrid for QuoteData -->
@@ -326,7 +328,8 @@ MinWidth="900" MinHeight="700">
                       ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
                       RowStyle="{StaticResource EnhancedDataGridRowStyle}"
                       CellStyle="{StaticResource EnhancedDataGridCellStyle}"
-                      SizeChanged="StockDataGrid_SizeChanged">
+                      SizeChanged="StockDataGrid_SizeChanged"
+                      ScrollViewer.ScrollChanged="StockDataGrid_ScrollChanged">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80"/>
                     <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="70"/>
@@ -444,6 +447,22 @@ MinWidth="900" MinHeight="700">
                     </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
+            
+            <!-- Load More Button Panel -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5,5,5,5"
+                        Visibility="{Binding HasMorePages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Button x:Name="LoadMoreButton"
+                        Content="{Binding TotalCachedStocksCount, StringFormat='Load More ({0} total)'}"
+                        Padding="15,8"
+                        Style="{StaticResource EnhancedButtonStyle}"
+                        Command="{Binding LoadMoreCommand}"
+                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBooleanConverter}}"/>
+                <TextBlock Text="Loading..." 
+                           Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                           VerticalAlignment="Center"
+                           Margin="10,0,0,0"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </StackPanel>
         </Grid>
         <!-- Historical Data Chart Title -->
         <TextBlock x:Name="SelectedSymbolTitleTextBlock"

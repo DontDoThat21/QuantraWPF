@@ -670,9 +670,23 @@ namespace Quantra.Controls
                 switch (mode)
                 {
                     case SymbolSelectionMode.AllDatabase:
-                        // Get all cached stocks from database - NO API CALLS
-                        stockList = _cacheService.GetAllCachedStocks();
-                        break;
+                        // Get first page of cached stocks from database using pagination - NO API CALLS
+                        var (stocks, totalCount) = await _cacheService.GetCachedStocksPaginatedAsync(1, 20);
+                        stockList = stocks;
+                        
+                        // Update the DataGrid with the filtered stocks and set pagination state
+                        if (_viewModel != null)
+                        {
+                            _viewModel.CachedStocks.Clear();
+                            foreach (var stock in stockList)
+                            {
+                                _viewModel.CachedStocks.Add(stock);
+                            }
+                            // Update pagination state in ViewModel
+                            _viewModel.CurrentPage = 1;
+                            _viewModel.TotalCachedStocksCount = totalCount;
+                        }
+                        return; // Return early since we've already handled the stock list
 
                     case SymbolSelectionMode.TopVolumeRsiDiscrepancies:
                         // Get stocks with high volume and RSI discrepancies

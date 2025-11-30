@@ -94,6 +94,7 @@ namespace Quantra.ViewModels
         // Symbol search box selection command or handler
         public ICommand SymbolSelectedCommand { get; }
         public ICommand RunPredictionsCommand { get; }
+        public ICommand LoadMoreCommand { get; }
 
         private readonly StockDataCacheService _stockDataCacheService;
         private readonly AlphaVantageService _alphaVantageService;
@@ -101,6 +102,43 @@ namespace Quantra.ViewModels
         private readonly PredictionCacheService _predictionCacheService;
 
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        // Pagination constants
+        private const int DEFAULT_PAGE_SIZE = 20;
+        
+        // Pagination state
+        private int _currentPage = 1;
+        private int _totalCachedStocksCount = 0;
+        
+        public int CurrentPage
+        {
+            get => _currentPage;
+            internal set
+            {
+                if (_currentPage != value)
+                {
+                    _currentPage = value;
+                    OnPropertyChanged(nameof(CurrentPage));
+                    OnPropertyChanged(nameof(HasMorePages));
+                }
+            }
+        }
+        
+        public int TotalCachedStocksCount
+        {
+            get => _totalCachedStocksCount;
+            internal set
+            {
+                if (_totalCachedStocksCount != value)
+                {
+                    _totalCachedStocksCount = value;
+                    OnPropertyChanged(nameof(TotalCachedStocksCount));
+                    OnPropertyChanged(nameof(HasMorePages));
+                }
+            }
+        }
+        
+        public bool HasMorePages => CachedStocks.Count < TotalCachedStocksCount;
 
         public StockExplorerViewModel(
             StockDataCacheService stockDataCacheService,
@@ -115,18 +153,103 @@ namespace Quantra.ViewModels
 
             SymbolSelectedCommand = new RelayCommand<string>(OnSymbolSelected);
             RunPredictionsCommand = new RelayCommand(async _ => await RunPredictionsAsync(), _ => CanRunPredictions);
+            LoadMoreCommand = new RelayCommand(async _ => await LoadMoreCachedStocksAsync(), _ => HasMorePages && !IsLoading);
 
-            // Load all cached stocks at startup
-            LoadCachedStocks();
+            // Load first page of cached stocks at startup asynchronously
+            _ = LoadCachedStocksAsync();
             LoadSymbolsAsync();
 
             // Start background preloading for frequently accessed symbols
             _ = Task.Run(async () => await StartBackgroundPreloadingAsync());
         }
 
+        /// <summary>
+        /// Loads the first page of cached stocks asynchronously
+        /// </summary>
+        private async Task LoadCachedStocksAsync()
+        {
+            IsLoading = true;
+            try
+            {
+                // Load from cache with pagination so table/grid is populated quickly on app start
+                var (stocks, totalCount) = await _stockDataCacheService.GetCachedStocksPaginatedAsync(1, DEFAULT_PAGE_SIZE).ConfigureAwait(false);
+                
+                // Update on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    CachedStocks.Clear();
+                    foreach (var stock in stocks)
+                    {
+                        CachedStocks.Add(stock);
+                    }
+                    
+                    CurrentPage = 1;
+                    TotalCachedStocksCount = totalCount;
+                    OnPropertyChanged(nameof(CanRunPredictions));
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't block UI thread - fail gracefully
+                System.Diagnostics.Debug.WriteLine($"Error loading cached stocks: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Loads the next page of cached stocks
+        /// </summary>
+        public async Task LoadMoreCachedStocksAsync()
+        {
+            if (!HasMorePages || IsLoading)
+                return;
+                
+            IsLoading = true;
+            try
+            {
+                var nextPage = CurrentPage + 1;
+                var (stocks, totalCount) = await _stockDataCacheService.GetCachedStocksPaginatedAsync(nextPage, DEFAULT_PAGE_SIZE).ConfigureAwait(false);
+                
+                // Update on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    // Build HashSet of existing symbols for O(1) lookup
+                    var existingSymbols = new HashSet<string>(CachedStocks.Select(s => s.Symbol));
+                    
+                    foreach (var stock in stocks)
+                    {
+                        // Only add if not already in the collection - O(1) lookup
+                        if (!existingSymbols.Contains(stock.Symbol))
+                        {
+                            CachedStocks.Add(stock);
+                            existingSymbols.Add(stock.Symbol);
+                        }
+                    }
+                    
+                    CurrentPage = nextPage;
+                    TotalCachedStocksCount = totalCount;
+                    OnPropertyChanged(nameof(CanRunPredictions));
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading more cached stocks: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Synchronous method for backward compatibility - delegates to async version
+        /// </summary>
         private void LoadCachedStocks()
         {
-            // Load from cache so table/grid is populated on app start
+            // Load from cache so table/grid is populated on app start (sync fallback)
             var cached = _stockDataCacheService.GetAllCachedStocks();
             CachedStocks.Clear();
             foreach (var stock in cached)

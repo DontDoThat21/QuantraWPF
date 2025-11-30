@@ -580,6 +580,133 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Returns a paginated list of cached stocks (latest data for each symbol)
+        /// </summary>
+        /// <param name="page">Page number (1-based)</param>
+        /// <param name="pageSize">Number of items per page</param>
+        /// <returns>Paginated result with stocks and total count</returns>
+        public async Task<(List<QuoteData> Stocks, int TotalCount)> GetCachedStocksPaginatedAsync(int page = 1, int pageSize = 20)
+        {
+            var stocks = new List<QuoteData>();
+            int totalCount = 0;
+
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get count and paginated symbols in efficient queries
+                    var distinctSymbols = dbContext.StockDataCache
+                        .Select(c => c.Symbol)
+                        .Distinct();
+
+                    totalCount = await distinctSymbols.CountAsync().ConfigureAwait(false);
+
+                    // Apply pagination at database level
+                    var paginatedSymbols = await distinctSymbols
+                        .OrderBy(s => s)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+
+                    if (paginatedSymbols.Count == 0)
+                    {
+                        return (stocks, totalCount);
+                    }
+
+                    // Fetch latest cache entries for all paginated symbols in one query
+                    // Using a subquery approach to get latest entry per symbol
+                    var latestEntries = await dbContext.StockDataCache
+                        .Where(c => paginatedSymbols.Contains(c.Symbol))
+                        .GroupBy(c => c.Symbol)
+                        .Select(g => g.OrderByDescending(c => c.CachedAt).FirstOrDefault())
+                        .Where(e => e != null)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+
+                    // Process entries to build QuoteData list
+                    foreach (var entry in latestEntries)
+                    {
+                        if (entry == null) continue;
+
+                        var storedData = entry.Data;
+                        string jsonData;
+
+                        // Check if data is compressed and decompress if needed
+                        if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
+                        {
+                            jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                        }
+                        else
+                        {
+                            jsonData = storedData;
+                        }
+
+                        var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                        if (prices != null && prices.Count > 0)
+                        {
+                            var last = prices.Last();
+                            stocks.Add(new QuoteData
+                            {
+                                Symbol = entry.Symbol,
+                                Price = last.Close,
+                                Timestamp = last.Date,
+                                // Other fields will be default values
+                                Change = 0,
+                                ChangePercent = 0,
+                                DayHigh = 0,
+                                DayLow = 0,
+                                MarketCap = 0,
+                                Volume = 0,
+                                RSI = 0,
+                                PERatio = 0,
+                                Date = last.Date,
+                                LastUpdated = DateTime.Now,
+                                LastAccessed = DateTime.Now
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Error retrieving paginated cached stocks", ex.ToString());
+            }
+
+            return (stocks, totalCount);
+        }
+
+        /// <summary>
+        /// Gets the total count of cached stocks (unique symbols)
+        /// </summary>
+        /// <returns>Total number of unique symbols in cache</returns>
+        public int GetCachedStocksCount()
+        {
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    return dbContext.StockDataCache
+                        .Select(c => c.Symbol)
+                        .Distinct()
+                        .Count();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Error getting cached stocks count", ex.ToString());
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// Returns cached stock data for a specific symbol (complete data with all indicators) - Async version
         /// </summary>
         public async Task<QuoteData?> GetCachedStockAsync(string symbol)
