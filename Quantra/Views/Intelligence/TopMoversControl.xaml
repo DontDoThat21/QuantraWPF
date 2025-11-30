@@ -68,9 +68,11 @@
                           IsReadOnly="True"
                           SelectionMode="Single"
                           MouseDoubleClick="DataGrid_MouseDoubleClick"
-                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}">
+                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="100">
+                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#1E90FF"/>
@@ -79,7 +81,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="100">
+                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
@@ -87,7 +89,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Change" Binding="{Binding ChangeAmount, StringFormat='\{0:+0.00;-0.00\}'}" Width="100">
+                        <DataGridTextColumn Header="Change" Binding="{Binding ChangeAmount, StringFormat='\{0:+0.00;-0.00\}'}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#50E070"/>
@@ -96,7 +98,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Change %" Binding="{Binding ChangePercentage, StringFormat='\{0:+0.00;-0.00\}%'}" Width="100">
+                        <DataGridTextColumn Header="Change %" Binding="{Binding ChangePercentage, StringFormat='\{0:+0.00;-0.00\}%'}" Width="*" MinWidth="90">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#50E070"/>
@@ -105,7 +107,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="120">
+                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="*" MinWidth="100">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -131,9 +133,11 @@
                           IsReadOnly="True"
                           SelectionMode="Single"
                           MouseDoubleClick="DataGrid_MouseDoubleClick"
-                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}">
+                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="100">
+                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#1E90FF"/>
@@ -142,7 +146,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="100">
+                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
@@ -150,7 +154,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Change" Binding="{Binding ChangeAmount, StringFormat='\{0:+0.00;-0.00\}'}" Width="100">
+                        <DataGridTextColumn Header="Change" Binding="{Binding ChangeAmount, StringFormat='\{0:+0.00;-0.00\}'}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#FF6B6B"/>
@@ -159,7 +163,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Change %" Binding="{Binding ChangePercentage, StringFormat='\{0:+0.00;-0.00\}%'}" Width="100">
+                        <DataGridTextColumn Header="Change %" Binding="{Binding ChangePercentage, StringFormat='\{0:+0.00;-0.00\}%'}" Width="*" MinWidth="90">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#FF6B6B"/>
@@ -168,7 +172,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="120">
+                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="*" MinWidth="100">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -194,9 +198,11 @@
                           IsReadOnly="True"
                           SelectionMode="Single"
                           MouseDoubleClick="DataGrid_MouseDoubleClick"
-                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}">
+                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="100">
+                        <DataGridTextColumn Header="Symbol" Binding="{Binding Ticker}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#1E90FF"/>
@@ -205,7 +211,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="100">
+                        <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=\$\{0:F2\}}" Width="*" MinWidth="80">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
@@ -213,7 +219,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTemplateColumn Header="Change" Width="100">
+                        <DataGridTemplateColumn Header="Change" Width="*" MinWidth="80">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding ChangeAmount, StringFormat='\{0:+0.00;-0.00\}'}" 
@@ -222,7 +228,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTemplateColumn Header="Change %" Width="100">
+                        <DataGridTemplateColumn Header="Change %" Width="*" MinWidth="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding ChangePercentage, StringFormat='\{0:+0.00;-0.00\}%'}" 
@@ -231,7 +237,7 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="120">
+                        <DataGridTextColumn Header="Volume" Binding="{Binding Volume, StringFormat=\{0:N0\}}" Width="*" MinWidth="100">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="Cyan"/>
