@@ -207,6 +207,43 @@ namespace Quantra
                 {
                     ServiceLocator.RegisterService<IStockDataCacheService>(stockDataCacheService);
                 }
+
+                // Register sentiment analysis services for legacy ServiceLocator compatibility
+                var financialNewsSentimentService = ServiceProvider.GetService<FinancialNewsSentimentService>();
+                if (financialNewsSentimentService != null)
+                {
+                    ServiceLocator.RegisterService(financialNewsSentimentService);
+                }
+
+                var socialMediaSentimentService = ServiceProvider.GetService<ISocialMediaSentimentService>();
+                if (socialMediaSentimentService != null)
+                {
+                    ServiceLocator.RegisterService(socialMediaSentimentService);
+                }
+
+                var analystRatingService = ServiceProvider.GetService<IAnalystRatingService>();
+                if (analystRatingService != null)
+                {
+                    ServiceLocator.RegisterService(analystRatingService);
+                }
+
+                var insiderTradingService = ServiceProvider.GetService<IInsiderTradingService>();
+                if (insiderTradingService != null)
+                {
+                    ServiceLocator.RegisterService(insiderTradingService);
+                }
+
+                var sectorSentimentService = ServiceProvider.GetService<SectorSentimentAnalysisService>();
+                if (sectorSentimentService != null)
+                {
+                    ServiceLocator.RegisterService(sectorSentimentService);
+                }
+
+                var sectorMomentumService = ServiceProvider.GetService<SectorMomentumService>();
+                if (sectorMomentumService != null)
+                {
+                    ServiceLocator.RegisterService(sectorMomentumService);
+                }
             }
             catch (Exception ex)
             {
