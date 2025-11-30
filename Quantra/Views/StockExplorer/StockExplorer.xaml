@@ -455,10 +455,10 @@ MinWidth="900" MinHeight="700">
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Updated Timestamp" Binding="{Binding LastAccessed, StringFormat={}{0:MM/dd/yyyy HH:mm}}" Width="140">
+                    <DataGridTextColumn Header="Updated Timestamp" Binding="{Binding CacheTime, StringFormat={}{0:MM/dd/yyyy HH:mm}}" Width="140">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}">
-                                <Setter Property="Foreground" Value="{Binding LastUpdated, Converter={StaticResource TimestampColorConverter}}"/>
+                                <Setter Property="Foreground" Value="{Binding CacheTime, Converter={StaticResource TimestampColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>

@@ -41,6 +41,7 @@ namespace Quantra
         public DateTime LastUpdated { get; set; }
         public DateTime LastAccessed { get; set; }
         public DateTime Timestamp { get; set; }
+        public DateTime? CacheTime { get; set; } // From database cache metadata
 
         // Prediction properties
         public double? PredictedPrice { get; set; }
