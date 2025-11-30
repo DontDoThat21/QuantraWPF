@@ -1,5 +1,7 @@
 // Handles UI event handlers for StockExplorer
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -939,20 +941,85 @@ namespace Quantra.Controls
                 if (ModeStatusPanel != null && ModeStatusText != null)
                 {
                     ModeStatusPanel.Visibility = Visibility.Visible;
-                    ModeStatusText.Text = "Loading all historical data...";
-                }
-
-                // Get the list of tickers from the current grid
-                var tickers = _viewModel?.CachedStocks?.Select(s => s.Symbol).ToList();
-                
-                if (tickers == null || !tickers.Any())
-                {
-                    CustomModal.ShowWarning("No stocks in the grid to load historical data for. Please load stocks first.", "No Stocks", Window.GetWindow(this));
-                    return;
+                    ModeStatusText.Text = "Fetching publicly traded tickers from AlphaVantage...";
                 }
 
                 // Set busy cursor during loading
                 Mouse.OverrideCursor = Cursors.Wait;
+                
+                // First, fetch all publicly traded tickers from AlphaVantage API
+                SharedTitleBar.SetLoadAllHistoricalsActive(true, "Caching publicly traded tickers...");
+                
+                List<string> allSymbols = null;
+                try
+                {
+                    allSymbols = await _alphaVantageService.GetAllStockSymbols();
+                    
+                    if (allSymbols != null && allSymbols.Any())
+                    {
+                        // Cache the symbols in the database using StockSymbolCacheService
+                        var stockSymbols = allSymbols.Select(symbol => new Models.StockSymbol
+                        {
+                            Symbol = symbol,
+                            Name = string.Empty,
+                            Sector = string.Empty,
+                            Industry = string.Empty,
+                            LastUpdated = DateTime.Now
+                        }).ToList();
+                        
+                        _stockSymbolCacheService.CacheStockSymbols(stockSymbols);
+                        
+                        if (ModeStatusText != null)
+                        {
+                            ModeStatusText.Text = $"Cached {allSymbols.Count} publicly traded tickers from AlphaVantage";
+                        }
+                        
+                        // Brief delay to show the success message
+                        await Task.Delay(1500);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //DatabaseMonolith.Log("Warning", "Failed to fetch all stock symbols from AlphaVantage", ex.ToString());
+                    if (ModeStatusText != null)
+                    {
+                        ModeStatusText.Text = "Failed to fetch symbols from AlphaVantage, continuing with grid symbols...";
+                    }
+                    await Task.Delay(1500);
+                }
+
+                // Get the list of tickers from the database (all cached symbols)
+                List<string> tickers = null;
+                try
+                {
+                    // Load all symbols from the StockSymbols table
+                    tickers = _stockSymbolCacheService.GetAllSymbolsAsList();
+                    
+                    if (tickers == null || !tickers.Any())
+                    {
+                        CustomModal.ShowWarning("No symbols found in database. The AlphaVantage API call may have failed.", "No Symbols", Window.GetWindow(this));
+                        return;
+                    }
+                    
+                    if (ModeStatusText != null)
+                    {
+                        ModeStatusText.Text = $"Loaded {tickers.Count} symbols from database. Starting historical data download...";
+                    }
+                    
+                    await Task.Delay(1000); // Brief delay to show the message
+                }
+                catch (Exception ex)
+                {
+                    //DatabaseMonolith.Log("Error", "Failed to load symbols from database", ex.ToString());
+                    CustomModal.ShowError($"Failed to load symbols from database: {ex.Message}", "Database Error", Window.GetWindow(this));
+                    return;
+                }
+
+                // Update status for historical data loading phase
+                if (ModeStatusText != null)
+                {
+                    ModeStatusText.Text = $"Loading historical data for {tickers.Count} symbols...";
+                }
                 
                 // Show the counter in SharedTitleBar
                 SharedTitleBar.SetLoadAllHistoricalsActive(true, $"Loading: 0/{tickers.Count}");

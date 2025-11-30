@@ -804,6 +804,8 @@
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="Margin" Value="2,0,2,0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+        <Setter Property="Focusable" Value="True"/>
     </Style>
 
 </ResourceDictionary>
