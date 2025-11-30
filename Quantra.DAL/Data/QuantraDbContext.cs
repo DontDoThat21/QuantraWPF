@@ -39,6 +39,7 @@ namespace Quantra.DAL.Data
         public DbSet<StockSymbolEntity> StockSymbols { get; set; }
         public DbSet<StockDataCache> StockDataCache { get; set; }
         public DbSet<FundamentalDataCache> FundamentalDataCache { get; set; }
+        public DbSet<StockConfigurationEntity> StockConfigurations { get; set; }
 
         // Trading Operations
         public DbSet<OrderHistoryEntity> OrderHistory { get; set; }

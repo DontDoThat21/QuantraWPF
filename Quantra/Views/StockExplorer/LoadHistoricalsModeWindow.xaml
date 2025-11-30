@@ -1,0 +1,159 @@
+<Window x:Class="Quantra.Views.StockExplorer.LoadHistoricalsModeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Load Historical Data" 
+        Height="350" 
+        Width="450"
+        WindowStartupLocation="CenterOwner" 
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        Background="#1A1A28"
+        BorderBrush="#3E3E56"
+        BorderThickness="1"
+        KeyDown="Window_KeyDown">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Quantra;component/Styles/EnhancedStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Radio Button Style -->
+            <Style x:Key="ModeRadioButtonStyle" TargetType="RadioButton">
+                <Setter Property="Margin" Value="0,8" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Cursor" Value="Hand" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Border CornerRadius="0" BorderThickness="0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="60" />
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <Border Grid.Row="0" Background="#262638" BorderBrush="#3E3E56" BorderThickness="0,0,0,1" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="Load Historical Data - Select Mode" 
+                               Style="{StaticResource EnhancedTextBlockStyle}"
+                               Foreground="#1E90FF"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center" 
+                               Margin="10,0,0,0" />
+                    
+                    <Button x:Name="CloseButton" 
+                            Content="X" 
+                            HorizontalAlignment="Right" 
+                            VerticalAlignment="Center"
+                            Width="30" 
+                            Height="30"
+                            Background="Transparent" 
+                            BorderThickness="0" 
+                            FontSize="20" 
+                            FontWeight="Bold"
+                            Foreground="#CCCCCC"
+                            Margin="0,0,5,0"
+                            Click="CloseButton_Click" />
+                </Grid>
+            </Border>
+            
+            <!-- Content -->
+            <Border Grid.Row="1" Padding="20,15">
+                <StackPanel>
+                    <TextBlock Text="Select how you want to load historical data:"
+                               Style="{StaticResource EnhancedTextBlockStyle}"
+                               FontWeight="Bold"
+                               Margin="0,0,0,15" />
+                    
+                    <!-- All Symbols Mode -->
+                    <RadioButton x:Name="AllSymbolsRadio" 
+                                 GroupName="LoadMode"
+                                 Style="{StaticResource ModeRadioButtonStyle}"
+                                 IsChecked="True">
+                        <StackPanel>
+                            <TextBlock Text="All Symbols" FontWeight="Bold" Foreground="White" />
+                            <TextBlock Text="Load historical data for all 12,459 symbols from AlphaVantage API"
+                                       FontSize="11" Foreground="#888888" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                    
+                    <!-- Non-Loaded Only Mode -->
+                    <RadioButton x:Name="NonLoadedOnlyRadio"
+                                 GroupName="LoadMode"
+                                 Style="{StaticResource ModeRadioButtonStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Non-Loaded Symbols Only" FontWeight="Bold" Foreground="White" />
+                            <TextBlock x:Name="NonLoadedDescription"
+                                       Text="Load historical data only for symbols without cached data"
+                                       FontSize="11" Foreground="#888888" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                    
+                    <!-- Stock Configuration Mode -->
+                    <RadioButton x:Name="StockConfigurationRadio"
+                                 GroupName="LoadMode"
+                                 Style="{StaticResource ModeRadioButtonStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Stock Configuration" FontWeight="Bold" Foreground="White" />
+                            <TextBlock Text="Load historical data for a predefined set of symbols"
+                                       FontSize="11" Foreground="#888888" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                    
+                    <!-- Configuration selector (appears when Stock Configuration is selected) -->
+                    <StackPanel x:Name="ConfigurationPanel" 
+                                Visibility="Collapsed" 
+                                Margin="25,5,0,0">
+                        <Button x:Name="ManageConfigurationsButton"
+                                Content="Manage Configurations..."
+                                Width="180"
+                                Height="28"
+                                HorizontalAlignment="Left"
+                                Click="ManageConfigurationsButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                Background="#3A6EA5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Footer Buttons -->
+            <Border Grid.Row="2" Background="#262638" BorderBrush="#3E3E56" BorderThickness="0,1,0,0">
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Margin="0,0,15,0" 
+                            VerticalAlignment="Center">
+                    
+                    <Button x:Name="LoadButton" 
+                            Content="Load Data" 
+                            Margin="10,0,10,0"
+                            MinWidth="100"
+                            Height="32"
+                            FontSize="14"
+                            Padding="8,3"
+                            Foreground="White"
+                            Background="#31A278"
+                            Click="LoadButton_Click" />
+                    
+                    <Button Content="Cancel" 
+                            Margin="10,0,10,0"
+                            MinWidth="80"
+                            Height="32"
+                            FontSize="14"
+                            Padding="8,3"
+                            Foreground="White"
+                            Background="#666677"
+                            Click="CancelButton_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
