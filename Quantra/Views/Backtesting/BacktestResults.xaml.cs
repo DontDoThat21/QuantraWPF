@@ -67,6 +67,10 @@ namespace Quantra.Views.Backtesting
             _viewModel.HighlightOutperformanceRequested += OnHighlightOutperformanceRequested;
             _viewModel.ManageCustomBenchmarksRequested += OnManageCustomBenchmarksRequested;
             
+            // Subscribe to PropertyChanged BEFORE any properties are set
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _isPropertyChangedSubscribed = true;
+            
             // Initialize custom benchmark combo box
             CustomBenchmarkComboBox.ItemsSource = _customBenchmarks;
         }
@@ -117,31 +121,37 @@ namespace Quantra.Views.Backtesting
         {
             if (_viewModel == null) return;
             
-            // Update UI asynchronously when Alpha Vantage Analytics properties change
-            // Using BeginInvoke for non-blocking UI updates
-            switch (e.PropertyName)
+            // Update UI synchronously when properties change
+            // Use Dispatcher.Invoke to ensure we're on the UI thread
+            Action updateAction = e.PropertyName switch
             {
-                case nameof(_viewModel.AnnualizedVolatilityText):
-                    Dispatcher.BeginInvoke(() => AnnualizedVolatilityText.Text = _viewModel.AnnualizedVolatilityText);
-                    break;
-                case nameof(_viewModel.CorrelationSPYText):
-                    Dispatcher.BeginInvoke(() => CorrelationSPYText.Text = _viewModel.CorrelationSPYText);
-                    break;
-                case nameof(_viewModel.CorrelationQQQText):
-                    Dispatcher.BeginInvoke(() => CorrelationQQQText.Text = _viewModel.CorrelationQQQText);
-                    break;
-                case nameof(_viewModel.CorrelationIWMText):
-                    Dispatcher.BeginInvoke(() => CorrelationIWMText.Text = _viewModel.CorrelationIWMText);
-                    break;
-                case nameof(_viewModel.BetaText):
-                    Dispatcher.BeginInvoke(() => BetaText.Text = _viewModel.BetaText);
-                    break;
-                case nameof(_viewModel.AlphaText):
-                    Dispatcher.BeginInvoke(() => AlphaText.Text = _viewModel.AlphaText);
-                    break;
-                case nameof(_viewModel.SharpeRatioText):
-                    Dispatcher.BeginInvoke(() => SharpeRatioText.Text = _viewModel.SharpeRatioText);
-                    break;
+                nameof(BacktestResultsViewModel.AnnualizedVolatilityText) => 
+                    () => AnnualizedVolatilityText.Text = _viewModel.AnnualizedVolatilityText,
+                nameof(BacktestResultsViewModel.CorrelationSPYText) => 
+                    () => CorrelationSPYText.Text = _viewModel.CorrelationSPYText,
+                nameof(BacktestResultsViewModel.CorrelationQQQText) => 
+                    () => CorrelationQQQText.Text = _viewModel.CorrelationQQQText,
+                nameof(BacktestResultsViewModel.CorrelationIWMText) => 
+                    () => CorrelationIWMText.Text = _viewModel.CorrelationIWMText,
+                nameof(BacktestResultsViewModel.BetaText) => 
+                    () => BetaText.Text = _viewModel.BetaText,
+                nameof(BacktestResultsViewModel.AlphaText) => 
+                    () => AlphaText.Text = _viewModel.AlphaText,
+                nameof(BacktestResultsViewModel.SharpeRatioText) => 
+                    () => SharpeRatioText.Text = _viewModel.SharpeRatioText,
+                _ => null
+            };
+            
+            if (updateAction != null)
+            {
+                if (Dispatcher.CheckAccess())
+                {
+                    updateAction();
+                }
+                else
+                {
+                    Dispatcher.Invoke(updateAction);
+                }
             }
         }
         
@@ -157,42 +167,35 @@ namespace Quantra.Views.Backtesting
             _currentResult = result;
             _historicalData = historical;
             
-            // Update ViewModel with results
+            // Update ViewModel with results (this will trigger PropertyChanged events)
             if (_viewModel != null)
             {
                 _viewModel.LoadResults(result, historical);
-                
-                // Subscribe to property changes for analytics data updates (only once)
-                if (!_isPropertyChangedSubscribed)
-                {
-                    _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-                    _isPropertyChangedSubscribed = true;
-                }
             }
             
             // Calculate equity volatility for later use
             CalculateStrategyVolatility();
             
-            // Update metrics display
-            TotalReturnText.Text = result.TotalReturn.ToString("P2");
-            MaxDrawdownText.Text = result.MaxDrawdown.ToString("P2");
-            WinRateText.Text = result.WinRate.ToString("P2");
-            CAGRText.Text = result.CAGR.ToString("P2");
+            // Update metrics display from ViewModel properties
+            TotalReturnText.Text = _viewModel?.TotalReturnText ?? result.TotalReturn.ToString("P2");
+            MaxDrawdownText.Text = _viewModel?.MaxDrawdownText ?? result.MaxDrawdown.ToString("P2");
+            WinRateText.Text = _viewModel?.WinRateText ?? result.WinRate.ToString("P2");
+            CAGRText.Text = _viewModel?.CagrText ?? result.CAGR.ToString("P2");
             
-            // Advanced metrics
-            SharpeRatioText.Text = result.SharpeRatio.ToString("F2");
-            SortinoRatioText.Text = result.SortinoRatio.ToString("F2");
-            CalmarRatioText.Text = result.CalmarRatio.ToString("F2");
-            ProfitFactorText.Text = result.ProfitFactor.ToString("F2");
-            InformationRatioText.Text = result.InformationRatio.ToString("F2");
+            // Advanced metrics from ViewModel
+            SharpeRatioText.Text = _viewModel?.SharpeRatioText ?? result.SharpeRatio.ToString("F2");
+            SortinoRatioText.Text = _viewModel?.SortinoRatioText ?? result.SortinoRatio.ToString("F2");
+            CalmarRatioText.Text = _viewModel?.CalmarRatioText ?? result.CalmarRatio.ToString("F2");
+            ProfitFactorText.Text = _viewModel?.ProfitFactorText ?? result.ProfitFactor.ToString("F2");
+            InformationRatioText.Text = _viewModel?.InformationRatioText ?? result.InformationRatio.ToString("F2");
             
-            // Initialize Alpha Vantage Analytics metrics (will be updated async)
-            AnnualizedVolatilityText.Text = "--";
-            BetaText.Text = "--";
-            AlphaText.Text = "--";
-            CorrelationSPYText.Text = "--";
-            CorrelationQQQText.Text = "--";
-            CorrelationIWMText.Text = "--";
+            // Alpha Vantage Analytics metrics from ViewModel (will be updated async)
+            AnnualizedVolatilityText.Text = _viewModel?.AnnualizedVolatilityText ?? "--";
+            BetaText.Text = _viewModel?.BetaText ?? "--";
+            AlphaText.Text = _viewModel?.AlphaText ?? "--";
+            CorrelationSPYText.Text = _viewModel?.CorrelationSPYText ?? "--";
+            CorrelationQQQText.Text = _viewModel?.CorrelationQQQText ?? "--";
+            CorrelationIWMText.Text = _viewModel?.CorrelationIWMText ?? "--";
             
             // Price chart with trades
             var priceSeries = new LineSeries
