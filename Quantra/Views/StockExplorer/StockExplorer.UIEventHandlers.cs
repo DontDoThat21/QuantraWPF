@@ -24,6 +24,10 @@ namespace Quantra.Controls
         // Tracks whether a dropdown selection was made (vs just closing without selection)
         private bool _dropdownSelectionMade = false;
         private string _selectedSymbolBeforeDropdown = null;
+        
+        // Debounce timer for scroll-based pagination
+        private DispatcherTimer _scrollDebounceTimer;
+        private bool _scrollLoadPending = false;
 
         private void StockExplorer_Loaded(object sender, RoutedEventArgs e)
         {
@@ -1489,7 +1493,7 @@ namespace Quantra.Controls
         /// <summary>
         /// Handles scroll events on the StockDataGrid to implement infinite scroll / load more functionality
         /// </summary>
-        private async void StockDataGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        private void StockDataGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             // Only trigger load more when scrolling vertically and near the bottom
             if (e.VerticalChange <= 0)
@@ -1509,10 +1513,33 @@ namespace Quantra.Controls
                 
             var scrollPercentage = verticalOffset / scrollableHeight;
             
-            // If scrolled past 80% and we have more pages, load more
-            if (scrollPercentage >= 0.8 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading)
+            // If scrolled past 80% and we have more pages, schedule a debounced load
+            if (scrollPercentage >= 0.8 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading && !_scrollLoadPending)
             {
-                await _viewModel.LoadMoreCachedStocksAsync();
+                _scrollLoadPending = true;
+                
+                // Initialize debounce timer if needed
+                if (_scrollDebounceTimer == null)
+                {
+                    _scrollDebounceTimer = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(200)
+                    };
+                    _scrollDebounceTimer.Tick += async (s, args) =>
+                    {
+                        _scrollDebounceTimer.Stop();
+                        _scrollLoadPending = false;
+                        
+                        if (_viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading)
+                        {
+                            await _viewModel.LoadMoreCachedStocksAsync();
+                        }
+                    };
+                }
+                
+                // Reset and start the debounce timer
+                _scrollDebounceTimer.Stop();
+                _scrollDebounceTimer.Start();
             }
         }
     }

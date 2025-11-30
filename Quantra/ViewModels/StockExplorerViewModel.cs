@@ -216,12 +216,16 @@ namespace Quantra.ViewModels
                 // Update on UI thread
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
+                    // Build HashSet of existing symbols for O(1) lookup
+                    var existingSymbols = new HashSet<string>(CachedStocks.Select(s => s.Symbol));
+                    
                     foreach (var stock in stocks)
                     {
-                        // Only add if not already in the collection
-                        if (!CachedStocks.Any(s => s.Symbol == stock.Symbol))
+                        // Only add if not already in the collection - O(1) lookup
+                        if (!existingSymbols.Contains(stock.Symbol))
                         {
                             CachedStocks.Add(stock);
+                            existingSymbols.Add(stock.Symbol);
                         }
                     }
                     

@@ -592,79 +592,85 @@ namespace Quantra.DAL.Services
 
             try
             {
-                await Task.Run(() =>
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    // Use Entity Framework Core with SQL Server
-                    var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                    optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+                    // Get count and paginated symbols in efficient queries
+                    var distinctSymbols = dbContext.StockDataCache
+                        .Select(c => c.Symbol)
+                        .Distinct();
 
-                    using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                    totalCount = await distinctSymbols.CountAsync().ConfigureAwait(false);
+
+                    // Apply pagination at database level
+                    var paginatedSymbols = await distinctSymbols
+                        .OrderBy(s => s)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+
+                    if (paginatedSymbols.Count == 0)
                     {
-                        // Get unique symbols from StockDataCache with pagination
-                        var allSymbols = dbContext.StockDataCache
-                            .Select(c => c.Symbol)
-                            .Distinct()
-                            .OrderBy(s => s)
-                            .ToList();
+                        return (stocks, totalCount);
+                    }
 
-                        totalCount = allSymbols.Count;
+                    // Fetch latest cache entries for all paginated symbols in one query
+                    // Using a subquery approach to get latest entry per symbol
+                    var latestEntries = await dbContext.StockDataCache
+                        .Where(c => paginatedSymbols.Contains(c.Symbol))
+                        .GroupBy(c => c.Symbol)
+                        .Select(g => g.OrderByDescending(c => c.CachedAt).FirstOrDefault())
+                        .Where(e => e != null)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
 
-                        // Apply pagination to symbols
-                        var paginatedSymbols = allSymbols
-                            .Skip((page - 1) * pageSize)
-                            .Take(pageSize)
-                            .ToList();
+                    // Process entries to build QuoteData list
+                    foreach (var entry in latestEntries)
+                    {
+                        if (entry == null) continue;
 
-                        foreach (var symbol in paginatedSymbols)
+                        var storedData = entry.Data;
+                        string jsonData;
+
+                        // Check if data is compressed and decompress if needed
+                        if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
                         {
-                            // Get the latest cache entry for each symbol
-                            var latest = dbContext.StockDataCache
-                                .Where(c => c.Symbol == symbol)
-                                .OrderByDescending(c => c.CachedAt)
-                                .FirstOrDefault();
+                            jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
+                        }
+                        else
+                        {
+                            jsonData = storedData;
+                        }
 
-                            if (latest != null)
+                        var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
+                        if (prices != null && prices.Count > 0)
+                        {
+                            var last = prices.Last();
+                            stocks.Add(new QuoteData
                             {
-                                var storedData = latest.Data;
-                                string jsonData;
-
-                                // Check if data is compressed and decompress if needed
-                                if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
-                                {
-                                    jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
-                                }
-                                else
-                                {
-                                    jsonData = storedData;
-                                }
-
-                                var prices = Newtonsoft.Json.JsonConvert.DeserializeObject<List<HistoricalPrice>>(jsonData);
-                                if (prices != null && prices.Count > 0)
-                                {
-                                    var last = prices.Last();
-                                    stocks.Add(new QuoteData
-                                    {
-                                        Symbol = symbol,
-                                        Price = last.Close,
-                                        Timestamp = last.Date,
-                                        // Other fields will be default values
-                                        Change = 0,
-                                        ChangePercent = 0,
-                                        DayHigh = 0,
-                                        DayLow = 0,
-                                        MarketCap = 0,
-                                        Volume = 0,
-                                        RSI = 0,
-                                        PERatio = 0,
-                                        Date = last.Date,
-                                        LastUpdated = DateTime.Now,
-                                        LastAccessed = DateTime.Now
-                                    });
-                                }
-                            }
+                                Symbol = entry.Symbol,
+                                Price = last.Close,
+                                Timestamp = last.Date,
+                                // Other fields will be default values
+                                Change = 0,
+                                ChangePercent = 0,
+                                DayHigh = 0,
+                                DayLow = 0,
+                                MarketCap = 0,
+                                Volume = 0,
+                                RSI = 0,
+                                PERatio = 0,
+                                Date = last.Date,
+                                LastUpdated = DateTime.Now,
+                                LastAccessed = DateTime.Now
+                            });
                         }
                     }
-                }).ConfigureAwait(false);
+                }
             }
             catch (Exception ex)
             {
