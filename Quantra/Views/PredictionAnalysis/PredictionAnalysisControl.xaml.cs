@@ -118,6 +118,9 @@ namespace Quantra.Controls
         _orderHistoryService);
     _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, _stockDataCacheService);
 
+    // Initialize model training service
+    InitializeTrainingService();
+
          DataContext = _viewModel;
 
     // Ensure the PredictionDataGrid is bound to the Predictions collection
