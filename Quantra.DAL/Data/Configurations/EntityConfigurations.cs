@@ -201,4 +201,42 @@ namespace Quantra.DAL.Data.Configurations
                 .HasConversion(doubleToDecimalConverter);
         }
     }
+
+    public class BacktestResultConfiguration : IEntityTypeConfiguration<BacktestResultEntity>
+    {
+        public void Configure(EntityTypeBuilder<BacktestResultEntity> builder)
+        {
+            // Indexes for efficient querying
+            builder.HasIndex(b => b.Symbol);
+            builder.HasIndex(b => b.StrategyName);
+            builder.HasIndex(b => b.CreatedAt);
+            builder.HasIndex(b => new { b.Symbol, b.StrategyName });
+            builder.HasIndex(b => new { b.Symbol, b.CreatedAt });
+
+            // Configure JSON columns as NVARCHAR(MAX)
+            builder.Property(b => b.EquityCurveJson)
+                   .HasColumnType("NVARCHAR(MAX)");
+            
+            builder.Property(b => b.TradesJson)
+                   .HasColumnType("NVARCHAR(MAX)");
+            
+            builder.Property(b => b.StrategyParametersJson)
+                   .HasColumnType("NVARCHAR(MAX)");
+
+            // Configure double properties to use REAL type for consistency
+            builder.Property(b => b.TotalReturn).HasColumnType("real");
+            builder.Property(b => b.MaxDrawdown).HasColumnType("real");
+            builder.Property(b => b.WinRate).HasColumnType("real");
+            builder.Property(b => b.SharpeRatio).HasColumnType("real");
+            builder.Property(b => b.SortinoRatio).HasColumnType("real");
+            builder.Property(b => b.CAGR).HasColumnType("real");
+            builder.Property(b => b.CalmarRatio).HasColumnType("real");
+            builder.Property(b => b.ProfitFactor).HasColumnType("real");
+            builder.Property(b => b.InformationRatio).HasColumnType("real");
+            builder.Property(b => b.TotalTransactionCosts).HasColumnType("real");
+            builder.Property(b => b.GrossReturn).HasColumnType("real");
+            builder.Property(b => b.InitialCapital).HasColumnType("real");
+            builder.Property(b => b.FinalEquity).HasColumnType("real");
+        }
+    }
 }
