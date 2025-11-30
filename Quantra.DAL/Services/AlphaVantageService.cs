@@ -3167,5 +3167,405 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
+
+        #region Analytics Fixed Window API Methods
+
+        /// <summary>
+        /// Gets advanced analytics metrics using the Alpha Vantage Analytics Fixed Window API
+        /// https://www.alphavantage.co/documentation/#analytics-fixed-window
+        /// </summary>
+        /// <param name="symbols">Comma-separated list of symbols</param>
+        /// <param name="range">Time range: 1month, 3month, 6month, 1year, full</param>
+        /// <param name="interval">Data interval: DAILY, WEEKLY, MONTHLY</param>
+        /// <param name="calculations">Metrics to calculate</param>
+        /// <returns>Analytics response with calculated metrics</returns>
+        public async Task<AnalyticsFixedWindowResponse> GetAnalyticsFixedWindowAsync(
+            string symbols,
+            string range = "full",
+            string interval = "DAILY",
+            string calculations = "MEAN,STDDEV,CUMULATIVE_RETURN")
+        {
+            var response = new AnalyticsFixedWindowResponse
+            {
+                Metrics = new List<AnalyticsMetricResult>(),
+                MetaData = new AnalyticsMetaData()
+            };
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(symbols))
+                {
+                    response.ErrorMessage = "Symbol(s) required";
+                    return response;
+                }
+
+                await WaitForApiLimit();
+
+                // Build the API request
+                var queryParams = new List<string>
+                {
+                    "function=ANALYTICS_FIXED_WINDOW",
+                    $"SYMBOLS={Uri.EscapeDataString(symbols)}",
+                    $"RANGE={range}",
+                    $"INTERVAL={interval}",
+                    $"OHLC=close",
+                    $"CALCULATIONS={Uri.EscapeDataString(calculations)}",
+                    $"apikey={_apiKey}"
+                };
+
+                var endpoint = $"query?{string.Join("&", queryParams)}";
+                await LogApiCall("ANALYTICS_FIXED_WINDOW", $"symbols={symbols}&range={range}");
+
+                var httpResponse = await _client.GetAsync(endpoint);
+                if (httpResponse.IsSuccessStatusCode)
+                {
+                    var content = await httpResponse.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    // Check for API error messages
+                    if (data["Information"] != null || data["Note"] != null || data["Error Message"] != null)
+                    {
+                        response.ErrorMessage = data["Information"]?.ToString() 
+                            ?? data["Note"]?.ToString() 
+                            ?? data["Error Message"]?.ToString()
+                            ?? "API returned an error";
+                        response.IsSuccess = false;
+                        _loggingService.Log("Warning", $"Analytics API returned message: {response.ErrorMessage}");
+                        return response;
+                    }
+
+                    // Parse meta data
+                    if (data["meta"] is JObject metaData)
+                    {
+                        response.MetaData = new AnalyticsMetaData
+                        {
+                            Symbols = metaData["SYMBOLS"]?.ToString() ?? symbols,
+                            Range = metaData["RANGE"]?.ToString() ?? range,
+                            Interval = metaData["INTERVAL"]?.ToString() ?? interval,
+                            CalculationDate = DateTime.Now
+                        };
+                    }
+                    else
+                    {
+                        response.MetaData = new AnalyticsMetaData
+                        {
+                            Symbols = symbols,
+                            Range = range,
+                            Interval = interval,
+                            CalculationDate = DateTime.Now
+                        };
+                    }
+
+                    // Parse payload containing the analytics results
+                    if (data["payload"] is JObject payload)
+                    {
+                        // The payload structure contains symbol-keyed results
+                        foreach (var symbolEntry in payload.Properties())
+                        {
+                            var symbolName = symbolEntry.Name;
+                            var symbolData = symbolEntry.Value;
+
+                            if (symbolData is JArray metricsArray)
+                            {
+                                foreach (var metric in metricsArray)
+                                {
+                                    var metricResult = new AnalyticsMetricResult
+                                    {
+                                        Symbol = symbolName,
+                                        MetricName = metric["name"]?.ToString() ?? "UNKNOWN",
+                                        Value = TryParseDouble(metric["value"]),
+                                        Description = metric["description"]?.ToString()
+                                    };
+                                    response.Metrics.Add(metricResult);
+                                }
+                            }
+                            else if (symbolData is JObject symbolMetrics)
+                            {
+                                // Alternative structure where metrics are object properties
+                                foreach (var metricProp in symbolMetrics.Properties())
+                                {
+                                    var metricResult = new AnalyticsMetricResult
+                                    {
+                                        Symbol = symbolName,
+                                        MetricName = metricProp.Name,
+                                        Value = TryParseDouble(metricProp.Value)
+                                    };
+                                    response.Metrics.Add(metricResult);
+                                }
+                            }
+                        }
+                    }
+
+                    response.IsSuccess = true;
+                    _loggingService.Log("Info", $"Retrieved analytics for {symbols}: {response.Metrics.Count} metrics");
+                }
+                else
+                {
+                    response.ErrorMessage = $"API request failed with status: {httpResponse.StatusCode}";
+                    _loggingService.Log("Warning", response.ErrorMessage);
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.ErrorMessage = $"Error getting analytics: {ex.Message}";
+                _loggingService.LogErrorWithContext(ex, $"Error getting analytics for {symbols}");
+                return response;
+            }
+        }
+
+        /// <summary>
+        /// Gets performance metrics (Sharpe, Sortino, etc.) for a symbol
+        /// Combines local calculations with API data for comprehensive metrics
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="startDate">Start date for analysis</param>
+        /// <param name="endDate">End date for analysis</param>
+        /// <param name="benchmark">Benchmark symbol for comparison</param>
+        /// <returns>Performance metrics</returns>
+        public async Task<PerformanceMetrics> GetPerformanceMetricsAsync(
+            string symbol,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            string benchmark = "SPY")
+        {
+            var metrics = new PerformanceMetrics
+            {
+                Symbol = symbol,
+                StartDate = startDate ?? DateTime.Now.AddYears(-1),
+                EndDate = endDate ?? DateTime.Now
+            };
+
+            try
+            {
+                // Get historical data for the symbol
+                var historicalData = await GetDailyData(symbol, "full");
+                
+                if (historicalData == null || historicalData.Count < 20)
+                {
+                    metrics.ErrorMessage = "Insufficient historical data";
+                    return metrics;
+                }
+
+                // Filter by date range
+                var filteredData = historicalData
+                    .Where(h => h.Date >= metrics.StartDate && h.Date <= metrics.EndDate)
+                    .OrderBy(h => h.Date)
+                    .ToList();
+
+                if (filteredData.Count < 20)
+                {
+                    metrics.ErrorMessage = "Insufficient data in date range";
+                    return metrics;
+                }
+
+                // Calculate daily returns
+                var dailyReturns = new List<double>();
+                var downsideReturns = new List<double>();
+
+                for (int i = 1; i < filteredData.Count; i++)
+                {
+                    double dailyReturn = (filteredData[i].Close - filteredData[i - 1].Close) / filteredData[i - 1].Close;
+                    dailyReturns.Add(dailyReturn);
+
+                    if (dailyReturn < 0)
+                    {
+                        downsideReturns.Add(dailyReturn);
+                    }
+                }
+
+                if (dailyReturns.Count == 0)
+                {
+                    metrics.ErrorMessage = "No returns data available";
+                    return metrics;
+                }
+
+                // Calculate metrics
+                double avgReturn = dailyReturns.Average();
+                double stdDev = CalculateStdDevForMetrics(dailyReturns);
+                double downsideStdDev = downsideReturns.Count > 0 ? CalculateStdDevForMetrics(downsideReturns) : stdDev;
+                double riskFreeRate = 0.0; // Assuming 0% risk-free rate for simplicity
+
+                // Sharpe Ratio (annualized)
+                metrics.SharpeRatio = stdDev > 0 ? (avgReturn - riskFreeRate) / stdDev * Math.Sqrt(252) : 0;
+
+                // Sortino Ratio (annualized)
+                metrics.SortinoRatio = downsideStdDev > 0 ? (avgReturn - riskFreeRate) / downsideStdDev * Math.Sqrt(252) : 0;
+
+                // Cumulative Return
+                metrics.CumulativeReturn = (filteredData.Last().Close - filteredData.First().Close) / filteredData.First().Close;
+
+                // Annualized Return (CAGR)
+                double totalDays = (filteredData.Last().Date - filteredData.First().Date).TotalDays;
+                if (totalDays > 0)
+                {
+                    metrics.AnnualizedReturn = Math.Pow(1 + metrics.CumulativeReturn, 365.0 / totalDays) - 1;
+                }
+
+                // Annualized Volatility
+                metrics.AnnualizedVolatility = stdDev * Math.Sqrt(252);
+
+                // Maximum Drawdown
+                double peak = filteredData[0].Close;
+                double maxDrawdown = 0;
+
+                foreach (var price in filteredData)
+                {
+                    if (price.Close > peak)
+                    {
+                        peak = price.Close;
+                    }
+                    double drawdown = (peak - price.Close) / peak;
+                    if (drawdown > maxDrawdown)
+                    {
+                        maxDrawdown = drawdown;
+                    }
+                }
+                metrics.MaxDrawdown = maxDrawdown;
+
+                // Calmar Ratio
+                metrics.CalmarRatio = maxDrawdown > 0 ? metrics.AnnualizedReturn / maxDrawdown : 0;
+
+                // Try to get benchmark data for Beta, Alpha, Information Ratio
+                try
+                {
+                    var benchmarkData = await GetDailyData(benchmark, "full");
+                    if (benchmarkData != null && benchmarkData.Count > 0)
+                    {
+                        var benchmarkFiltered = benchmarkData
+                            .Where(h => h.Date >= metrics.StartDate && h.Date <= metrics.EndDate)
+                            .OrderBy(h => h.Date)
+                            .ToList();
+
+                        if (benchmarkFiltered.Count >= 20)
+                        {
+                            // Calculate benchmark returns
+                            var benchmarkReturns = new List<double>();
+                            for (int i = 1; i < benchmarkFiltered.Count; i++)
+                            {
+                                double benchReturn = (benchmarkFiltered[i].Close - benchmarkFiltered[i - 1].Close) / benchmarkFiltered[i - 1].Close;
+                                benchmarkReturns.Add(benchReturn);
+                            }
+
+                            if (benchmarkReturns.Count > 0 && dailyReturns.Count > 0)
+                            {
+                                int minCount = Math.Min(dailyReturns.Count, benchmarkReturns.Count);
+                                var alignedSymbolReturns = dailyReturns.Take(minCount).ToList();
+                                var alignedBenchReturns = benchmarkReturns.Take(minCount).ToList();
+
+                                // Calculate Beta
+                                double covariance = CalculateCovariance(alignedSymbolReturns, alignedBenchReturns);
+                                double benchVariance = CalculateVariance(alignedBenchReturns);
+                                metrics.Beta = benchVariance > 0 ? covariance / benchVariance : 1.0;
+
+                                // Calculate Alpha (Jensen's Alpha)
+                                double benchAvgReturn = alignedBenchReturns.Average();
+                                metrics.Alpha = (avgReturn - riskFreeRate) - metrics.Beta * (benchAvgReturn - riskFreeRate);
+                                metrics.Alpha *= 252; // Annualize
+
+                                // Calculate Treynor Ratio
+                                metrics.TreynorRatio = metrics.Beta != 0 ? (avgReturn - riskFreeRate) * 252 / metrics.Beta : 0;
+
+                                // Calculate R-Squared
+                                double correlation = CalculateCorrelation(alignedSymbolReturns, alignedBenchReturns);
+                                metrics.RSquared = correlation * correlation;
+
+                                // Information Ratio
+                                var excessReturns = new List<double>();
+                                for (int i = 0; i < minCount; i++)
+                                {
+                                    excessReturns.Add(alignedSymbolReturns[i] - alignedBenchReturns[i]);
+                                }
+                                double trackingError = CalculateStdDevForMetrics(excessReturns);
+                                double avgExcessReturn = excessReturns.Average();
+                                metrics.InformationRatio = trackingError > 0 ? avgExcessReturn / trackingError * Math.Sqrt(252) : 0;
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // If benchmark calculation fails, continue with basic metrics
+                    _loggingService.Log("Warning", $"Could not calculate benchmark metrics for {symbol} vs {benchmark}");
+                }
+
+                metrics.IsValid = true;
+                _loggingService.Log("Info", $"Calculated performance metrics for {symbol}: Sharpe={metrics.SharpeRatio:F2}, Sortino={metrics.SortinoRatio:F2}");
+            }
+            catch (Exception ex)
+            {
+                metrics.ErrorMessage = $"Error calculating metrics: {ex.Message}";
+                _loggingService.LogErrorWithContext(ex, $"Error calculating performance metrics for {symbol}");
+            }
+
+            return metrics;
+        }
+
+        /// <summary>
+        /// Calculate standard deviation of a list of values (for performance metrics)
+        /// </summary>
+        private double CalculateStdDevForMetrics(List<double> values)
+        {
+            if (values == null || values.Count <= 1)
+                return 0;
+
+            double avg = values.Average();
+            double sumOfSquares = values.Sum(v => Math.Pow(v - avg, 2));
+            return Math.Sqrt(sumOfSquares / (values.Count - 1));
+        }
+
+        /// <summary>
+        /// Calculate covariance between two lists
+        /// </summary>
+        private double CalculateCovariance(List<double> x, List<double> y)
+        {
+            if (x.Count != y.Count || x.Count <= 1)
+                return 0;
+
+            double xMean = x.Average();
+            double yMean = y.Average();
+            double sum = 0;
+
+            for (int i = 0; i < x.Count; i++)
+            {
+                sum += (x[i] - xMean) * (y[i] - yMean);
+            }
+
+            return sum / (x.Count - 1);
+        }
+
+        /// <summary>
+        /// Calculate variance of a list
+        /// </summary>
+        private double CalculateVariance(List<double> values)
+        {
+            if (values == null || values.Count <= 1)
+                return 0;
+
+            double mean = values.Average();
+            double sumOfSquares = values.Sum(v => Math.Pow(v - mean, 2));
+            return sumOfSquares / (values.Count - 1);
+        }
+
+        /// <summary>
+        /// Calculate Pearson correlation coefficient
+        /// </summary>
+        private double CalculateCorrelation(List<double> x, List<double> y)
+        {
+            if (x.Count != y.Count || x.Count <= 1)
+                return 0;
+
+            double xStd = CalculateStdDevForMetrics(x);
+            double yStd = CalculateStdDevForMetrics(y);
+
+            if (xStd == 0 || yStd == 0)
+                return 0;
+
+            double covariance = CalculateCovariance(x, y);
+            return covariance / (xStd * yStd);
+        }
+
+        #endregion
     }
 }

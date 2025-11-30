@@ -60,5 +60,34 @@ namespace Quantra.DAL.Services.Interfaces
             int limit = 50);
         Task<TopMoversResponse> GetTopMoversAsync();
         Task<InsiderTransactionsResponse> GetInsiderTransactionsAsync(string symbol);
+
+        // Analytics Fixed Window API Methods
+        /// <summary>
+        /// Gets advanced analytics metrics using the Alpha Vantage Analytics Fixed Window API
+        /// </summary>
+        /// <param name="symbols">Comma-separated list of symbols (e.g., "AAPL,MSFT,GOOGL")</param>
+        /// <param name="range">Time range for analysis (e.g., "1month", "3month", "1year", "full")</param>
+        /// <param name="interval">Data interval: DAILY, WEEKLY, or MONTHLY</param>
+        /// <param name="calculations">Comma-separated list of metrics to calculate (e.g., "MEAN,STDDEV,CUMULATIVE_RETURN")</param>
+        /// <returns>Analytics response with calculated metrics</returns>
+        Task<AnalyticsFixedWindowResponse> GetAnalyticsFixedWindowAsync(
+            string symbols,
+            string range = "full",
+            string interval = "DAILY",
+            string calculations = "MEAN,STDDEV,CUMULATIVE_RETURN");
+
+        /// <summary>
+        /// Gets performance metrics (Sharpe, Sortino, etc.) for a symbol using the Analytics API
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="startDate">Start date for analysis</param>
+        /// <param name="endDate">End date for analysis</param>
+        /// <param name="benchmark">Benchmark symbol for comparison (default: SPY)</param>
+        /// <returns>Performance metrics calculated from API data</returns>
+        Task<PerformanceMetrics> GetPerformanceMetricsAsync(
+            string symbol,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            string benchmark = "SPY");
     }
 }

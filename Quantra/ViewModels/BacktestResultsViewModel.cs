@@ -533,7 +533,7 @@ namespace Quantra.ViewModels
             // Calculate equity volatility
             CalculateStrategyVolatility();
 
-            // Update performance metrics
+            // Update performance metrics from local calculation first
             UpdatePerformanceMetrics(result);
 
             // Update Monte Carlo status
@@ -543,6 +543,44 @@ namespace Quantra.ViewModels
             if (result.HasMonteCarloResults)
             {
                 UpdateMonteCarloStatistics(result.MonteCarloResults);
+            }
+
+            // Asynchronously enhance metrics with Alpha Vantage API data
+            _ = EnhanceMetricsWithApiDataAsync(result.Symbol, result.StartDate, result.EndDate);
+        }
+
+        /// <summary>
+        /// Enhance performance metrics with Alpha Vantage Analytics Fixed Window API data
+        /// </summary>
+        private async Task EnhanceMetricsWithApiDataAsync(string symbol, DateTime startDate, DateTime endDate)
+        {
+            if (string.IsNullOrEmpty(symbol) || _alphaVantageService == null)
+                return;
+
+            try
+            {
+                // Get performance metrics from Alpha Vantage API
+                var apiMetrics = await _alphaVantageService.GetPerformanceMetricsAsync(symbol, startDate, endDate);
+
+                if (apiMetrics != null && apiMetrics.IsValid)
+                {
+                    // If API metrics are available and valid, we can use them to validate/supplement local calculations
+                    // For now, we'll log the comparison and keep local calculations as the primary source
+                    // This provides a fallback mechanism if the API call fails
+                    System.Diagnostics.Debug.WriteLine($"API Metrics for {symbol}: Sharpe={apiMetrics.SharpeRatio:F2}, Sortino={apiMetrics.SortinoRatio:F2}");
+                    
+                    // Update Information Ratio if we got benchmark data
+                    if (apiMetrics.InformationRatio != 0 && _currentResult != null)
+                    {
+                        _currentResult.InformationRatio = apiMetrics.InformationRatio;
+                        InformationRatioText = apiMetrics.InformationRatio.ToString("F2");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // API enhancement failed - continue with local calculations
+                System.Diagnostics.Debug.WriteLine($"API enhancement failed for {symbol}: {ex.Message}");
             }
         }
 
