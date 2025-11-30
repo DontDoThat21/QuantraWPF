@@ -112,6 +112,37 @@ namespace Quantra.Views.Backtesting
             ManageCustomBenchmarks();
         }
         
+        private void OnViewModelPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (_viewModel == null) return;
+            
+            // Update UI when Alpha Vantage Analytics properties change
+            switch (e.PropertyName)
+            {
+                case nameof(_viewModel.AnnualizedVolatilityText):
+                    Dispatcher.Invoke(() => AnnualizedVolatilityText.Text = _viewModel.AnnualizedVolatilityText);
+                    break;
+                case nameof(_viewModel.CorrelationSPYText):
+                    Dispatcher.Invoke(() => CorrelationSPYText.Text = _viewModel.CorrelationSPYText);
+                    break;
+                case nameof(_viewModel.CorrelationQQQText):
+                    Dispatcher.Invoke(() => CorrelationQQQText.Text = _viewModel.CorrelationQQQText);
+                    break;
+                case nameof(_viewModel.CorrelationIWMText):
+                    Dispatcher.Invoke(() => CorrelationIWMText.Text = _viewModel.CorrelationIWMText);
+                    break;
+                case nameof(_viewModel.BetaText):
+                    Dispatcher.Invoke(() => BetaText.Text = _viewModel.BetaText);
+                    break;
+                case nameof(_viewModel.AlphaText):
+                    Dispatcher.Invoke(() => AlphaText.Text = _viewModel.AlphaText);
+                    break;
+                case nameof(_viewModel.SharpeRatioText):
+                    Dispatcher.Invoke(() => SharpeRatioText.Text = _viewModel.SharpeRatioText);
+                    break;
+            }
+        }
+        
         #endregion
         
         #region Public Methods
@@ -128,6 +159,9 @@ namespace Quantra.Views.Backtesting
             if (_viewModel != null)
             {
                 _viewModel.LoadResults(result, historical);
+                
+                // Subscribe to property changes for analytics data updates
+                _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             }
             
             // Calculate equity volatility for later use
@@ -145,6 +179,14 @@ namespace Quantra.Views.Backtesting
             CalmarRatioText.Text = result.CalmarRatio.ToString("F2");
             ProfitFactorText.Text = result.ProfitFactor.ToString("F2");
             InformationRatioText.Text = result.InformationRatio.ToString("F2");
+            
+            // Initialize Alpha Vantage Analytics metrics (will be updated async)
+            AnnualizedVolatilityText.Text = "--";
+            BetaText.Text = "--";
+            AlphaText.Text = "--";
+            CorrelationSPYText.Text = "--";
+            CorrelationQQQText.Text = "--";
+            CorrelationIWMText.Text = "--";
             
             // Price chart with trades
             var priceSeries = new LineSeries
