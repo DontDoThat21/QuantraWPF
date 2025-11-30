@@ -332,7 +332,23 @@ MinWidth="900" MinHeight="700">
                       SizeChanged="StockDataGrid_SizeChanged"
                       ScrollViewer.ScrollChanged="StockDataGrid_ScrollChanged">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80"/>
+                    <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="Symbol" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="SymbolFilterTextBox"
+                                             Width="70"
+                                             Height="25"
+                                             Text="{Binding SymbolFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter stocks by symbol"
+                                             VerticalContentAlignment="Center"
+                                             Margin="0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="70"/>
                     <DataGridTextColumn Header="P/E Ratio" Binding="{Binding PERatio, StringFormat={}{0:F1}}" Width="70"/>
                     <DataGridTextColumn Header="VWAP" Binding="{Binding VWAP, StringFormat={}{0:F2}}" Width="70">

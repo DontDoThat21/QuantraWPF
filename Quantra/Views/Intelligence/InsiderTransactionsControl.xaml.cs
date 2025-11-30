@@ -7,6 +7,9 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 using Quantra.DAL.Services;
 using Quantra.Models;
 
@@ -71,7 +74,6 @@ namespace Quantra.Views.Intelligence
         private List<InsiderTransactionData> _allTransactions;
         private List<InsiderTransactionData> _filteredTransactions;
         private readonly IUserSettingsService _userSettingsService;
-        private readonly System.Data.IDbConnection _connection;
         private bool _isLoadingAllSymbols = false;
 
         public InsiderTransactionsControl()
@@ -84,11 +86,8 @@ namespace Quantra.Views.Intelligence
                 _loggingService = App.ServiceProvider?.GetService(typeof(LoggingService)) as LoggingService;
                 _userSettingsService = App.ServiceProvider?.GetService(typeof(IUserSettingsService)) as IUserSettingsService;
                 
-                // Get database connection
-                _connection = Quantra.DAL.Data.ConnectionHelper.GetConnection();
-                
-                // Initialize database table if needed
-                InitializeInsiderTransactionsTable();
+                // Ensure database is created with EF Core
+                EnsureDatabaseCreated();
             }
             catch (Exception ex)
             {
@@ -145,13 +144,34 @@ namespace Quantra.Views.Intelligence
             {
                 LoadingIndicator.Visibility = Visibility.Visible;
                 LoadButton.IsEnabled = false;
-                StatusText.Text = $"Loading insider transactions for {symbol}...";
+                StatusText.Text = $"Checking cache for {symbol}...";
+
+                // First, try to load from cache for this specific symbol
+                var cachedTransactions = LoadTransactionsFromCache(symbol);
+
+                if (cachedTransactions != null && cachedTransactions.Count > 0)
+                {
+                    // Found in cache - display immediately
+                    _allTransactions = cachedTransactions;
+                    ApplyFilters();
+                    UpdateSummary();
+                    StatusText.Text = $"Loaded {_allTransactions.Count} cached transactions for {symbol}";
+                    _loggingService?.Log("Info", $"Loaded {_allTransactions.Count} cached insider transactions for {symbol}");
+                    return; // Exit early, no API call needed
+                }
+
+                // Not in cache, fetch from API
+                StatusText.Text = $"Loading insider transactions from API for {symbol}...";
 
                 var response = await _alphaVantageService.GetInsiderTransactionsAsync(symbol);
 
                 if (response != null && response.Transactions.Count > 0)
                 {
                     _allTransactions = response.Transactions;
+                    
+                    // Save to cache for future use
+                    SaveTransactionsToCache(_allTransactions);
+                    
                     ApplyFilters();
                     UpdateSummary();
                     StatusText.Text = $"Loaded {_allTransactions.Count} transactions for {symbol}";
@@ -279,58 +299,26 @@ namespace Quantra.Views.Intelligence
         #region Database Caching Methods
 
         /// <summary>
-        /// Initializes the InsiderTransactions table in the database
+        /// Ensures the database and InsiderTransactions table exist using EF Core
         /// </summary>
-        private void InitializeInsiderTransactionsTable()
+        private void EnsureDatabaseCreated()
         {
             try
             {
-                if (_connection.State != System.Data.ConnectionState.Open)
-                {
-                    _connection.Open();
-                }
-
-                using (var cmd = _connection.CreateCommand())
-                {
-                    cmd.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS InsiderTransactions (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            Symbol TEXT NOT NULL,
-                            FilingDate TEXT NOT NULL,
-                            TransactionDate TEXT NOT NULL,
-                            OwnerName TEXT,
-                            OwnerCik TEXT,
-                            OwnerTitle TEXT,
-                            SecurityType TEXT,
-                            TransactionCode TEXT,
-                            SharesTraded INTEGER NOT NULL DEFAULT 0,
-                            PricePerShare REAL NOT NULL DEFAULT 0.0,
-                            SharesOwnedFollowing INTEGER NOT NULL DEFAULT 0,
-                            AcquisitionOrDisposal TEXT,
-                            LastUpdated TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            UNIQUE(Symbol, FilingDate, TransactionDate, OwnerCik)
-                        );";
-                    cmd.ExecuteNonQuery();
-                }
-
-                // Create indexes
-                using (var cmd = _connection.CreateCommand())
-                {
-                    cmd.CommandText = @"
-                        CREATE INDEX IF NOT EXISTS idx_insider_transactions_symbol ON InsiderTransactions(Symbol);
-                        CREATE INDEX IF NOT EXISTS idx_insider_transactions_date ON InsiderTransactions(TransactionDate);
-                        CREATE INDEX IF NOT EXISTS idx_insider_transactions_lastupdated ON InsiderTransactions(LastUpdated);";
-                    cmd.ExecuteNonQuery();
-                }
+                using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                    .UseSqlServer(ConnectionHelper.ConnectionString)
+                    .Options);
+                
+                context.Database.EnsureCreated();
             }
             catch (Exception ex)
             {
-                _loggingService?.Log("Error", "Failed to initialize InsiderTransactions table", ex.ToString());
+                _loggingService?.Log("Error", "Failed to ensure InsiderTransactions table exists", ex.ToString());
             }
         }
 
         /// <summary>
-        /// Saves insider transactions to the database cache
+        /// Saves insider transactions to the database cache using EF Core
         /// </summary>
         private void SaveTransactionsToCache(List<InsiderTransactionData> transactions)
         {
@@ -339,94 +327,59 @@ namespace Quantra.Views.Intelligence
 
             try
             {
-                if (_connection.State != System.Data.ConnectionState.Open)
-                {
-                    _connection.Open();
-                }
+                using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                    .UseSqlServer(ConnectionHelper.ConnectionString)
+                    .Options);
+
+                // Capture the actual cache time once for this batch
+                var cacheTime = DateTime.Now;
 
                 foreach (var transaction in transactions)
                 {
-                    using (var cmd = _connection.CreateCommand())
+                    // Check if transaction already exists
+                    var existing = context.InsiderTransactions.FirstOrDefault(t =>
+                        t.Symbol == transaction.Symbol &&
+                        t.FilingDate == transaction.FilingDate &&
+                        t.TransactionDate == transaction.TransactionDate &&
+                        t.OwnerCik == transaction.OwnerCik);
+
+                    if (existing != null)
                     {
-                        cmd.CommandText = @"
-                            INSERT OR REPLACE INTO InsiderTransactions 
-                            (Symbol, FilingDate, TransactionDate, OwnerName, OwnerCik, OwnerTitle, 
-                             SecurityType, TransactionCode, SharesTraded, PricePerShare, 
-                             SharesOwnedFollowing, AcquisitionOrDisposal, LastUpdated)
-                            VALUES (@Symbol, @FilingDate, @TransactionDate, @OwnerName, @OwnerCik, @OwnerTitle,
-                                    @SecurityType, @TransactionCode, @SharesTraded, @PricePerShare,
-                                    @SharesOwnedFollowing, @AcquisitionOrDisposal, @LastUpdated)";
-
-                        var param = cmd.CreateParameter();
-                        param.ParameterName = "@Symbol";
-                        param.Value = transaction.Symbol;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@FilingDate";
-                        param.Value = transaction.FilingDate.ToString("yyyy-MM-dd HH:mm:ss");
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@TransactionDate";
-                        param.Value = transaction.TransactionDate.ToString("yyyy-MM-dd HH:mm:ss");
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@OwnerName";
-                        param.Value = (object)transaction.OwnerName ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@OwnerCik";
-                        param.Value = (object)transaction.OwnerCik ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@OwnerTitle";
-                        param.Value = (object)transaction.OwnerTitle ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@SecurityType";
-                        param.Value = (object)transaction.SecurityType ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@TransactionCode";
-                        param.Value = (object)transaction.TransactionCode ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@SharesTraded";
-                        param.Value = transaction.SharesTraded;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@PricePerShare";
-                        param.Value = transaction.PricePerShare;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@SharesOwnedFollowing";
-                        param.Value = transaction.SharesOwnedFollowing;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@AcquisitionOrDisposal";
-                        param.Value = (object)transaction.AcquisitionOrDisposal ?? DBNull.Value;
-                        cmd.Parameters.Add(param);
-
-                        param = cmd.CreateParameter();
-                        param.ParameterName = "@LastUpdated";
-                        param.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                        cmd.Parameters.Add(param);
-
-                        cmd.ExecuteNonQuery();
+                        // Update existing record
+                        existing.OwnerName = transaction.OwnerName;
+                        existing.OwnerTitle = transaction.OwnerTitle;
+                        existing.SecurityType = transaction.SecurityType;
+                        existing.TransactionCode = transaction.TransactionCode;
+                        existing.SharesTraded = transaction.SharesTraded;
+                        existing.PricePerShare = transaction.PricePerShare;
+                        existing.SharesOwnedFollowing = transaction.SharesOwnedFollowing;
+                        existing.AcquisitionOrDisposal = transaction.AcquisitionOrDisposal;
+                        existing.LastUpdated = cacheTime;
+                    }
+                    else
+                    {
+                        // Add new record
+                        context.InsiderTransactions.Add(new InsiderTransactionEntity
+                        {
+                            Symbol = transaction.Symbol,
+                            FilingDate = transaction.FilingDate,
+                            TransactionDate = transaction.TransactionDate,
+                            OwnerName = transaction.OwnerName,
+                            OwnerCik = transaction.OwnerCik,
+                            OwnerTitle = transaction.OwnerTitle,
+                            SecurityType = transaction.SecurityType,
+                            TransactionCode = transaction.TransactionCode,
+                            SharesTraded = transaction.SharesTraded,
+                            PricePerShare = transaction.PricePerShare,
+                            SharesOwnedFollowing = transaction.SharesOwnedFollowing,
+                            AcquisitionOrDisposal = transaction.AcquisitionOrDisposal,
+                            LastUpdated = cacheTime
+                        });
                     }
                 }
 
-                _loggingService?.Log("Info", $"Cached {transactions.Count} insider transactions to database");
+                context.SaveChanges();
+                _loggingService?.Log("Info", $"Cached {transactions.Count} insider transactions to database at {cacheTime:yyyy-MM-dd HH:mm:ss}");
             }
             catch (Exception ex)
             {
@@ -435,7 +388,7 @@ namespace Quantra.Views.Intelligence
         }
 
         /// <summary>
-        /// Loads insider transactions from the database cache
+        /// Loads insider transactions from the database cache using EF Core
         /// </summary>
         private List<InsiderTransactionData> LoadTransactionsFromCache(string symbol = null)
         {
@@ -443,60 +396,36 @@ namespace Quantra.Views.Intelligence
 
             try
             {
-                if (_connection.State != System.Data.ConnectionState.Open)
+                using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                    .UseSqlServer(ConnectionHelper.ConnectionString)
+                    .Options);
+
+                IQueryable<InsiderTransactionEntity> query = context.InsiderTransactions;
+
+                if (!string.IsNullOrWhiteSpace(symbol))
                 {
-                    _connection.Open();
+                    query = query.Where(t => t.Symbol == symbol.ToUpper());
                 }
 
-                using (var cmd = _connection.CreateCommand())
-                {
-                    if (string.IsNullOrWhiteSpace(symbol))
-                    {
-                        // Load all transactions
-                        cmd.CommandText = @"SELECT Symbol, FilingDate, TransactionDate, OwnerName, OwnerCik, OwnerTitle,
-                                            SecurityType, TransactionCode, SharesTraded, PricePerShare,
-                                            SharesOwnedFollowing, AcquisitionOrDisposal
-                                            FROM InsiderTransactions
-                                            ORDER BY TransactionDate DESC";
-                    }
-                    else
-                    {
-                        // Load transactions for specific symbol
-                        cmd.CommandText = @"SELECT Symbol, FilingDate, TransactionDate, OwnerName, OwnerCik, OwnerTitle,
-                                            SecurityType, TransactionCode, SharesTraded, PricePerShare,
-                                            SharesOwnedFollowing, AcquisitionOrDisposal
-                                            FROM InsiderTransactions
-                                            WHERE Symbol = @Symbol
-                                            ORDER BY TransactionDate DESC";
-                        
-                        var param = cmd.CreateParameter();
-                        param.ParameterName = "@Symbol";
-                        param.Value = symbol.ToUpper();
-                        cmd.Parameters.Add(param);
-                    }
+                var dbTransactions = query
+                    .OrderByDescending(t => t.TransactionDate)
+                    .ToList();
 
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            transactions.Add(new InsiderTransactionData
-                            {
-                                Symbol = reader["Symbol"].ToString(),
-                                FilingDate = DateTime.Parse(reader["FilingDate"].ToString()),
-                                TransactionDate = DateTime.Parse(reader["TransactionDate"].ToString()),
-                                OwnerName = reader["OwnerName"].ToString(),
-                                OwnerCik = reader["OwnerCik"].ToString(),
-                                OwnerTitle = reader["OwnerTitle"].ToString(),
-                                SecurityType = reader["SecurityType"].ToString(),
-                                TransactionCode = reader["TransactionCode"].ToString(),
-                                SharesTraded = Convert.ToInt32(reader["SharesTraded"]),
-                                PricePerShare = Convert.ToDouble(reader["PricePerShare"]),
-                                SharesOwnedFollowing = Convert.ToInt32(reader["SharesOwnedFollowing"]),
-                                AcquisitionOrDisposal = reader["AcquisitionOrDisposal"].ToString()
-                            });
-                        }
-                    }
-                }
+                transactions = dbTransactions.Select(t => new InsiderTransactionData
+                {
+                    Symbol = t.Symbol,
+                    FilingDate = t.FilingDate,
+                    TransactionDate = t.TransactionDate,
+                    OwnerName = t.OwnerName,
+                    OwnerCik = t.OwnerCik,
+                    OwnerTitle = t.OwnerTitle,
+                    SecurityType = t.SecurityType,
+                    TransactionCode = t.TransactionCode,
+                    SharesTraded = t.SharesTraded,
+                    PricePerShare = t.PricePerShare,
+                    SharesOwnedFollowing = t.SharesOwnedFollowing,
+                    AcquisitionOrDisposal = t.AcquisitionOrDisposal
+                }).ToList();
             }
             catch (Exception ex)
             {
@@ -507,7 +436,7 @@ namespace Quantra.Views.Intelligence
         }
 
         /// <summary>
-        /// Gets a list of all unique symbols in the database
+        /// Gets a list of all unique symbols in the database using EF Core
         /// </summary>
         private List<string> GetCachedSymbols()
         {
@@ -515,23 +444,15 @@ namespace Quantra.Views.Intelligence
 
             try
             {
-                if (_connection.State != System.Data.ConnectionState.Open)
-                {
-                    _connection.Open();
-                }
+                using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                    .UseSqlServer(ConnectionHelper.ConnectionString)
+                    .Options);
 
-                using (var cmd = _connection.CreateCommand())
-                {
-                    cmd.CommandText = "SELECT DISTINCT Symbol FROM InsiderTransactions ORDER BY Symbol";
-                    
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            symbols.Add(reader["Symbol"].ToString());
-                        }
-                    }
-                }
+                symbols = context.InsiderTransactions
+                    .Select(t => t.Symbol)
+                    .Distinct()
+                    .OrderBy(s => s)
+                    .ToList();
             }
             catch (Exception ex)
             {

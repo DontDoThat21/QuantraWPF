@@ -23,6 +23,7 @@ using Quantra.Views.Shared;
 using Quantra.Utilities;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls 
 {
@@ -99,6 +100,25 @@ namespace Quantra.Controls
                 }
             }
         }
+
+        // Symbol filter text for DataGrid filtering
+        private string _symbolFilterText = "";
+        public string SymbolFilterText
+        {
+            get => _symbolFilterText;
+            set
+            {
+                if (_symbolFilterText != value)
+                {
+                    _symbolFilterText = value;
+                    OnPropertyChanged(nameof(SymbolFilterText));
+                    _ = ApplySymbolFilterAsync();
+                }
+            }
+        }
+
+        // Collection view for filtering
+        private System.Windows.Data.CollectionView _stocksView;
 
         private string _priceText = "";
         public string PriceText
@@ -614,6 +634,10 @@ namespace Quantra.Controls
 
             // Initialize DataGrid settings and load saved configuration
             InitializeDataGridSettings();
+            
+            // Initialize the filter collection view
+            InitializeStockFilterView();
+            
             this.Loaded += StockExplorer_Loaded;
         }
 
@@ -3674,6 +3698,108 @@ namespace Quantra.Controls
             if (_viewModel != null && _viewModel.HasMorePages)
             {
                 await _viewModel.LoadMoreCachedStocksAsync();
+            }
+        }
+
+        // Symbol filter methods
+        private void InitializeStockFilterView()
+        {
+            // Wait for the control to be fully loaded before setting up the filter
+            if (_viewModel != null)
+            {
+                // Hook into the Loaded event to set up the filter view after bindings are established
+                this.Loaded += (s, e) =>
+                {
+                    if (StockDataGrid?.ItemsSource != null)
+                    {
+                        // Get the existing CollectionView from the DataGrid's bound ItemsSource
+                        _stocksView = (System.Windows.Data.CollectionView)System.Windows.Data.CollectionViewSource.GetDefaultView(StockDataGrid.ItemsSource);
+                    }
+                };
+            }
+        }
+
+        private async System.Threading.Tasks.Task ApplySymbolFilterAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SymbolFilterText))
+            {
+                // Remove filter if text is empty - restore current page
+                if (_viewModel != null && _viewModel.CurrentPage > 0)
+                {
+                    await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
+                }
+                return;
+            }
+
+            // Search the entire database for matching symbol
+            if (_viewModel == null || _cacheService == null)
+                return;
+
+            try
+            {
+                _viewModel.IsLoading = true;
+                
+                // Search database for stocks matching the filter text
+                await System.Threading.Tasks.Task.Run(async () =>
+                {
+                    using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options);
+
+                    // Query database for matching symbols
+                    var matchingSymbols = await context.StockDataCache
+                        .Where(c => c.Symbol.Contains(SymbolFilterText.ToUpper()))
+                        .Select(c => c.Symbol)
+                        .Distinct()
+                        .OrderBy(s => s)
+                        .ToListAsync();
+
+                    if (matchingSymbols.Any())
+                    {
+                        // Load quote data for matching symbols
+                        var matchingStocks = new List<QuoteData>();
+                        foreach (var symbol in matchingSymbols)
+                        {
+                            var stock = await _cacheService.GetCachedStockAsync(symbol);
+                            if (stock != null)
+                            {
+                                matchingStocks.Add(stock);
+                            }
+                        }
+
+                        // Update UI on UI thread
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                            foreach (var stock in matchingStocks)
+                            {
+                                _viewModel.CachedStocks.Add(stock);
+                            }
+                            
+                            // Reset pagination since we're showing filtered results
+                            _viewModel.CurrentPage = 1;
+                            _viewModel.TotalCachedStocksCount = matchingStocks.Count;
+                        });
+                    }
+                    else
+                    {
+                        // No matches found - clear the grid
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                            _viewModel.CurrentPage = 1;
+                            _viewModel.TotalCachedStocksCount = 0;
+                        });
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", $"Error applying symbol filter for '{SymbolFilterText}'", ex.ToString());
+            }
+            finally
+            {
+                _viewModel.IsLoading = false;
             }
         }
     }

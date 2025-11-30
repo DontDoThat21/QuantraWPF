@@ -279,6 +279,43 @@ namespace Quantra.ViewModels
         }
 
         /// <summary>
+        /// Loads a specific page of cached stocks
+        /// </summary>
+        public async Task LoadCachedStocksPageAsync(int pageNumber)
+        {
+            if (pageNumber < 1 || IsLoading)
+                return;
+                
+            IsLoading = true;
+            try
+            {
+                var (stocks, totalCount) = await _stockDataCacheService.GetCachedStocksPaginatedAsync(pageNumber, DEFAULT_PAGE_SIZE).ConfigureAwait(false);
+                
+                // Update on UI thread
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    CachedStocks.Clear();
+                    foreach (var stock in stocks)
+                    {
+                        CachedStocks.Add(stock);
+                    }
+                    
+                    CurrentPage = pageNumber;
+                    TotalCachedStocksCount = totalCount;
+                    OnPropertyChanged(nameof(CanRunPredictions));
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading page {pageNumber}: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>
         /// Synchronous method for backward compatibility - delegates to async version
         /// </summary>
         private void LoadCachedStocks()

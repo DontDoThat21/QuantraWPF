@@ -65,6 +65,9 @@ namespace Quantra.DAL.Data
         // API Usage Tracking
         public DbSet<AlphaVantageApiUsage> AlphaVantageApiUsage { get; set; }
 
+        // Insider Transactions
+        public DbSet<InsiderTransactionEntity> InsiderTransactions { get; set; }
+
         public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {
         }
