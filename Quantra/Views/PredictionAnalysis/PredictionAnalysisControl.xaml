@@ -219,7 +219,6 @@
                     <ComboBoxItem Content="Tech Sector"/>
                     <ComboBoxItem Content="Financial Sector"/>
                     <ComboBoxItem Content="Healthcare Sector"/>
-                    <ComboBoxItem Content="Cached Symbols"/>
                     <ComboBoxItem Content="Watchlist"/>
                 </ComboBox>
                 <TextBlock Text="This will analyze multiple symbols based on the selected category"
