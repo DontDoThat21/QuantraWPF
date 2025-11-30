@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Quantra.Views.Shared;
 using Quantra.Enums;
+using Quantra.Views.StockExplorer;
+using Quantra.DAL.Enums;
+using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {
@@ -933,6 +936,21 @@ namespace Quantra.Controls
         {
             try
             {
+                // Show mode selection dialog
+                var modeResult = LoadHistoricalsModeWindow.Show(
+                    _stockConfigurationService,
+                    GetLoadedSymbolCount(),
+                    GetTotalSymbolCount(),
+                    Window.GetWindow(this));
+
+                if (modeResult == null)
+                {
+                    // User cancelled
+                    return;
+                }
+
+                var (selectedMode, selectedSymbols) = modeResult.Value;
+
                 // Disable button to prevent multiple clicks
                 if (LoadAllHistoricalsButton != null)
                     LoadAllHistoricalsButton.IsEnabled = false;
@@ -941,81 +959,21 @@ namespace Quantra.Controls
                 if (ModeStatusPanel != null && ModeStatusText != null)
                 {
                     ModeStatusPanel.Visibility = Visibility.Visible;
-                    ModeStatusText.Text = "Fetching publicly traded tickers from AlphaVantage...";
+                    ModeStatusText.Text = "Initializing historical data load...";
                 }
 
                 // Set busy cursor during loading
                 Mouse.OverrideCursor = Cursors.Wait;
                 
-                // First, fetch all publicly traded tickers from AlphaVantage API
-                SharedTitleBar.SetLoadAllHistoricalsActive(true, "Caching publicly traded tickers...");
+                // Get the list of tickers based on selected mode
+                List<string> tickers = await GetTickersForMode(selectedMode, selectedSymbols);
                 
-                List<string> allSymbols = null;
-                try
+                if (tickers == null || !tickers.Any())
                 {
-                    allSymbols = await _alphaVantageService.GetAllStockSymbols();
-                    
-                    if (allSymbols != null && allSymbols.Any())
-                    {
-                        // Cache the symbols in the database using StockSymbolCacheService
-                        var stockSymbols = allSymbols.Select(symbol => new Models.StockSymbol
-                        {
-                            Symbol = symbol,
-                            Name = string.Empty,
-                            Sector = string.Empty,
-                            Industry = string.Empty,
-                            LastUpdated = DateTime.Now
-                        }).ToList();
-                        
-                        _stockSymbolCacheService.CacheStockSymbols(stockSymbols);
-                        
-                        if (ModeStatusText != null)
-                        {
-                            ModeStatusText.Text = $"Cached {allSymbols.Count} publicly traded tickers from AlphaVantage";
-                        }
-                        
-                        // Brief delay to show the success message
-                        await Task.Delay(1500);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    //DatabaseMonolith.Log("Warning", "Failed to fetch all stock symbols from AlphaVantage", ex.ToString());
-                    if (ModeStatusText != null)
-                    {
-                        ModeStatusText.Text = "Failed to fetch symbols from AlphaVantage, continuing with grid symbols...";
-                    }
-                    await Task.Delay(1500);
-                }
-
-                // Get the list of tickers from the database (all cached symbols)
-                List<string> tickers = null;
-                try
-                {
-                    // Load all symbols from the StockSymbols table
-                    tickers = _stockSymbolCacheService.GetAllSymbolsAsList();
-                    
-                    if (tickers == null || !tickers.Any())
-                    {
-                        CustomModal.ShowWarning("No symbols found in database. The AlphaVantage API call may have failed.", "No Symbols", Window.GetWindow(this));
-                        return;
-                    }
-                    
-                    if (ModeStatusText != null)
-                    {
-                        ModeStatusText.Text = $"Loaded {tickers.Count} symbols from database. Starting historical data download...";
-                    }
-                    
-                    await Task.Delay(1000); // Brief delay to show the message
-                }
-                catch (Exception ex)
-                {
-                    //DatabaseMonolith.Log("Error", "Failed to load symbols from database", ex.ToString());
-                    CustomModal.ShowError($"Failed to load symbols from database: {ex.Message}", "Database Error", Window.GetWindow(this));
+                    CustomModal.ShowWarning("No symbols to load based on selected mode.", "No Symbols", Window.GetWindow(this));
                     return;
                 }
-
-                // Update status for historical data loading phase
+                
                 if (ModeStatusText != null)
                 {
                     ModeStatusText.Text = $"Loading historical data for {tickers.Count} symbols...";
@@ -1120,6 +1078,156 @@ namespace Quantra.Controls
                     LoadAllHistoricalsButton.IsEnabled = true;
                     
                 Mouse.OverrideCursor = null;
+            }
+        }
+
+        /// <summary>
+        /// Gets tickers based on the selected load mode
+        /// </summary>
+        private async Task<List<string>> GetTickersForMode(HistoricalsLoadMode mode, List<string> configSymbols)
+        {
+            switch (mode)
+            {
+                case HistoricalsLoadMode.AllSymbols:
+                    return await GetAllSymbolsFromApi();
+                    
+                case HistoricalsLoadMode.NonLoadedOnly:
+                    return await GetNonLoadedSymbols();
+                    
+                case HistoricalsLoadMode.StockConfiguration:
+                    return configSymbols ?? new List<string>();
+                    
+                default:
+                    return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Gets all symbols from AlphaVantage API and caches them
+        /// </summary>
+        private async Task<List<string>> GetAllSymbolsFromApi()
+        {
+            if (ModeStatusText != null)
+            {
+                ModeStatusText.Text = "Fetching publicly traded tickers from AlphaVantage...";
+            }
+
+            SharedTitleBar.SetLoadAllHistoricalsActive(true, "Caching publicly traded tickers...");
+
+            try
+            {
+                var allSymbols = await _alphaVantageService.GetAllStockSymbols();
+                
+                if (allSymbols != null && allSymbols.Any())
+                {
+                    // Cache the symbols in the database using StockSymbolCacheService
+                    var stockSymbols = allSymbols.Select(symbol => new Models.StockSymbol
+                    {
+                        Symbol = symbol,
+                        Name = string.Empty,
+                        Sector = string.Empty,
+                        Industry = string.Empty,
+                        LastUpdated = DateTime.Now
+                    }).ToList();
+                    
+                    _stockSymbolCacheService.CacheStockSymbols(stockSymbols);
+                    
+                    if (ModeStatusText != null)
+                    {
+                        ModeStatusText.Text = $"Cached {allSymbols.Count} publicly traded tickers from AlphaVantage";
+                    }
+                    
+                    await Task.Delay(1500);
+                    return allSymbols;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ModeStatusText != null)
+                {
+                    ModeStatusText.Text = "Failed to fetch symbols from AlphaVantage, using database cache...";
+                }
+                await Task.Delay(1500);
+            }
+
+            // Fallback to database cache
+            return _stockSymbolCacheService.GetAllSymbolsAsList();
+        }
+
+        /// <summary>
+        /// Gets symbols that don't have cached historical data
+        /// </summary>
+        private async Task<List<string>> GetNonLoadedSymbols()
+        {
+            if (ModeStatusText != null)
+            {
+                ModeStatusText.Text = "Identifying symbols without cached historical data...";
+            }
+
+            try
+            {
+                // First ensure we have all symbols cached
+                var allSymbols = await GetAllSymbolsFromApi();
+                
+                if (allSymbols == null || !allSymbols.Any())
+                {
+                    return new List<string>();
+                }
+
+                // Get symbols that already have cached data
+                var loadedSymbols = _cacheService.GetAllCachedSymbols();
+                var loadedSet = new HashSet<string>(loadedSymbols, StringComparer.OrdinalIgnoreCase);
+
+                // Return only symbols without cached data
+                var nonLoadedSymbols = allSymbols.Where(s => !loadedSet.Contains(s)).ToList();
+
+                if (ModeStatusText != null)
+                {
+                    ModeStatusText.Text = $"Found {nonLoadedSymbols.Count} symbols without cached data (out of {allSymbols.Count} total)";
+                }
+
+                await Task.Delay(1000);
+                return nonLoadedSymbols;
+            }
+            catch (Exception ex)
+            {
+                if (ModeStatusText != null)
+                {
+                    ModeStatusText.Text = $"Error identifying non-loaded symbols: {ex.Message}";
+                }
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Gets the count of loaded symbols for display
+        /// </summary>
+        private int GetLoadedSymbolCount()
+        {
+            try
+            {
+                var loadedSymbols = _cacheService.GetAllCachedSymbols();
+                return loadedSymbols?.Count ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the total symbol count for display
+        /// </summary>
+        private int GetTotalSymbolCount()
+        {
+            try
+            {
+                var allSymbols = _stockSymbolCacheService.GetAllSymbolsAsList();
+                return allSymbols?.Count > 0 ? allSymbols.Count : 12459; // Default to ~12459 if no cached symbols
+            }
+            catch
+            {
+                return 12459;
             }
         }
 

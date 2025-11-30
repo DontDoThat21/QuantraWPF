@@ -880,5 +880,39 @@ namespace Quantra.DAL.Services
                 return await Task.FromResult(false);
             }
         }
+
+        /// <summary>
+        /// Gets a list of all symbols that have cached historical data
+        /// </summary>
+        /// <returns>List of symbols with cached data</returns>
+        public List<string> GetAllCachedSymbols()
+        {
+            var symbols = new List<string>();
+
+            try
+            {
+                // Use Entity Framework Core with SQL Server
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Get distinct symbols from the cache
+                    symbols = dbContext.StockDataCache
+                        .Select(c => c.Symbol)
+                        .Distinct()
+                        .OrderBy(s => s)
+                        .ToList();
+                }
+
+                _loggingService.Log("Info", $"Retrieved {symbols.Count} cached symbols");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Error getting cached symbols", ex.ToString());
+            }
+
+            return symbols;
+        }
     }
 }

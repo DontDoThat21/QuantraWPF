@@ -171,4 +171,38 @@ namespace Quantra.DAL.Data.Entities
         [Required]
         public DateTime LastUpdated { get; set; }
     }
+
+    /// <summary>
+    /// Entity representing a predefined stock configuration for batch loading historical data
+    /// </summary>
+    [Table("StockConfigurations")]
+    public class StockConfigurationEntity
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string Name { get; set; }
+
+        [MaxLength(500)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// JSON array of stock symbols in this configuration
+        /// </summary>
+        [Required]
+        [MaxLength]
+        public string Symbols { get; set; }
+
+        [Required]
+        public DateTime CreatedAt { get; set; }
+
+        public DateTime? LastUsed { get; set; }
+
+        /// <summary>
+        /// Whether this is the default configuration
+        /// </summary>
+        public bool IsDefault { get; set; }
+    }
 }

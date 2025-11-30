@@ -46,6 +46,8 @@ namespace Quantra.Controls
         private readonly SectorSentimentAnalysisService _sectorSentimentService;
         private readonly TwitterSentimentService _twitterSentimentService;
         private readonly StockSymbolCacheService _stockSymbolCacheService;
+        private readonly StockConfigurationService _stockConfigurationService;
+        private readonly LoggingService _loggingService;
         
         private bool _isLoaded = false;
         private bool _isHandlingSelectionChanged = false;
@@ -535,6 +537,8 @@ namespace Quantra.Controls
             _cacheService = stockDataCacheService;
             _alphaVantageService = alphaVantageService;
             _stockSymbolCacheService = stockSymbolCacheService ?? throw new ArgumentNullException(nameof(stockSymbolCacheService));
+            _loggingService = loggingService;
+            _stockConfigurationService = new StockConfigurationService(loggingService);
 
             // Initialize sentiment analysis services with null checks
             try
