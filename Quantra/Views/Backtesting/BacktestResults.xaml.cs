@@ -273,6 +273,8 @@ namespace Quantra.Views.Backtesting
                 
                 if (selectedBenchmarks.Count == 0 || _currentResult == null || _historicalData == null || _historicalData.Count == 0)
                 {
+                    // Update charts with empty data to show a consistent UI state
+                    UpdateBenchmarkComparisonCharts();
                     return;
                 }
                 
@@ -282,31 +284,39 @@ namespace Quantra.Views.Backtesting
                 
                 foreach (var benchmarkInfo in selectedBenchmarks)
                 {
-                    // Check if this is a custom benchmark
-                    var customBenchmark = _customBenchmarks.FirstOrDefault(b => b.DisplaySymbol == benchmarkInfo.symbol);
-                    
-                    BenchmarkComparisonData benchmarkData;
-                    
-                    if (customBenchmark != null && _viewModel != null)
+                    try
                     {
-                        // Load custom benchmark data using the service via ViewModel
-                        benchmarkData = await _viewModel.CustomBenchmarkService.CalculateCustomBenchmarkData(
-                            customBenchmark, startDate, endDate);
+                        // Check if this is a custom benchmark
+                        var customBenchmark = _customBenchmarks.FirstOrDefault(b => b.DisplaySymbol == benchmarkInfo.symbol);
+                        
+                        BenchmarkComparisonData benchmarkData;
+                        
+                        if (customBenchmark != null && _viewModel != null)
+                        {
+                            // Load custom benchmark data using the service via ViewModel
+                            benchmarkData = await _viewModel.CustomBenchmarkService.CalculateCustomBenchmarkData(
+                                customBenchmark, startDate, endDate);
+                        }
+                        else if (_viewModel != null)
+                        {
+                            // Load standard benchmark data from historical service via ViewModel
+                            var historicalData = await _viewModel.HistoricalDataService.GetComprehensiveHistoricalData(benchmarkInfo.symbol);
+                            benchmarkData = CreateBenchmarkData(historicalData, benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
+                        }
+                        else
+                        {
+                            benchmarkData = null;
+                        }
+                        
+                        if (benchmarkData != null)
+                        {
+                            _benchmarkData.Add(benchmarkData);
+                        }
                     }
-                    else if (_viewModel != null)
+                    catch (Exception ex)
                     {
-                        // Load standard benchmark data from historical service via ViewModel
-                        var historicalData = await _viewModel.HistoricalDataService.GetComprehensiveHistoricalData(benchmarkInfo.symbol);
-                        benchmarkData = CreateBenchmarkData(historicalData, benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
-                    }
-                    else
-                    {
-                        benchmarkData = null;
-                    }
-                    
-                    if (benchmarkData != null)
-                    {
-                        _benchmarkData.Add(benchmarkData);
+                        // Individual benchmark loading failed - continue with other benchmarks
+                        System.Diagnostics.Debug.WriteLine($"Failed to load benchmark data for {benchmarkInfo.symbol}: {ex.Message}");
                     }
                 }
                 
@@ -314,14 +324,24 @@ namespace Quantra.Views.Backtesting
                 UpdateBenchmarkComparisonCharts();
                 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Log error
+                // Log error for debugging
+                System.Diagnostics.Debug.WriteLine($"Error loading benchmark data: {ex.Message}");
+                
+                // Still update charts to show a consistent UI state
+                UpdateBenchmarkComparisonCharts();
             }
         }
         
         private BenchmarkComparisonData CreateBenchmarkData(List<HistoricalPrice> historicalData, string symbol, string name, DateTime startDate, DateTime endDate)
         {
+            if (historicalData == null || historicalData.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"No historical data available for benchmark {symbol}");
+                return null;
+            }
+
             var filteredData = historicalData
                 .Where(h => h.Date >= startDate && h.Date <= endDate)
                 .OrderBy(h => h.Date)
@@ -329,6 +349,7 @@ namespace Quantra.Views.Backtesting
 
             if (filteredData.Count == 0)
             {
+                System.Diagnostics.Debug.WriteLine($"No data in date range {startDate:d} - {endDate:d} for benchmark {symbol}");
                 return null;
             }
 

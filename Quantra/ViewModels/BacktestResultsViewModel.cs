@@ -564,6 +564,8 @@ namespace Quantra.ViewModels
 
                 if (selectedBenchmarks.Count == 0)
                 {
+                    // No benchmarks selected, still notify that loading is complete
+                    BenchmarkDataLoaded?.Invoke(this, EventArgs.Empty);
                     return;
                 }
 
@@ -572,31 +574,45 @@ namespace Quantra.ViewModels
 
                 foreach (var benchmarkInfo in selectedBenchmarks)
                 {
-                    var customBenchmark = CustomBenchmarks.FirstOrDefault(b => b.DisplaySymbol == benchmarkInfo.symbol);
-
-                    BenchmarkComparisonData benchmarkData;
-
-                    if (customBenchmark != null)
+                    try
                     {
-                        benchmarkData = await _customBenchmarkService.CalculateCustomBenchmarkData(
-                            customBenchmark, startDate, endDate);
+                        var customBenchmark = CustomBenchmarks.FirstOrDefault(b => b.DisplaySymbol == benchmarkInfo.symbol);
+
+                        BenchmarkComparisonData benchmarkData;
+
+                        if (customBenchmark != null)
+                        {
+                            benchmarkData = await _customBenchmarkService.CalculateCustomBenchmarkData(
+                                customBenchmark, startDate, endDate);
+                        }
+                        else
+                        {
+                            benchmarkData = await LoadBenchmarkHistoricalDataAsync(benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
+                        }
+
+                        if (benchmarkData != null)
+                        {
+                            _benchmarkData.Add(benchmarkData);
+                        }
                     }
-                    else
+                    catch (Exception)
                     {
-                        benchmarkData = await LoadBenchmarkHistoricalDataAsync(benchmarkInfo.symbol, benchmarkInfo.name, startDate, endDate);
-                    }
-
-                    if (benchmarkData != null)
-                    {
-                        _benchmarkData.Add(benchmarkData);
+                        // Individual benchmark loading failed - continue with other benchmarks
+                        // This prevents one failing benchmark from blocking all benchmark data
+                        System.Diagnostics.Debug.WriteLine($"Failed to load benchmark data for {benchmarkInfo.symbol}");
                     }
                 }
 
+                // Always notify that loading is complete, even if some benchmarks failed
                 BenchmarkDataLoaded?.Invoke(this, EventArgs.Empty);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Log error if needed
+                // Log the error for debugging purposes
+                System.Diagnostics.Debug.WriteLine($"Error loading benchmark data: {ex.Message}");
+                
+                // Still notify that loading is complete (with no data) to prevent UI from hanging
+                BenchmarkDataLoaded?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -929,6 +945,12 @@ namespace Quantra.ViewModels
             {
                 var historicalData = await _historicalDataService.GetComprehensiveHistoricalData(symbol);
 
+                if (historicalData == null || historicalData.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"No historical data returned for benchmark {symbol}");
+                    return null;
+                }
+
                 var filteredData = historicalData
                     .Where(h => h.Date >= startDate && h.Date <= endDate)
                     .OrderBy(h => h.Date)
@@ -936,6 +958,7 @@ namespace Quantra.ViewModels
 
                 if (filteredData.Count == 0)
                 {
+                    System.Diagnostics.Debug.WriteLine($"No data in date range {startDate:d} - {endDate:d} for benchmark {symbol}. Total data points: {historicalData.Count}");
                     return null;
                 }
 
@@ -1019,8 +1042,9 @@ namespace Quantra.ViewModels
 
                 return benchmarkData;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error loading benchmark data for {symbol}: {ex.Message}");
                 return null;
             }
         }
