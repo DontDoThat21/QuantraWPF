@@ -537,7 +537,7 @@ namespace Quantra.Controls
             _cacheService = stockDataCacheService;
             _alphaVantageService = alphaVantageService;
             _stockSymbolCacheService = stockSymbolCacheService ?? throw new ArgumentNullException(nameof(stockSymbolCacheService));
-            _loggingService = loggingService;
+            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
             _stockConfigurationService = new StockConfigurationService(loggingService);
 
             // Initialize sentiment analysis services with null checks

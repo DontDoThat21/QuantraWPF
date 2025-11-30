@@ -1223,11 +1223,11 @@ namespace Quantra.Controls
             try
             {
                 var allSymbols = _stockSymbolCacheService.GetAllSymbolsAsList();
-                return allSymbols?.Count > 0 ? allSymbols.Count : 12459; // Default to ~12459 if no cached symbols
+                return allSymbols?.Count > 0 ? allSymbols.Count : LoadHistoricalsModeWindow.DEFAULT_TOTAL_SYMBOL_COUNT;
             }
             catch
             {
-                return 12459;
+                return LoadHistoricalsModeWindow.DEFAULT_TOTAL_SYMBOL_COUNT;
             }
         }
 

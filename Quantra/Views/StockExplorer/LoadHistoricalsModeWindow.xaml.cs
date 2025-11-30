@@ -12,6 +12,11 @@ namespace Quantra.Views.StockExplorer
     /// </summary>
     public partial class LoadHistoricalsModeWindow : Window
     {
+        /// <summary>
+        /// Default total symbol count from AlphaVantage API
+        /// </summary>
+        public const int DEFAULT_TOTAL_SYMBOL_COUNT = 12459;
+        
         private readonly StockConfigurationService _configService;
         private List<string> _selectedConfigurationSymbols;
 
@@ -55,7 +60,7 @@ namespace Quantra.Views.StockExplorer
         /// <param name="configService">The stock configuration service</param>
         /// <param name="loadedCount">Number of symbols already loaded</param>
         /// <param name="totalCount">Total number of symbols available</param>
-        public LoadHistoricalsModeWindow(StockConfigurationService configService, int loadedCount = 0, int totalCount = 12459)
+        public LoadHistoricalsModeWindow(StockConfigurationService configService, int loadedCount = 0, int totalCount = DEFAULT_TOTAL_SYMBOL_COUNT)
         {
             InitializeComponent();
             _configService = configService;
@@ -77,7 +82,7 @@ namespace Quantra.Views.StockExplorer
         public static (HistoricalsLoadMode Mode, List<string> Symbols)? Show(
             StockConfigurationService configService, 
             int loadedCount = 0, 
-            int totalCount = 12459,
+            int totalCount = DEFAULT_TOTAL_SYMBOL_COUNT,
             Window owner = null)
         {
             var dialog = new LoadHistoricalsModeWindow(configService, loadedCount, totalCount);
