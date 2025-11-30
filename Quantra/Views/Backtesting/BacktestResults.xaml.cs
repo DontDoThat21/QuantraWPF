@@ -133,18 +133,35 @@ namespace Quantra.Views.Backtesting
             // Calculate equity volatility for later use
             CalculateStrategyVolatility();
             
-            // Update metrics display
-            TotalReturnText.Text = result.TotalReturn.ToString("P2");
-            MaxDrawdownText.Text = result.MaxDrawdown.ToString("P2");
-            WinRateText.Text = result.WinRate.ToString("P2");
-            CAGRText.Text = result.CAGR.ToString("P2");
-            
-            // Advanced metrics
-            SharpeRatioText.Text = result.SharpeRatio.ToString("F2");
-            SortinoRatioText.Text = result.SortinoRatio.ToString("F2");
-            CalmarRatioText.Text = result.CalmarRatio.ToString("F2");
-            ProfitFactorText.Text = result.ProfitFactor.ToString("F2");
-            InformationRatioText.Text = result.InformationRatio.ToString("F2");
+            // Update metrics display with null checks and debugging
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"Loading backtest results - Total Return: {result?.TotalReturn:P2}");
+                
+                if (result == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("ERROR: Backtest result is null!");
+                    return;
+                }
+                
+                TotalReturnText.Text = result.TotalReturn.ToString("P2");
+                MaxDrawdownText.Text = result.MaxDrawdown.ToString("P2");
+                WinRateText.Text = result.WinRate.ToString("P2");
+                CAGRText.Text = result.CAGR.ToString("P2");
+                
+                // Advanced metrics
+                SharpeRatioText.Text = result.SharpeRatio.ToString("F2");
+                SortinoRatioText.Text = result.SortinoRatio.ToString("F2");
+                CalmarRatioText.Text = result.CalmarRatio.ToString("F2");
+                ProfitFactorText.Text = result.ProfitFactor.ToString("F2");
+                InformationRatioText.Text = result.InformationRatio.ToString("F2");
+                
+                System.Diagnostics.Debug.WriteLine($"Performance metrics updated successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ERROR updating performance metrics: {ex.Message}");
+            }
             
             // Price chart with trades
             var priceSeries = new LineSeries

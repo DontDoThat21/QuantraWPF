@@ -336,6 +336,14 @@ namespace Quantra.Views.Backtesting
                     costModel
                 );
 
+                // Debug: Log backtest results
+                System.Diagnostics.Debug.WriteLine($"Backtest completed for {symbol}:");
+                System.Diagnostics.Debug.WriteLine($"  Total Return: {result.TotalReturn:P2}");
+                System.Diagnostics.Debug.WriteLine($"  Max Drawdown: {result.MaxDrawdown:P2}");
+                System.Diagnostics.Debug.WriteLine($"  Win Rate: {result.WinRate:P2}");
+                System.Diagnostics.Debug.WriteLine($"  Total Trades: {result.TotalTrades}");
+                System.Diagnostics.Debug.WriteLine($"  Sharpe Ratio: {result.SharpeRatio:F2}");
+
                 ShowProgress("Rendering results...");
 
                 // Display results
