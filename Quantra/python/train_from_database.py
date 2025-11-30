@@ -221,13 +221,14 @@ def train_model_from_database(
     logger.info(f"Training set: {len(X_train)} samples")
     logger.info(f"Test set: {len(X_test)} samples")
     
-    # Train the model
+    # Train the model (force retraining to use current data)
     logger.info(f"Training {model_type} model with {architecture_type} architecture...")
     model, scaler, used_model_type = load_or_train_model(
         X_train=X_train,
         y_train=y_train,
         model_type=model_type,
-        architecture_type=architecture_type
+        architecture_type=architecture_type,
+        force_retrain=True
     )
     
     # Set feature names
