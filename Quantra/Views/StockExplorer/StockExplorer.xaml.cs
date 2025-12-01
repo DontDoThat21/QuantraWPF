@@ -815,6 +815,11 @@ namespace Quantra.Controls
                         // Get stocks with bearish cup and handle patterns
                         stockList = await GetBearishCupAndHandleStocks();
                         break;
+
+                    case SymbolSelectionMode.OhlcvCandles:
+                        // Get OHLCV candle data using TIME_SERIES_INTRADAY API
+                        stockList = await GetOhlcvCandleStocks();
+                        break;
                 }
 
                 // Update the DataGrid with the filtered stocks
@@ -1008,43 +1013,26 @@ namespace Quantra.Controls
                 // Check for cancellation before starting
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // First, try to get from in-memory ViewModel cache (fast operation)
-                var cachedStock = _viewModel.CachedStocks?.FirstOrDefault(s => s.Symbol == symbol);
-                if (cachedStock != null)
-                {
-                    // Use cached data and update the ViewModel's selected stock
-                    _viewModel.SelectedStock = cachedStock;
-                    
-                    // Update the LastAccessed timestamp to reflect when it was selected
-                    cachedStock.LastAccessed = DateTime.Now;
-                    
-                    // Notify that cached symbol data was accessed
-                    SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
-                    
-                    // Update cache timestamp display on UI thread
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        UpdateCacheTimestampDisplay(symbol);
-                    });
-                    
-                    return;
-                }
-
-                // Check for cancellation before database cache lookup
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // ONLY load from the compressed GZip database cache - NO API CALLS on symbol selection
-                // This ensures the user only sees cached data until they explicitly click Refresh
-                var databaseCachedStock = await Task.Run(async () =>
+                // Load data from API on left-click row selection (per issue requirements)
+                // The cache loading is now done via the "Load from Cache" button
+                var quoteData = await Task.Run(async () =>
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
+                    try
+                    {
+                        return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
+                    }
+                    catch (Exception apiEx)
+                    {
+                        // If API fails, fall back to database cache
+                        return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
+                    }
                 }, cancellationToken).ConfigureAwait(false);
                 
                 // Check for cancellation before UI updates
                 cancellationToken.ThrowIfCancellationRequested();
                 
-                if (databaseCachedStock != null)
+                if (quoteData != null)
                 {
                     // Update UI on UI thread using batch updater for better performance
                     _uiBatchUpdater.QueueUpdate($"symbol_data_{symbol}", () =>
@@ -1060,25 +1048,41 @@ namespace Quantra.Controls
                         }
                         
                         // Update the ViewModel's selected stock
-                        _viewModel.SelectedStock = databaseCachedStock;
+                        _viewModel.SelectedStock = quoteData;
                         
                         // Add to the ViewModel's cached stocks collection
-                        _viewModel.CachedStocks.Add(databaseCachedStock);
+                        _viewModel.CachedStocks.Add(quoteData);
                         
                         // Update cache timestamp display
                         UpdateCacheTimestampDisplay(symbol);
                     });
                     
-                    // Notify other components that cached symbol data was accessed
-                    SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
+                    // Cache the data in background for future use
+                    lock (_backgroundTasksLock)
+                    {
+                        _backgroundTasks.Add(Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                            }
+                            catch (Exception cacheEx)
+                            {
+                                // Log warning but don't fail - caching is secondary
+                            }
+                        }));
+                    }
+                    
+                    // Notify other components that symbol data was retrieved
+                    SymbolUpdateService.NotifySymbolDataRetrieved(symbol, "StockExplorer");
                 }
                 else
                 {
-                    // No cached data available - update UI to reflect this
+                    // No data available - update UI to reflect this
                     await Dispatcher.InvokeAsync(() =>
                     {
                         SelectedSymbolDisplay = symbol;
-                        CacheTimestampText = "Not cached - Click Refresh to load";
+                        CacheTimestampText = "No data available";
                         CacheTimestampColor = System.Windows.Media.Brushes.Gray;
                         OnPropertyChanged(nameof(CanRefreshSymbol));
                     });
@@ -3341,6 +3345,108 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", "Error getting Bearish Cup and Handle stocks", ex.ToString());
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Gets OHLCV candlestick data using TIME_SERIES_INTRADAY API
+        /// Returns stocks from cache with their intraday OHLCV data
+        /// </summary>
+        private async Task<List<QuoteData>> GetOhlcvCandleStocks()
+        {
+            var result = new List<QuoteData>();
+            try
+            {
+                // Get stocks from database cache to display with their OHLCV data
+                var (cachedStocks, totalCount) = await _cacheService.GetCachedStocksPaginatedAsync(1, 20);
+                
+                if (cachedStocks == null || !cachedStocks.Any())
+                {
+                    return result;
+                }
+
+                var batchSize = 5; // Smaller batches for intraday API calls due to rate limits
+                var processedCount = 0;
+
+                for (int i = 0; i < cachedStocks.Count; i += batchSize)
+                {
+                    var batch = cachedStocks.Skip(i).Take(batchSize).ToList();
+                    var batchTasks = new List<Task>();
+
+                    foreach (var stock in batch)
+                    {
+                        batchTasks.Add(Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // Load intraday OHLCV data using TIME_SERIES_INTRADAY API
+                                var intradayData = await _alphaVantageService.GetIntradayData(stock.Symbol, "5min", "compact");
+                                
+                                if (intradayData != null && intradayData.Any())
+                                {
+                                    // Get the most recent candle data
+                                    var latestCandle = intradayData.OrderByDescending(p => p.Date).FirstOrDefault();
+                                    
+                                    if (latestCandle != null)
+                                    {
+                                        // Create QuoteData with OHLCV data from intraday
+                                        var candleQuote = new QuoteData
+                                        {
+                                            Symbol = stock.Symbol,
+                                            Price = latestCandle.Close,
+                                            DayHigh = latestCandle.High,
+                                            DayLow = latestCandle.Low,
+                                            Volume = latestCandle.Volume,
+                                            LastUpdated = latestCandle.Date,
+                                            // Store Open price in a way that can be accessed
+                                            PERatio = stock.PERatio,
+                                            RSI = stock.RSI,
+                                            VWAP = stock.VWAP,
+                                            ChangePercent = stock.Price > 0 ? ((latestCandle.Close - stock.Price) / stock.Price) * 100 : 0
+                                        };
+
+                                        lock (result)
+                                        {
+                                            result.Add(candleQuote);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // If no intraday data available, use existing stock data
+                                    lock (result)
+                                    {
+                                        result.Add(stock);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // If API call fails, add the original stock data
+                                lock (result)
+                                {
+                                    result.Add(stock);
+                                }
+                            }
+                        }));
+                    }
+
+                    await Task.WhenAll(batchTasks);
+                    processedCount += batch.Count;
+
+                    // Add delay between batches to respect API limits
+                    if (i + batchSize < cachedStocks.Count)
+                    {
+                        await Task.Delay(1500); // 1.5 second delay between batches
+                    }
+                }
+
+                return result.OrderByDescending(x => x.Volume).ToList();
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", "Error getting OHLCV candle stocks", ex.ToString());
                 return result;
             }
         }

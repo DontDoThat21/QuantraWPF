@@ -72,6 +72,7 @@ MinWidth="900" MinHeight="700">
                         <ComboBoxItem Content="High Alpha"/>
                         <ComboBoxItem Content="Bullish Cup and Handle"/>
                         <ComboBoxItem Content="Bearish Cup and Handle"/>
+                        <ComboBoxItem Content="OHLCV Candles"/>
                     </ComboBox>
                 </StackPanel>
 
@@ -183,6 +184,16 @@ MinWidth="900" MinHeight="700">
                             Padding="10,5"
                             Click="BearishCupAndHandleButton_Click"
                             Style="{StaticResource EnhancedButtonStyle}"
+                            Visibility="Collapsed"/>
+
+                    <!-- OHLCV Candles Button (visible only when OHLCV Candles mode is selected) -->
+                    <Button x:Name="OhlcvCandlesButton"
+                            Content="Load OHLCV Candles"
+                            Margin="0,0,5,0"
+                            Padding="10,5"
+                            Click="OhlcvCandlesButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            ToolTip="Load intraday OHLCV candlestick data using TIME_SERIES_INTRADAY API"
                             Visibility="Collapsed"/>
 
                     <!-- Load All Historicals Button (always visible) -->
@@ -783,15 +794,15 @@ MinWidth="900" MinHeight="700">
                            Foreground="{Binding CacheTimestampColor, RelativeSource={RelativeSource AncestorType=UserControl}}"
                            ToolTip="Date/time when this symbol's data was last cached"
                            Margin="5,0,0,0"/>
-                <Button x:Name="RefreshSymbolDataButton"
-                        Content="⟳ Refresh"
+                <Button x:Name="LoadFromCacheButton"
+                        Content="📁 Load from Cache"
                         Margin="10,0,0,0"
                         Padding="8,2"
                         Height="24"
-                        MinWidth="70"
-                        Click="RefreshSymbolDataButton_Click"
+                        MinWidth="110"
+                        Click="LoadFromCacheButton_Click"
                         Style="{StaticResource EnhancedButtonStyle}"
-                        ToolTip="Fetch latest data from API for this symbol"
+                        ToolTip="Load cached data for this symbol from the database"
                         IsEnabled="{Binding CanRefreshSymbol, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             </StackPanel>
 

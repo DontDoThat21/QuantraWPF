@@ -68,6 +68,11 @@ namespace Quantra.Enums
         /// <summary>
         /// Bearish Cup and Handle pattern - shows stocks with bearish cup and handle formation (inverted pattern)
         /// </summary>
-        BearishCupAndHandle
+        BearishCupAndHandle,
+        
+        /// <summary>
+        /// OHLCV Candles mode - shows intraday OHLCV candlestick data from TIME_SERIES_INTRADAY API
+        /// </summary>
+        OhlcvCandles
     }
 }

@@ -87,6 +87,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Disable search button initially - will be enabled when valid symbol is typed
                         DisableStockSearchButton();
@@ -122,6 +124,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -152,6 +156,8 @@ namespace Quantra.Controls
                             LowPEButton.Visibility = Visibility.Collapsed;
                         if (AllDatabaseButton != null)
                             AllDatabaseButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -182,6 +188,8 @@ namespace Quantra.Controls
                             LowPEButton.Visibility = Visibility.Collapsed;
                         if (AllDatabaseButton != null)
                             AllDatabaseButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -212,6 +220,8 @@ namespace Quantra.Controls
                             HighVolumeButton.Visibility = Visibility.Collapsed;
                         if (AllDatabaseButton != null)
                             AllDatabaseButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -252,6 +262,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -282,6 +294,8 @@ namespace Quantra.Controls
                             LowPEButton.Visibility = Visibility.Collapsed;
                         if (AllDatabaseButton != null)
                             AllDatabaseButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -312,6 +326,8 @@ namespace Quantra.Controls
                             HighVolumeButton.Visibility = Visibility.Collapsed;
                         if (LowPEButton != null)
                             LowPEButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -352,6 +368,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -392,6 +410,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -432,6 +452,8 @@ namespace Quantra.Controls
                             BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
                         if (BearishCupAndHandleButton != null)
                             BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -472,6 +494,8 @@ namespace Quantra.Controls
                             HighBetaButton.Visibility = Visibility.Collapsed;
                         if (HighAlphaButton != null)
                             HighAlphaButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -512,6 +536,8 @@ namespace Quantra.Controls
                             HighBetaButton.Visibility = Visibility.Collapsed;
                         if (HighAlphaButton != null)
                             HighAlphaButton.Visibility = Visibility.Collapsed;
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Collapsed;
                         
                         // Show status but don't auto-load
                         if (ModeStatusPanel != null)
@@ -519,6 +545,48 @@ namespace Quantra.Controls
                             ModeStatusPanel.Visibility = Visibility.Visible;
                             if (ModeStatusText != null)
                                 ModeStatusText.Text = "Click 'Load Bearish Cup and Handle' to find stocks with bearish cup and handle patterns";
+                        }
+                        break;
+
+                    case SymbolSelectionMode.OhlcvCandles:
+                        // Hide the individual symbol search for OHLCV Candles mode
+                        if (SymbolSearchPanel != null)
+                            SymbolSearchPanel.Visibility = Visibility.Collapsed;
+                        
+                        // Show OHLCV Candles button, hide other buttons
+                        if (OhlcvCandlesButton != null)
+                            OhlcvCandlesButton.Visibility = Visibility.Visible;
+                        if (BearishCupAndHandleButton != null)
+                            BearishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (BullishCupAndHandleButton != null)
+                            BullishCupAndHandleButton.Visibility = Visibility.Collapsed;
+                        if (RsiOversoldButton != null)
+                            RsiOversoldButton.Visibility = Visibility.Collapsed;
+                        if (RsiOverboughtButton != null)
+                            RsiOverboughtButton.Visibility = Visibility.Collapsed;
+                        if (TopVolumeRsiButton != null)
+                            TopVolumeRsiButton.Visibility = Visibility.Collapsed;
+                        if (TopPEButton != null)
+                            TopPEButton.Visibility = Visibility.Collapsed;
+                        if (HighVolumeButton != null)
+                            HighVolumeButton.Visibility = Visibility.Collapsed;
+                        if (LowPEButton != null)
+                            LowPEButton.Visibility = Visibility.Collapsed;
+                        if (AllDatabaseButton != null)
+                            AllDatabaseButton.Visibility = Visibility.Collapsed;
+                        if (HighThetaButton != null)
+                            HighThetaButton.Visibility = Visibility.Collapsed;
+                        if (HighBetaButton != null)
+                            HighBetaButton.Visibility = Visibility.Collapsed;
+                        if (HighAlphaButton != null)
+                            HighAlphaButton.Visibility = Visibility.Collapsed;
+                        
+                        // Show status but don't auto-load
+                        if (ModeStatusPanel != null)
+                        {
+                            ModeStatusPanel.Visibility = Visibility.Visible;
+                            if (ModeStatusText != null)
+                                ModeStatusText.Text = "Click 'Load OHLCV Candles' to view intraday candlestick data using TIME_SERIES_INTRADAY API";
                         }
                         break;
                 }
@@ -1375,53 +1443,124 @@ namespace Quantra.Controls
         }
 
         /// <summary>
-        /// Handles the refresh button click for the selected symbol - fetches latest data from API
+        /// Handles the Load from Cache button click for the selected symbol - loads data from database cache
         /// </summary>
-        private async void RefreshSymbolDataButton_Click(object sender, RoutedEventArgs e)
+        private async void LoadFromCacheButton_Click(object sender, RoutedEventArgs e)
         {
             var selectedSymbol = _viewModel?.SelectedSymbol;
             if (string.IsNullOrEmpty(selectedSymbol))
             {
-                CustomModal.ShowWarning("Please select a stock symbol to refresh.", "No Symbol Selected", Window.GetWindow(this));
+                CustomModal.ShowWarning("Please select a stock symbol to load from cache.", "No Symbol Selected", Window.GetWindow(this));
                 return;
             }
 
-            // Disable the button during refresh
-            if (RefreshSymbolDataButton != null)
-                RefreshSymbolDataButton.IsEnabled = false;
+            // Disable the button during load
+            if (LoadFromCacheButton != null)
+                LoadFromCacheButton.IsEnabled = false;
 
-            // Create a new cancellation token source for the refresh operation
-            using var refreshCancellation = new System.Threading.CancellationTokenSource();
-            var refreshToken = refreshCancellation.Token;
+            // Create a new cancellation token source for the load operation
+            using var loadCancellation = new System.Threading.CancellationTokenSource();
+            var loadToken = loadCancellation.Token;
 
             try
             {
-                // Refresh the data for the currently selected symbol from API
-                // Note: RefreshSymbolDataFromAPI handles cursor state internally
-                await RefreshSymbolDataFromAPI(selectedSymbol, refreshToken);
+                Mouse.OverrideCursor = Cursors.Wait;
 
-                // Update the cache timestamp display
-                UpdateCacheTimestampDisplay(selectedSymbol);
+                // Load data from the database cache only (no API call)
+                var cachedStock = await _cacheService.GetCachedStockAsync(selectedSymbol);
+                
+                if (cachedStock != null)
+                {
+                    // Update the ViewModel with cached data
+                    _viewModel.SelectedStock = cachedStock;
+                    
+                    // Update or add to cached stocks collection
+                    var existing = _viewModel.CachedStocks.FirstOrDefault(s => s.Symbol == selectedSymbol);
+                    if (existing != null)
+                    {
+                        var index = _viewModel.CachedStocks.IndexOf(existing);
+                        _viewModel.CachedStocks[index] = cachedStock;
+                    }
+                    else
+                    {
+                        _viewModel.CachedStocks.Add(cachedStock);
+                    }
+                    
+                    // Update the cache timestamp display
+                    UpdateCacheTimestampDisplay(selectedSymbol);
 
-                // Update the price and RSI labels
-                await UpdatePriceAndRsiLabels(selectedSymbol);
+                    // Update the price and RSI labels
+                    await UpdatePriceAndRsiLabels(selectedSymbol);
 
-                // Reload indicator data asynchronously to avoid blocking UI
-                await LoadIndicatorDataAsync(selectedSymbol, refreshToken);
+                    // Reload indicator data asynchronously to avoid blocking UI
+                    await LoadIndicatorDataAsync(selectedSymbol, loadToken);
+                }
+                else
+                {
+                    CustomModal.ShowWarning($"No cached data found for {selectedSymbol}. Left-click a row in the grid to load data from the API.", "No Cache Data", Window.GetWindow(this));
+                }
             }
             catch (System.OperationCanceledException)
             {
-                CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
+                CustomModal.ShowWarning("Cache load was cancelled.", "Operation Cancelled", Window.GetWindow(this));
             }
             catch (Exception ex)
             {
-                CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
+                CustomModal.ShowError($"Error loading cached data: {ex.Message}", "Error", Window.GetWindow(this));
             }
             finally
             {
+                Mouse.OverrideCursor = null;
                 // Re-enable the button
-                if (RefreshSymbolDataButton != null)
-                    RefreshSymbolDataButton.IsEnabled = true;
+                if (LoadFromCacheButton != null)
+                    LoadFromCacheButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// OHLCV Candles button click event handler - loads intraday OHLCV candlestick data
+        /// </summary>
+        private async void OhlcvCandlesButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Disable button to prevent multiple clicks
+                if (OhlcvCandlesButton != null)
+                    OhlcvCandlesButton.IsEnabled = false;
+
+                // Show loading status
+                if (ModeStatusPanel != null && ModeStatusText != null)
+                {
+                    ModeStatusPanel.Visibility = Visibility.Visible;
+                    ModeStatusText.Text = "Loading OHLCV candle data using TIME_SERIES_INTRADAY API...";
+                }
+
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                // Load OHLCV candle data for stocks from cache
+                await LoadSymbolsForMode(SymbolSelectionMode.OhlcvCandles);
+
+                // Update status to show completion
+                if (ModeStatusText != null)
+                {
+                    var count = _viewModel?.CachedStocks?.Count ?? 0;
+                    ModeStatusText.Text = $"Loaded {count} stocks with OHLCV candle data";
+                }
+            }
+            catch (Exception ex)
+            {
+                CustomModal.ShowError($"Error loading OHLCV candle data: {ex.Message}", "Error", Window.GetWindow(this));
+                
+                // Show error status
+                if (ModeStatusText != null)
+                    ModeStatusText.Text = "Error loading OHLCV candle data";
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                // Always re-enable button
+                if (OhlcvCandlesButton != null)
+                    OhlcvCandlesButton.IsEnabled = true;
             }
         }
 
