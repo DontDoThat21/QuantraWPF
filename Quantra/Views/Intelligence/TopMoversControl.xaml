@@ -53,10 +53,11 @@
         <!-- Tab Control -->
         <TabControl Grid.Row="2" x:Name="MoversTabControl" 
                     Background="#2D2D42" BorderBrush="#3E3E56"
+                    Style="{StaticResource EnhancedTabControlStyle}"
                     Padding="0" Margin="0">
             
             <!-- Top Gainers Tab -->
-            <TabItem Header="Top Gainers" Style="{StaticResource TabItemStyle}">
+            <TabItem Header="Top Gainers" Style="{StaticResource TabItemStyle}" x:Name="GainersTab">
                 <DataGrid x:Name="GainersGrid" 
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
@@ -122,7 +123,7 @@
             </TabItem>
             
             <!-- Top Losers Tab -->
-            <TabItem Header="Top Losers" Style="{StaticResource TabItemStyle}">
+            <TabItem Header="Top Losers" Style="{StaticResource TabItemStyle}" x:Name="LosersTab">
                 <DataGrid x:Name="LosersGrid" 
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
@@ -188,7 +189,7 @@
             </TabItem>
             
             <!-- Most Active Tab -->
-            <TabItem Header="Most Active" Style="{StaticResource TabItemStyle}">
+            <TabItem Header="Most Active" Style="{StaticResource TabItemStyle}" x:Name="MostActiveTab">
                 <DataGrid x:Name="MostActiveGrid" 
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"

@@ -80,10 +80,36 @@
             </Grid>
         </Border>
         
-        <!-- Content Area with Tabs -->
-        <TabControl x:Name="EarningsTabControl" Grid.Row="3" Style="{StaticResource EnhancedTabControlStyle}">
-            <TabItem Header="Quarterly Earnings" Style="{StaticResource TabItemStyle}">
+        <!-- Content Area with Radio Buttons -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Radio Button Bar -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <RadioButton x:Name="QuarterlyRadioButton" Content="Quarterly Earnings" 
+                             IsChecked="True" Margin="0,0,20,0"
+                             Checked="ViewRadioButton_Checked"
+                             Style="{StaticResource {x:Type RadioButton}}"
+                             Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                <RadioButton x:Name="AnnualRadioButton" Content="Annual Earnings" 
+                             Margin="0,0,20,0"
+                             Checked="ViewRadioButton_Checked"
+                             Style="{StaticResource {x:Type RadioButton}}"
+                             Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                <RadioButton x:Name="TrendRadioButton" Content="EPS Trend" 
+                             Checked="ViewRadioButton_Checked"
+                             Style="{StaticResource {x:Type RadioButton}}"
+                             Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+            </StackPanel>
+            
+            <!-- Content Panels -->
+            <Grid Grid.Row="1">
+                <!-- Quarterly Earnings Panel -->
                 <DataGrid x:Name="QuarterlyEarningsGrid" 
+                          Visibility="Visible"
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
                           BorderThickness="0"
@@ -95,7 +121,7 @@
                           IsReadOnly="True"
                           ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Period" Binding="{Binding FiscalDateEnding}" Width="100">
+                        <DataGridTextColumn Header="Period" Binding="{Binding FiscalDateEnding}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#1E90FF"/>
@@ -103,14 +129,14 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Reported Date" Binding="{Binding ReportedDate}" Width="110">
+                        <DataGridTextColumn Header="Reported Date" Binding="{Binding ReportedDate}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Reported EPS" Binding="{Binding ReportedEPS, StringFormat=\{0:F2\}}" Width="110">
+                        <DataGridTextColumn Header="Reported EPS" Binding="{Binding ReportedEPS, StringFormat=\{0:F2\}}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
@@ -118,14 +144,14 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Estimated EPS" Binding="{Binding EstimatedEPS, StringFormat=\{0:F2\}}" Width="110">
+                        <DataGridTextColumn Header="Estimated EPS" Binding="{Binding EstimatedEPS, StringFormat=\{0:F2\}}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#99CCFF"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Surprise" Binding="{Binding Surprise, StringFormat=\{0:F2\}}" Width="90">
+                        <DataGridTextColumn Header="Surprise" Binding="{Binding Surprise, StringFormat=\{0:F2\}}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
@@ -139,7 +165,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Surprise %" Binding="{Binding SurprisePercentage, StringFormat=\{0:F2\}%}" Width="100">
+                        <DataGridTextColumn Header="Surprise %" Binding="{Binding SurprisePercentage, StringFormat=\{0:F2\}%}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
@@ -155,10 +181,10 @@
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </TabItem>
-            
-            <TabItem Header="Annual Earnings" Style="{StaticResource TabItemStyle}">
+                
+                <!-- Annual Earnings Panel -->
                 <DataGrid x:Name="AnnualEarningsGrid" 
+                          Visibility="Collapsed"
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
                           BorderThickness="0"
@@ -170,7 +196,7 @@
                           IsReadOnly="True"
                           ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Fiscal Year" Binding="{Binding FiscalDateEnding}" Width="120">
+                        <DataGridTextColumn Header="Fiscal Year" Binding="{Binding FiscalDateEnding}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="#1E90FF"/>
@@ -178,7 +204,7 @@
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Reported EPS" Binding="{Binding ReportedEPS, StringFormat=\$\{0:F2\}}" Width="140">
+                        <DataGridTextColumn Header="Reported EPS" Binding="{Binding ReportedEPS, StringFormat=\$\{0:F2\}}" Width="*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="White"/>
@@ -189,10 +215,11 @@
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </TabItem>
-            
-            <TabItem Header="EPS Trend" Style="{StaticResource TabItemStyle}">
-                <lvc:CartesianChart x:Name="EPSChart" Background="Transparent" Margin="10">
+                
+                <!-- EPS Trend Panel -->
+                <lvc:CartesianChart x:Name="EPSChart" 
+                                    Visibility="Collapsed"
+                                    Background="Transparent" Margin="10">
                     <lvc:CartesianChart.AxisX>
                         <lvc:Axis Title="Period" Foreground="White" FontSize="10">
                             <lvc:Axis.Separator>
@@ -208,8 +235,8 @@
                         </lvc:Axis>
                     </lvc:CartesianChart.AxisY>
                 </lvc:CartesianChart>
-            </TabItem>
-        </TabControl>
+            </Grid>
+        </Grid>
         
         <!-- Status Bar -->
         <TextBlock Grid.Row="4" x:Name="StatusText" Text="Enter a symbol to load earnings data." 
