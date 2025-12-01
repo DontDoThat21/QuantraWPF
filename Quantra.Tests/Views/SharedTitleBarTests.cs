@@ -54,15 +54,20 @@ namespace Quantra.Tests.Views
         [TestMethod]
         public void TestVixValueFormatting()
         {
-            // Test VIX value formatting
+            // Test VIX value formatting with 2 decimal places
             double vixValue = 23.456;
-            string formattedValue = $"VIX: {vixValue:F1} (Today)";
-            Assert.AreEqual("VIX: 23.5 (Today)", formattedValue);
+            string formattedValue = $"VIX: {vixValue:F2} (Today)";
+            Assert.AreEqual("VIX: 23.46 (Today)", formattedValue);
             
             // Test with different value
-            vixValue = 15.0;
-            formattedValue = $"VIX: {vixValue:F1} (Yesterday)";
-            Assert.AreEqual("VIX: 15.0 (Yesterday)", formattedValue);
+            vixValue = 17.23;
+            formattedValue = $"VIX: {vixValue:F2} (Yesterday)";
+            Assert.AreEqual("VIX: 17.23 (Yesterday)", formattedValue);
+            
+            // Test that we don't truncate
+            vixValue = 15.99;
+            formattedValue = $"VIX: {vixValue:F2} (Today)";
+            Assert.AreEqual("VIX: 15.99 (Today)", formattedValue);
         }
         
         [TestMethod]

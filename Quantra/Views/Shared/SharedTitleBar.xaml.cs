@@ -561,7 +561,7 @@ namespace Quantra
                             dateDisplay = updateDate.ToString("MM/dd");
                         }
                         
-                        VixDisplay = $"VIX: {cachedVixValue:F1} ({dateDisplay})";
+                        VixDisplay = $"VIX: {cachedVixValue:F2} ({dateDisplay})";
                         //DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set cached VIX value: {VixDisplay}");
                     }
                     else
@@ -577,7 +577,7 @@ namespace Quantra
                 //DatabaseMonolith.Log("Info", "RefreshVixDisplay: Fetching live VIX data");
                 double vixValue = await GetVixValue();
                 string timestamp = DateTime.Now.ToString("HH:mm");
-                VixDisplay = $"VIX: {vixValue:F1} ({timestamp})";
+                VixDisplay = $"VIX: {vixValue:F2} ({timestamp})";
                 //DatabaseMonolith.Log("Info", $"RefreshVixDisplay: Set live VIX value: {VixDisplay}");
             }
             catch (Exception ex)
