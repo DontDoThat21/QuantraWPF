@@ -1374,6 +1374,110 @@ namespace Quantra.Controls
             }
         }
 
+        /// <summary>
+        /// Handles the refresh button click for the selected symbol - fetches latest data from API
+        /// </summary>
+        private async void RefreshSymbolDataButton_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedSymbol = _viewModel?.SelectedSymbol;
+            if (string.IsNullOrEmpty(selectedSymbol))
+            {
+                CustomModal.ShowWarning("Please select a stock symbol to refresh.", "No Symbol Selected", Window.GetWindow(this));
+                return;
+            }
+
+            // Disable the button during refresh
+            if (RefreshSymbolDataButton != null)
+                RefreshSymbolDataButton.IsEnabled = false;
+
+            // Create a new cancellation token source for the refresh operation
+            using var refreshCancellation = new System.Threading.CancellationTokenSource();
+            var refreshToken = refreshCancellation.Token;
+
+            try
+            {
+                // Refresh the data for the currently selected symbol from API
+                // Note: RefreshSymbolDataFromAPI handles cursor state internally
+                await RefreshSymbolDataFromAPI(selectedSymbol, refreshToken);
+
+                // Update the cache timestamp display
+                UpdateCacheTimestampDisplay(selectedSymbol);
+
+                // Update the price and RSI labels
+                await UpdatePriceAndRsiLabels(selectedSymbol);
+
+                // Reload indicator data asynchronously to avoid blocking UI
+                await LoadIndicatorDataAsync(selectedSymbol, refreshToken);
+            }
+            catch (System.OperationCanceledException)
+            {
+                CustomModal.ShowWarning("Data refresh was cancelled.", "Operation Cancelled", Window.GetWindow(this));
+            }
+            catch (Exception ex)
+            {
+                CustomModal.ShowError($"Error refreshing data: {ex.Message}", "Error", Window.GetWindow(this));
+            }
+            finally
+            {
+                // Re-enable the button
+                if (RefreshSymbolDataButton != null)
+                    RefreshSymbolDataButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Updates the cache timestamp display for the selected symbol
+        /// </summary>
+        private void UpdateCacheTimestampDisplay(string symbol)
+        {
+            if (string.IsNullOrEmpty(symbol))
+            {
+                CacheTimestampText = "--";
+                CacheTimestampColor = System.Windows.Media.Brushes.White;
+                SelectedSymbolDisplay = "--";
+                OnPropertyChanged(nameof(CanRefreshSymbol));
+                return;
+            }
+
+            SelectedSymbolDisplay = symbol;
+
+            // Get cache timestamp from the selected stock
+            var selectedStock = _viewModel?.SelectedStock;
+            if (selectedStock?.CacheTime.HasValue == true)
+            {
+                var cacheTime = selectedStock.CacheTime.Value;
+                var age = DateTime.Now - cacheTime;
+                
+                // Format the timestamp
+                CacheTimestampText = cacheTime.ToString("MM/dd/yyyy HH:mm");
+
+                // Color based on age: Green < 1 hour, Yellow < 24 hours, Orange < 7 days, Red >= 7 days
+                if (age.TotalHours < 1)
+                {
+                    CacheTimestampColor = System.Windows.Media.Brushes.LightGreen;
+                }
+                else if (age.TotalHours < 24)
+                {
+                    CacheTimestampColor = System.Windows.Media.Brushes.Yellow;
+                }
+                else if (age.TotalDays < 7)
+                {
+                    CacheTimestampColor = System.Windows.Media.Brushes.Orange;
+                }
+                else
+                {
+                    CacheTimestampColor = System.Windows.Media.Brushes.OrangeRed;
+                }
+            }
+            else
+            {
+                CacheTimestampText = "Not cached";
+                CacheTimestampColor = System.Windows.Media.Brushes.Gray;
+            }
+
+            OnPropertyChanged(nameof(CanRefreshSymbol));
+        }
+
         // Sentiment Analysis Event Handler
         private async void RunSentimentAnalysisButton_Click(object sender, RoutedEventArgs e)
         {

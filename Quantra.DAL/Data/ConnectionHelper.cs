@@ -112,7 +112,7 @@ namespace Quantra.DAL.Data
                     // Connect to master database to create the database
                     var masterConnectionString =
                "Data Source=(localdb)\\MSSQLLocalDB;" +
-                          "Initial Catalog=master;" +
+                          "Initial Catalog=QuantraRelational;" +
                 "Integrated Security=True;" +
                             "Encrypt=True;" +
                                 "TrustServerCertificate=False";

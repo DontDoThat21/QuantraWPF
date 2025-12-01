@@ -148,6 +148,55 @@ namespace Quantra.Controls
             }
         }
 
+        // Selected symbol display for the indicators panel
+        private string _selectedSymbolDisplay = "--";
+        public string SelectedSymbolDisplay
+        {
+            get => _selectedSymbolDisplay;
+            set
+            {
+                if (_selectedSymbolDisplay != value)
+                {
+                    _selectedSymbolDisplay = value;
+                    OnPropertyChanged(nameof(SelectedSymbolDisplay));
+                    OnPropertyChanged(nameof(CanRefreshSymbol));
+                }
+            }
+        }
+
+        // Cache timestamp display text for the UI
+        private string _cacheTimestampText = "--";
+        public string CacheTimestampText
+        {
+            get => _cacheTimestampText;
+            set
+            {
+                if (_cacheTimestampText != value)
+                {
+                    _cacheTimestampText = value;
+                    OnPropertyChanged(nameof(CacheTimestampText));
+                }
+            }
+        }
+
+        // Cache timestamp color based on freshness
+        private System.Windows.Media.Brush _cacheTimestampColor = System.Windows.Media.Brushes.White;
+        public System.Windows.Media.Brush CacheTimestampColor
+        {
+            get => _cacheTimestampColor;
+            set
+            {
+                if (_cacheTimestampColor != value)
+                {
+                    _cacheTimestampColor = value;
+                    OnPropertyChanged(nameof(CacheTimestampColor));
+                }
+            }
+        }
+
+        // Whether the refresh button should be enabled
+        public bool CanRefreshSymbol => !string.IsNullOrEmpty(_selectedSymbolDisplay) && _selectedSymbolDisplay != "--";
+
         // Individual indicator properties for consistent UI updates
         private string _rsiValue = "--";
         public string RsiValue
@@ -959,52 +1008,43 @@ namespace Quantra.Controls
                 // Check for cancellation before starting
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // First, try to get cached data (fast operation)
+                // First, try to get from in-memory ViewModel cache (fast operation)
                 var cachedStock = _viewModel.CachedStocks?.FirstOrDefault(s => s.Symbol == symbol);
                 if (cachedStock != null)
                 {
                     // Use cached data and update the ViewModel's selected stock
                     _viewModel.SelectedStock = cachedStock;
                     
-                    // Update the LastUpdated timestamp to reflect when it was selected
-                    cachedStock.LastUpdated = DateTime.Now;
+                    // Update the LastAccessed timestamp to reflect when it was selected
+                    cachedStock.LastAccessed = DateTime.Now;
                     
                     // Notify that cached symbol data was accessed
                     SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
                     
-                    //DatabaseMonolith.Log("Info", $"Using cached data for symbol: {symbol}");
+                    // Update cache timestamp display on UI thread
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        UpdateCacheTimestampDisplay(symbol);
+                    });
+                    
                     return;
                 }
 
-                // Check for cancellation before API call
+                // Check for cancellation before database cache lookup
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // If no cached data available, get from API in background thread to avoid UI blocking
-                var quoteData = await Task.Run(async () =>
+                // ONLY load from the compressed GZip database cache - NO API CALLS on symbol selection
+                // This ensures the user only sees cached data until they explicitly click Refresh
+                var databaseCachedStock = await Task.Run(async () =>
                 {
-                    try
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        return await _alphaVantageService.GetQuoteDataAsync(symbol).ConfigureAwait(false);
-                    }
-                    catch (System.OperationCanceledException)
-                    {
-                        throw; // Re-throw cancellation
-                    }
-                    catch (Exception apiEx)
-                    {
-                        // If API fails, try to use any available cached data from the database
-                        //DatabaseMonolith.Log("Warning", $"API call failed for {symbol}, attempting to use database cache", apiEx.ToString());
-                        
-                        cancellationToken.ThrowIfCancellationRequested();
-                        return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
-                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return await _cacheService.GetCachedStockAsync(symbol).ConfigureAwait(false);
                 }, cancellationToken).ConfigureAwait(false);
                 
                 // Check for cancellation before UI updates
                 cancellationToken.ThrowIfCancellationRequested();
                 
-                if (quoteData != null)
+                if (databaseCachedStock != null)
                 {
                     // Update UI on UI thread using batch updater for better performance
                     _uiBatchUpdater.QueueUpdate($"symbol_data_{symbol}", () =>
@@ -1020,51 +1060,36 @@ namespace Quantra.Controls
                         }
                         
                         // Update the ViewModel's selected stock
-                        _viewModel.SelectedStock = quoteData;
+                        _viewModel.SelectedStock = databaseCachedStock;
                         
-                        // Add to the cached stocks collection
-                        _viewModel.CachedStocks.Add(quoteData);
+                        // Add to the ViewModel's cached stocks collection
+                        _viewModel.CachedStocks.Add(databaseCachedStock);
+                        
+                        // Update cache timestamp display
+                        UpdateCacheTimestampDisplay(symbol);
                     });
                     
-                    // Cache the complete quote data in background
-                    lock (_backgroundTasksLock)
-                    {
-                        _backgroundTasks.Add(Task.Run(async () =>
-                        {
-                            try
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-                                await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
-                            }
-                            catch (System.OperationCanceledException)
-                            {
-                                // Caching was cancelled - this is fine
-                            }
-                            catch (Exception cacheEx)
-                            {
-                                //DatabaseMonolith.Log("Warning", $"Failed to cache data for {symbol}", cacheEx.ToString());
-                            }
-                        }, cancellationToken));
-                    }
-                    
-                    // Notify other components that symbol data has been retrieved
-                    SymbolUpdateService.NotifySymbolDataRetrieved(symbol, "StockExplorer");
-                    
-                    //DatabaseMonolith.Log("Info", $"Successfully loaded fresh data for symbol: {symbol}");
+                    // Notify other components that cached symbol data was accessed
+                    SymbolUpdateService.NotifyCachedSymbolDataAccessed(symbol, "StockExplorer");
                 }
                 else
                 {
-                    //DatabaseMonolith.Log("Warning", $"No data available for symbol: {symbol}");
+                    // No cached data available - update UI to reflect this
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        SelectedSymbolDisplay = symbol;
+                        CacheTimestampText = "Not cached - Click Refresh to load";
+                        CacheTimestampColor = System.Windows.Media.Brushes.Gray;
+                        OnPropertyChanged(nameof(CanRefreshSymbol));
+                    });
                 }
             }
             catch (System.OperationCanceledException)
             {
-                //DatabaseMonolith.Log("Info", $"Symbol data loading for {symbol} was cancelled");
                 throw; // Re-throw to handle at higher level
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error getting symbol data for {symbol}", ex.ToString());
                 throw;
             }
             finally

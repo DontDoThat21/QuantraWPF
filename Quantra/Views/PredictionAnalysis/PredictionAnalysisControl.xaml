@@ -303,97 +303,162 @@
                     Background="#3E3E56" BorderBrush="Cyan" BorderThickness="1" 
                     CornerRadius="5" Margin="10,10,10,10" Padding="10">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- First Row: Model Type, Architecture, and Train Button -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Section Title -->
-                    <TextBlock Grid.Column="0" 
-                               Text="🎓 Model Training" 
-                               FontSize="14" FontWeight="Bold" 
-                               Foreground="Cyan" 
-                               VerticalAlignment="Center" 
-                               Margin="0,0,20,0"/>
+                        <!-- Section Title -->
+                        <TextBlock Grid.Column="0" 
+                                   Text="🎓 Model Training" 
+                                   FontSize="14" FontWeight="Bold" 
+                                   Foreground="Cyan" 
+                                   VerticalAlignment="Center" 
+                                   Margin="0,0,20,0"/>
 
-                    <!-- Model Type Selection -->
-                    <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,0,10,0">
-                        <TextBlock Text="Model Type:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
-                        <ComboBox x:Name="ModelTypeComboBox" 
-                                  Style="{StaticResource EnhancedComboBoxStyle}"
-                                  ToolTip="Select the machine learning model type to train">
-                            <ComboBoxItem Content="Auto (Best Available)" IsSelected="True" Tag="auto"/>
-                            <ComboBoxItem Content="PyTorch LSTM/GRU" Tag="pytorch"/>
-                            <ComboBoxItem Content="TensorFlow LSTM/GRU" Tag="tensorflow"/>
-                            <ComboBoxItem Content="Random Forest" Tag="random_forest"/>
-                        </ComboBox>
-                    </StackPanel>
+                        <!-- Model Type Selection -->
+                        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,0,10,0">
+                            <TextBlock Text="Model Type:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                            <ComboBox x:Name="ModelTypeComboBox" 
+                                      Style="{StaticResource EnhancedComboBoxStyle}"
+                                      ToolTip="Select the machine learning model type to train">
+                                <ComboBoxItem Content="Auto (Best Available)" IsSelected="True" Tag="auto"/>
+                                <ComboBoxItem Content="PyTorch LSTM/GRU" Tag="pytorch"/>
+                                <ComboBoxItem Content="TensorFlow LSTM/GRU" Tag="tensorflow"/>
+                                <ComboBoxItem Content="Random Forest" Tag="random_forest"/>
+                            </ComboBox>
+                        </StackPanel>
 
-                    <!-- Architecture Type Selection -->
-                    <StackPanel Grid.Column="2" Orientation="Vertical" Margin="10,0">
-                        <TextBlock Text="Architecture:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
-                        <ComboBox x:Name="ArchitectureComboBox" 
-                                  Style="{StaticResource EnhancedComboBoxStyle}"
-                                  ToolTip="Select neural network architecture (for PyTorch/TensorFlow)">
-                            <ComboBoxItem Content="LSTM" IsSelected="True" Tag="lstm"/>
-                            <ComboBoxItem Content="GRU" Tag="gru"/>
-                            <ComboBoxItem Content="Transformer" Tag="transformer"/>
-                        </ComboBox>
-                    </StackPanel>
+                        <!-- Architecture Type Selection -->
+                        <StackPanel Grid.Column="2" Orientation="Vertical" Margin="10,0">
+                            <TextBlock Text="Architecture:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                            <ComboBox x:Name="ArchitectureComboBox" 
+                                      Style="{StaticResource EnhancedComboBoxStyle}"
+                                      ToolTip="Select neural network architecture (for PyTorch/TensorFlow)">
+                                <ComboBoxItem Content="LSTM" IsSelected="True" Tag="lstm"/>
+                                <ComboBoxItem Content="GRU" Tag="gru"/>
+                                <ComboBoxItem Content="Transformer" Tag="transformer"/>
+                            </ComboBox>
+                        </StackPanel>
 
-                    <!-- Info Text -->
-                    <StackPanel Grid.Column="3" Orientation="Vertical" Margin="10,0,10,0" VerticalAlignment="Center">
-                        <TextBlock Text="Train ML model using all cached historical data" 
-                                   Foreground="#AAAAAA" FontSize="10" TextWrapping="Wrap"/>
-                        <TextBlock Text="(~12,000 symbols from database)" 
-                                   Foreground="#888888" FontSize="9" FontStyle="Italic"/>
-                    </StackPanel>
+                        <!-- Info Text -->
+                        <StackPanel Grid.Column="3" Orientation="Vertical" Margin="10,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="Train ML model using cached historical data" 
+                                       Foreground="#AAAAAA" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="TrainingSymbolsCountTextBlock"
+                                       Text="" 
+                                       Foreground="#888888" FontSize="9" FontStyle="Italic"
+                                       Visibility="Collapsed"/>
+                        </StackPanel>
 
-                    <!-- Train Model Button -->
-                    <Button Grid.Column="4" 
-                            x:Name="TrainModelButton"
-                            Content="🚀 Train Model from Database" 
-                            Width="200" Height="50" 
-                            Click="TrainModelButton_Click"
-                            Background="#2D6A4C" 
-                            Foreground="White" 
-                            BorderBrush="Cyan"
-                            FontSize="13" FontWeight="Bold"
-                            ToolTip="Train the ML model using all 12,000+ cached stock symbols from the database. This may take several minutes.">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" 
-                                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                                    BorderThickness="2" 
-                                                    CornerRadius="5" 
-                                                    Padding="10">
-                                                <ContentPresenter HorizontalAlignment="Center" 
-                                                                  VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#3E8A5C"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#1E4A3C"/>
-                                                </Trigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter Property="Background" Value="#555555"/>
-                                                    <Setter Property="Foreground" Value="#888888"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                        <!-- Train Model Button -->
+                        <Button Grid.Column="4" 
+                                x:Name="TrainModelButton"
+                                Content="🚀 Train Model" 
+                                Width="150" Height="50" 
+                                Click="TrainModelButton_Click"
+                                Background="#2D6A4C" 
+                                Foreground="White" 
+                                BorderBrush="Cyan"
+                                FontSize="13" FontWeight="Bold"
+                                ToolTip="Train the ML model using selected or all cached symbols from the database">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}" 
+                                                        BorderThickness="2" 
+                                                        CornerRadius="5" 
+                                                        Padding="10">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#3E8A5C"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter Property="Background" Value="#1E4A3C"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Background" Value="#555555"/>
+                                                        <Setter Property="Foreground" Value="#888888"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                    
+                    <!-- Second Row: Symbol Selection Controls -->
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Max Symbols Input -->
+                        <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,15,0">
+                            <TextBlock Text="Max Symbols:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                            <TextBox x:Name="MaxSymbolsTextBox"
+                                     Width="100"
+                                     Style="{StaticResource EnhancedTextBoxStyle}"
+                                     TextChanged="MaxSymbolsTextBox_TextChanged"
+                                     ToolTip="Limit the number of symbols to train on (leave blank for all)"/>
+                        </StackPanel>
+
+                        <!-- Symbol Selection Button -->
+                        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,0,10,0">
+                            <TextBlock Text="Select Symbols:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                            <Button x:Name="SelectTrainingSymbolsButton"
+                                    Content="📋 Choose Symbols"
+                                    Click="SelectTrainingSymbolsButton_Click"
+                                    Style="{StaticResource EnhancedButtonStyle}"
+                                    Background="#3A6EA5"
+                                    Foreground="White"
+                                    Padding="10,5"
+                                    ToolTip="Select specific symbols to train on using Stock Configuration Manager"/>
+                        </StackPanel>
+
+                        <!-- Clear Selection Button -->
+                        <Button Grid.Column="3"
+                                x:Name="ClearTrainingSymbolsButton"
+                                Content="✖ Clear"
+                                Click="ClearTrainingSymbolsButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                Background="#D64545"
+                                Foreground="White"
+                                Width="80"
+                                Margin="0,17,10,0"
+                                ToolTip="Clear selected symbols and train on all"/>
+
+                        <!-- Help Text -->
+                        <TextBlock Grid.Column="4"
+                                   Text="Choose symbols from saved configurations or limit the count"
+                                   Foreground="#AAAAAA"
+                                   FontSize="10"
+                                   VerticalAlignment="Center"
+                                   Margin="10,17,0,0"
+                                   TextWrapping="Wrap"/>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

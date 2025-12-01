@@ -764,15 +764,35 @@ MinWidth="900" MinHeight="700">
                 </lvc:CartesianChart.AxisY>
             </lvc:CartesianChart>
 
-            <!-- Symbol Label for Indicators -->
+            <!-- Symbol Label and Cache Timestamp with Refresh Button -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,2" VerticalAlignment="Bottom">
                 <TextBlock Text="Symbol:" 
                            Style="{StaticResource EnhancedTextBlockStyle}" 
                            FontWeight="Bold"/>
-                <TextBlock x:Name="UpdatedTimestampLabel" 
-                           Text="{Binding UpdatedTimestampText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                <TextBlock x:Name="SymbolDisplayLabel" 
+                           Text="{Binding SelectedSymbolDisplay, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                            Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                           FontWeight="Bold"
                            Margin="10,0,0,0"/>
+                <TextBlock Text="Cached:" 
+                           Style="{StaticResource EnhancedTextBlockStyle}" 
+                           Margin="20,0,0,0"/>
+                <TextBlock x:Name="CacheTimestampLabel" 
+                           Text="{Binding CacheTimestampText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                           Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                           Foreground="{Binding CacheTimestampColor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                           ToolTip="Date/time when this symbol's data was last cached"
+                           Margin="5,0,0,0"/>
+                <Button x:Name="RefreshSymbolDataButton"
+                        Content="⟳ Refresh"
+                        Margin="10,0,0,0"
+                        Padding="8,2"
+                        Height="24"
+                        MinWidth="70"
+                        Click="RefreshSymbolDataButton_Click"
+                        Style="{StaticResource EnhancedButtonStyle}"
+                        ToolTip="Fetch latest data from API for this symbol"
+                        IsEnabled="{Binding CanRefreshSymbol, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             </StackPanel>
 
             <!-- Static Indicators List -->

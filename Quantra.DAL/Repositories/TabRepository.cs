@@ -1,4 +1,3 @@
-using Dapper;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -15,7 +14,7 @@ namespace Quantra.Repositories
             _connection = connection;
         }
 
-        public List<(string TabName, int TabOrder)> GetTabs()
+        /*public List<(string TabName, int TabOrder)> GetTabs()
         {
             _connection.Open();
             var tabs = _connection.Query<(string TabName, int TabOrder)>(
@@ -58,6 +57,6 @@ namespace Quantra.Repositories
                 SET Row = @Row, Column = @Column, RowSpan = @RowSpan, ColumnSpan = @ColumnSpan 
                 WHERE TabName = @TabName AND ControlIndex = @ControlIndex";
             _connection.Execute(query, new { TabName = tabName, ControlIndex = controlIndex, Row = row, Column = column, RowSpan = rowSpan, ColumnSpan = columnSpan });
-        }
+        }*/
     }
 }
