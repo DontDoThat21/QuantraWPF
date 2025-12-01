@@ -108,6 +108,16 @@ namespace Quantra.Views.Intelligence
             }
         }
 
+        private async void TopicComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Only auto-load if we have the service initialized
+            // Note: This fires on initial selection too, which is acceptable behavior
+            if (_alphaVantageService != null)
+            {
+                await LoadNewsSentiment();
+            }
+        }
+
         private async System.Threading.Tasks.Task LoadNewsSentiment()
         {
             if (_alphaVantageService == null)
@@ -125,14 +135,10 @@ namespace Quantra.Views.Intelligence
                 var ticker = TickerTextBox.Text?.Trim().ToUpper();
                 string topic = null;
 
-                // Get selected topic
+                // Get selected topic from Tag property (contains AlphaVantage API topic value)
                 if (TopicComboBox.SelectedItem is ComboBoxItem selectedTopic)
                 {
-                    var topicText = selectedTopic.Content?.ToString();
-                    if (topicText != "All Topics")
-                    {
-                        topic = topicText?.ToLowerInvariant();
-                    }
+                    topic = selectedTopic.Tag as string;
                 }
 
                 var response = await _alphaVantageService.GetNewsSentimentAsync(
@@ -141,20 +147,28 @@ namespace Quantra.Views.Intelligence
                     limit: 50
                 );
 
+                // Build search criteria description for status message
+                var searchCriteria = new List<string>();
+                if (!string.IsNullOrEmpty(ticker))
+                    searchCriteria.Add($"ticker(s): {ticker}");
+                if (!string.IsNullOrEmpty(topic))
+                    searchCriteria.Add($"topic: {topic}");
+                var criteriaText = searchCriteria.Count > 0 ? string.Join(", ", searchCriteria) : "all news";
+
                 if (response != null && response.Feed.Count > 0)
                 {
                     _newsItems = response.Feed;
                     NewsListView.ItemsSource = _newsItems;
                     UpdateSummary();
                     SummaryPanel.Visibility = Visibility.Visible;
-                    StatusText.Text = $"Last updated: {DateTime.Now:g} | {_newsItems.Count} articles loaded";
+                    StatusText.Text = $"Last updated: {DateTime.Now:g} | {_newsItems.Count} articles loaded for {criteriaText}";
                     _loggingService?.Log("Info", $"Loaded {_newsItems.Count} news sentiment items");
                 }
                 else
                 {
                     NewsListView.ItemsSource = null;
                     SummaryPanel.Visibility = Visibility.Collapsed;
-                    StatusText.Text = "No news articles found for the specified criteria.";
+                    StatusText.Text = $"No news articles found for {criteriaText}.";
                 }
             }
             catch (Exception ex)

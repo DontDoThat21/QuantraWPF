@@ -44,22 +44,31 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <TextBox x:Name="TickerTextBox" Width="100" Height="30" 
                          Margin="0,0,10,0" VerticalContentAlignment="Center"
-                         materialDesign:HintAssist.Hint="Ticker"
+                         materialDesign:HintAssist.Hint="Ticker(s)"
                          Style="{StaticResource EnhancedTextBoxStyle}"
-                         KeyDown="TickerTextBox_KeyDown"/>
-                <ComboBox x:Name="TopicComboBox" Width="120" Height="30" 
+                         KeyDown="TickerTextBox_KeyDown"
+                         ToolTip="Enter one or more stock symbols separated by commas (e.g., AAPL,MSFT). Leave empty to search by topic only."/>
+                <ComboBox x:Name="TopicComboBox" Width="160" Height="30" 
                           Margin="0,0,10,0"
-                          Style="{StaticResource EnhancedComboBoxStyle}">
-                    <ComboBoxItem Content="All Topics" IsSelected="True"/>
-                    <ComboBoxItem Content="Technology"/>
-                    <ComboBoxItem Content="Finance"/>
-                    <ComboBoxItem Content="Manufacturing"/>
-                    <ComboBoxItem Content="Energy"/>
-                    <ComboBoxItem Content="Healthcare"/>
-                    <ComboBoxItem Content="Economy"/>
-                    <ComboBoxItem Content="Earnings"/>
-                    <ComboBoxItem Content="IPO"/>
-                    <ComboBoxItem Content="Mergers"/>
+                          Style="{StaticResource EnhancedComboBoxStyle}"
+                          SelectionChanged="TopicComboBox_SelectionChanged"
+                          ToolTip="Select a topic to filter news articles. Clear ticker to search by topic only.">
+                    <ComboBoxItem Content="All Topics" IsSelected="True" Tag="{x:Null}"/>
+                    <ComboBoxItem Content="Blockchain" Tag="blockchain"/>
+                    <ComboBoxItem Content="Earnings" Tag="earnings"/>
+                    <ComboBoxItem Content="IPO" Tag="ipo"/>
+                    <ComboBoxItem Content="Mergers &amp; Acquisitions" Tag="mergers_and_acquisitions"/>
+                    <ComboBoxItem Content="Financial Markets" Tag="financial_markets"/>
+                    <ComboBoxItem Content="Economy - Fiscal" Tag="economy_fiscal"/>
+                    <ComboBoxItem Content="Economy - Monetary" Tag="economy_monetary"/>
+                    <ComboBoxItem Content="Economy - Macro" Tag="economy_macro"/>
+                    <ComboBoxItem Content="Energy &amp; Transportation" Tag="energy_transportation"/>
+                    <ComboBoxItem Content="Finance" Tag="finance"/>
+                    <ComboBoxItem Content="Life Sciences" Tag="life_sciences"/>
+                    <ComboBoxItem Content="Manufacturing" Tag="manufacturing"/>
+                    <ComboBoxItem Content="Real Estate" Tag="real_estate"/>
+                    <ComboBoxItem Content="Retail &amp; Wholesale" Tag="retail_wholesale"/>
+                    <ComboBoxItem Content="Technology" Tag="technology"/>
                 </ComboBox>
                 <Button x:Name="LoadButton" Content="Load" Width="80" Height="30" 
                         Click="LoadButton_Click"
@@ -198,7 +207,7 @@
         </ListView>
         
         <!-- Status Bar -->
-        <TextBlock Grid.Row="4" x:Name="StatusText" Text="Enter a ticker or select a topic to load news sentiment." 
+        <TextBlock Grid.Row="4" x:Name="StatusText" Text="Enter ticker(s) and/or select a topic to load news sentiment." 
                    Foreground="#AAAAAA" Margin="0,10,0,0"/>
     </Grid>
 </UserControl>
