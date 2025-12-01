@@ -12,7 +12,7 @@ using Quantra.ViewModels.Base;
 namespace Quantra.ViewModels
 {
     /// <summary>
-    /// ViewModel for the Login Window
+    /// ViewModel for the Login Window with registration support
     /// </summary>
     public class LoginWindowViewModel : ViewModelBase
     {
@@ -20,15 +20,20 @@ namespace Quantra.ViewModels
         private readonly HistoricalDataService _historicalDataService;
         private readonly AlphaVantageService _alphaVantageService;
         private readonly TechnicalIndicatorService _technicalIndicatorService;
+        private readonly AuthenticationService _authenticationService;
         private Dictionary<string, (string Username, string Password, string Pin)> _rememberedAccounts;
 
         private string _username;
         private string _password;
+        private string _confirmPassword;
+        private string _email;
         private string _pin;
         private bool _rememberMe;
         private string _selectedAccount;
         private bool _isPinVisible;
         private bool _isLoggingIn;
+        private bool _isRegistrationMode;
+        private string _statusMessage;
 
         /// <summary>
         /// Constructor with dependency injection
@@ -37,12 +42,14 @@ namespace Quantra.ViewModels
             UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,
-            TechnicalIndicatorService technicalIndicatorService)
+            TechnicalIndicatorService technicalIndicatorService,
+            AuthenticationService authenticationService)
         {
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
             _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
             _technicalIndicatorService = technicalIndicatorService ?? throw new ArgumentNullException(nameof(technicalIndicatorService));
+            _authenticationService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
 
             _rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
             RememberedAccountsList = new ObservableCollection<string>();
@@ -69,6 +76,24 @@ namespace Quantra.ViewModels
         {
             get => _password;
             set => SetProperty(ref _password, value);
+        }
+
+        /// <summary>
+        /// Confirm password for registration
+        /// </summary>
+        public string ConfirmPassword
+        {
+            get => _confirmPassword;
+            set => SetProperty(ref _confirmPassword, value);
+        }
+
+        /// <summary>
+        /// Email for registration (optional)
+        /// </summary>
+        public string Email
+        {
+            get => _email;
+            set => SetProperty(ref _email, value);
         }
 
         /// <summary>
@@ -127,11 +152,43 @@ namespace Quantra.ViewModels
             set => SetProperty(ref _isLoggingIn, value);
         }
 
+        /// <summary>
+        /// Whether the form is in registration mode
+        /// </summary>
+        public bool IsRegistrationMode
+        {
+            get => _isRegistrationMode;
+            set
+            {
+                if (SetProperty(ref _isRegistrationMode, value))
+                {
+                    OnPropertyChanged(nameof(IsLoginMode));
+                    StatusMessage = string.Empty;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the form is in login mode (inverse of registration mode)
+        /// </summary>
+        public bool IsLoginMode => !IsRegistrationMode;
+
+        /// <summary>
+        /// Status message to display to user
+        /// </summary>
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
         #endregion
 
         #region Commands
 
         public ICommand LoginCommand { get; private set; }
+        public ICommand RegisterCommand { get; private set; }
+        public ICommand ToggleRegistrationModeCommand { get; private set; }
         public ICommand OpenSettingsCommand { get; private set; }
 
         #endregion
@@ -149,6 +206,16 @@ namespace Quantra.ViewModels
         public event EventHandler<string> LoginFailed;
 
         /// <summary>
+        /// Event fired when registration succeeds
+        /// </summary>
+        public event EventHandler<string> RegistrationSuccessful;
+
+        /// <summary>
+        /// Event fired when registration fails
+        /// </summary>
+        public event EventHandler<string> RegistrationFailed;
+
+        /// <summary>
         /// Event fired when settings should be opened
         /// </summary>
         public event EventHandler SettingsRequested;
@@ -160,6 +227,8 @@ namespace Quantra.ViewModels
         private void InitializeCommands()
         {
             LoginCommand = new RelayCommand(async param => await ExecuteLoginAsync(), CanExecuteLogin);
+            RegisterCommand = new RelayCommand(async param => await ExecuteRegisterAsync(), CanExecuteRegister);
+            ToggleRegistrationModeCommand = new RelayCommand(ExecuteToggleRegistrationMode);
             OpenSettingsCommand = new RelayCommand(ExecuteOpenSettings);
         }
 
@@ -199,7 +268,12 @@ namespace Quantra.ViewModels
 
         private bool CanExecuteLogin(object parameter)
         {
-            return !IsLoggingIn && (!string.IsNullOrWhiteSpace(Username) || !string.IsNullOrWhiteSpace(Pin));
+            return !IsLoggingIn && !IsRegistrationMode && (!string.IsNullOrWhiteSpace(Username) || !string.IsNullOrWhiteSpace(Pin));
+        }
+
+        private bool CanExecuteRegister(object parameter)
+        {
+            return !IsLoggingIn && IsRegistrationMode && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password);
         }
 
         private async Task ExecuteLoginAsync()
@@ -207,28 +281,13 @@ namespace Quantra.ViewModels
             if (IsLoggingIn) return;
 
             IsLoggingIn = true;
+            StatusMessage = string.Empty;
             try
             {
-                var tradingBot = new WebullTradingBot(
-                    _userSettingsService,
-                    _historicalDataService,
-                    _alphaVantageService,
-                    _technicalIndicatorService);
-
-                bool isAuthenticated = false;
-
-                // Authenticate with PIN if available and remembered
-                if (!string.IsNullOrEmpty(Pin) && _rememberedAccounts.Values.Any(a => a.Pin == Pin))
-                {
-                    var account = _rememberedAccounts.Values.First(a => a.Pin == Pin);
-                    isAuthenticated = await tradingBot.Authenticate(account.Username, account.Password);
-                }
-                else
-                {
-                    isAuthenticated = await tradingBot.Authenticate(Username, Password);
-                }
-
-                if (isAuthenticated)
+                // First try to authenticate with the AuthenticationService (registered users)
+                var authResult = await _authenticationService.AuthenticateAsync(Username, Password);
+                
+                if (authResult.Success)
                 {
                     // Save credentials if remember me is checked
                     if (RememberMe)
@@ -246,22 +305,126 @@ namespace Quantra.ViewModels
                         HistoricalDataService = _historicalDataService,
                         AlphaVantageService = _alphaVantageService,
                         TechnicalIndicatorService = _technicalIndicatorService,
-                        SavedWindowState = savedWindowState
+                        SavedWindowState = savedWindowState,
+                        UserId = authResult.UserId
                     });
                 }
                 else
                 {
-                    LoginFailed?.Invoke(this, "Authentication unsuccessful.");
+                    // Fall back to WebullTradingBot authentication for backward compatibility
+                    var tradingBot = new WebullTradingBot(
+                        _userSettingsService,
+                        _historicalDataService,
+                        _alphaVantageService,
+                        _technicalIndicatorService);
+
+                    bool isAuthenticated = false;
+
+                    // Authenticate with PIN if available and remembered
+                    if (!string.IsNullOrEmpty(Pin) && _rememberedAccounts.Values.Any(a => a.Pin == Pin))
+                    {
+                        var account = _rememberedAccounts.Values.First(a => a.Pin == Pin);
+                        isAuthenticated = await tradingBot.Authenticate(account.Username, account.Password);
+                    }
+                    else
+                    {
+                        isAuthenticated = await tradingBot.Authenticate(Username, Password);
+                    }
+
+                    if (isAuthenticated)
+                    {
+                        // Clear user context for legacy authentication (no user-specific settings)
+                        AuthenticationService.SetCurrentUserId(null);
+
+                        // Save credentials if remember me is checked
+                        if (RememberMe)
+                        {
+                            DatabaseMonolith.RememberAccount(Username, Password, Pin);
+                        }
+
+                        // Get saved window state
+                        var savedWindowState = _userSettingsService.GetSavedWindowState();
+
+                        // Fire success event with context needed to open MainWindow
+                        LoginSuccessful?.Invoke(this, new LoginSuccessEventArgs
+                        {
+                            UserSettingsService = _userSettingsService,
+                            HistoricalDataService = _historicalDataService,
+                            AlphaVantageService = _alphaVantageService,
+                            TechnicalIndicatorService = _technicalIndicatorService,
+                            SavedWindowState = savedWindowState
+                        });
+                    }
+                    else
+                    {
+                        StatusMessage = "Invalid username or password.";
+                        LoginFailed?.Invoke(this, "Authentication unsuccessful.");
+                    }
                 }
             }
             catch (Exception ex)
             {
+                StatusMessage = $"Login error: {ex.Message}";
                 LoginFailed?.Invoke(this, $"Login error: {ex.Message}");
             }
             finally
             {
                 IsLoggingIn = false;
             }
+        }
+
+        private async Task ExecuteRegisterAsync()
+        {
+            if (IsLoggingIn) return;
+
+            // Validate passwords match
+            if (Password != ConfirmPassword)
+            {
+                StatusMessage = "Passwords do not match.";
+                RegistrationFailed?.Invoke(this, "Passwords do not match.");
+                return;
+            }
+
+            IsLoggingIn = true;
+            StatusMessage = string.Empty;
+            try
+            {
+                var result = await _authenticationService.RegisterUserAsync(Username, Password, Email);
+                
+                if (result.Success)
+                {
+                    StatusMessage = "Registration successful! Please login.";
+                    RegistrationSuccessful?.Invoke(this, result.Message);
+                    
+                    // Switch to login mode
+                    IsRegistrationMode = false;
+                    ConfirmPassword = string.Empty;
+                    Email = string.Empty;
+                }
+                else
+                {
+                    StatusMessage = result.ErrorMessage;
+                    RegistrationFailed?.Invoke(this, result.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Registration error: {ex.Message}";
+                RegistrationFailed?.Invoke(this, $"Registration error: {ex.Message}");
+            }
+            finally
+            {
+                IsLoggingIn = false;
+            }
+        }
+
+        private void ExecuteToggleRegistrationMode(object parameter)
+        {
+            IsRegistrationMode = !IsRegistrationMode;
+            // Clear fields when switching modes
+            Password = string.Empty;
+            ConfirmPassword = string.Empty;
+            StatusMessage = string.Empty;
         }
 
         private void ExecuteOpenSettings(object parameter)
@@ -282,5 +445,6 @@ namespace Quantra.ViewModels
         public AlphaVantageService AlphaVantageService { get; set; }
         public TechnicalIndicatorService TechnicalIndicatorService { get; set; }
         public WindowState? SavedWindowState { get; set; }
+        public int? UserId { get; set; }
     }
 }

@@ -163,6 +163,15 @@ namespace Quantra.DAL.Data.Configurations
             // Tell EF Core that this table has triggers to prevent OUTPUT clause usage
             builder.ToTable(tb => tb.HasTrigger("TR_SettingsProfiles_Update"));
 
+            // Configure relationship with UserCredential
+            builder.HasOne(p => p.User)
+                   .WithMany()
+                   .HasForeignKey(p => p.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Index for efficient lookup by user
+            builder.HasIndex(p => p.UserId);
+
             // Create a converter for double to decimal conversion
             var doubleToDecimalConverter = new ValueConverter<decimal, double>(
                 v => (double)v,           // decimal to double for writing to DB

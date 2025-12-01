@@ -204,25 +204,28 @@ namespace Quantra.DAL.Services
 
             try
             {
-                // Check if account already exists
+                // Check if account already exists by username (username is unique)
                 var existing = _dbContext.UserCredentials
-                    .FirstOrDefault(c => c.Username == username && c.Pin == pin);
+                    .FirstOrDefault(c => c.Username.ToLower() == username.ToLower());
 
                 if (existing != null)
                 {
                     // Update existing credentials
                     existing.Password = password;
+                    existing.Pin = pin ?? string.Empty;
                     existing.LastLoginDate = DateTime.Now;
                 }
                 else
                 {
-                    // Add new credentials
+                    // Add new credentials (this should rarely happen since registration creates the user)
                     _dbContext.UserCredentials.Add(new UserCredential
                     {
                         Username = username,
                         Password = password,
                         Pin = pin ?? string.Empty,
-                        LastLoginDate = DateTime.Now
+                        LastLoginDate = DateTime.Now,
+                        CreatedDate = DateTime.Now,
+                        IsActive = true
                     });
                 }
 

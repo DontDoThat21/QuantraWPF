@@ -127,12 +127,14 @@ namespace Quantra
                 var historicalDataService = ServiceProvider.GetRequiredService<HistoricalDataService>();
                 var alphaVantageService = ServiceProvider.GetRequiredService<AlphaVantageService>();
                 var technicalIndicatorService = ServiceProvider.GetRequiredService<TechnicalIndicatorService>();
+                var authenticationService = ServiceProvider.GetRequiredService<AuthenticationService>();
 
                 var loginViewModel = new ViewModels.LoginWindowViewModel(
                     userSettingsService,
                     historicalDataService,
                     alphaVantageService,
-                    technicalIndicatorService);
+                    technicalIndicatorService,
+                    authenticationService);
 
                 var loginWindow = new LoginWindow(loginViewModel);
                 loginWindow.Show();

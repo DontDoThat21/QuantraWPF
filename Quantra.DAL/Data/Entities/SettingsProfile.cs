@@ -5,13 +5,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Quantra.DAL.Data.Entities
 {
     /// <summary>
-    /// Entity representing a settings profile
+    /// Entity representing a settings profile.
+    /// Each settings profile is now associated with a specific user.
     /// </summary>
     [Table("SettingsProfiles")]
     public class SettingsProfile
     {
         [Key]
         public int Id { get; set; }
+
+        /// <summary>
+        /// Foreign key to UserCredentials table. Null for system/default profiles.
+        /// </summary>
+        public int? UserId { get; set; }
+
+        /// <summary>
+        /// Navigation property to the user who owns this settings profile
+        /// </summary>
+        [ForeignKey("UserId")]
+        public virtual UserCredential? User { get; set; }
 
         [Required]
         [MaxLength(100)]

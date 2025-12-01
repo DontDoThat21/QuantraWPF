@@ -10,12 +10,14 @@ using System.Text.Json;
 using Quantra.DAL.Services;
 using Quantra.ViewModels;
 using System.ComponentModel;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra
 {
     public partial class LoginWindow : Window
     {
         private readonly LoginWindowViewModel _viewModel;
+        private bool _isRegistrationMode = false;
 
         // Parameterless constructor for XAML designer support
         public LoginWindow()
@@ -36,21 +38,43 @@ namespace Quantra
             // Subscribe to ViewModel events
             _viewModel.LoginSuccessful += OnLoginSuccessful;
             _viewModel.LoginFailed += OnLoginFailed;
+            _viewModel.RegistrationSuccessful += OnRegistrationSuccessful;
+            _viewModel.RegistrationFailed += OnRegistrationFailed;
             _viewModel.SettingsRequested += OnSettingsRequested;
             
-            // Subscribe to PropertyChanged to monitor IsLoggingIn state
+            // Subscribe to PropertyChanged to monitor state changes
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         }
 
         /// <summary>
         /// Legacy constructor for compatibility - creates ViewModel internally
+        /// NOTE: This constructor creates a temporary AuthenticationService for backward compatibility.
+        /// Prefer using the constructor that accepts LoginWindowViewModel.
         /// </summary>
         public LoginWindow(UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,
             TechnicalIndicatorService technicalIndicatorService)
-            : this(new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
+            : this(CreateViewModelWithInternalAuth(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
         {
+        }
+
+        /// <summary>
+        /// Creates a LoginWindowViewModel with an internally created AuthenticationService
+        /// </summary>
+        private static LoginWindowViewModel CreateViewModelWithInternalAuth(
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService)
+        {
+            var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+            optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+            var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
+            var loggingService = new LoggingService();
+            var authService = new AuthenticationService(dbContext, loggingService);
+            
+            return new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService, authService);
         }
 
         private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -59,6 +83,55 @@ namespace Quantra
             {
                 // Set cursor based on IsLoggingIn state
                 this.Cursor = _viewModel.IsLoggingIn ? Cursors.Wait : Cursors.Arrow;
+            }
+            else if (e.PropertyName == nameof(LoginWindowViewModel.IsRegistrationMode))
+            {
+                UpdateUIForMode(_viewModel.IsRegistrationMode);
+            }
+            else if (e.PropertyName == nameof(LoginWindowViewModel.StatusMessage))
+            {
+                // Update status message visibility
+                if (!string.IsNullOrEmpty(_viewModel.StatusMessage))
+                {
+                    StatusMessageText.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    StatusMessageText.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+
+        private void UpdateUIForMode(bool isRegistrationMode)
+        {
+            _isRegistrationMode = isRegistrationMode;
+            
+            if (isRegistrationMode)
+            {
+                // Switch to registration mode
+                FormTitleText.Text = "Create Account";
+                TitleBar.Title = "Register";
+                LoginButton.Visibility = Visibility.Collapsed;
+                RegisterButton.Visibility = Visibility.Visible;
+                ConfirmPasswordContainer.Visibility = Visibility.Visible;
+                EmailContainer.Visibility = Visibility.Visible;
+                AccountSelectionContainer.Visibility = Visibility.Collapsed;
+                RememberMeCheckBox.Visibility = Visibility.Collapsed;
+                PinTextBoxContainer.Visibility = Visibility.Collapsed;
+                ToggleModeButton.Content = "Back to Login";
+            }
+            else
+            {
+                // Switch to login mode
+                FormTitleText.Text = "Quantra Login";
+                TitleBar.Title = "Login";
+                LoginButton.Visibility = Visibility.Visible;
+                RegisterButton.Visibility = Visibility.Collapsed;
+                ConfirmPasswordContainer.Visibility = Visibility.Collapsed;
+                EmailContainer.Visibility = Visibility.Collapsed;
+                AccountSelectionContainer.Visibility = Visibility.Visible;
+                RememberMeCheckBox.Visibility = Visibility.Visible;
+                ToggleModeButton.Content = "Create Account";
             }
         }
 
@@ -84,6 +157,16 @@ namespace Quantra
             MessageBox.Show(errorMessage, "Login Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
+        private void OnRegistrationSuccessful(object sender, string message)
+        {
+            MessageBox.Show(message, "Registration Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void OnRegistrationFailed(object sender, string errorMessage)
+        {
+            MessageBox.Show(errorMessage, "Registration Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
         private void OnSettingsRequested(object sender, EventArgs e)
         {
             var settingsWindow = new SettingsWindow();
@@ -97,6 +180,8 @@ namespace Quantra
             {
                 _viewModel.LoginSuccessful -= OnLoginSuccessful;
                 _viewModel.LoginFailed -= OnLoginFailed;
+                _viewModel.RegistrationSuccessful -= OnRegistrationSuccessful;
+                _viewModel.RegistrationFailed -= OnRegistrationFailed;
                 _viewModel.SettingsRequested -= OnSettingsRequested;
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             }
@@ -120,6 +205,32 @@ namespace Quantra
                 {
                     _viewModel.LoginCommand.Execute(null);
                 }
+            }
+        }
+
+        private void RegisterButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Update ViewModel properties from UI (PasswordBox can't bind directly)
+            if (_viewModel != null)
+            {
+                _viewModel.Username = UsernameTextBox.Text;
+                _viewModel.Password = PasswordBox.Password;
+                _viewModel.ConfirmPassword = ConfirmPasswordBox.Password;
+                _viewModel.Email = EmailTextBox.Text;
+                
+                // Execute register command
+                if (_viewModel.RegisterCommand.CanExecute(null))
+                {
+                    _viewModel.RegisterCommand.Execute(null);
+                }
+            }
+        }
+
+        private void ToggleModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel != null)
+            {
+                _viewModel.ToggleRegistrationModeCommand?.Execute(null);
             }
         }
 
@@ -204,7 +315,7 @@ namespace Quantra
 
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
         private static extern IntPtr SendMessage(Window window, WM msg, IntPtr wParam, IntPtr lParam);
+
+        #endregion
     }
 }
-
-#endregion
