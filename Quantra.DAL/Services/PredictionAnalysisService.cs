@@ -15,12 +15,12 @@ namespace Quantra.DAL.Services
     public class PredictionAnalysisService
     {
         private readonly QuantraDbContext _context;
-        private LoggingService _loggingService;
+        private readonly LoggingService _loggingService;
 
-        public PredictionAnalysisService(QuantraDbContext context)
+        public PredictionAnalysisService(QuantraDbContext context, LoggingService loggingService)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _loggingService = new LoggingService();
+            _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
         }
 
         // Parameterless constructor for backward compatibility
@@ -35,6 +35,7 @@ namespace Quantra.DAL.Services
             });
 
             _context = new QuantraDbContext(optionsBuilder.Options);
+            _loggingService = new LoggingService();
         }
 
         /// <summary>
@@ -269,6 +270,8 @@ namespace Quantra.DAL.Services
 
             try
             {
+                _loggingService.Log("Info", $"SavePredictionAsync started for {prediction.Symbol}");
+
                 // Ensure the stock symbol exists in the database
                 var stockSymbol = await _context.StockSymbols
                     .AsNoTracking()
@@ -277,6 +280,7 @@ namespace Quantra.DAL.Services
 
                 if (stockSymbol == null)
                 {
+                    _loggingService.Log("Info", $"Creating new stock symbol entry for {prediction.Symbol}");
                     stockSymbol = new StockSymbolEntity
                     {
                         Symbol = prediction.Symbol,
@@ -284,6 +288,11 @@ namespace Quantra.DAL.Services
                     };
                     _context.StockSymbols.Add(stockSymbol);
                     await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} created successfully");
+                }
+                else
+                {
+                    _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} already exists");
                 }
 
                 // Create prediction entity (TradingRule not saved since it's not in the entity)
@@ -299,11 +308,14 @@ namespace Quantra.DAL.Services
                 };
 
                 _context.StockPredictions.Add(predictionEntity);
+                _loggingService.Log("Info", $"Saving prediction entity for {prediction.Symbol}");
                 await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                _loggingService.Log("Info", $"Prediction entity saved with ID {predictionEntity.Id}");
 
                 // Save indicators if any
                 if (prediction.Indicators != null && prediction.Indicators.Any())
                 {
+                    _loggingService.Log("Info", $"Saving {prediction.Indicators.Count} indicators for prediction {predictionEntity.Id}");
                     foreach (var indicator in prediction.Indicators)
                     {
                         var indicatorEntity = new PredictionIndicatorEntity
@@ -315,8 +327,14 @@ namespace Quantra.DAL.Services
                         _context.PredictionIndicators.Add(indicatorEntity);
                     }
                     await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    _loggingService.Log("Info", $"Indicators saved successfully for prediction {predictionEntity.Id}");
+                }
+                else
+                {
+                    _loggingService.Log("Warning", $"No indicators to save for prediction {predictionEntity.Id}");
                 }
 
+                _loggingService.Log("Info", $"SavePredictionAsync completed successfully for {prediction.Symbol}, ID: {predictionEntity.Id}");
                 return predictionEntity.Id;
             }
             catch (OperationCanceledException)

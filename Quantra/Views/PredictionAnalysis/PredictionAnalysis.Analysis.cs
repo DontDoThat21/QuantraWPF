@@ -205,6 +205,7 @@ namespace Quantra.Controls
 
                 // IMPORTANT: Pass current_price to Python for proper target price calculation
                 // The ML model predicts percentage change, which needs to be converted to actual price
+                // CRITICAL: Add current price to indicators so Python can convert percentage predictions to actual prices
                 if (currentPrice > 0)
                 {
                     indicators["current_price"] = currentPrice;

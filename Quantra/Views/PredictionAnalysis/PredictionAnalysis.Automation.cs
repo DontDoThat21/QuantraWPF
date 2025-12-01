@@ -41,8 +41,9 @@ namespace Quantra.Controls
             // Create the repository with parameterless constructor which handles DbContext internally
    _predictionRepository = new PredictionAnalysisRepository();
             
-   // Initialize the prediction service
-  _predictionService = new PredictionAnalysisService();
+   // Get the prediction service from DI container or create with parameterless constructor as fallback
+  _predictionService = App.ServiceProvider?.GetService(typeof(PredictionAnalysisService)) as PredictionAnalysisService
+      ?? new PredictionAnalysisService();
         }
 
         public bool IsAutomatedMode
@@ -417,6 +418,15 @@ if (LastUpdatedText != null)
                         this.Predictions.Add(prediction);
                     }
                     
+                    // Explicitly set ItemsSource and refresh the DataGrid
+                    if (PredictionDataGrid != null)
+                    {
+                        PredictionDataGrid.ItemsSource = null; // Force refresh
+                        PredictionDataGrid.ItemsSource = this.Predictions;
+                        PredictionDataGrid.Items.Refresh();
+                        PredictionDataGrid.UpdateLayout();
+                    }
+                    
                     // Update status and timestamp in same dispatcher call
                     if (StatusText != null)
                         StatusText.Text = $"Automated analysis complete. Found {this.Predictions.Count} predictions";
@@ -478,9 +488,14 @@ if (LastUpdatedText != null)
                     double.IsNaN(prediction.TargetPrice) || double.IsInfinity(prediction.TargetPrice) ||
                     double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
                 {
-                    //_loggingService.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+                    _loggingService?.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
+                    if (StatusText != null)
+                        StatusText.Text = $"Skipped invalid prediction for {prediction?.Symbol}";
                     return;
                 }
+
+                // Log the save attempt
+                _loggingService?.Log("Info", $"Attempting to save prediction for {prediction.Symbol}: {prediction.PredictedAction} @ {prediction.Confidence:P0}");
 
                 // Save with timeout protection (10 seconds)
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
@@ -488,17 +503,26 @@ if (LastUpdatedText != null)
                     if (_predictionService != null)
                     {
                         // ConfigureAwait(false) prevents deadlock by not capturing synchronization context
-                        await _predictionService.SavePredictionAsync(prediction).ConfigureAwait(false);
+                        var id = await _predictionService.SavePredictionAsync(prediction, cts.Token).ConfigureAwait(false);
+                        _loggingService?.Log("Info", $"Successfully saved prediction ID {id} for {prediction.Symbol}");
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Error", "PredictionService is null - cannot save prediction");
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                //_loggingService.Log("Warning", $"Timeout saving prediction for {prediction?.Symbol ?? "<null>"}");
+                _loggingService?.Log("Warning", $"Timeout saving prediction for {prediction?.Symbol ?? "<null>"}");
+                if (StatusText != null)
+                    StatusText.Text = $"Timeout saving {prediction?.Symbol}";
             }
             catch (Exception ex)
             {
-                //_loggingService.Log("Error", $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}", ex.ToString());
+                _loggingService?.LogErrorWithContext(ex, $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}");
+                if (StatusText != null)
+                    StatusText.Text = $"Error saving {prediction?.Symbol}: {ex.Message}";
             }
         }
 

@@ -1392,9 +1392,12 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
             model.feature_names = feature_names
             
         # Make predictions based on model type
+        # IMPORTANT: Model predicts percentage change, not absolute price
+        predicted_change = None
+        
         if used_model_type == 'pytorch':
             # Scale and predict with PyTorch model
-            target_price = float(model.predict(feature_array)[0])
+            predicted_change = float(model.predict(feature_array)[0])
                 
             # Calculate confidence - approximate for PyTorch
             confidence = 0.8  # Default confidence for PyTorch models
@@ -1402,7 +1405,7 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                 
         elif used_model_type == 'tensorflow':
             # Scale and predict with TensorFlow model
-            target_price = float(model.predict(feature_array)[0])
+            predicted_change = float(model.predict(feature_array)[0])
                 
             # Calculate confidence - approximate for TensorFlow
             confidence = 0.8  # Default confidence for TensorFlow models
@@ -1414,7 +1417,7 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                 feature_array = scaler.transform(feature_array)
                     
             # Make predictions
-            target_price = float(model.predict(feature_array)[0])
+            predicted_change = float(model.predict(feature_array)[0])
                 
             # Calculate confidence based on feature importance for RF
             predictions = []
@@ -1426,9 +1429,17 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
             # Get feature importances for Random Forest
             weights = dict(zip(feature_names, 
                              [float(imp) for imp in model.feature_importances_]))
+        
+        # CRITICAL FIX: Convert predicted percentage change to actual target price
+        current_price = features.get('current_price', 100.0)  # Default to 100 if not provided
+        
+        # predicted_change is a percentage change (e.g., 0.05 = 5% increase, -0.1 = 10% decrease)
+        # Convert to actual target price
+        target_price = current_price * (1 + predicted_change)
+        
+        logger.info(f"Current price: ${current_price:.2f}, Predicted change: {predicted_change:.4f} ({predicted_change*100:.2f}%), Target price: ${target_price:.2f}")
                              
         # Determine action based on predictions
-        current_price = features.get('current_price', target_price * 0.95)
         price_diff = target_price - current_price
         
         if abs(price_diff) / current_price < 0.01:  # Less than 1% change

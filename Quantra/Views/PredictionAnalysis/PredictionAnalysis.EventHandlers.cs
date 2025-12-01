@@ -174,13 +174,26 @@ namespace Quantra.Controls
 
                 if (prediction != null && prediction.PredictedAction != "ERROR")
                 {
-                    Predictions.Add(prediction);
+                    // Save prediction to database
+                    await SavePredictionToDatabaseAsync(prediction);
 
-                    if (PredictionDataGrid != null)
-                        PredictionDataGrid.ItemsSource = Predictions;
+                    // Add to UI collection on UI thread
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        Predictions.Add(prediction);
 
-                    if (StatusText != null)
-                        StatusText.Text = $"Analysis complete for {symbol}. Action: {prediction.PredictedAction}, Confidence: {prediction.Confidence:P0}";
+                        // Force DataGrid refresh
+                        if (PredictionDataGrid != null)
+                        {
+                            PredictionDataGrid.ItemsSource = null;
+                            PredictionDataGrid.ItemsSource = Predictions;
+                            PredictionDataGrid.Items.Refresh();
+                            PredictionDataGrid.UpdateLayout();
+                        }
+
+                        if (StatusText != null)
+                            StatusText.Text = $"Analysis complete for {symbol}. Action: {prediction.PredictedAction}, Confidence: {prediction.Confidence:P0}";
+                    });
                 }
                 else
                 {

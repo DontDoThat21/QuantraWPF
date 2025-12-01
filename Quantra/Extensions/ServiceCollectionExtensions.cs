@@ -129,6 +129,9 @@ namespace Quantra.Extensions
                 return new PredictionCacheService(loggingService, sp);
             });
 
+            // Register PredictionAnalysisService as scoped
+            services.AddScoped<PredictionAnalysisService>();
+
             // Register PredictionDataService
             services.AddScoped<PredictionDataService>();
             services.AddScoped<IPredictionDataService>(sp => sp.GetRequiredService<PredictionDataService>());
