@@ -64,6 +64,7 @@ namespace Quantra.Views.Intelligence
         private readonly AlphaVantageService _alphaVantageService;
         private readonly LoggingService _loggingService;
         private TopMoversResponse _topMovers;
+        private bool _hasLoadedInitially;
 
         /// <summary>
         /// Event raised when a symbol is double-clicked for navigation
@@ -83,6 +84,27 @@ namespace Quantra.Views.Intelligence
             catch (Exception ex)
             {
                 StatusText.Text = $"Service initialization error: {ex.Message}";
+            }
+
+            // Auto-load data when control is loaded
+            Loaded += TopMoversControl_Loaded;
+        }
+
+        private async void TopMoversControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only load once on initial load
+            if (!_hasLoadedInitially)
+            {
+                _hasLoadedInitially = true;
+                try
+                {
+                    await LoadTopMovers();
+                }
+                catch (Exception ex)
+                {
+                    StatusText.Text = $"Error loading data: {ex.Message}";
+                    _loggingService?.LogErrorWithContext(ex, "Error in TopMoversControl_Loaded");
+                }
             }
         }
 
