@@ -41,7 +41,7 @@ namespace Quantra.DAL.Services
             _apiKey = AlphaVantageService.GetApiKey();
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
-                throw new InvalidOperationException("AlphaVantageApiKey not found in database settings profile.");
+                //throw new InvalidOperationException("AlphaVantageApiKey not found in database settings profile.");
             }
 
             _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);

@@ -258,6 +258,57 @@ namespace Quantra.DAL.Services
                     AlertEmail = string.Empty,
                     EnableEmailAlerts = false,
                     EnableVixMonitoring = true,
+                    
+                    // Risk management settings with valid defaults
+                    AccountSize = 100000m,
+                    BaseRiskPercentage = 0.01m, // 1%
+                    PositionSizingMethod = "FixedRisk",
+                    MaxPositionSizePercent = 0.1m, // 10%
+                    FixedTradeAmount = 5000m,
+                    UseVolatilityBasedSizing = false,
+                    ATRMultiple = 2m,
+                    UseKellyCriterion = false,
+                    HistoricalWinRate = 0.55m,
+                    HistoricalRewardRiskRatio = 2m,
+                    KellyFractionMultiplier = 0.5m,
+                    
+                    // Alert sound settings
+                    EnableAlertSounds = true,
+                    DefaultAlertSound = "alert.wav",
+                    DefaultOpportunitySound = "opportunity.wav",
+                    DefaultPredictionSound = "prediction.wav",
+                    DefaultTechnicalIndicatorSound = "indicator.wav",
+                    AlertVolume = 80,
+                    
+                    // Visual indicator settings
+                    EnableVisualIndicators = true,
+                    DefaultVisualIndicatorType = "Toast",
+                    DefaultVisualIndicatorColor = "#FFFF00",
+                    VisualIndicatorDuration = 5,
+                    
+                    // News sentiment settings
+                    EnableNewsSentimentAnalysis = true,
+                    NewsArticleRefreshIntervalMinutes = 30,
+                    MaxNewsArticlesPerSymbol = 15,
+                    EnableNewsSourceFiltering = true,
+                    
+                    // Analyst ratings settings
+                    EnableAnalystRatings = true,
+                    RatingsCacheExpiryHours = 24,
+                    EnableRatingChangeAlerts = true,
+                    EnableConsensusChangeAlerts = true,
+                    AnalystRatingSentimentWeight = 2m,
+                    
+                    // Insider trading settings
+                    EnableInsiderTradingAnalysis = true,
+                    InsiderDataRefreshIntervalMinutes = 120,
+                    EnableInsiderTradingAlerts = true,
+                    TrackNotableInsiders = true,
+                    InsiderTradingSentimentWeight = 2.5m,
+                    HighlightCEOTransactions = true,
+                    HighlightOptionsActivity = true,
+                    EnableInsiderTransactionNotifications = true,
+                    
                     CreatedAt = DateTime.Now,
                     LastModified = DateTime.Now
                 };
