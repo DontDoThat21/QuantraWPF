@@ -11,7 +11,7 @@ using Quantra.Repositories;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // Sentiment correlation analyzer
         private Modules.SentimentPriceCorrelationAnalysis _sentimentCorrelationAnalysis;

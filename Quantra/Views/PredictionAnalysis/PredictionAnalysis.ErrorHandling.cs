@@ -7,7 +7,7 @@ using System.Windows.Media;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // Helper method to display chart initialization errors
         private void DisplayChartInitializationError(string errorMessage)

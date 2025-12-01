@@ -13,7 +13,7 @@ using Quantra.DAL.Data;
 
 namespace Quantra.Controls
 {
-  public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         private WebullTradingBot _tradingBot;
    private StockDataCacheService _stockDataCache;

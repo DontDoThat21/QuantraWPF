@@ -22,7 +22,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl, INotifyPropertyChanged
+    public partial class PredictionAnalysis : UserControl, INotifyPropertyChanged
     {
         private readonly PredictionAnalysisViewModel _viewModel;
         private readonly NotificationService _notificationService;
@@ -51,14 +51,14 @@ namespace Quantra.Controls
         private double confidence;
 
         // Parameterless constructor for XAML designer support
-        public PredictionAnalysisControl()
+        public PredictionAnalysis()
         {
             InitializeComponent();
             indicators = new Dictionary<string, double>();
             _lastAnalysisTime = new Dictionary<string, DateTime>();
         }
 
-     public PredictionAnalysisControl(
+     public PredictionAnalysis(
         PredictionAnalysisViewModel viewModel,
         NotificationService notificationService,
         TechnicalIndicatorService indicatorService,

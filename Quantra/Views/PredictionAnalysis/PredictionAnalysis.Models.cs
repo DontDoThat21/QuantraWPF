@@ -7,7 +7,7 @@ using System.Windows.Controls;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // UI configuration and display settings
         public class DisplaySettings

@@ -19,7 +19,7 @@ using Microsoft.EntityFrameworkCore; // Added for DbContext
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl, IDisposable
+    public partial class PredictionAnalysis : UserControl, IDisposable
     {
      // Automated mode property
         private DispatcherTimer autoRefreshTimer;

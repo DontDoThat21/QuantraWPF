@@ -15,7 +15,7 @@ using Quantra.DAL.Services;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // Remove duplicate _alphaVantageService field - already declared in xaml.cs
         private WebullTradingBot tradingBot;
@@ -36,7 +36,7 @@ namespace Quantra.Controls
         public Func<double, string> DateFormatter { get; set; }
 
         // Additional constructor with configuration
-        public PredictionAnalysisControl(IConfiguration configuration,
+        public PredictionAnalysis(IConfiguration configuration,
             AlphaVantageService alphaVantageService,
             WebullTradingBot webullTradingBot)
         {

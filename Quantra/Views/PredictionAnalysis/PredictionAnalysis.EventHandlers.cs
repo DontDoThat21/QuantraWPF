@@ -13,7 +13,7 @@ using System.Windows.Input; // Added for KeyEventArgs
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // Add this field to ensure selectedPrediction is available in this partial class
         // private Quantra.Models.PredictionModel selectedPrediction;

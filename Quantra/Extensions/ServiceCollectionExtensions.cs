@@ -280,7 +280,7 @@ namespace Quantra.Extensions
             services.AddTransient<BacktestResultsViewModel>();
 
             // Register Views
-            services.AddTransient<PredictionAnalysisControl>();
+            services.AddTransient<PredictionAnalysis>();
 
             return services;
         }

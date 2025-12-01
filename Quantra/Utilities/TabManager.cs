@@ -605,7 +605,7 @@ namespace Quantra.Utilities
                                     control.UpdateLayout();
 
                                     // Special handling for PredictionAnalysisControl
-                                    if (control is Controls.PredictionAnalysisControl predictionControl)
+                                    if (control is Controls.PredictionAnalysis predictionControl)
                                     {
                                         predictionControl.ForceLayoutUpdate();
                                         //DatabaseMonolith.Log("Info", $"Force updated PredictionAnalysisControl layout in tab '{tabName}'");

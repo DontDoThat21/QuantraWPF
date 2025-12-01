@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // NOTE: These service fields are initialized via DI in the main constructor (xaml.cs)
         // They are declared here for clarity but assigned in the main partial class constructor

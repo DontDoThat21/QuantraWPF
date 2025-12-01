@@ -6,7 +6,7 @@ using System.Windows.Controls;
 
 namespace Quantra.Controls
 {
-    public partial class PredictionAnalysisControl : UserControl
+    public partial class PredictionAnalysis : UserControl
     {
         // This file is no longer needed. Use Quantra.Models.PredictionModel everywhere.
         // (Intentionally left blank or can be deleted)

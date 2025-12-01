@@ -798,7 +798,7 @@ namespace Quantra
                 }
                 
                 // Create a new instance of our custom PredictionAnalysisControl with all required dependencies
-                var predictionAnalysisControl = new PredictionAnalysisControl(
+                var predictionAnalysisControl = new PredictionAnalysis(
                     _predictionAnalysisViewModel,
                     _notificationService,
                     _indicatorService,
@@ -2087,7 +2087,7 @@ namespace Quantra
             DatabaseMonolith.AddCustomControlWithSpans(tabName, controlType, row, column, rowSpan, columnSpan);
 
             // Special handling for Prediction Analysis control - update layout after adding to grid
-            if (controlType == "Prediction Analysis" && control is PredictionAnalysisControl predictionControl)
+            if (controlType == "Prediction Analysis" && control is PredictionAnalysis predictionControl)
             {
                 // Update layout directly without complex dispatcher logic
                 try
@@ -2148,7 +2148,7 @@ namespace Quantra
                                     control.UpdateLayout();
                                     
                                     // Special handling for PredictionAnalysisControl
-                                    if (control is Controls.PredictionAnalysisControl predictionControl)
+                                    if (control is Controls.PredictionAnalysis predictionControl)
                                     {
                                         predictionControl.ForceLayoutUpdate();
                                         
