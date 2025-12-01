@@ -533,6 +533,8 @@ MinWidth="900" MinHeight="700">
                     <Button x:Name="RunPredictionsButton"
                             Content="Run Predictions"
                             Padding="10,5"
+                            Width="180"
+                            Height="36"
                             Style="{StaticResource EnhancedButtonStyle}"
                             Command="{Binding RunPredictionsCommand}"
                             IsEnabled="{Binding CanRunPredictions}"/>
@@ -540,6 +542,8 @@ MinWidth="900" MinHeight="700">
                     <Button x:Name="RunSentimentAnalysisButton"
                             Content="Run Sentiment Analysis"
                             Padding="10,5"
+                            Width="230"
+                            Height="36"
                             Margin="10,0,0,0"
                             Style="{StaticResource EnhancedButtonStyle}"
                             Click="RunSentimentAnalysisButton_Click"
