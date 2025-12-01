@@ -58,36 +58,36 @@ MinWidth="400" MinHeight="300">
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
 
                 <!-- Selected Trading Strategy -->
-                <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-                        CornerRadius="3" Padding="6,6" MinWidth="200">
-                    <ComboBox x:Name="TradingStrategy" ToolTip="Select this prediction control's trading strategy"
+                <StackPanel Orientation="Vertical" Margin="0,0,10,0">
+                    <TextBlock Text="Trading Strategy:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                    <ComboBox x:Name="TradingStrategy" 
+                              ToolTip="Select this prediction control's trading strategy"
                               SelectionChanged="TradingStrategy_SelectionChanged"
                               Style="{StaticResource EnhancedComboBoxStyle}"
-                              VerticalContentAlignment="Center">
+                              VerticalContentAlignment="Center"
+                              MinWidth="200">
                         <ComboBoxItem Content="SMA Crossover" Tag="SMA"/>
                         <ComboBoxItem Content="RSI Divergence" Tag="RSI"/>
                         <ComboBoxItem Content="Bollinger Bands" Tag="BB"/>
                         <ComboBoxItem Content="MACD Crossover" Tag="MACD" IsSelected="True"/>
                     </ComboBox>
-                </Border>
+                </StackPanel>
 
                 <!-- Update Rate -->
-                <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-                        CornerRadius="3" Padding="6,6" MinWidth="130">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Update Rate" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="AutoModeToggle2" MinWidth="60"
-                                  ToolTip="Enable/Disable Data updates every 15 minutes during trading hours, or if data is > 15m old."
-                                  Style="{StaticResource EnhancedComboBoxStyle}"
-                                  VerticalContentAlignment="Center">
-                            <ComboBoxItem Content="15m" Tag="15m" IsSelected="True"/>
-                            <ComboBoxItem Content="30m" Tag="30m"/>
-                            <ComboBoxItem Content="1h" Tag="1h"/>
-                            <ComboBoxItem Content="2h" Tag="2h"/>
-                            <ComboBoxItem Content="3h" Tag="3h"/>
-                        </ComboBox>
-                    </StackPanel>
-                </Border>
+                <StackPanel Orientation="Vertical" Margin="0,0,10,0">
+                    <TextBlock Text="Update Rate:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                    <ComboBox x:Name="AutoModeToggle2" 
+                              MinWidth="130"
+                              ToolTip="Enable/Disable Data updates every 15 minutes during trading hours, or if data is > 15m old."
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="15m" Tag="15m" IsSelected="True"/>
+                        <ComboBoxItem Content="30m" Tag="30m"/>
+                        <ComboBoxItem Content="1h" Tag="1h"/>
+                        <ComboBoxItem Content="2h" Tag="2h"/>
+                        <ComboBoxItem Content="3h" Tag="3h"/>
+                    </ComboBox>
+                </StackPanel>
 
                 <!-- Auto Mode Toggle -->
                 <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
