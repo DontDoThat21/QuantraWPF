@@ -203,6 +203,13 @@ namespace Quantra.Controls
                 Dictionary<string, double> weights = null;
                 List<string> featureNames = null;
 
+                // IMPORTANT: Pass current_price to Python for proper target price calculation
+                // The ML model predicts percentage change, which needs to be converted to actual price
+                if (currentPrice > 0)
+                {
+                    indicators["current_price"] = currentPrice;
+                }
+
                 // This should ALWAYS use the trained ML model from Python
                 // The Python script will automatically load the trained model or train a new one if needed
                 try
@@ -834,7 +841,7 @@ namespace Quantra.Controls
                                  $"Performance Metrics:\n" +
                                  $"  MAE: {result.Performance?.Mae:F6}\n" +
                                  $"  RMSE: {result.Performance?.Rmse:F6}\n" +
-                                 $"  R² Score: {result.Performance?.R2Score:F4}";
+                                 $"  Rï¿½ Score: {result.Performance?.R2Score:F4}";
 
                     MessageBox.Show(message, "Training Successful", MessageBoxButton.OK, MessageBoxImage.Information);
 
