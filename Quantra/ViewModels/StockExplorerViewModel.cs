@@ -843,6 +843,7 @@ namespace Quantra.ViewModels
                 {
                     ["symbol"] = stock.Symbol.GetHashCode(), // Convert symbol to numeric
                     ["close"] = stock.Price,
+                    ["current_price"] = stock.Price, // Required for Python to calculate actual target price
                     ["volume"] = stock.Volume,
                     ["rsi"] = stock.RSI,
                     ["pe_ratio"] = stock.PERatio,
