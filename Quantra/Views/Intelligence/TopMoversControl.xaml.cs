@@ -64,6 +64,7 @@ namespace Quantra.Views.Intelligence
         private readonly AlphaVantageService _alphaVantageService;
         private readonly LoggingService _loggingService;
         private TopMoversResponse _topMovers;
+        private bool _hasLoadedInitially;
 
         /// <summary>
         /// Event raised when a symbol is double-clicked for navigation
@@ -84,11 +85,60 @@ namespace Quantra.Views.Intelligence
             {
                 StatusText.Text = $"Service initialization error: {ex.Message}";
             }
+
+            // Auto-load data when control is loaded
+            Loaded += TopMoversControl_Loaded;
+        }
+
+        private async void TopMoversControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Only load once on initial load
+            if (!_hasLoadedInitially)
+            {
+                _hasLoadedInitially = true;
+                try
+                {
+                    await LoadTopMovers();
+                }
+                catch (Exception ex)
+                {
+                    StatusText.Text = $"Error loading data: {ex.Message}";
+                    _loggingService?.LogErrorWithContext(ex, "Error in TopMoversControl_Loaded");
+                }
+            }
         }
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             await LoadTopMovers();
+        }
+
+        private void ViewRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not RadioButton radioButton)
+                return;
+
+            if (GainersGrid == null || LosersGrid == null || MostActiveGrid == null)
+                return;
+
+            if (radioButton.Name == "GainersRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Visible;
+                LosersGrid.Visibility = Visibility.Collapsed;
+                MostActiveGrid.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "LosersRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Collapsed;
+                LosersGrid.Visibility = Visibility.Visible;
+                MostActiveGrid.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "MostActiveRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Collapsed;
+                LosersGrid.Visibility = Visibility.Collapsed;
+                MostActiveGrid.Visibility = Visibility.Visible;
+            }
         }
 
         private async System.Threading.Tasks.Task LoadTopMovers()

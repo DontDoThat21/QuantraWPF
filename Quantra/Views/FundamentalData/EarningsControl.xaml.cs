@@ -73,6 +73,34 @@ namespace Quantra.Views.FundamentalData
             }
         }
 
+        private void ViewRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.RadioButton radioButton)
+                return;
+
+            if (QuarterlyEarningsGrid == null || AnnualEarningsGrid == null || EPSChart == null)
+                return;
+
+            if (radioButton.Name == "QuarterlyRadioButton")
+            {
+                QuarterlyEarningsGrid.Visibility = Visibility.Visible;
+                AnnualEarningsGrid.Visibility = Visibility.Collapsed;
+                EPSChart.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "AnnualRadioButton")
+            {
+                QuarterlyEarningsGrid.Visibility = Visibility.Collapsed;
+                AnnualEarningsGrid.Visibility = Visibility.Visible;
+                EPSChart.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "TrendRadioButton")
+            {
+                QuarterlyEarningsGrid.Visibility = Visibility.Collapsed;
+                AnnualEarningsGrid.Visibility = Visibility.Collapsed;
+                EPSChart.Visibility = Visibility.Visible;
+            }
+        }
+
         private async System.Threading.Tasks.Task LoadEarningsData()
         {
             var symbol = SymbolTextBox.Text?.Trim().ToUpper();
