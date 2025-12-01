@@ -36,37 +36,13 @@ namespace Quantra.DAL.Services
 
         /// <summary>
         /// Constructor for PredictionDataService with dependency injection.
-        /// The cacheService parameter is optional for backward compatibility with existing DI configurations.
-        /// When not provided, a default cache service is created internally.
+        /// All dependencies are required and should be provided by the DI container.
         /// </summary>
-        public PredictionDataService(QuantraDbContext context, ILogger<PredictionDataService> logger, PredictionCacheService cacheService = null)
+        public PredictionDataService(QuantraDbContext context, ILogger<PredictionDataService> logger, PredictionCacheService cacheService)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cacheService = cacheService ?? CreateDefaultCacheService();
-        }
-
-        /// <summary>
-        /// Parameterless constructor for backward compatibility
-        /// </summary>
-        public PredictionDataService()
-        {
-            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
-            {
-                sqlServerOptions.CommandTimeout(30);
-            });
-            _context = new QuantraDbContext(optionsBuilder.Options);
-            _cacheService = CreateDefaultCacheService();
-        }
-
-        /// <summary>
-        /// Creates a default PredictionCacheService when none is provided
-        /// </summary>
-        private static PredictionCacheService CreateDefaultCacheService()
-        {
-            var loggingService = new LoggingService();
-            return new PredictionCacheService(loggingService);
+            _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         }
 
         /// <inheritdoc/>

@@ -23,7 +23,6 @@ namespace Quantra.DAL.Services
         private readonly TimeSpan _cacheValidityPeriod;
 
         // Constants
-        private const string DatabaseConnectionString = "Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;";
         private const long EstimatedBytesPerEntry = 200L;
 
         // Compiled regex patterns for cache command detection
@@ -72,12 +71,15 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Creates a new DbContext with the configured connection string.
+        /// Creates a new DbContext with SQL Server connection using ConnectionHelper.
         /// </summary>
         private QuantraDbContext CreateDbContext()
         {
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-            optionsBuilder.UseSqlite(DatabaseConnectionString);
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+            {
+                sqlServerOptions.CommandTimeout(30);
+            });
             return new QuantraDbContext(optionsBuilder.Options);
         }
 

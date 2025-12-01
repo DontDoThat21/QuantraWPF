@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Quantra.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Quantra.DAL.Data;
 
 namespace Quantra.DAL.Services
@@ -18,39 +19,14 @@ namespace Quantra.DAL.Services
     {
         private readonly TimeSpan _cacheValidityPeriod;
         private readonly LoggingService _loggingService;
+        private readonly IServiceProvider _serviceProvider;
 
-        public PredictionCacheService(LoggingService loggingService, TimeSpan? cacheValidityPeriod = null)
+        public PredictionCacheService(LoggingService loggingService, IServiceProvider serviceProvider, TimeSpan? cacheValidityPeriod = null)
         {
             _cacheValidityPeriod = cacheValidityPeriod ?? TimeSpan.FromHours(1); // Default 1 hour cache
             _loggingService = loggingService;
-            //EnsureCacheTableExists();
+            _serviceProvider = serviceProvider;
         }
-
-        /// <summary>
-        /// Ensures the prediction cache table exists using Entity Framework Core
-        /// </summary>
-        /*private void EnsureCacheTableExists()
-        {
-            try
-            {
-                // Create DbContext using default configuration
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
-                {
-                    // Ensure the database and tables are created
-                    // This will create all tables defined in the DbContext including PredictionCache
-                    dbContext.Database.EnsureCreated();
-
-                    _loggingService.Log("Info", "Prediction cache table created or verified using EF Core");
-                }
-            }
-            catch (Exception ex)
-            {
-                _loggingService.Log("Error", "Failed to ensure prediction cache table exists", ex.ToString());
-            }
-        }*/
 
         /// <summary>
         /// Get cached prediction result if available and valid using Entity Framework
@@ -59,13 +35,13 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var scope = _serviceProvider.CreateScope())
                 {
-                    // Query using LINQ - EF Core will translate to appropriate SQL (works with both SQLite and SQL Server)
+                    var dbContext = scope.ServiceProvider.GetRequiredService<QuantraDbContext>();
+
+                    // Query using LINQ - EF Core will translate to appropriate SQL
                     var cachedEntry = dbContext.PredictionCache
+                        .AsNoTracking()
                         .Where(pc => pc.Symbol == symbol
                                   && pc.ModelVersion == modelVersion
                                   && pc.InputDataHash == inputDataHash)
@@ -106,11 +82,10 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
-
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var scope = _serviceProvider.CreateScope())
                 {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<QuantraDbContext>();
+
                     // Check if entry already exists
                     var existingEntry = dbContext.PredictionCache
                         .FirstOrDefault(pc => pc.Symbol == symbol
@@ -187,11 +162,11 @@ namespace Quantra.DAL.Services
             try
             {
                 var expiryDate = DateTime.Now - _cacheValidityPeriod;
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-                optionsBuilder.UseSqlite("Data Source=Quantra.db;Journal Mode=WAL;Busy Timeout=30000;");
 
-                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                using (var scope = _serviceProvider.CreateScope())
                 {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<QuantraDbContext>();
+
                     // Find expired entries using LINQ
                     var expiredEntries = dbContext.PredictionCache
                         .Where(pc => pc.CreatedAt < expiryDate)
