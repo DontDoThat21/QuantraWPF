@@ -382,8 +382,9 @@ namespace Quantra
                         var addToolButton = new Button
                         {
                             Content = "Add Tool",
-                            Width = 200,
-                            Height = 100,
+                            Width = 300,
+                            Height = 150,
+                            FontSize = 18,
                             HorizontalAlignment = HorizontalAlignment.Center,
                             VerticalAlignment = VerticalAlignment.Center,
                             Style = FindResource("ButtonStyle1") as Style
