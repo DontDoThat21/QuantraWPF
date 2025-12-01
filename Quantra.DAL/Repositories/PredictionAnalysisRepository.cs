@@ -18,32 +18,17 @@ namespace Quantra.Repositories
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        // Parameterless constructor for backward compatibility
+        /// <summary>
+        /// Parameterless constructor for backward compatibility.
+        /// Uses SQL Server with ConnectionHelper for consistent configuration across the application.
+        /// </summary>
         public PredictionAnalysisRepository()
         {
-            // For legacy code that doesn't use DI
-            // Prefer a relational SQL Server connection named "QuantraRelational" provided
-            // via environment variable or standard ConnectionStrings__QuantraRelational.
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-
-            string sqlConn = Environment.GetEnvironmentVariable("QUANTRA_RELATIONAL_CONNECTION");
-            if (string.IsNullOrWhiteSpace(sqlConn))
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
             {
-                // Try ASP.NET style JSON environment variable name
-                sqlConn = Environment.GetEnvironmentVariable("ConnectionStrings__QuantraRelational");
-            }
-
-            if (!string.IsNullOrWhiteSpace(sqlConn))
-            {
-                // Use SQL Server if connection string provided
-                optionsBuilder.UseSqlServer(sqlConn);
-            }
-            else
-            {
-                // Fallback to local SQLite database for compatibility
-                optionsBuilder.UseSqlite("Data Source=Quantra.db");
-            }
-
+                sqlServerOptions.CommandTimeout(30);
+            });
             _context = new QuantraDbContext(optionsBuilder.Options);
         }
 
