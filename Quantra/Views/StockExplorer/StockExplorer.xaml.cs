@@ -1066,9 +1066,9 @@ namespace Quantra.Controls
                             {
                                 await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
                             }
-                            catch (Exception cacheEx)
+                            catch (Exception)
                             {
-                                // Log warning but don't fail - caching is secondary
+                                // Caching is secondary - don't fail the main operation
                             }
                         }));
                     }
@@ -3355,6 +3355,9 @@ namespace Quantra.Controls
         /// </summary>
         private async Task<List<QuoteData>> GetOhlcvCandleStocks()
         {
+            const string INTRADAY_INTERVAL = "5min";
+            const string OUTPUT_SIZE = "compact";
+            
             var result = new List<QuoteData>();
             try
             {
@@ -3381,7 +3384,7 @@ namespace Quantra.Controls
                             try
                             {
                                 // Load intraday OHLCV data using TIME_SERIES_INTRADAY API
-                                var intradayData = await _alphaVantageService.GetIntradayData(stock.Symbol, "5min", "compact");
+                                var intradayData = await _alphaVantageService.GetIntradayData(stock.Symbol, INTRADAY_INTERVAL, OUTPUT_SIZE);
                                 
                                 if (intradayData != null && intradayData.Any())
                                 {
@@ -3390,7 +3393,7 @@ namespace Quantra.Controls
                                     
                                     if (latestCandle != null)
                                     {
-                                        // Create QuoteData with OHLCV data from intraday
+                                        // Create QuoteData with OHLCV data from intraday candle
                                         var candleQuote = new QuoteData
                                         {
                                             Symbol = stock.Symbol,
@@ -3399,7 +3402,6 @@ namespace Quantra.Controls
                                             DayLow = latestCandle.Low,
                                             Volume = latestCandle.Volume,
                                             LastUpdated = latestCandle.Date,
-                                            // Store Open price in a way that can be accessed
                                             PERatio = stock.PERatio,
                                             RSI = stock.RSI,
                                             VWAP = stock.VWAP,
@@ -3421,7 +3423,7 @@ namespace Quantra.Controls
                                     }
                                 }
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 // If API call fails, add the original stock data
                                 lock (result)
@@ -3444,9 +3446,8 @@ namespace Quantra.Controls
 
                 return result.OrderByDescending(x => x.Volume).ToList();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //DatabaseMonolith.Log("Error", "Error getting OHLCV candle stocks", ex.ToString());
                 return result;
             }
         }
