@@ -99,7 +99,7 @@ namespace Quantra.Controls
                     symbol, lookbackDays);
                 
                 // Update UI with results
-                UpdateSentimentCorrelationDisplay();
+                await UpdateSentimentCorrelationDisplay();
                 
                 UpdateStatus($"Sentiment-price correlation analysis for {symbol} complete.");
             }
@@ -125,7 +125,7 @@ namespace Quantra.Controls
         /// <summary>
         /// Updates the UI with sentiment correlation results
         /// </summary>
-        private void UpdateSentimentCorrelationDisplay()
+        private async Task UpdateSentimentCorrelationDisplay()
         {
             if (_lastSentimentCorrelation == null)
                 return;
@@ -135,10 +135,10 @@ namespace Quantra.Controls
             try
             {
                 // Get visualization data
-                var visualData = _sentimentCorrelationAnalysis.GetVisualizationData(
+                var visualData = await _sentimentCorrelationAnalysis.GetVisualizationData(
                     result.Symbol, 
                     30, 
-                    null).GetAwaiter().GetResult();
+                    null);
                 
                 // Update the original sentiment visualization (for legacy compatibility)
                 _sentimentVisualizationControl?.UpdateVisualization(visualData);

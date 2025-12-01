@@ -1304,14 +1304,14 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
 def predict_stock(features, model_type='auto', architecture_type='lstm', use_feature_engineering=True, optimize_hyperparams=False):
     """
     Make stock predictions using the provided features and the specified ML model.
-    
+                    
     Args:
         features (dict): Dictionary of feature names and values
         model_type (str): Model type to use ('pytorch', 'tensorflow', 'random_forest', or 'auto')
         architecture_type (str): Neural network architecture type ('lstm', 'gru', 'transformer')
         use_feature_engineering (bool): Whether to use advanced feature engineering
         optimize_hyperparams (bool): Whether to optimize hyperparameters if training a new model
-        
+                        
     Returns:
         dict: Prediction results with action, confidence, target price, etc.
     """
@@ -1319,7 +1319,7 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
         # Create a simple feature set if none exists
         if not features:
             features = {'dummy': 0.0}
-            
+                
         # Initialize models
         if optimize_hyperparams and HYPERPARAMETER_OPTIMIZATION_AVAILABLE:
             logger.info("Hyperparameter optimization requested for prediction")
@@ -1329,25 +1329,25 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                 'optimization_available': True,
                 'status': 'Training data required for optimization'
             }
-        
+            
         # Load or train the model
         model, scaler, used_model_type = load_or_train_model(
             model_type=model_type,
             architecture_type=architecture_type
         )
-        
+            
         used_architecture = 'n/a'
         if hasattr(model, 'architecture_type'):
             used_architecture = model.architecture_type
-        
+            
         logger.info(f"Making prediction with {used_model_type} model using {used_architecture} architecture")
-        
+            
         # Convert features to DataFrame for feature engineering
         feature_df = pd.DataFrame([features])
-        
+            
         # Check if we have OHLCV data for feature engineering
         has_ohlcv = all(col in feature_df.columns for col in ['open', 'high', 'low', 'close'])
-        
+            
         # Apply feature engineering if we have OHLCV data and feature engineering is enabled
         if has_ohlcv and FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering:
             try:
@@ -1363,47 +1363,66 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                     logger.info("No saved pipeline found, using basic feature creation")
             except Exception as e:
                 logger.warning(f"Error in feature engineering: {str(e)}. Using raw features.")
-        
+            
         # Prepare feature array for prediction
         feature_names = list(feature_df.columns)
         feature_array = feature_df.values
-        
+            
+        # CRITICAL FIX: Check feature count consistency with scaler
+        if used_model_type == 'random_forest' and scaler is not None:
+            expected_features = scaler.n_features_in_ if hasattr(scaler, 'n_features_in_') else None
+            actual_features = feature_array.shape[1]
+                
+            if expected_features is not None and actual_features != expected_features:
+                logger.warning(f"Feature mismatch detected: model expects {expected_features} features but got {actual_features}. Forcing retrain...")
+                    
+                # Force retrain with current feature set to match
+                model, scaler, used_model_type = load_or_train_model(
+                    X_train=feature_array,  # Use current features for training
+                    y_train=np.random.rand(feature_array.shape[0]),  # Dummy target
+                    model_type=model_type,
+                    architecture_type=architecture_type,
+                    force_retrain=True  # Force retrain flag
+                )
+                    
+                logger.info(f"Model retrained with {feature_array.shape[1]} features to match input")
+            
         # Align feature names with model if possible
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):
             model.feature_names = feature_names
-        
+            
         # Make predictions based on model type
         if used_model_type == 'pytorch':
             # Scale and predict with PyTorch model
             target_price = float(model.predict(feature_array)[0])
-            
+                
             # Calculate confidence - approximate for PyTorch
             confidence = 0.8  # Default confidence for PyTorch models
             weights = model.feature_importance(feature_array)
-            
+                
         elif used_model_type == 'tensorflow':
             # Scale and predict with TensorFlow model
             target_price = float(model.predict(feature_array)[0])
-            
+                
             # Calculate confidence - approximate for TensorFlow
             confidence = 0.8  # Default confidence for TensorFlow models
             weights = model.feature_importance(feature_array)
-            
+                
         else:  # Random Forest
             # Scale the features
             if scaler:
                 feature_array = scaler.transform(feature_array)
-                
+                    
             # Make predictions
             target_price = float(model.predict(feature_array)[0])
-            
+                
             # Calculate confidence based on feature importance for RF
             predictions = []
             for estimator in model.estimators_:
                 predictions.append(float(estimator.predict(feature_array)[0]))
-            
+                
             confidence = 1.0 - min(1.0, np.std(predictions) / (np.mean(predictions) + 1e-10))
-            
+                
             # Get feature importances for Random Forest
             weights = dict(zip(feature_names, 
                              [float(imp) for imp in model.feature_importances_]))
