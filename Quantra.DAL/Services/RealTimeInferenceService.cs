@@ -70,6 +70,20 @@ namespace Quantra.DAL.Services
         {
             if (_isInitialized) return true;
 
+            // TEMPORARY: The Python real_time_inference.py script is not properly configured
+            // for stdin/stdout JSON API communication. It runs in interactive mode.
+            // Use ExecutePythonPredictionAsync() method instead which properly invokes stock_predictor.py
+            Console.WriteLine("=".PadRight(80, '='));
+            Console.WriteLine("NOTICE: Real-time Python inference service is currently disabled.");
+            Console.WriteLine("The real_time_inference.py script requires modification to support JSON API mode.");
+            Console.WriteLine("For predictions, please use ExecutePythonPredictionAsync() instead.");
+            Console.WriteLine("=".PadRight(80, '='));
+            
+            _isInitialized = false;
+            return false;
+
+            // TODO: Uncomment and fix when Python script is updated to support --api-mode
+            /*
             try
             {
                 if (!File.Exists(_pythonScript))
@@ -81,7 +95,7 @@ namespace Quantra.DAL.Services
                 var psi = new ProcessStartInfo
                 {
                     FileName = "python3",
-                    Arguments = $"\"{_pythonScript}\"",
+                    Arguments = $"\"{_pythonScript}\" --api-mode",  // NEW: needs --api-mode flag
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -89,45 +103,14 @@ namespace Quantra.DAL.Services
                     CreateNoWindow = true,
                     WorkingDirectory = Path.GetDirectoryName(_pythonScript)
                 };
-
-                _pythonProcess = Process.Start(psi);
-                if (_pythonProcess == null)
-                {
-                    throw new Exception("Failed to start Python inference process");
-                }
-
-                // Send initialization command
-                var initCommand = new
-                {
-                    command = "initialize",
-                    config = new
-                    {
-                        model_types = new[] { "auto" },
-                        max_queue_size = 1000,
-                        prediction_timeout = 0.1,
-                        enable_monitoring = true
-                    }
-                };
-
-                await _streamAccessSemaphore.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    await _pythonProcess.StandardInput.WriteLineAsync(JsonSerializer.Serialize(initCommand)).ConfigureAwait(false);
-                    await _pythonProcess.StandardInput.FlushAsync().ConfigureAwait(false);
-                }
-                finally
-                {
-                    _streamAccessSemaphore.Release();
-                }
-
-                _isInitialized = true;
-                return true;
+                // ... rest of initialization
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to initialize real-time inference service: {ex.Message}");
+                Console.WriteLine($"Failed to initialize: {ex.Message}");
                 return false;
             }
+            */
         }
 
         /// <summary>
@@ -243,6 +226,47 @@ namespace Quantra.DAL.Services
                     _pendingRequests.TryRemove(requestId, out _);
                 }
             }
+            catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("Python process restarted"))
+            {
+                stopwatch.Stop();
+                Console.WriteLine($"Python process was restarted during prediction: {ioEx.Message}");
+
+                // Mark process as dead so it gets restarted on next request
+                _isInitialized = false;
+
+                // Return safe fallback prediction
+                return new PredictionResult
+                {
+                    Symbol = marketData.ContainsKey("symbol") ? marketData["symbol"].ToString() : "UNKNOWN",
+                    Action = "HOLD",
+                    Confidence = 0.5,
+                    CurrentPrice = marketData.ContainsKey("close") ? marketData["close"] : 0,
+                    TargetPrice = marketData.ContainsKey("close") ? marketData["close"] : 0,
+                    PredictionDate = DateTime.Now,
+                    RequestId = requestId,
+                    InferenceTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                    Error = "Python process restarted during prediction - please retry"
+                };
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                stopwatch.Stop();
+                Console.WriteLine($"Prediction request {requestId} timed out after 10 seconds");
+
+                // Return safe fallback prediction for timeout
+                return new PredictionResult
+                {
+                    Symbol = marketData.ContainsKey("symbol") ? marketData["symbol"].ToString() : "UNKNOWN",
+                    Action = "HOLD",
+                    Confidence = 0.5,
+                    CurrentPrice = marketData.ContainsKey("close") ? marketData["close"] : 0,
+                    TargetPrice = marketData.ContainsKey("close") ? marketData["close"] : 0,
+                    PredictionDate = DateTime.Now,
+                    RequestId = requestId,
+                    InferenceTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                    Error = "Prediction request timed out - Python process may be overloaded"
+                };
+            }
             catch (IOException ioEx) when (ioEx.Message.Contains("pipe") || ioEx.Message.Contains("closed"))
             {
                 stopwatch.Stop();
@@ -297,7 +321,25 @@ namespace Quantra.DAL.Services
             }
 
             // Process has exited or was never started, need to restart
-            Console.WriteLine("Python process has exited, restarting...");
+            if (_pythonProcess != null)
+            {
+                Console.WriteLine($"Python process has exited with code {_pythonProcess.ExitCode}. Restarting...");
+                
+                // Try to capture any error output before disposing
+                try
+                {
+                    var errors = await _pythonProcess.StandardError.ReadToEndAsync().ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(errors))
+                    {
+                        Console.WriteLine($"Python process error output: {errors}");
+                    }
+                }
+                catch { }
+            }
+            else
+            {
+                Console.WriteLine("Python process was never started, initializing...");
+            }
 
             // Clean up existing process
             try
@@ -311,11 +353,18 @@ namespace Quantra.DAL.Services
             _isInitialized = false;
 
             // Clear pending requests as they will never be fulfilled
+            var clearedCount = 0;
             foreach (var kvp in _pendingRequests)
             {
                 kvp.Value.TrySetException(new InvalidOperationException("Python process restarted"));
+                clearedCount++;
             }
             _pendingRequests.Clear();
+            
+            if (clearedCount > 0)
+            {
+                Console.WriteLine($"Cleared {clearedCount} pending prediction requests due to process restart");
+            }
 
             // Restart the process
             return await InitializeAsync().ConfigureAwait(false);
@@ -338,12 +387,41 @@ namespace Quantra.DAL.Services
                     var response = await _pythonProcess.StandardOutput.ReadLineAsync().ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(response))
                     {
-                        var pythonResult = JsonSerializer.Deserialize<PythonInferenceResult>(response);
-
-                        if (_pendingRequests.TryGetValue(pythonResult.RequestId, out var tcs))
+                        // Check if the response looks like JSON (starts with '{' or '[')
+                        var trimmed = response.Trim();
+                        if (!trimmed.StartsWith('{') && !trimmed.StartsWith('['))
                         {
-                            var predictionResult = ConvertToPredictionResult(pythonResult);
-                            tcs.SetResult(predictionResult);
+                            // Not JSON - likely debug output or banner text from Python
+                            Console.WriteLine($"[Python Output] {response}");
+                            return;
+                        }
+
+                        // Try to deserialize JSON response
+                        try
+                        {
+                            var pythonResult = JsonSerializer.Deserialize<PythonInferenceResult>(response);
+
+                            if (pythonResult != null && !string.IsNullOrEmpty(pythonResult.RequestId))
+                            {
+                                if (_pendingRequests.TryGetValue(pythonResult.RequestId, out var tcs))
+                                {
+                                    var predictionResult = ConvertToPredictionResult(pythonResult);
+                                    tcs.SetResult(predictionResult);
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Received response for unknown request: {pythonResult.RequestId}");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Received JSON without valid RequestId: {response.Substring(0, Math.Min(100, response.Length))}");
+                            }
+                        }
+                        catch (JsonException jsonEx)
+                        {
+                            Console.WriteLine($"Failed to parse JSON response: {jsonEx.Message}");
+                            Console.WriteLine($"Response content: {response.Substring(0, Math.Min(200, response.Length))}");
                         }
                     }
                 }
