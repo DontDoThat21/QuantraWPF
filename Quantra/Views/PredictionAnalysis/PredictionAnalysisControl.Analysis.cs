@@ -8,6 +8,7 @@ using Quantra.Models; // Ensures Quantra.Models.PredictionModel is accessible
 using System.Windows;
 using System.Windows.Controls;
 using Quantra.DAL.Services; // Ensures Quantra.Models.PredictionModel is accessible
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls
 {
@@ -710,11 +711,20 @@ namespace Quantra.Controls
 
         // Model Training Service
         private ModelTrainingService _modelTrainingService;
+        private ModelTrainingHistoryService _modelTrainingHistoryService;
+        private List<string> _selectedTrainingSymbols;
+        private int? _maxTrainingSymbols;
 
         // Initialize training service - call this in the main constructor
         private void InitializeTrainingService()
         {
             _modelTrainingService = new ModelTrainingService(_loggingService);
+            
+            // Initialize training history service
+            var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+            optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+            var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
+            _modelTrainingHistoryService = new Quantra.DAL.Services.ModelTrainingHistoryService(dbContext, _loggingService);
         }
 
         /// <summary>
@@ -740,8 +750,26 @@ namespace Quantra.Controls
                 string modelType = GetSelectedModelType();
                 string architectureType = GetSelectedArchitectureType();
                 
-                // Optional: Ask user if they want to limit the number of symbols
-                int? maxSymbols = null; // Set to a number to limit, or null for all symbols
+                // Get max symbols from UI or selected symbols
+                int? maxSymbols = _maxTrainingSymbols;
+                
+                // If specific symbols are selected, use those instead
+                if (_selectedTrainingSymbols != null && _selectedTrainingSymbols.Count > 0)
+                {
+                    maxSymbols = _selectedTrainingSymbols.Count;
+                    if (StatusText != null)
+                        StatusText.Text = $"Preparing to train on {_selectedTrainingSymbols.Count} selected symbols...";
+                }
+                else if (maxSymbols.HasValue)
+                {
+                    if (StatusText != null)
+                        StatusText.Text = $"Preparing to train on up to {maxSymbols.Value} symbols...";
+                }
+                else
+                {
+                    if (StatusText != null)
+                        StatusText.Text = "Preparing to train on all available symbols...";
+                }
                 
                 // Progress callback to update UI
                 Action<string> progressCallback = (message) =>
@@ -766,6 +794,29 @@ namespace Quantra.Controls
                 // Display results
                 if (result.Success)
                 {
+                    // Log training session to database
+                    try
+                    {
+                        int trainingHistoryId = await _modelTrainingHistoryService.LogTrainingSessionAsync(
+                            result,
+                            notes: $"Trained via UI with {result.SymbolsCount} symbols"
+                        );
+
+                        _loggingService?.Log("Info", $"Training session saved with ID: {trainingHistoryId}");
+                        
+                        // Save per-symbol training results if available
+                        if (result.SymbolResults != null && result.SymbolResults.Count > 0)
+                        {
+                            await _modelTrainingHistoryService.LogSymbolResultsWithDatesAsync(trainingHistoryId, result.SymbolResults);
+                            
+                            _loggingService?.Log("Info", $"Saved {result.SymbolResults.Count} symbol training results");
+                        }
+                    }
+                    catch (Exception logEx)
+                    {
+                        _loggingService?.LogErrorWithContext(logEx, "Failed to log training session to database");
+                    }
+
                     var message = $"Model Training Complete!\n\n" +
                                  $"Model Type: {result.ModelType}\n" +
                                  $"Architecture: {result.ArchitectureType}\n" +
@@ -836,6 +887,84 @@ namespace Quantra.Controls
         private async void TrainModelButton_Click(object sender, RoutedEventArgs e)
         {
             await TrainModelFromDatabaseAsync();
+        }
+        
+        /// <summary>
+        /// Handle the Select Training Symbols button click
+        /// </summary>
+        private void SelectTrainingSymbolsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Use the Stock Configuration Manager to select symbols
+                var stockConfigService = new StockConfigurationService(_loggingService);
+                var selectedSymbols = Quantra.Views.StockExplorer.StockConfigurationManagerWindow.ShowAndGetSymbols(
+                    stockConfigService,
+                    Window.GetWindow(this)
+                );
+
+                if (selectedSymbols != null && selectedSymbols.Count > 0)
+                {
+                    _selectedTrainingSymbols = selectedSymbols;
+
+                    // Update the UI to show how many symbols are selected
+                    var symbolsCountTextBlock = this.FindName("TrainingSymbolsCountTextBlock") as TextBlock;
+                    if (symbolsCountTextBlock != null)
+                    {
+                        symbolsCountTextBlock.Text = $"{selectedSymbols.Count} symbols selected";
+                        symbolsCountTextBlock.Visibility = Visibility.Visible;
+                    }
+
+                    if (StatusText != null)
+                        StatusText.Text = $"Selected {selectedSymbols.Count} symbols for training";
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error selecting training symbols");
+                MessageBox.Show($"Error selecting symbols:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Handle changes to the max symbols TextBox
+        /// </summary>
+        private void MaxSymbolsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is TextBox textBox)
+            {
+                if (string.IsNullOrWhiteSpace(textBox.Text))
+                {
+                    _maxTrainingSymbols = null;
+                }
+                else if (int.TryParse(textBox.Text, out int maxSymbols) && maxSymbols > 0)
+                {
+                    _maxTrainingSymbols = maxSymbols;
+                }
+                else
+                {
+                    // Invalid input - reset
+                    _maxTrainingSymbols = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clear selected training symbols
+        /// </summary>
+        private void ClearTrainingSymbolsButton_Click(object sender, RoutedEventArgs e)
+        {
+            _selectedTrainingSymbols = null;
+
+            var symbolsCountTextBlock = this.FindName("TrainingSymbolsCountTextBlock") as TextBlock;
+            if (symbolsCountTextBlock != null)
+            {
+                symbolsCountTextBlock.Text = "";
+                symbolsCountTextBlock.Visibility = Visibility.Collapsed;
+            }
+
+            if (StatusText != null)
+                StatusText.Text = "Cleared selected training symbols";
         }
     }
 }
