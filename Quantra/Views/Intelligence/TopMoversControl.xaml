@@ -50,15 +50,33 @@
                      Height="4" Margin="0,0,0,10"
                      Visibility="Collapsed" Foreground="Cyan"/>
         
-        <!-- Tab Control -->
-        <TabControl Grid.Row="2" x:Name="MoversTabControl" 
-                    Background="#2D2D42" BorderBrush="#3E3E56"
-                    Style="{StaticResource EnhancedTabControlStyle}"
-                    Padding="0" Margin="0">
+        <!-- View Selection and Content Grid -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             
-            <!-- Top Gainers Tab -->
-            <TabItem Header="Top Gainers" Style="{StaticResource TabItemStyle}" x:Name="GainersTab">
-                <DataGrid x:Name="GainersGrid" 
+            <!-- Radio Buttons for View Selection -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10" HorizontalAlignment="Left">
+                <RadioButton x:Name="GainersRadioButton" Content="Top Gainers" 
+                             IsChecked="True" Margin="0,0,15,0"
+                             Foreground="White" FontSize="14"
+                             Checked="ViewRadioButton_Checked"/>
+                <RadioButton x:Name="LosersRadioButton" Content="Top Losers" 
+                             Margin="0,0,15,0"
+                             Foreground="White" FontSize="14"
+                             Checked="ViewRadioButton_Checked"/>
+                <RadioButton x:Name="MostActiveRadioButton" Content="Most Active" 
+                             Foreground="White" FontSize="14"
+                             Checked="ViewRadioButton_Checked"/>
+            </StackPanel>
+            
+            <!-- Content Area with Border -->
+            <Border Grid.Row="1" Background="#2D2D42" BorderBrush="#3E3E56" BorderThickness="1">
+                <Grid>
+                    <!-- Top Gainers Grid -->
+                    <DataGrid x:Name="GainersGrid" 
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
                           BorderThickness="0"
@@ -120,11 +138,10 @@
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </TabItem>
-            
-            <!-- Top Losers Tab -->
-            <TabItem Header="Top Losers" Style="{StaticResource TabItemStyle}" x:Name="LosersTab">
-                <DataGrid x:Name="LosersGrid" 
+                    
+                    <!-- Top Losers Grid -->
+                    <DataGrid x:Name="LosersGrid" 
+                          Visibility="Collapsed"
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
                           BorderThickness="0"
@@ -186,11 +203,10 @@
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </TabItem>
-            
-            <!-- Most Active Tab -->
-            <TabItem Header="Most Active" Style="{StaticResource TabItemStyle}" x:Name="MostActiveTab">
-                <DataGrid x:Name="MostActiveGrid" 
+                    
+                    <!-- Most Active Grid -->
+                    <DataGrid x:Name="MostActiveGrid" 
+                          Visibility="Collapsed"
                           AutoGenerateColumns="False"
                           Background="#2D2D42" Foreground="White"
                           BorderThickness="0"
@@ -253,8 +269,9 @@
                         </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
-            </TabItem>
-        </TabControl>
+                </Grid>
+            </Border>
+        </Grid>
         
         <!-- Status Bar -->
         <TextBlock Grid.Row="3" x:Name="StatusText" Text="Loading market movers..." 

@@ -65,7 +65,6 @@ namespace Quantra.Views.Intelligence
         private readonly LoggingService _loggingService;
         private TopMoversResponse _topMovers;
         private bool _hasLoadedInitially;
-        private int _selectedTabIndex = 0; // Track selected tab to preserve selection
 
         /// <summary>
         /// Event raised when a symbol is double-clicked for navigation
@@ -89,18 +88,6 @@ namespace Quantra.Views.Intelligence
 
             // Auto-load data when control is loaded
             Loaded += TopMoversControl_Loaded;
-            
-            // Handle tab selection changes to preserve selection
-            MoversTabControl.SelectionChanged += MoversTabControl_SelectionChanged;
-        }
-
-        private void MoversTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // Store the selected tab index to preserve it during data updates
-            if (MoversTabControl.SelectedIndex >= 0)
-            {
-                _selectedTabIndex = MoversTabControl.SelectedIndex;
-            }
         }
 
         private async void TopMoversControl_Loaded(object sender, RoutedEventArgs e)
@@ -126,6 +113,34 @@ namespace Quantra.Views.Intelligence
             await LoadTopMovers();
         }
 
+        private void ViewRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not RadioButton radioButton)
+                return;
+
+            if (GainersGrid == null || LosersGrid == null || MostActiveGrid == null)
+                return;
+
+            if (radioButton.Name == "GainersRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Visible;
+                LosersGrid.Visibility = Visibility.Collapsed;
+                MostActiveGrid.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "LosersRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Collapsed;
+                LosersGrid.Visibility = Visibility.Visible;
+                MostActiveGrid.Visibility = Visibility.Collapsed;
+            }
+            else if (radioButton.Name == "MostActiveRadioButton")
+            {
+                GainersGrid.Visibility = Visibility.Collapsed;
+                LosersGrid.Visibility = Visibility.Collapsed;
+                MostActiveGrid.Visibility = Visibility.Visible;
+            }
+        }
+
         private async System.Threading.Tasks.Task LoadTopMovers()
         {
             if (_alphaVantageService == null)
@@ -140,9 +155,6 @@ namespace Quantra.Views.Intelligence
                 RefreshButton.IsEnabled = false;
                 StatusText.Text = "Loading market movers data...";
 
-                // Store current tab selection before updating data
-                var currentTabIndex = MoversTabControl.SelectedIndex;
-                
                 _topMovers = await _alphaVantageService.GetTopMoversAsync();
 
                 if (_topMovers != null)
@@ -157,20 +169,6 @@ namespace Quantra.Views.Intelligence
                                      $"{_topMovers.MostActivelyTraded.Count} most active";
 
                     _loggingService?.Log("Info", $"Loaded top movers: {_topMovers.TopGainers.Count} gainers, {_topMovers.TopLosers.Count} losers");
-                    
-                    // Restore tab selection after data update
-                    // Use Dispatcher to ensure UI has finished updating before setting selection
-                    Dispatcher.InvokeAsync(() =>
-                    {
-                        if (currentTabIndex >= 0 && currentTabIndex < MoversTabControl.Items.Count)
-                        {
-                            MoversTabControl.SelectedIndex = currentTabIndex;
-                        }
-                        else if (_selectedTabIndex >= 0 && _selectedTabIndex < MoversTabControl.Items.Count)
-                        {
-                            MoversTabControl.SelectedIndex = _selectedTabIndex;
-                        }
-                    }, System.Windows.Threading.DispatcherPriority.Loaded);
                 }
                 else
                 {
