@@ -120,7 +120,15 @@ namespace Quantra.Extensions
             services.AddSingleton<SystemHealthMonitorService>();
 
             // Register PredictionCacheService
-            services.AddSingleton<PredictionCacheService>();
+            services.AddSingleton<PredictionCacheService>(sp =>
+            {
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new PredictionCacheService(loggingService, sp);
+            });
+
+            // Register PredictionDataService
+            services.AddScoped<PredictionDataService>();
+            services.AddScoped<IPredictionDataService>(sp => sp.GetRequiredService<PredictionDataService>());
 
             // Register CacheManagementService (MarketChat story 10)
             services.AddSingleton<CacheManagementService>(sp =>

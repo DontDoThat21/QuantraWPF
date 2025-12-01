@@ -68,6 +68,10 @@ namespace Quantra.DAL.Data
         // Insider Transactions
         public DbSet<InsiderTransactionEntity> InsiderTransactions { get; set; }
 
+        // Model Training History
+        public DbSet<ModelTrainingHistory> ModelTrainingHistory { get; set; }
+        public DbSet<SymbolTrainingResult> SymbolTrainingResults { get; set; }
+
         public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {
         }

@@ -158,6 +158,22 @@ namespace Quantra.DAL.Services
 
                         await process.WaitForExitAsync();
 
+                        // CRITICAL: Wait for async output readers to complete
+                        // WaitForExitAsync() can return before async readers finish processing buffered output
+                        process.WaitForExit();
+
+                        // Check if we got any output - if not, the script failed silently
+                        if (standardOutput.Length == 0 && errorOutput.Length == 0)
+                        {
+                            var errorMessage = "Python process produced no output. This usually indicates:\n" +
+                                             "1. Missing Python dependencies (pyodbc, numpy, tensorflow, pytorch, etc.)\n" +
+                                             "2. Python script syntax or import errors\n" +
+                                             "3. ODBC Driver 17 for SQL Server not installed\n" +
+                                             $"4. Connection string issue: {_connectionString}\n\n" +
+                                             $"Try running manually: python \"{_pythonScriptPath}\" \"{_connectionString}\" \"{outputFile}\" {modelType} {architectureType}";
+                            throw new Exception(errorMessage);
+                        }
+
                         if (process.ExitCode != 0)
                         {
                             var errorMessage = $"Python training failed with exit code {process.ExitCode}";
@@ -175,7 +191,16 @@ namespace Quantra.DAL.Services
                         // Read results
                         if (!File.Exists(outputFile))
                         {
-                            throw new Exception("Training script did not create output file");
+                            var errorMessage = "Training script did not create output file";
+                            if (errorOutput.Length > 0)
+                            {
+                                errorMessage += $"\n\nError output:\n{errorOutput}";
+                            }
+                            if (standardOutput.Length > 0)
+                            {
+                                errorMessage += $"\n\nStandard output:\n{standardOutput}";
+                            }
+                            throw new Exception(errorMessage);
                         }
 
                         var jsonResult = await File.ReadAllTextAsync(outputFile);
@@ -256,6 +281,9 @@ namespace Quantra.DAL.Services
         
         [JsonPropertyName("message")]
         public string Message { get; set; }
+        
+        [JsonPropertyName("symbol_results")]
+        public List<SymbolTrainingMetric> SymbolResults { get; set; }
     }
 
     public class ModelPerformance
@@ -271,5 +299,35 @@ namespace Quantra.DAL.Services
         
         [JsonPropertyName("r2_score")]
         public double R2Score { get; set; }
+    }
+
+    /// <summary>
+    /// Per-symbol training metrics from Python training script
+    /// </summary>
+    public class SymbolTrainingMetric
+    {
+        [JsonPropertyName("symbol")]
+        public string Symbol { get; set; }
+        
+        [JsonPropertyName("data_points")]
+        public int DataPoints { get; set; }
+        
+        [JsonPropertyName("training_samples")]
+        public int TrainingSamples { get; set; }
+        
+        [JsonPropertyName("test_samples")]
+        public int TestSamples { get; set; }
+        
+        [JsonPropertyName("included")]
+        public bool Included { get; set; }
+        
+        [JsonPropertyName("exclusion_reason")]
+        public string ExclusionReason { get; set; }
+        
+        [JsonPropertyName("data_start_date")]
+        public string DataStartDate { get; set; }
+        
+        [JsonPropertyName("data_end_date")]
+        public string DataEndDate { get; set; }
     }
 }
