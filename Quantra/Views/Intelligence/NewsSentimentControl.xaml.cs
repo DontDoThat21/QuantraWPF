@@ -110,8 +110,9 @@ namespace Quantra.Views.Intelligence
 
         private async void TopicComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Only auto-load if we have the service initialized and have made at least one selection
-            if (_alphaVantageService != null && IsLoaded)
+            // Only auto-load if we have the service initialized
+            // Note: This fires on initial selection too, which is acceptable behavior
+            if (_alphaVantageService != null)
             {
                 await LoadNewsSentiment();
             }
@@ -137,11 +138,7 @@ namespace Quantra.Views.Intelligence
                 // Get selected topic from Tag property (contains AlphaVantage API topic value)
                 if (TopicComboBox.SelectedItem is ComboBoxItem selectedTopic)
                 {
-                    var topicTag = selectedTopic.Tag?.ToString();
-                    if (!string.IsNullOrEmpty(topicTag))
-                    {
-                        topic = topicTag;
-                    }
+                    topic = selectedTopic.Tag as string;
                 }
 
                 var response = await _alphaVantageService.GetNewsSentimentAsync(

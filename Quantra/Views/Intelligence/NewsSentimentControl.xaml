@@ -53,7 +53,7 @@
                           Style="{StaticResource EnhancedComboBoxStyle}"
                           SelectionChanged="TopicComboBox_SelectionChanged"
                           ToolTip="Select a topic to filter news articles. Clear ticker to search by topic only.">
-                    <ComboBoxItem Content="All Topics" IsSelected="True" Tag=""/>
+                    <ComboBoxItem Content="All Topics" IsSelected="True" Tag="{x:Null}"/>
                     <ComboBoxItem Content="Blockchain" Tag="blockchain"/>
                     <ComboBoxItem Content="Earnings" Tag="earnings"/>
                     <ComboBoxItem Content="IPO" Tag="ipo"/>
