@@ -17,12 +17,35 @@ namespace Quantra.DAL.Services
         private readonly LoggingService _loggingService;
 
         // Current logged-in user ID (used to scope settings profiles)
+        // Thread-safe implementation using lock for single-threaded WPF app context
         private static int? _currentUserId;
+        private static readonly object _userIdLock = new object();
 
         /// <summary>
-        /// Gets the currently logged-in user ID, or null if no user is logged in
+        /// Gets the currently logged-in user ID, or null if no user is logged in.
+        /// This is a static property for application-wide user context in this single-user WPF application.
         /// </summary>
-        public static int? CurrentUserId => _currentUserId;
+        public static int? CurrentUserId
+        {
+            get
+            {
+                lock (_userIdLock)
+                {
+                    return _currentUserId;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the current user ID. Should only be called by AuthenticationService during login/logout.
+        /// </summary>
+        internal static void SetCurrentUserId(int? userId)
+        {
+            lock (_userIdLock)
+            {
+                _currentUserId = userId;
+            }
+        }
 
         public AuthenticationService(QuantraDbContext dbContext, LoggingService loggingService)
         {
@@ -163,8 +186,8 @@ namespace Quantra.DAL.Services
                 user.LastLoginDate = DateTime.Now;
                 await _dbContext.SaveChangesAsync();
 
-                // Set current user ID
-                _currentUserId = user.Id;
+                // Set current user ID using thread-safe method
+                SetCurrentUserId(user.Id);
 
                 _loggingService.Log("Info", $"User logged in: {username}");
 
@@ -188,7 +211,7 @@ namespace Quantra.DAL.Services
         /// </summary>
         public void Logout()
         {
-            _currentUserId = null;
+            SetCurrentUserId(null);
             _loggingService.Log("Info", "User logged out");
         }
 
@@ -290,10 +313,11 @@ namespace Quantra.DAL.Services
 
         /// <summary>
         /// Computes a hash for a password with the given salt using PBKDF2
+        /// OWASP recommends at least 120,000 iterations for PBKDF2 with SHA-256
         /// </summary>
         private string ComputeHash(string password, byte[] salt)
         {
-            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256))
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 120000, HashAlgorithmName.SHA256))
             {
                 byte[] hash = pbkdf2.GetBytes(32);
                 return Convert.ToBase64String(hash);

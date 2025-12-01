@@ -10,6 +10,7 @@ using System.Text.Json;
 using Quantra.DAL.Services;
 using Quantra.ViewModels;
 using System.ComponentModel;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra
 {
@@ -47,13 +48,33 @@ namespace Quantra
 
         /// <summary>
         /// Legacy constructor for compatibility - creates ViewModel internally
+        /// NOTE: This constructor creates a temporary AuthenticationService for backward compatibility.
+        /// Prefer using the constructor that accepts LoginWindowViewModel.
         /// </summary>
         public LoginWindow(UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,
             TechnicalIndicatorService technicalIndicatorService)
-            : this(new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
+            : this(CreateViewModelWithInternalAuth(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService))
         {
+        }
+
+        /// <summary>
+        /// Creates a LoginWindowViewModel with an internally created AuthenticationService
+        /// </summary>
+        private static LoginWindowViewModel CreateViewModelWithInternalAuth(
+            UserSettingsService userSettingsService,
+            HistoricalDataService historicalDataService,
+            AlphaVantageService alphaVantageService,
+            TechnicalIndicatorService technicalIndicatorService)
+        {
+            var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+            optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+            var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
+            var loggingService = new LoggingService();
+            var authService = new AuthenticationService(dbContext, loggingService);
+            
+            return new LoginWindowViewModel(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService, authService);
         }
 
         private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)

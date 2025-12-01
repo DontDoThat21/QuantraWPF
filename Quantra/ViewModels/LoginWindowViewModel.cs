@@ -8,8 +8,6 @@ using System.Windows.Input;
 using Quantra.Commands;
 using Quantra.DAL.Services;
 using Quantra.ViewModels.Base;
-using Quantra.DAL.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.ViewModels
 {
@@ -44,19 +42,14 @@ namespace Quantra.ViewModels
             UserSettingsService userSettingsService,
             HistoricalDataService historicalDataService,
             AlphaVantageService alphaVantageService,
-            TechnicalIndicatorService technicalIndicatorService)
+            TechnicalIndicatorService technicalIndicatorService,
+            AuthenticationService authenticationService)
         {
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
             _historicalDataService = historicalDataService ?? throw new ArgumentNullException(nameof(historicalDataService));
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
             _technicalIndicatorService = technicalIndicatorService ?? throw new ArgumentNullException(nameof(technicalIndicatorService));
-
-            // Initialize AuthenticationService
-            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-            optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
-            var dbContext = new QuantraDbContext(optionsBuilder.Options);
-            var loggingService = new LoggingService();
-            _authenticationService = new AuthenticationService(dbContext, loggingService);
+            _authenticationService = authenticationService ?? throw new ArgumentNullException(nameof(authenticationService));
 
             _rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
             RememberedAccountsList = new ObservableCollection<string>();
@@ -340,6 +333,9 @@ namespace Quantra.ViewModels
 
                     if (isAuthenticated)
                     {
+                        // Clear user context for legacy authentication (no user-specific settings)
+                        AuthenticationService.SetCurrentUserId(null);
+
                         // Save credentials if remember me is checked
                         if (RememberMe)
                         {
