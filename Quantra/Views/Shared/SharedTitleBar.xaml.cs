@@ -33,6 +33,8 @@ namespace Quantra
         private UserSettingsService _userSettingsService;
         private HistoricalDataService _historicalDataService;
         private TechnicalIndicatorService _technicalIndicatorService;
+        private YahooFinanceService _yahooFinanceService;
+        private LoggingService _loggingService;
 
         public static readonly DependencyProperty TitleProperty =
             DependencyProperty.Register("Title", typeof(string), typeof(SharedTitleBar), new PropertyMetadata(string.Empty));
@@ -382,11 +384,21 @@ namespace Quantra
                 _settingsService = App.ServiceProvider.GetService<ISettingsService>();
             }
 
-            // Instantiate AlphaVantageService
+            // Instantiate services
             _alphaVantageService = alphaVantageService;
             _userSettingsService = userSettingsService;
             _historicalDataService = historicalDataService;
             _technicalIndicatorService = technicalIndicatorService;
+            
+            // Get logging service and initialize Yahoo Finance service
+            if (App.ServiceProvider != null)
+            {
+                _loggingService = App.ServiceProvider.GetService<LoggingService>();
+                if (_loggingService != null)
+                {
+                    _yahooFinanceService = new YahooFinanceService(_loggingService);
+                }
+            }
 
             // Ensure settings are properly initialized before starting VIX monitoring
             try
@@ -579,15 +591,32 @@ namespace Quantra
         {
             try
             {
-                //DatabaseMonolith.Log("Info", "GetVixValue: Calling AlphaVantage API for VIX data");
-                // Use AlphaVantage service directly to get VIX data
-                double vixValue = await _alphaVantageService.GetQuoteData("^VIX");
-                //DatabaseMonolith.Log("Info", $"GetVixValue: Received VIX value: {vixValue}");
-                return vixValue;
+                // Use Yahoo Finance service to get VIX data instead of AlphaVantage
+                if (_yahooFinanceService != null)
+                {
+                    _loggingService?.Log("Info", "GetVixValue: Fetching VIX data from Yahoo Finance");
+                    var vixValue = await _yahooFinanceService.GetVixValueAsync();
+                    
+                    if (vixValue.HasValue)
+                    {
+                        _loggingService?.Log("Info", $"GetVixValue: Received VIX value: {vixValue.Value}");
+                        return vixValue.Value;
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", "GetVixValue: Yahoo Finance returned null, using fallback");
+                    }
+                }
+                else
+                {
+                    _loggingService?.Log("Warning", "GetVixValue: Yahoo Finance service not initialized, using fallback");
+                }
+                
+                return 15.0; // Default moderate volatility fallback
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "GetVixValue: Failed to get VIX data from API", ex.ToString());
+                _loggingService?.LogErrorWithContext(ex, "GetVixValue: Failed to get VIX data from Yahoo Finance");
                 return 15.0; // Default moderate volatility fallback
             }
         }
@@ -596,19 +625,35 @@ namespace Quantra
         {
             try
             {
-                // Use the AlphaVantage service's cached historical data method to get the latest VIX value
-                var cachedData = await _alphaVantageService.GetExtendedHistoricalData("^VIX", "daily", "compact");
-                
-                if (cachedData != null && cachedData.Count > 0)
+                // Try to get VIX from Yahoo Finance even when market is closed
+                if (_yahooFinanceService != null)
                 {
-                    // Get the most recent data point
-                    var latestData = cachedData.OrderByDescending(d => d.Date).First();
-                    return (latestData.Close, latestData.Date);
+                    var (vixValue, timestamp) = await _yahooFinanceService.GetVixValueWithCacheAsync();
+                    
+                    if (vixValue.HasValue && timestamp.HasValue)
+                    {
+                        _loggingService?.Log("Info", $"Retrieved cached VIX value: {vixValue.Value}");
+                        return (vixValue.Value, timestamp.Value);
+                    }
+                }
+                
+                // Fallback: Try AlphaVantage historical data as secondary source
+                if (_alphaVantageService != null)
+                {
+                    var cachedData = await _alphaVantageService.GetExtendedHistoricalData("^VIX", "daily", "compact");
+                    
+                    if (cachedData != null && cachedData.Count > 0)
+                    {
+                        // Get the most recent data point
+                        var latestData = cachedData.OrderByDescending(d => d.Date).First();
+                        _loggingService?.Log("Info", $"Using AlphaVantage fallback VIX data: {latestData.Close}");
+                        return (latestData.Close, latestData.Date);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to get cached VIX value", ex.ToString());
+                _loggingService?.LogErrorWithContext(ex, "Failed to get cached VIX value");
             }
             
             // Return default if no cached data available
@@ -908,6 +953,9 @@ namespace Quantra
                 vixMonitoringTimer.Stop();
                 vixMonitoringTimer = null;
             }
+            
+            // Dispose Yahoo Finance service
+            _yahooFinanceService?.Dispose();
             
             // Unsubscribe from global loading state changes
             GlobalLoadingStateService.LoadingStateChanged -= OnGlobalLoadingStateChanged;
