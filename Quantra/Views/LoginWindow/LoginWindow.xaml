@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:Quantra"
-        Title="Login" Height="700" Width="450" WindowStartupLocation="CenterScreen"
+        Title="Login" Height="750" Width="450" WindowStartupLocation="CenterScreen"
         Background="Transparent" WindowStyle="None" AllowsTransparency="True" 
         MinHeight="700" MinWidth="400">
     <Window.Resources>
@@ -21,6 +21,7 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -37,13 +38,13 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Custom Title Bar -->
-                <local:SharedTitleBar Title="Login" Grid.Row="0"/>
+                <local:SharedTitleBar x:Name="TitleBar" Title="Login" Grid.Row="0"/>
                 
                 <!-- Main Content -->
-                <Grid Grid.Row="1">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <!-- App Logo/Icon -->
-                        <Border Width="70" Height="70" Background="Transparent" Margin="0,0,0,15">
+                        <Border Width="70" Height="70" Background="Transparent" Margin="0,10,0,10">
                             <Path Data="M12,2L1,21H23M12,6L19.5,19H4.5" Fill="{StaticResource LightBlueBrush}" Stretch="Uniform"/>
                         </Border>
                         
@@ -52,15 +53,24 @@
                                    Style="{StaticResource EnhancedHeaderTextBlockStyle}" 
                                    HorizontalAlignment="Center" Margin="0,0,0,5"/>
                         
-                        <TextBlock Text="Quantra Login" FontSize="18" FontWeight="SemiBold" 
-                                   Style="{StaticResource EnhancedTextBlockStyle}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                        <TextBlock x:Name="FormTitleText" Text="Quantra Login" FontSize="18" FontWeight="SemiBold" 
+                                   Style="{StaticResource EnhancedTextBlockStyle}" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                         
-                        <!-- Login Fields -->
+                        <!-- Login/Registration Fields -->
                         <materialDesign:Card Background="#262638" UniformCornerRadius="6" 
-                                           Margin="0,5,0,15" Padding="25,30" Width="320"
+                                           Margin="0,5,0,15" Padding="25,25" Width="320"
                                            materialDesign:ElevationAssist.Elevation="Dp2">
-                            <!-- Login fields remain unchanged -->
                             <StackPanel>
+                                <!-- Status Message -->
+                                <TextBlock x:Name="StatusMessageText" 
+                                          Text="{Binding StatusMessage}" 
+                                          Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                                          Foreground="#FF6B6B"
+                                          TextWrapping="Wrap"
+                                          HorizontalAlignment="Center"
+                                          Margin="0,0,0,10"
+                                          Visibility="{Binding StatusMessage, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}"/>
+                                
                                 <!-- Username Field -->
                                 <Grid Margin="0,0,0,5">
                                     <TextBlock Text="Username" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
@@ -83,8 +93,28 @@
                                                Margin="0,18,0,0"/>
                                 </Grid>
                                 
-                                <!-- Account Selection -->
-                                <Grid Margin="0,10,0,5">
+                                <!-- Confirm Password Field (Registration only) -->
+                                <Grid x:Name="ConfirmPasswordContainer" Margin="0,10,0,5" Visibility="Collapsed">
+                                    <TextBlock Text="Confirm Password" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <PasswordBox x:Name="ConfirmPasswordBox" Style="{StaticResource EnhancedPasswordBoxStyle}" 
+                                               Height="38" Width="240"
+                                               Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Email Field (Registration only) -->
+                                <Grid x:Name="EmailContainer" Margin="0,10,0,5" Visibility="Collapsed">
+                                    <TextBlock Text="Email (Optional)" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                              Margin="2,0,0,0" 
+                                              VerticalAlignment="Top"/>
+                                    <TextBox x:Name="EmailTextBox" Style="{StaticResource EnhancedTextBoxStyle}" 
+                                            Height="38" Width="240"
+                                            Margin="0,18,0,0"/>
+                                </Grid>
+                                
+                                <!-- Account Selection (Login only) -->
+                                <Grid x:Name="AccountSelectionContainer" Margin="0,10,0,5">
                                     <TextBlock Text="Saved Accounts" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
                                               Margin="2,0,0,0" 
                                               VerticalAlignment="Top"/>
@@ -94,7 +124,7 @@
                                             Margin="0,18,0,0"/>
                                 </Grid>
                                 
-                                <!-- Remember Me Checkbox -->
+                                <!-- Remember Me Checkbox (Login only) -->
                                 <CheckBox x:Name="RememberMeCheckBox" Content="Remember this account" 
                                          Style="{StaticResource EnhancedCheckBoxStyle}" 
                                          Margin="0,15,0,5"/>
@@ -110,9 +140,21 @@
                                 </Grid>
                                 
                                 <!-- Action Buttons -->
-                                <Button Content="Login" Style="{StaticResource EnhancedButtonStyle}" 
+                                <Button x:Name="LoginButton" Content="Login" Style="{StaticResource EnhancedButtonStyle}" 
                                       Height="38" Width="120"
                                       Margin="0,20,0,5" Click="LoginButton_Click"/>
+                                
+                                <Button x:Name="RegisterButton" Content="Register" Style="{StaticResource EnhancedButtonStyle}" 
+                                      Height="38" Width="120"
+                                      Margin="0,5,0,5" Click="RegisterButton_Click"
+                                      Visibility="Collapsed"/>
+                                
+                                <!-- Toggle between Login/Register mode -->
+                                <Button x:Name="ToggleModeButton" Content="Create Account" 
+                                      Style="{StaticResource EnhancedButtonStyle}" 
+                                      Height="32" Width="140"
+                                      Margin="0,10,0,5" Click="ToggleModeButton_Click"
+                                      Background="Transparent" BorderThickness="0"/>
                                 
                                 <Button Content="Settings" Style="{StaticResource EnhancedButtonStyle}" 
                                       Height="38" Width="120"
@@ -120,7 +162,7 @@
                             </StackPanel>
                         </materialDesign:Card>
                     </StackPanel>
-                </Grid>
+                </ScrollViewer>
                 
                 <!-- Resize Grips -->
                 <Grid Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
@@ -149,4 +191,3 @@
         </Border>
     </Grid>
 </Window>
-

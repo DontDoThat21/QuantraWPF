@@ -6,6 +6,12 @@ namespace Quantra.Models
     public class DatabaseSettingsProfile
     {
         public int Id { get; set; }
+        
+        /// <summary>
+        /// Foreign key to UserCredentials table. Null for system/default profiles.
+        /// </summary>
+        public int? UserId { get; set; }
+        
         public string Name { get; set; }
         public string Description { get; set; }
         public bool IsDefault { get; set; }

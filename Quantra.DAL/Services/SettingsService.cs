@@ -176,7 +176,7 @@ namespace Quantra.DAL.Services
         }, RetryOptions.ForUserFacingOperation());
         }
 
-        // Get the default settings profile
+        // Get the default settings profile (filters by current user if logged in)
         public DatabaseSettingsProfile GetDefaultSettingsProfile()
         {
             return ResilienceHelper.Retry(() =>
@@ -184,18 +184,20 @@ namespace Quantra.DAL.Services
             // Ensure database is created
             _context.Database.EnsureCreated();
 
-            // Try to get default profile
+            var currentUserId = AuthenticationService.CurrentUserId;
+
+            // Try to get default profile for current user
             var entity = _context.SettingsProfiles
                .AsNoTracking()
-             .FirstOrDefault(p => p.IsDefault);
+             .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
             if (entity != null)
                 return MapFromEntity(entity);
 
-            // If no default, get first profile
+            // If no default for user, get first profile for user
             entity = _context.SettingsProfiles
               .AsNoTracking()
-            .FirstOrDefault();
+            .FirstOrDefault(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
 
             if (entity != null)
                 return MapFromEntity(entity);
@@ -206,29 +208,31 @@ namespace Quantra.DAL.Services
             // Try one more time
             entity = _context.SettingsProfiles
                   .AsNoTracking()
-              .FirstOrDefault(p => p.IsDefault);
+              .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
             return entity != null ? MapFromEntity(entity) : null;
         }, RetryOptions.ForUserFacingOperation());
         }
 
-        // Get the default settings profile asynchronously
+        // Get the default settings profile asynchronously (filters by current user if logged in)
         public async Task<DatabaseSettingsProfile> GetDefaultSettingsProfileAsync()
         {
             await _context.Database.EnsureCreatedAsync();
 
-            // Try to get default profile
+            var currentUserId = AuthenticationService.CurrentUserId;
+
+            // Try to get default profile for current user
             var entity = await _context.SettingsProfiles
             .AsNoTracking()
-             .FirstOrDefaultAsync(p => p.IsDefault);
+             .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
             if (entity != null)
                 return MapFromEntity(entity);
 
-            // If no default, get first profile
+            // If no default for user, get first profile for user
             entity = await _context.SettingsProfiles
                .AsNoTracking()
-                   .FirstOrDefaultAsync();
+                   .FirstOrDefaultAsync(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
 
             if (entity != null)
                 return MapFromEntity(entity);
@@ -239,12 +243,12 @@ namespace Quantra.DAL.Services
             // Try one more time
             entity = await _context.SettingsProfiles
                  .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.IsDefault);
+            .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
             return entity != null ? MapFromEntity(entity) : null;
         }
 
-        // Get all settings profiles
+        // Get all settings profiles for the current user
         public List<DatabaseSettingsProfile> GetAllSettingsProfiles()
         {
             return ResilienceHelper.Retry(() =>
@@ -252,8 +256,11 @@ namespace Quantra.DAL.Services
                       // Ensure database is created
                       _context.Database.EnsureCreated();
 
+                      var currentUserId = AuthenticationService.CurrentUserId;
+
                       var entities = _context.SettingsProfiles
      .AsNoTracking()
+     .Where(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null))
            .OrderByDescending(p => p.IsDefault)
         .ThenBy(p => p.Name)
                .ToList();
@@ -340,6 +347,7 @@ namespace Quantra.DAL.Services
             return new SettingsProfile
             {
                 Id = profile.Id,
+                UserId = profile.UserId,
                 Name = profile.Name,
                 Description = profile.Description,
                 IsDefault = profile.IsDefault,
@@ -463,6 +471,7 @@ namespace Quantra.DAL.Services
             return new DatabaseSettingsProfile
             {
                 Id = entity.Id,
+                UserId = entity.UserId,
                 Name = entity.Name,
                 Description = entity.Description ?? "",
                 IsDefault = entity.IsDefault,

@@ -105,6 +105,9 @@ namespace Quantra.Extensions
             // Logging service
             services.AddSingleton<LoggingService>();
 
+            // Register AuthenticationService for user login and registration
+            services.AddScoped<AuthenticationService>();
+
             // Register TradeRecordService as both concrete type and interface
             services.AddSingleton<TradeRecordService>();
             services.AddSingleton<ITradeRecordService>(sp => sp.GetRequiredService<TradeRecordService>());

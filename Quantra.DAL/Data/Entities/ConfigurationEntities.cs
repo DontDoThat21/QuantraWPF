@@ -72,10 +72,38 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(500)]
         public string Password { get; set; }
 
+        /// <summary>
+        /// Password hash for secure authentication. Use PasswordHash for new registrations.
+        /// </summary>
+        [MaxLength(500)]
+        public string? PasswordHash { get; set; }
+
+        /// <summary>
+        /// Salt used for password hashing
+        /// </summary>
+        [MaxLength(100)]
+        public string? PasswordSalt { get; set; }
+
         [MaxLength(50)]
         public string Pin { get; set; }
 
         public DateTime? LastLoginDate { get; set; }
+
+        /// <summary>
+        /// Date the user registered
+        /// </summary>
+        public DateTime? CreatedDate { get; set; }
+
+        /// <summary>
+        /// Email address for account recovery and notifications
+        /// </summary>
+        [MaxLength(255)]
+        public string? Email { get; set; }
+
+        /// <summary>
+        /// Whether the user account is active
+        /// </summary>
+        public bool IsActive { get; set; } = true;
     }
 
     /// <summary>
