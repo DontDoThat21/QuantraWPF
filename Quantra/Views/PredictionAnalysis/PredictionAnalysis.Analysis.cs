@@ -203,6 +203,12 @@ namespace Quantra.Controls
                 Dictionary<string, double> weights = null;
                 List<string> featureNames = null;
 
+                // CRITICAL: Add current price to indicators so Python can convert percentage predictions to actual prices
+                if (currentPrice > 0)
+                {
+                    indicators["current_price"] = currentPrice;
+                }
+
                 // This should ALWAYS use the trained ML model from Python
                 // The Python script will automatically load the trained model or train a new one if needed
                 try

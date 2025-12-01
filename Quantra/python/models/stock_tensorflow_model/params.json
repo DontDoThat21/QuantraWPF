@@ -1,1 +1,0 @@
-{"input_dim": 14, "hidden_dim": 64, "num_layers": 2, "dropout": 0.2, "architecture_type": "lstm"}
