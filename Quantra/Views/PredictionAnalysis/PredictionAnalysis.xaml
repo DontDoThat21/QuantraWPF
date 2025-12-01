@@ -226,10 +226,11 @@ MinWidth="400" MinHeight="300">
                            Foreground="#AAAAAA" FontSize="11" Margin="0,5" TextWrapping="Wrap"/>
             </StackPanel>
 
-            <!-- Timeframe Selection -->
+            <!-- Timeframe, Analyze Button, and Min Confidence in Right Column -->
             <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,5">
+                <!-- Timeframe Selection -->
                 <TextBlock Text="Timeframe:" Foreground="White" Margin="0,5"/>
-                <ComboBox x:Name="TimeframeComboBox" Margin="0,0,5,0"
+                <ComboBox x:Name="TimeframeComboBox" Margin="0,0,0,10"
                           Style="{StaticResource EnhancedComboBoxStyle}">
                     <ComboBoxItem Content="1 Day" Tag="1day"/>
                     <ComboBoxItem Content="1 Week" Tag="1week"/>
@@ -237,16 +238,37 @@ MinWidth="400" MinHeight="300">
                     <ComboBoxItem Content="3 Months" Tag="3month"/>
                     <ComboBoxItem Content="1 Year" Tag="1year"/>
                 </ComboBox>
+
+                <!-- Analyze Button and Min Confidence Row -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Analyze Button -->
+                    <Button Grid.Column="0" x:Name="AnalyzeButton" Content="Analyze" 
+                            Width="100" Height="30" Margin="0,0,10,0" 
+                            Click="AnalyzeButton_Click"
+                            Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
+
+                    <!-- Minimum Confidence -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="Min Confidence:" Foreground="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="ConfidenceComboBox" Width="60"
+                                  Style="{StaticResource EnhancedComboBoxStyle}">
+                            <ComboBoxItem Content="50%" Tag="0.5"/>
+                            <ComboBoxItem Content="60%" Tag="0.6" IsSelected="True"/>
+                            <ComboBoxItem Content="70%" Tag="0.7"/>
+                            <ComboBoxItem Content="80%" Tag="0.8"/>
+                            <ComboBoxItem Content="90%" Tag="0.9"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
 
-            <!-- Analyze Button -->
-            <Button Grid.Row="1" Grid.Column="2" x:Name="AnalyzeButton" Content="Analyze" 
-                    Width="100" Height="30" Margin="10,10,10,10" 
-                    Click="AnalyzeButton_Click"
-                    Background="#3E3E56" Foreground="White" BorderBrush="Cyan"/>
-
             <!-- Indicators Selection - Update with all available indicators -->
-            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
                       Orientation="Horizontal" Margin="10,10,10,10">
                 <TextBlock Text="Indicators:" Foreground="White" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <WrapPanel>
@@ -283,19 +305,6 @@ MinWidth="400" MinHeight="300">
                     <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Foreground="White" Margin="5,0" IsChecked="False"
                               Style="{StaticResource EnhancedCheckBoxStyle}"/>
                 </WrapPanel>
-            </StackPanel>
-
-            <!-- Minimum Confidence -->
-            <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="10,10,10,10">
-                <TextBlock Text="Min Confidence:" Foreground="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                <ComboBox x:Name="ConfidenceComboBox" Width="60"
-                          Style="{StaticResource EnhancedComboBoxStyle}">
-                    <ComboBoxItem Content="50%" Tag="0.5"/>
-                    <ComboBoxItem Content="60%" Tag="0.6" IsSelected="True"/>
-                    <ComboBoxItem Content="70%" Tag="0.7"/>
-                    <ComboBoxItem Content="80%" Tag="0.8"/>
-                    <ComboBoxItem Content="90%" Tag="0.9"/>
-                </ComboBox>
             </StackPanel>
 
             <!-- Model Training Section -->
@@ -353,8 +362,10 @@ MinWidth="400" MinHeight="300">
 
                         <!-- Info Text -->
                         <StackPanel Grid.Column="3" Orientation="Vertical" Margin="10,0,10,0" VerticalAlignment="Center">
-                            <TextBlock Text="Train ML model using cached historical data" 
-                                       Foreground="#AAAAAA" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock Text="⚠ Model training required for predictions" 
+                                       Foreground="#FFD700" FontSize="10" FontWeight="Bold" TextWrapping="Wrap"/>
+                            <TextBlock Text="Train ML model using cached historical data from Stock Explorer" 
+                                       Foreground="#AAAAAA" FontSize="9" TextWrapping="Wrap" Margin="0,2,0,0"/>
                             <TextBlock x:Name="TrainingSymbolsCountTextBlock"
                                        Text="" 
                                        Foreground="#888888" FontSize="9" FontStyle="Italic"

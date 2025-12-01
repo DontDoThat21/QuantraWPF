@@ -196,30 +196,37 @@ namespace Quantra.Controls
                     //DatabaseMonolith.Log("Warning", "Error fetching social media sentiment", ex.ToString());
                 }
 
-                // --- NEW: Call PythonStockPredictor for ML-based predictionModel ---
+                // --- PRIMARY: Call PythonStockPredictor for ML-based prediction using trained models ---
                 string action = "HOLD";
                 double confidence = 0.5;
                 double targetPrice = currentPrice;
                 Dictionary<string, double> weights = null;
                 List<string> featureNames = null;
 
+                // This should ALWAYS use the trained ML model from Python
+                // The Python script will automatically load the trained model or train a new one if needed
                 try
                 {
                     var result = await Quantra.Models.PythonStockPredictor.PredictAsync(indicators);
                     if (result == null)
-                        throw new Exception("Failed to get predictionModel result");
+                        throw new Exception("Failed to get prediction result from trained ML model");
 
                     action = result.Action;
                     confidence = result.Confidence;
                     targetPrice = result.TargetPrice;
                     weights = result.FeatureWeights;
+                    
+                    //DatabaseMonolith.Log("Info", $"ML prediction for {symbol}: {action} with {confidence:P0} confidence (model-based)");
                 }
                 catch (Exception ex)
                 {
-                    //DatabaseMonolith.Log("Warning", $"Python ML predictionModel failed for {symbol}", ex.ToString());
-                    // Fallback to legacy logic if Python fails
-                    (action, confidence, targetPrice) = DeterminePredictionFromIndicators(currentPrice, indicators);
-                    weights = null;
+                    //DatabaseMonolith.Log("Error", $"Python ML prediction failed for {symbol}", ex.ToString());
+                    // NOTE: Consider this a critical error - predictions should come from trained models
+                    // If the model isn't trained or Python fails, we should notify the user to train the model
+                    // rather than silently falling back to rule-based logic
+                    throw new InvalidOperationException(
+                        $"ML prediction failed for {symbol}. Please ensure the ML model is trained. " +
+                        $"Use the 'Train Model' button to train the model with historical data.", ex);
                 }
 
                 // Incorporate sentiment into confidence/decision

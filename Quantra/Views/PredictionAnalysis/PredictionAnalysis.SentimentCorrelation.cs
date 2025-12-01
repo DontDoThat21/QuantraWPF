@@ -28,27 +28,16 @@ namespace Quantra.Controls
         /// </summary>
         private void InitializeSentimentCorrelationAnalysis()
         {
-            // Get or create required services for SentimentPriceCorrelationAnalysis
-            var financialNewsSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<FinancialNewsSentimentService>() 
-                ?? new FinancialNewsSentimentService(_userSettings);
+            // Use injected services from constructor - proper MVVM DI pattern
+            var financialNewsSentimentService = _financialNewsSentimentService;
+            var socialMediaSentimentService = _twitterSentimentService;
+            var analystRatingService = _analystRatingService;
+            var insiderTradingService = _insiderTradingService;
             
-            var socialMediaSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<ISocialMediaSentimentService>() 
-                ?? new TwitterSentimentService();
-            
-            var analystRatingService = Quantra.DAL.Services.ServiceLocator.Resolve<IAnalystRatingService>() 
-                ?? new Quantra.DAL.Services.AnalystRatingService(_userSettings, null, _loggingService);
-            
-            var insiderTradingService = Quantra.DAL.Services.ServiceLocator.Resolve<IInsiderTradingService>() 
-                ?? new Quantra.DAL.Services.InsiderTradingService(_userSettings);
-            
-            var sectorSentimentService = Quantra.DAL.Services.ServiceLocator.Resolve<SectorSentimentAnalysisService>() 
-                ?? new SectorSentimentAnalysisService(_userSettings);
-            
-            var predictionAnalysisRepository = Quantra.DAL.Services.ServiceLocator.Resolve<Quantra.Repositories.PredictionAnalysisRepository>() 
-                ?? new Quantra.Repositories.PredictionAnalysisRepository();
-            
-            var sectorMomentumService = Quantra.DAL.Services.ServiceLocator.Resolve<SectorMomentumService>() 
-                ?? new SectorMomentumService(_userSettingsService, _loggingService);
+            // For services not injected, use defaults
+            var sectorSentimentService = new SectorSentimentAnalysisService(_userSettings);
+            var predictionAnalysisRepository = new Quantra.Repositories.PredictionAnalysisRepository();
+            var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService);
             
             _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(
                 _userSettings, 

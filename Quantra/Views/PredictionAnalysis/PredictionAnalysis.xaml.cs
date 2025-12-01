@@ -45,6 +45,9 @@ namespace Quantra.Controls
         private ComboBox _strategyProfileComboBox;
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
+        // NOTE: Sentiment analysis service fields are declared in PredictionAnalysis.Analysis.cs
+        // Do not redeclare here to avoid ambiguity errors
+        
         // Indicators dictionary (not duplicated in other files)
         private Dictionary<string, double> indicators;
         // Confidence value (not duplicated in other files)
