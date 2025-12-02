@@ -143,19 +143,22 @@ class TFTStockPredictor:
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
         
-        # Convert to dict format expected by train_tft_model
-        def to_dict_loader(loader):
-            return [
-                {
+        # Generator function to yield dict batches without loading all into memory
+        def dict_batch_generator(loader):
+            """Yield batches as dicts to avoid loading all data into memory at once."""
+            for past, static, targets in loader:
+                yield {
                     'past_features': past,
                     'static_features': static,
                     'targets': targets
                 }
-                for past, static, targets in loader
-            ]
         
-        train_loader_dict = to_dict_loader(train_loader)
-        val_loader_dict = to_dict_loader(val_loader)
+        # For training, we need to iterate multiple times (one per epoch)
+        # The train_tft_model expects an iterable per epoch, so we create fresh generators
+        # For simplicity with the current train_tft_model interface, we use list for small datasets
+        # For large datasets, modify train_tft_model to accept DataLoader directly
+        train_loader_dict = list(dict_batch_generator(train_loader))
+        val_loader_dict = list(dict_batch_generator(val_loader))
         
         # Train model
         history = train_tft_model(
@@ -258,7 +261,8 @@ class TFTStockPredictor:
         # Create a synthetic temporal sequence (repeat values for lookback)
         # In production, you would pass actual historical data
         n_features = len(feature_values)
-        X_past = np.tile(feature_values, (1, lookback, 1)).astype(np.float32)  # (1, lookback, features)
+        # Reshape to (1, 1, n_features) then tile to (1, lookback, n_features)
+        X_past = np.tile(feature_values.reshape(1, 1, n_features), (1, lookback, 1)).astype(np.float32)
         
         # Create static features
         if static_dict is None:
@@ -546,12 +550,20 @@ def prepare_temporal_features(historical_data: np.ndarray,
         
     Returns:
         Temporal features of shape (1, lookback, n_features)
+        
+    Note:
+        If historical_data has fewer than lookback days, zero padding is used
+        to avoid introducing bias. In production, ensure sufficient historical
+        data is available for accurate predictions.
     """
     if len(historical_data) < lookback:
-        # Pad with zeros or repeat first values
+        # Pad with zeros to avoid introducing bias from repeated values
+        # In production, consider requiring sufficient historical data
         padding_size = lookback - len(historical_data)
-        padding = np.tile(historical_data[0:1], (padding_size, 1))
+        padding = np.zeros((padding_size, historical_data.shape[1]), dtype=historical_data.dtype)
         historical_data = np.vstack([padding, historical_data])
+        logger.warning(f"Insufficient historical data ({len(historical_data) - padding_size} days). "
+                      f"Padded with {padding_size} zero values. Consider providing at least {lookback} days of data.")
     
     # Take the last lookback days
     temporal_features = historical_data[-lookback:].astype(np.float32)

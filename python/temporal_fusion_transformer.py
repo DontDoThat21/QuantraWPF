@@ -166,10 +166,7 @@ class VariableSelectionNetwork(nn.Module):
             context_flat = context
         
         # Compute variable selection weights
-        if self.num_features > 1:
-            weights_input = x_flat
-        else:
-            weights_input = x_flat
+        weights_input = x_flat
             
         weights = self.weight_grn(weights_input, context_flat)
         weights = self.softmax(weights)  # (batch*time, num_features)
@@ -544,7 +541,7 @@ def train_tft_model(model: TemporalFusionTransformer,
                     target = targets
                     
                 loss = loss_fn(pred_quantiles, target)
-                total_loss = total_loss + loss
+                total_loss += loss
             
             total_loss = total_loss / len(model.forecast_horizons)
             total_loss.backward()
@@ -584,7 +581,7 @@ def train_tft_model(model: TemporalFusionTransformer,
                         target = targets
                         
                     loss = loss_fn(pred_quantiles, target)
-                    total_loss = total_loss + loss
+                    total_loss += loss
                 
                 total_loss = total_loss / len(model.forecast_horizons)
                 val_losses.append(total_loss.item())
