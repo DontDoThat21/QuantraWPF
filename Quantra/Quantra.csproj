@@ -68,15 +68,19 @@
     <Compile Remove="Controls\**" />
     <Compile Remove="DAL\**" />
     <Compile Remove="Data\**" />
+    <Compile Remove="Views\Controls\**" />
     <EmbeddedResource Remove="Controls\**" />
     <EmbeddedResource Remove="DAL\**" />
     <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Views\Controls\**" />
     <None Remove="Controls\**" />
     <None Remove="DAL\**" />
     <None Remove="Data\**" />
+    <None Remove="Views\Controls\**" />
     <Page Remove="Controls\**" />
     <Page Remove="DAL\**" />
     <Page Remove="Data\**" />
+    <Page Remove="Views\Controls\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -85,10 +89,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Quantra.DAL\Quantra.DAL.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Views\Controls\" />
   </ItemGroup>
 
 </Project>
