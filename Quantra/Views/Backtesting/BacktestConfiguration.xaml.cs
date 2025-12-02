@@ -682,6 +682,195 @@ namespace Quantra.Views.Backtesting
         }
 
         /// <summary>
+        /// Handle Run All Symbols button click - batch backtest all cached symbols
+        /// </summary>
+        private async void RunAllSymbolsButton_Click(object sender, RoutedEventArgs e)
+        {
+            await RunBatchBacktestsAsync();
+        }
+
+        /// <summary>
+        /// Run backtests for all cached symbols and automatically save results
+        /// </summary>
+        private async Task RunBatchBacktestsAsync()
+        {
+            var originalCursor = this.Cursor;
+
+            try
+            {
+                // Set waiting cursor
+                this.Cursor = System.Windows.Input.Cursors.Wait;
+
+                // Validate that we have a strategy selected
+                if (_selectedStrategy == null)
+                {
+                    ShowError("Please select a strategy before running batch backtests");
+                    return;
+                }
+
+                // Validate other required inputs
+                if (!double.TryParse(InitialCapitalTextBox.Text, out double initialCapital) || initialCapital <= 0)
+                {
+                    ShowError("Initial capital must be a positive number");
+                    return;
+                }
+
+                if (!int.TryParse(TradeSizeTextBox.Text, out int tradeSize) || tradeSize <= 0)
+                {
+                    ShowError("Trade size must be a positive integer");
+                    return;
+                }
+
+                if (StartDatePicker.SelectedDate == null || EndDatePicker.SelectedDate == null)
+                {
+                    ShowError("Please select start and end dates");
+                    return;
+                }
+
+                if (StartDatePicker.SelectedDate >= EndDatePicker.SelectedDate)
+                {
+                    ShowError("Start date must be before end date");
+                    return;
+                }
+
+                // Get all cached symbols
+                ShowProgress("Loading cached symbols...");
+                var symbols = await Task.Run(() => _stockDataCacheService.GetAllCachedSymbolsAsync());
+
+                if (symbols == null || !symbols.Any())
+                {
+                    ShowError("No cached symbols found. Please cache some symbols in Stock Explorer first.");
+                    return;
+                }
+
+                var symbolList = symbols.ToList();
+                int totalSymbols = symbolList.Count;
+                int successCount = 0;
+                int failCount = 0;
+
+                // Configure progress bar for batch processing
+                ProgressBar.Visibility = Visibility.Visible;
+                ProgressBar.IsIndeterminate = false;
+                ProgressBar.Minimum = 0;
+                ProgressBar.Maximum = totalSymbols;
+                ProgressBar.Value = 0;
+
+                // Disable buttons during batch processing
+                RunBacktestButton.IsEnabled = false;
+                QuickTestButton.IsEnabled = false;
+                RunAllSymbolsButton.IsEnabled = false;
+                SaveResultButton.IsEnabled = false;
+
+                DateTime startDate = StartDatePicker.SelectedDate.Value;
+                DateTime endDate = EndDatePicker.SelectedDate.Value;
+
+                // Get cost model
+                var costModel = GetSelectedCostModel();
+
+                // Update strategy parameters from UI
+                UpdateStrategyFromUI(_selectedStrategy);
+
+                // Process each symbol
+                for (int i = 0; i < totalSymbols; i++)
+                {
+                    string symbol = symbolList[i];
+
+                    try
+                    {
+                        // Update progress
+                        ProgressBar.Value = i;
+                        ShowStatus($"Processing {i + 1}/{totalSymbols}: {symbol}...");
+                        StatusText.Foreground = Brushes.Yellow;
+
+                        // Get historical data
+                        var historicalData = await _historicalDataService.GetComprehensiveHistoricalData(symbol);
+
+                        if (historicalData == null || historicalData.Count == 0)
+                        {
+                            _loggingService?.Log("Warning", $"No historical data found for {symbol}, skipping...");
+                            failCount++;
+                            continue;
+                        }
+
+                        // Filter by date range
+                        historicalData = historicalData
+                            .Where(h => h.Date >= startDate && h.Date <= endDate)
+                            .OrderBy(h => h.Date)
+                            .ToList();
+
+                        if (historicalData.Count < 30)
+                        {
+                            _loggingService?.Log("Warning", $"Insufficient data for {symbol} ({historicalData.Count} days), skipping...");
+                            failCount++;
+                            continue;
+                        }
+
+                        // Create backtesting engine
+                        var engine = new BacktestingEngine(_historicalDataService);
+
+                        // Run backtest
+                        var result = await engine.RunBacktestAsync(
+                            symbol,
+                            historicalData,
+                            _selectedStrategy,
+                            initialCapital,
+                            tradeSize,
+                            costModel
+                        );
+
+                        // Save result to database
+                        var entity = _backtestResultService.ConvertFromEngineResult(
+                            result,
+                            _selectedStrategy.Name,
+                            initialCapital,
+                            $"Batch Run - {DateTime.Now:yyyy-MM-dd HH:mm}");
+
+                        await _backtestResultService.SaveResultAsync(entity);
+
+                        successCount++;
+                        _loggingService?.Log("Info", $"Successfully backtested and saved {symbol}: Return={result.TotalReturn:P2}, WinRate={result.WinRate:P2}");
+                    }
+                    catch (Exception ex)
+                    {
+                        failCount++;
+                        _loggingService?.Log("Error", $"Failed to backtest {symbol}: {ex.Message}", ex.ToString());
+                    }
+                }
+
+                // Update final progress
+                ProgressBar.Value = totalSymbols;
+                ShowStatus($"Batch backtest completed! Successful: {successCount}, Failed: {failCount}, Total: {totalSymbols}");
+                StatusText.Foreground = Brushes.LightGreen;
+
+                MessageBox.Show(
+                    $"Batch backtest completed!\n\n" +
+                    $"Total Symbols: {totalSymbols}\n" +
+                    $"Successful: {successCount}\n" +
+                    $"Failed: {failCount}\n\n" +
+                    $"Strategy: {_selectedStrategy.Name}\n" +
+                    $"Date Range: {startDate:d} to {endDate:d}",
+                    "Batch Backtest Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Batch backtest failed: {ex.Message}");
+                _loggingService?.Log("Error", $"Batch backtest error: {ex.Message}", ex.ToString());
+            }
+            finally
+            {
+                // Restore UI state
+                this.Cursor = originalCursor;
+                ProgressBar.Visibility = Visibility.Collapsed;
+                ProgressBar.IsIndeterminate = false;
+                RunBacktestButton.IsEnabled = true;
+                QuickTestButton.IsEnabled = true;
+                RunAllSymbolsButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
         /// Save the current backtest result to the database
         /// </summary>
         private async void SaveResultButton_Click(object sender, RoutedEventArgs e)

@@ -101,7 +101,7 @@ namespace Quantra.Models
                 return null;
 
             List<double> rsiValues = CalculateRSI(prices, RsiPeriod);
-            if (rsiValues == null || rsiValues.Count <= currentIndex - RsiPeriod)
+            if (rsiValues == null || rsiValues.Count <= currentIndex)
                 return null;
 
             // Check for bullish divergence (oversold)
@@ -154,14 +154,14 @@ namespace Quantra.Models
 
         private bool IsOversold(List<double> rsiValues, int index)
         {
-            int rsiIndex = index - RsiPeriod;
-            return rsiIndex >= 0 && rsiValues[rsiIndex] < OversoldLevel;
+            // RSI values array is parallel to prices array
+            return index >= 0 && index < rsiValues.Count && rsiValues[index] < OversoldLevel;
         }
 
         private bool IsOverbought(List<double> rsiValues, int index)
         {
-            int rsiIndex = index - RsiPeriod;
-            return rsiIndex >= 0 && rsiValues[rsiIndex] > OverboughtLevel;
+            // RSI values array is parallel to prices array
+            return index >= 0 && index < rsiValues.Count && rsiValues[index] > OverboughtLevel;
         }
 
         private bool HasBullishDivergence(List<HistoricalPrice> prices, List<double> rsiValues, int currentIndex, int lookback)
@@ -169,10 +169,6 @@ namespace Quantra.Models
             int startIdx = currentIndex - lookback;
             if (startIdx < RsiPeriod)
                 return false;
-
-            // Adjust indices for RSI values which start at period
-            int rsiCurrentIdx = currentIndex - RsiPeriod;
-            int rsiStartIdx = startIdx - RsiPeriod;
 
             // Find price lows in the lookback period
             int minPriceIdx = startIdx;
@@ -186,12 +182,10 @@ namespace Quantra.Models
             if (minPriceIdx == currentIndex)
                 return false;
 
-            // Find the corresponding RSI value for the price low
-            int rsiMinPriceIdx = minPriceIdx - RsiPeriod;
-
             // Check if price made lower low but RSI made higher low (bullish divergence)
+            // RSI array is parallel to prices array
             return prices[currentIndex].Low < prices[minPriceIdx].Low &&
-                   rsiValues[rsiCurrentIdx] > rsiValues[rsiMinPriceIdx];
+                   rsiValues[currentIndex] > rsiValues[minPriceIdx];
         }
 
         private bool HasBearishDivergence(List<HistoricalPrice> prices, List<double> rsiValues, int currentIndex, int lookback)
@@ -199,10 +193,6 @@ namespace Quantra.Models
             int startIdx = currentIndex - lookback;
             if (startIdx < RsiPeriod)
                 return false;
-
-            // Adjust indices for RSI values which start at period
-            int rsiCurrentIdx = currentIndex - RsiPeriod;
-            int rsiStartIdx = startIdx - RsiPeriod;
 
             // Find price highs in the lookback period
             int maxPriceIdx = startIdx;
@@ -216,12 +206,10 @@ namespace Quantra.Models
             if (maxPriceIdx == currentIndex)
                 return false;
 
-            // Find the corresponding RSI value for the price high
-            int rsiMaxPriceIdx = maxPriceIdx - RsiPeriod;
-
             // Check if price made higher high but RSI made lower high (bearish divergence)
+            // RSI array is parallel to prices array
             return prices[currentIndex].High > prices[maxPriceIdx].High &&
-                   rsiValues[rsiCurrentIdx] < rsiValues[rsiMaxPriceIdx];
+                   rsiValues[currentIndex] < rsiValues[maxPriceIdx];
         }
 
         private List<double> CalculateRSI(List<HistoricalPrice> prices, int period)

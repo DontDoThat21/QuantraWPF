@@ -44,6 +44,9 @@ namespace Quantra.DAL.Services
             {
                 using (var dbContext = CreateDbContext())
                 {
+                    // Sanitize numeric values to prevent SQL Server errors
+                    SanitizeNumericValues(result);
+                    
                     result.CreatedAt = DateTime.Now;
                     dbContext.BacktestResults.Add(result);
                     await dbContext.SaveChangesAsync();
@@ -57,6 +60,69 @@ namespace Quantra.DAL.Services
                 _loggingService.Log("Error", $"Failed to save backtest result: {ex.Message}", ex.ToString());
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Sanitizes numeric values to prevent SQL Server errors with NaN, Infinity, or out-of-range values
+        /// </summary>
+        private void SanitizeNumericValues(BacktestResultEntity result)
+        {
+            // Replace invalid values with 0
+            result.InitialCapital = SanitizeDouble(result.InitialCapital);
+            result.FinalEquity = SanitizeDouble(result.FinalEquity);
+            result.TotalReturn = SanitizeDouble(result.TotalReturn);
+            result.MaxDrawdown = SanitizeDouble(result.MaxDrawdown);
+            result.WinRate = SanitizeDouble(result.WinRate);
+            result.SharpeRatio = SanitizeDouble(result.SharpeRatio);
+            result.SortinoRatio = SanitizeDouble(result.SortinoRatio);
+            result.CAGR = SanitizeDouble(result.CAGR);
+            result.CalmarRatio = SanitizeDouble(result.CalmarRatio);
+            
+            // ProfitFactor needs special handling - cap at reasonable maximum
+            result.ProfitFactor = SanitizeProfitFactor(result.ProfitFactor);
+            
+            result.InformationRatio = SanitizeDouble(result.InformationRatio);
+            result.TotalTransactionCosts = SanitizeDouble(result.TotalTransactionCosts);
+            result.GrossReturn = SanitizeDouble(result.GrossReturn);
+        }
+
+        /// <summary>
+        /// Sanitizes a double value, replacing NaN, Infinity, or extreme values with 0
+        /// </summary>
+        private double SanitizeDouble(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return 0;
+            }
+            
+            // Cap extremely large values that might cause issues
+            const double maxValue = 1e10; // 10 billion
+            if (Math.Abs(value) > maxValue)
+            {
+                return 0;
+            }
+            
+            return value;
+        }
+
+        /// <summary>
+        /// Sanitizes profit factor, capping at 999 for cases with no losses
+        /// </summary>
+        private double SanitizeProfitFactor(double profitFactor)
+        {
+            if (double.IsNaN(profitFactor) || double.IsInfinity(profitFactor))
+            {
+                return 0;
+            }
+            
+            // Cap profit factor at 999 (extremely high but represents "perfect" trading)
+            if (profitFactor > 999)
+            {
+                return 999;
+            }
+            
+            return profitFactor;
         }
 
         /// <inheritdoc/>
@@ -314,7 +380,7 @@ namespace Quantra.DAL.Services
                 tradesJson = JsonConvert.SerializeObject(tradesData);
             }
 
-            return new BacktestResultEntity
+            var result = new BacktestResultEntity
             {
                 Symbol = engineResult.Symbol,
                 StrategyName = strategyName,
@@ -342,6 +408,11 @@ namespace Quantra.DAL.Services
                 Notes = notes,
                 CreatedAt = DateTime.Now
             };
+
+            // Sanitize numeric values before returning
+            SanitizeNumericValues(result);
+            
+            return result;
         }
     }
 }

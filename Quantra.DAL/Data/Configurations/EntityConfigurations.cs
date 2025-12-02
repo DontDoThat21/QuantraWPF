@@ -232,20 +232,22 @@ namespace Quantra.DAL.Data.Configurations
             builder.Property(b => b.StrategyParametersJson)
                    .HasColumnType("NVARCHAR(MAX)");
 
-            // Configure double properties to use REAL type for consistency
-            builder.Property(b => b.TotalReturn).HasColumnType("real");
-            builder.Property(b => b.MaxDrawdown).HasColumnType("real");
-            builder.Property(b => b.WinRate).HasColumnType("real");
-            builder.Property(b => b.SharpeRatio).HasColumnType("real");
-            builder.Property(b => b.SortinoRatio).HasColumnType("real");
-            builder.Property(b => b.CAGR).HasColumnType("real");
-            builder.Property(b => b.CalmarRatio).HasColumnType("real");
-            builder.Property(b => b.ProfitFactor).HasColumnType("real");
-            builder.Property(b => b.InformationRatio).HasColumnType("real");
-            builder.Property(b => b.TotalTransactionCosts).HasColumnType("real");
-            builder.Property(b => b.GrossReturn).HasColumnType("real");
-            builder.Property(b => b.InitialCapital).HasColumnType("real");
-            builder.Property(b => b.FinalEquity).HasColumnType("real");
+            // Configure double properties to use FLOAT type (SQL Server float(53)) instead of REAL
+            // FLOAT can store the full double range including double.MaxValue used for ProfitFactor
+            // when there are no losing trades
+            builder.Property(b => b.TotalReturn).HasColumnType("float");
+            builder.Property(b => b.MaxDrawdown).HasColumnType("float");
+            builder.Property(b => b.WinRate).HasColumnType("float");
+            builder.Property(b => b.SharpeRatio).HasColumnType("float");
+            builder.Property(b => b.SortinoRatio).HasColumnType("float");
+            builder.Property(b => b.CAGR).HasColumnType("float");
+            builder.Property(b => b.CalmarRatio).HasColumnType("float");
+            builder.Property(b => b.ProfitFactor).HasColumnType("float");
+            builder.Property(b => b.InformationRatio).HasColumnType("float");
+            builder.Property(b => b.TotalTransactionCosts).HasColumnType("float");
+            builder.Property(b => b.GrossReturn).HasColumnType("float");
+            builder.Property(b => b.InitialCapital).HasColumnType("float");
+            builder.Property(b => b.FinalEquity).HasColumnType("float");
         }
     }
 

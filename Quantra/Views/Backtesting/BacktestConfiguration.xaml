@@ -176,6 +176,11 @@
                     Click="QuickTestButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
                     Padding="15,10" Margin="0,0,10,0"/>
+            <Button x:Name="RunAllSymbolsButton" Content="Run All Symbols"
+                    Click="RunAllSymbolsButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Padding="15,10" FontSize="14" FontWeight="Bold" Margin="0,0,10,0"
+                    ToolTip="Run backtest on all cached symbols and save results automatically"/>
             <Button x:Name="SaveResultButton" Content="Save Result"
                     Click="SaveResultButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"

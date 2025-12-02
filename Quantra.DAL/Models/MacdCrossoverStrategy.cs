@@ -146,16 +146,20 @@ namespace Quantra.Models
             var signalLine = result.signalLine;
             var histogram = result.histogram;
 
-            // MACD index is adjusted for calculation periods
-            int macdIndex = currentIndex - FastEma - SlowEma - SignalPeriod + 3;
-            if (macdIndex < 0 || macdIndex >= macdLine.Count || macdIndex - 1 < 0)
+            // MACD arrays are parallel to prices array
+            if (currentIndex >= macdLine.Count || currentIndex - 1 < 0)
+                return null;
+
+            // Skip if current values are NaN
+            if (double.IsNaN(macdLine[currentIndex]) || double.IsNaN(signalLine[currentIndex]) ||
+                double.IsNaN(macdLine[currentIndex - 1]) || double.IsNaN(signalLine[currentIndex - 1]))
                 return null;
 
             // Get current and previous MACD values
-            double currentMacd = macdLine[macdIndex];
-            double currentSignal = signalLine[macdIndex];
-            double previousMacd = macdLine[macdIndex - 1];
-            double previousSignal = signalLine[macdIndex - 1];
+            double currentMacd = macdLine[currentIndex];
+            double currentSignal = signalLine[currentIndex];
+            double previousMacd = macdLine[currentIndex - 1];
+            double previousSignal = signalLine[currentIndex - 1];
 
             // Check for crossover
             bool bullishCrossover = previousMacd < previousSignal && currentMacd > currentSignal;
@@ -184,17 +188,17 @@ namespace Quantra.Models
             if (IncludeDivergence)
             {
                 int lookbackPeriods = 14;
-                int startIdx = Math.Max(0, macdIndex - lookbackPeriods);
+                int startIdx = Math.Max(SlowEma + SignalPeriod, currentIndex - lookbackPeriods);
 
                 // For bullish crossover: Check for bullish divergence (price making lower lows, MACD making higher lows)
                 if (bullishCrossover)
                 {
-                    hasDivergence = CheckBullishDivergence(prices, macdLine, currentIndex, macdIndex, startIdx);
+                    hasDivergence = CheckBullishDivergence(prices, macdLine, currentIndex, startIdx);
                 }
                 // For bearish crossover: Check for bearish divergence (price making higher highs, MACD making lower highs)
                 else if (bearishCrossover)
                 {
-                    hasDivergence = CheckBearishDivergence(prices, macdLine, currentIndex, macdIndex, startIdx);
+                    hasDivergence = CheckBearishDivergence(prices, macdLine, currentIndex, startIdx);
                 }
             }
 
@@ -221,29 +225,29 @@ namespace Quantra.Models
         /// <summary>
         /// Check for bullish divergence: price makes lower lows, but MACD makes higher lows
         /// </summary>
-        private bool CheckBullishDivergence(List<HistoricalPrice> prices, List<double> macdLine, int priceIndex, int macdIndex, int startIdx)
+        private bool CheckBullishDivergence(List<HistoricalPrice> prices, List<double> macdLine, int currentIndex, int startIdx)
         {
-            if (startIdx >= macdIndex || priceIndex <= 0)
+            if (currentIndex <= 0)
                 return false;
 
             // Find the lowest price in the lookback period
             int lowestPriceIdx = startIdx;
-            for (int i = startIdx + 1; i < priceIndex; i++)
+            for (int i = startIdx + 1; i < currentIndex; i++)
             {
                 if (prices[i].Low < prices[lowestPriceIdx].Low)
                     lowestPriceIdx = i;
             }
 
-            // Find the corresponding MACD value
-            int macdLowIdx = lowestPriceIdx - (priceIndex - macdIndex);
-            if (macdLowIdx < 0 || macdLowIdx >= macdLine.Count)
+            // MACD array is parallel to prices array
+            if (lowestPriceIdx < 0 || lowestPriceIdx >= macdLine.Count ||
+                double.IsNaN(macdLine[lowestPriceIdx]) || double.IsNaN(macdLine[currentIndex]))
                 return false;
 
             // Find the most recent lower low in price (if it exists)
-            if (prices[priceIndex].Low < prices[lowestPriceIdx].Low)
+            if (prices[currentIndex].Low < prices[lowestPriceIdx].Low)
             {
                 // If current price made a lower low, check if MACD made a higher low
-                return macdLine[macdIndex] > macdLine[macdLowIdx];
+                return macdLine[currentIndex] > macdLine[lowestPriceIdx];
             }
             return false;
         }
@@ -251,29 +255,29 @@ namespace Quantra.Models
         /// <summary>
         /// Check for bearish divergence: price makes higher highs, but MACD makes lower highs
         /// </summary>
-        private bool CheckBearishDivergence(List<HistoricalPrice> prices, List<double> macdLine, int priceIndex, int macdIndex, int startIdx)
+        private bool CheckBearishDivergence(List<HistoricalPrice> prices, List<double> macdLine, int currentIndex, int startIdx)
         {
-            if (startIdx >= macdIndex || priceIndex <= 0)
+            if (currentIndex <= 0)
                 return false;
 
             // Find the highest price in the lookback period
             int highestPriceIdx = startIdx;
-            for (int i = startIdx + 1; i < priceIndex; i++)
+            for (int i = startIdx + 1; i < currentIndex; i++)
             {
                 if (prices[i].High > prices[highestPriceIdx].High)
                     highestPriceIdx = i;
             }
 
-            // Find the corresponding MACD value
-            int macdHighIdx = highestPriceIdx - (priceIndex - macdIndex);
-            if (macdHighIdx < 0 || macdHighIdx >= macdLine.Count)
+            // MACD array is parallel to prices array
+            if (highestPriceIdx < 0 || highestPriceIdx >= macdLine.Count ||
+                double.IsNaN(macdLine[highestPriceIdx]) || double.IsNaN(macdLine[currentIndex]))
                 return false;
 
             // Find the most recent higher high in price (if it exists)
-            if (prices[priceIndex].High > prices[highestPriceIdx].High)
+            if (prices[currentIndex].High > prices[highestPriceIdx].High)
             {
                 // If current price made a higher high, check if MACD made a lower high
-                return macdLine[macdIndex] < macdLine[macdHighIdx];
+                return macdLine[currentIndex] < macdLine[highestPriceIdx];
             }
             return false;
         }
@@ -294,24 +298,17 @@ namespace Quantra.Models
                 return (null, null, null);
 
             // Calculate MACD line (fastEMA - slowEMA)
+            // Both fastEma and slowEma are parallel to prices array
             var macdLine = new List<double>();
             for (int i = 0; i < prices.Count; i++)
             {
-                if (i < slowPeriod - 1)
+                if (double.IsNaN(fastEma[i]) || double.IsNaN(slowEma[i]))
                 {
                     macdLine.Add(double.NaN);
                 }
                 else
                 {
-                    int fastIdx = i - (slowPeriod - fastPeriod);
-                    if (fastIdx >= 0 && fastIdx < fastEma.Count && i < slowEma.Count)
-                    {
-                        macdLine.Add(fastEma[fastIdx] - slowEma[i]);
-                    }
-                    else
-                    {
-                        macdLine.Add(double.NaN);
-                    }
+                    macdLine.Add(fastEma[i] - slowEma[i]);
                 }
             }
 
@@ -321,24 +318,17 @@ namespace Quantra.Models
                 return (macdLine, null, null);
 
             // Calculate histogram (MACD - Signal)
+            // Both macdLine and signalLine are parallel to prices array
             var histogram = new List<double>();
             for (int i = 0; i < macdLine.Count; i++)
             {
-                if (i < slowPeriod + signalPeriod - 2)
+                if (i >= signalLine.Count || double.IsNaN(macdLine[i]) || double.IsNaN(signalLine[i]))
                 {
                     histogram.Add(double.NaN);
                 }
                 else
                 {
-                    int signalIdx = i - (slowPeriod - 1);
-                    if (signalIdx >= 0 && signalIdx < signalLine.Count)
-                    {
-                        histogram.Add(macdLine[i] - signalLine[signalIdx]);
-                    }
-                    else
-                    {
-                        histogram.Add(double.NaN);
-                    }
+                    histogram.Add(macdLine[i] - signalLine[i]);
                 }
             }
 
@@ -355,15 +345,23 @@ namespace Quantra.Models
 
             var result = new List<double>();
 
-            // Add NaN for periods where EMA can't be calculated
-            for (int i = 0; i < period - 1; i++)
+            // Find the first valid (non-NaN) starting point
+            int firstValidIdx = 0;
+            while (firstValidIdx < values.Count && double.IsNaN(values[firstValidIdx]))
+                firstValidIdx++;
+
+            if (firstValidIdx + period > values.Count)
+                return null;
+
+            // Add NaN for periods before we can calculate EMA
+            for (int i = 0; i < firstValidIdx + period - 1; i++)
             {
                 result.Add(double.NaN);
             }
 
-            // Calculate first EMA as SMA
+            // Calculate first EMA as SMA (from first valid values)
             double sum = 0;
-            for (int i = 0; i < period; i++)
+            for (int i = firstValidIdx; i < firstValidIdx + period; i++)
             {
                 sum += values[i];
             }
@@ -374,11 +372,18 @@ namespace Quantra.Models
             double multiplier = 2.0 / (period + 1);
 
             // Calculate EMA for remaining values
-            for (int i = period; i < values.Count; i++)
+            for (int i = firstValidIdx + period; i < values.Count; i++)
             {
-                // EMA = (Close - Previous EMA) * multiplier + Previous EMA
-                ema = (values[i] - ema) * multiplier + ema;
-                result.Add(ema);
+                if (double.IsNaN(values[i]))
+                {
+                    result.Add(double.NaN);
+                }
+                else
+                {
+                    // EMA = (Close - Previous EMA) * multiplier + Previous EMA
+                    ema = (values[i] - ema) * multiplier + ema;
+                    result.Add(ema);
+                }
             }
 
             return result;
