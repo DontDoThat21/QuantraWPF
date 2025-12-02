@@ -60,17 +60,18 @@ namespace Quantra.Tests
                 var plusTab = new TabItem { Header = "+" };
                 testTabControl.Items.Add(plusTab);
 
-                // Create services for MainWindow
+                // Create services for MainWindow using dependency injection
                 var userSettingsService = serviceProvider.GetRequiredService<UserSettingsService>();
                 var historicalDataService = serviceProvider.GetRequiredService<HistoricalDataService>();
                 var alphaVantageService = serviceProvider.GetRequiredService<AlphaVantageService>();
                 var technicalIndicatorService = serviceProvider.GetRequiredService<TechnicalIndicatorService>();
+                var dbContext = serviceProvider.GetRequiredService<QuantraDbContext>();
 
                 // Create a MainWindow instance for testing
                 testMainWindow = new MainWindow(userSettingsService, historicalDataService, alphaVantageService, technicalIndicatorService);
 
-                // Create TabManager with current 3-parameter constructor
-                tabManager = new Utilities.TabManager(testMainWindow, testTabControl, userSettingsService);
+                // Create TabManager with all required dependencies (4-parameter constructor)
+                tabManager = new Utilities.TabManager(testMainWindow, testTabControl, userSettingsService, dbContext);
 
                 // Subscribe to the TabAdded event to verify it fires
                 tabManager.TabAdded += (tabName) =>

@@ -1,7 +1,7 @@
-using Dapper;
 using Microsoft.EntityFrameworkCore;
 using Quantra.Controls;
 using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 using Quantra.DAL.Services;
 using Quantra.Repositories;
 using System;
@@ -17,6 +17,7 @@ namespace Quantra.Utilities
     /// <summary>
     /// Manages tab-related operations within the application including loading, adding,
     /// saving, editing, and removing tabs, as well as handling tab selection and drag-drop functionality.
+    /// Uses dependency injection for database context to improve testability and resource management.
     /// </summary>
     public class TabManager
     {
@@ -25,6 +26,8 @@ namespace Quantra.Utilities
         private readonly MainWindow _mainWindow;
         private readonly TabControl _tabControl;
         private readonly UserSettingsService _userSettingsService;
+        private readonly QuantraDbContext _dbContext;
+        private readonly TabRepository _tabRepository;
         private TabItem _lastNonPlusTab;
         private bool _isTabSelectionInProgress = false;
 
@@ -39,11 +42,15 @@ namespace Quantra.Utilities
 
         #region Constructor
 
-        public TabManager(MainWindow mainWindow, TabControl tabControl, UserSettingsService userSettingsService)
+        public TabManager(MainWindow mainWindow, TabControl tabControl, UserSettingsService userSettingsService, QuantraDbContext dbContext)
         {
             _mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
             _tabControl = tabControl ?? throw new ArgumentNullException(nameof(tabControl));
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            
+            // Initialize TabRepository with injected DbContext
+            _tabRepository = new TabRepository(_dbContext);
 
             // Attach event handlers
             _tabControl.PreviewMouseMove += TabControl_PreviewMouseMove;
@@ -61,29 +68,23 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = ConnectionHelper.GetConnection())
+                var tabs = _tabRepository.GetTabs();
+                //DatabaseMonolith.Log("Info", $"Found {tabs.Count} tabs in database");
+
+                // Clear existing tabs except for the '+' tab
+                var plusTab = _tabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == "+");
+                _tabControl.Items.Clear();
+                if (plusTab != null)
                 {
-                    connection.Open();
-                    var tabs = connection.Query<(string TabName, int TabOrder)>(
-                        "SELECT TabName, TabOrder FROM UserAppSettings ORDER BY TabOrder").ToList();
+                    _tabControl.Items.Add(plusTab);
+                }
 
-                    //DatabaseMonolith.Log("Info", $"Found {tabs.Count} tabs in database");
-
-                    // Clear existing tabs except for the '+' tab
-                    var plusTab = _tabControl.Items.OfType<TabItem>().FirstOrDefault(t => t.Header.ToString() == "+");
-                    _tabControl.Items.Clear();
-                    if (plusTab != null)
-                    {
-                        _tabControl.Items.Add(plusTab);
-                    }
-
-                    // Add tabs from database and load their controls
-                    foreach (var tab in tabs)
-                    {
-                        AddCustomTab(tab.TabName);
-                        // Load controls for each tab immediately after adding it
-                        LoadTabControls(tab.TabName);
-                    }
+                // Add tabs from database and load their controls
+                foreach (var tab in tabs)
+                {
+                    AddCustomTab(tab.TabName);
+                    // Load controls for each tab immediately after adding it
+                    LoadTabControls(tab.TabName);
                 }
             }
             catch (Exception ex)
@@ -274,39 +275,23 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = ConnectionHelper.GetConnection())
+                // Check if tab already exists
+                var existingTab = _dbContext.UserAppSettings
+                    .AsNoTracking()
+                    .FirstOrDefault(t => t.TabName == tabName);
+
+                if (existingTab == null)
                 {
-                    connection.Open();
+                    // Default grid dimensions - always 4x4
+                    int rows = 4;
+                    int columns = 4;
 
-                    // Check if tab already exists
-                    var existingTab = connection.QueryFirstOrDefault<string>(
-                        "SELECT TabName FROM UserAppSettings WHERE TabName = @TabName", new { TabName = tabName });
+                    // Calculate new tab order (one before the '+' tab)
+                    int tabOrder = _tabControl.Items.Count - 2;
 
-                    if (existingTab == null)
-                    {
-                        // Default grid dimensions - always 4x4
-                        int rows = 4;
-                        int columns = 4;
+                    _tabRepository.InsertTab(tabName, tabOrder, rows, columns);
 
-                        // Calculate new tab order (one before the '+' tab)
-                        int tabOrder = _tabControl.Items.Count - 2;
-
-                        var insertQuery = @"
-                            INSERT INTO UserAppSettings 
-                                (TabName, TabOrder, GridRows, GridColumns) 
-                            VALUES 
-                                (@TabName, @TabOrder, @GridRows, @GridColumns)";
-
-                        connection.Execute(insertQuery, new
-                        {
-                            TabName = tabName,
-                            TabOrder = tabOrder,
-                            GridRows = rows,
-                            GridColumns = columns
-                        });
-
-                        //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
-                    }
+                    //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
                 }
             }
             catch (Exception ex)
@@ -325,35 +310,19 @@ namespace Quantra.Utilities
         {
             try
             {
-                using (var connection = ConnectionHelper.GetConnection())
+                // Check if tab already exists
+                var existingTab = _dbContext.UserAppSettings
+                    .AsNoTracking()
+                    .FirstOrDefault(t => t.TabName == tabName);
+
+                if (existingTab == null)
                 {
-                    connection.Open();
+                    // Calculate new tab order (one before the '+' tab)
+                    int tabOrder = _tabControl.Items.Count - 2;
 
-                    // Check if tab already exists
-                    var existingTab = connection.QueryFirstOrDefault<string>(
-                        "SELECT TabName FROM UserAppSettings WHERE TabName = @TabName", new { TabName = tabName });
+                    _tabRepository.InsertTab(tabName, tabOrder, rows, columns);
 
-                    if (existingTab == null)
-                    {
-                        // Calculate new tab order (one before the '+' tab)
-                        int tabOrder = _tabControl.Items.Count - 2;
-
-                        var insertQuery = @"
-                            INSERT INTO UserAppSettings 
-                                (TabName, TabOrder, GridRows, GridColumns) 
-                            VALUES 
-                                (@TabName, @TabOrder, @GridRows, @GridColumns)";
-
-                        connection.Execute(insertQuery, new
-                        {
-                            TabName = tabName,
-                            TabOrder = tabOrder,
-                            GridRows = rows,
-                            GridColumns = columns
-                        });
-
-                        //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
-                    }
+                    //DatabaseMonolith.Log("Info", $"Created new tab: {tabName} with grid dimensions {rows}x{columns}");
                 }
             }
             catch (Exception ex)
@@ -373,12 +342,7 @@ namespace Quantra.Utilities
             _tabControl.Items.Remove(tabItem);
 
             // Remove the tab from the database
-            using (var connection = ConnectionHelper.GetConnection())
-            {
-                connection.Open();
-                var deleteQuery = "DELETE FROM UserAppSettings WHERE TabName = @TabName";
-                connection.Execute(deleteQuery, new { TabName = tabName });
-            }
+            _tabRepository.DeleteTab(tabName);
 
             _mainWindow.AppendAlert($"Removed tab: {tabName}");
         }
@@ -398,35 +362,29 @@ namespace Quantra.Utilities
                     // Update the tab name in the UI
                     tabItem.Header = newTabName;
 
-                    // Update the tab name in the database using Entity Framework Core
-                    using (var dbContext = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
-                        .UseSqlServer(ConnectionHelper.ConnectionString)
-                        .Options))
+                    // Find the existing tab configuration
+                    var tabConfig = _dbContext.UserAppSettings
+                        .FirstOrDefault(t => t.TabName == oldTabName);
+
+                    if (tabConfig != null)
                     {
-                        // Find the existing tab configuration
-                        var tabConfig = dbContext.UserAppSettings
-                            .FirstOrDefault(t => t.TabName == oldTabName);
+                        // Update the tab name
+                        tabConfig.TabName = newTabName;
 
-                        if (tabConfig != null)
-                        {
-                            // Update the tab name
-                            tabConfig.TabName = newTabName;
+                        // Ensure grid dimensions are at least 4x4
+                        if (tabConfig.GridRows < 4)
+                            tabConfig.GridRows = 4;
+                        if (tabConfig.GridColumns < 4)
+                            tabConfig.GridColumns = 4;
 
-                            // Ensure grid dimensions are at least 4x4
-                            if (tabConfig.GridRows < 4)
-                                tabConfig.GridRows = 4;
-                            if (tabConfig.GridColumns < 4)
-                                tabConfig.GridColumns = 4;
+                        // Save changes to database
+                        _dbContext.SaveChanges();
 
-                            // Save changes to database
-                            dbContext.SaveChanges();
-
-                            _mainWindow.AppendAlert($"Renamed tab from {oldTabName} to {newTabName}");
-                        }
-                        else
-                        {
-                            _mainWindow.AppendAlert($"Warning: Tab '{oldTabName}' not found in database", "warning");
-                        }
+                        _mainWindow.AppendAlert($"Renamed tab from {oldTabName} to {newTabName}");
+                    }
+                    else
+                    {
+                        _mainWindow.AppendAlert($"Warning: Tab '{oldTabName}' not found in database", "warning");
                     }
                 }
                 catch (Exception ex)
@@ -775,16 +733,11 @@ namespace Quantra.Utilities
                     tabControl.Items.Insert(newIndex, tabItem);
 
                     // Update the tab order in the database
-                    using (var connection = ConnectionHelper.GetConnection())
+                    for (int i = 0; i < _tabControl.Items.Count - 1; i++)
                     {
-                        connection.Open();
-                        for (int i = 0; i < _tabControl.Items.Count - 1; i++)
+                        if (_tabControl.Items[i] is TabItem item && item.Header is string tabName)
                         {
-                            if (_tabControl.Items[i] is TabItem item && item.Header is string tabName)
-                            {
-                                var updateQuery = "UPDATE UserAppSettings SET TabOrder = @TabOrder WHERE TabName = @TabName";
-                                connection.Execute(updateQuery, new { TabOrder = i, TabName = tabName });
-                            }
+                            _tabRepository.UpdateTabOrder(tabName, i);
                         }
                     }
                 }

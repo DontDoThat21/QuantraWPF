@@ -35,12 +35,11 @@ namespace Quantra.Managers
 
         #region Constructor
 
-        public TabManager(TabControl tabControl, UserSettingsService userSettingsService)
+        public TabManager(TabControl tabControl, UserSettingsService userSettingsService, QuantraDbContext dbContext)
         {
             _mainTabControl = tabControl ?? throw new ArgumentNullException(nameof(tabControl));
-            var connection = ConnectionHelper.GetConnection();
-            _tabRepository = new TabRepository(connection);
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+            _tabRepository = new TabRepository(dbContext ?? throw new ArgumentNullException(nameof(dbContext)));
         }
 
         #endregion

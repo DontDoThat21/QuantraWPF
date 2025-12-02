@@ -67,11 +67,10 @@ namespace Quantra
                 throw new InvalidOperationException("UserSettingsService must be injected via constructor before calling InitializeTabManagement");
             }
             
-            var connection = ConnectionHelper.GetConnection();
-            _tabRepository = new TabRepository(connection);
+            _tabRepository = new TabRepository(_quantraDbContext);
             
             // Initialize TabManager - ensuring it's never null
-            TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService);
+            TabManager = new Utilities.TabManager(this, MainTabControl, _userSettingsService, _quantraDbContext);
             
             // Hook up TabManager events
             TabManager.TabAdded += (tabName) => {
@@ -143,7 +142,6 @@ namespace Quantra
                 int gridColumns = createTabWindow.GridColumns;
 
                 // Add the tab to the UI
-                TabManager = new TabManager(this, MainTabControl, _userSettingsService);
                 TabManager.AddCustomTab(newTabName);
 
                 // Save the tab to the database with specified grid dimensions
