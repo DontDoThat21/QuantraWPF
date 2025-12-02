@@ -435,7 +435,9 @@ MinWidth="400" MinHeight="300">
                                       ToolTip="Select neural network architecture (for PyTorch/TensorFlow)">
                                 <ComboBoxItem Content="LSTM" Tag="lstm"/>
                                 <ComboBoxItem Content="GRU" Tag="gru"/>
-                                <ComboBoxItem Content="Transformer" IsSelected="True" Tag="transformer"/>
+                                <ComboBoxItem Content="Transformer" Tag="transformer"/>
+                                <ComboBoxItem Content="TFT (Temporal Fusion)" IsSelected="True" Tag="tft"
+                                              ToolTip="Temporal Fusion Transformer - Multi-horizon forecasting with uncertainty quantification"/>
                             </ComboBox>
                         </StackPanel>
 
