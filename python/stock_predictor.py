@@ -1297,10 +1297,48 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):
             model.feature_names = feature_names
         
+        # Get current price from features - this is required to calculate actual target price
+        # The model predicts percentage change, not actual price
+        current_price = features.get('current_price', 0.0)
+        if current_price <= 0:
+            # Try alternate keys for current price
+            current_price = features.get('close', features.get('price', 0.0))
+        
+        if current_price <= 0:
+            logger.error("No valid current_price provided in features. Cannot calculate target price.")
+            # Return error result with clear message - don't use a fake default
+            return {
+                'action': 'HOLD',
+                'confidence': 0.0,
+                'targetPrice': 0.0,
+                'weights': {},
+                'timeSeries': {
+                    'prices': [],
+                    'dates': [],
+                    'confidence': 0.0
+                },
+                'risk': {
+                    'var': 0.0,
+                    'maxDrawdown': 0.0,
+                    'sharpeRatio': 0.0,
+                    'riskScore': 1.0  # High risk due to missing data
+                },
+                'patterns': [],
+                'modelType': 'error',
+                'architectureType': 'n/a',
+                'error': 'No current_price provided in features. Please include current_price, close, or price in the input.',
+                'hyperparameterOptimization': {
+                    'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                    'used': False,
+                    'optimizedParams': False
+                }
+            }
+        
         # Make predictions based on model type
+        # NOTE: The model predicts percentage change (e.g., 0.05 means +5% price change)
         if used_model_type == 'pytorch':
             # Scale and predict with PyTorch model
-            target_price = float(model.predict(feature_array)[0])
+            predicted_pct_change = float(model.predict(feature_array)[0])
             
             # Calculate confidence - approximate for PyTorch
             confidence = 0.8  # Default confidence for PyTorch models
@@ -1308,7 +1346,7 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
             
         elif used_model_type == 'tensorflow':
             # Scale and predict with TensorFlow model
-            target_price = float(model.predict(feature_array)[0])
+            predicted_pct_change = float(model.predict(feature_array)[0])
             
             # Calculate confidence - approximate for TensorFlow
             confidence = 0.8  # Default confidence for TensorFlow models
@@ -1320,26 +1358,35 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                 feature_array = scaler.transform(feature_array)
                 
             # Make predictions
-            target_price = float(model.predict(feature_array)[0])
+            predicted_pct_change = float(model.predict(feature_array)[0])
             
             # Calculate confidence based on feature importance for RF
             predictions = []
             for estimator in model.estimators_:
                 predictions.append(float(estimator.predict(feature_array)[0]))
             
-            confidence = 1.0 - min(1.0, np.std(predictions) / (np.mean(predictions) + 1e-10))
+            # Confidence is inversely related to prediction variance
+            pct_std = np.std(predictions) if len(predictions) > 0 else 0.0
+            confidence = 1.0 - min(1.0, pct_std / (abs(np.mean(predictions)) + 1e-10))
             
             # Get feature importances for Random Forest
             weights = dict(zip(feature_names, 
                              [float(imp) for imp in model.feature_importances_]))
-                             
-        # Determine action based on predictions
-        current_price = features.get('current_price', target_price * 0.95)
-        price_diff = target_price - current_price
         
-        if abs(price_diff) / current_price < 0.01:  # Less than 1% change
+        # Clamp the predicted percentage change to reasonable bounds (-50% to +100%)
+        # This prevents extreme predictions from outliers in training data
+        predicted_pct_change = max(-0.5, min(1.0, predicted_pct_change))
+        
+        # Convert percentage change prediction to actual target price
+        # target_price = current_price * (1 + predicted_percentage_change)
+        target_price = current_price * (1.0 + predicted_pct_change)
+        
+        logger.info(f"Prediction: current_price={current_price:.2f}, predicted_pct_change={predicted_pct_change:.4f}, target_price={target_price:.2f}")
+                             
+        # Determine action based on predicted percentage change
+        if abs(predicted_pct_change) < 0.01:  # Less than 1% change
             action = "HOLD"
-        elif price_diff > 0:
+        elif predicted_pct_change > 0:
             action = "BUY"
         else:
             action = "SELL"
@@ -1368,18 +1415,36 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                            for _ in range(5)]
         
         # Calculate risk metrics - adjust based on model type
+        # Note: predicted_pct_change is the predicted percentage change
+        price_diff = target_price - current_price  # Actual dollar difference
+        
         if used_model_type in ['pytorch', 'tensorflow']:
             # For deep learning models, estimate volatility from features
             volatility = features.get('volatility', 0.02)
-            var_95 = target_price * volatility * 1.65  # 95% VaR approximation
-            max_drawdown = target_price * volatility * 2.33  # 99% worst case
-            sharpe_ratio = abs(price_diff / current_price) / volatility if volatility > 0 else 1.0
+            # VaR (Value at Risk) at 95%: max expected loss in worst 5% of cases
+            var_95 = current_price * volatility * 1.65  # 95% VaR approximation (in dollars)
+            # Max drawdown: worst case scenario
+            max_drawdown = current_price * volatility * 2.33  # 99% worst case (in dollars)
+            sharpe_ratio = abs(predicted_pct_change) / volatility if volatility > 0 else 1.0
         else:
-            # For random forest, use bootstrap predictions
-            volatility = np.std(predictions) / np.mean(predictions) if 'predictions' in locals() else 0.02
-            var_95 = np.percentile(predictions, 5) - np.mean(predictions) if 'predictions' in locals() else target_price * 0.05
-            max_drawdown = min(predictions) - np.mean(predictions) if 'predictions' in locals() else target_price * 0.1
-            sharpe_ratio = 1.0 / (volatility + 1e-10)
+            # For random forest, use bootstrap predictions (which are percentage changes)
+            if 'predictions' in locals() and len(predictions) > 0:
+                # Predictions are percentage changes, compute volatility
+                volatility = np.std(predictions) if len(predictions) > 1 else 0.02
+                
+                # VaR: the loss at the 5th percentile (negative values represent losses)
+                # If 5th percentile is negative, that's the expected loss in worst cases
+                pct_5th = np.percentile(predictions, 5)
+                var_95 = current_price * max(0, -pct_5th)  # Convert negative pct to positive loss
+                
+                # Max drawdown: the most negative prediction (worst case loss)
+                min_pct = min(predictions)
+                max_drawdown = current_price * max(0, -min_pct)  # Convert to positive loss
+            else:
+                volatility = 0.02
+                var_95 = current_price * 0.05  # Default 5% VaR
+                max_drawdown = current_price * 0.1  # Default 10% max drawdown
+            sharpe_ratio = abs(predicted_pct_change) / (volatility + 1e-10)
         
         # Create a pattern with model-specific name
         base_pattern_name = {
