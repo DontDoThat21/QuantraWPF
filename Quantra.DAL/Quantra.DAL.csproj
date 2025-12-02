@@ -47,7 +47,6 @@
 
     <!-- Resilience and database providers used by ErrorHandling -->
     <PackageReference Include="Polly" Version="8.4.0" />
-    <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
     
     <!-- SQL Server Client for LocalDB and SQL Server connections -->
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
