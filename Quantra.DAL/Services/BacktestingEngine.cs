@@ -742,6 +742,12 @@ namespace Quantra.DAL.Services
         /// <param name="initialCapital">Initial investment amount</param>
         private void CalculateAdvancedMetrics(BacktestResult result, double initialCapital)
         {
+            // Debug logging
+            System.Diagnostics.Debug.WriteLine($"CalculateAdvancedMetrics called:");
+            System.Diagnostics.Debug.WriteLine($"  Equity curve count: {result.EquityCurve.Count}");
+            System.Diagnostics.Debug.WriteLine($"  Trades count: {result.Trades.Count}");
+            System.Diagnostics.Debug.WriteLine($"  Completed trades: {result.Trades.Count(t => t.ExitPrice.HasValue)}");
+            
             // 1. Calculate daily returns from equity curve
             List<double> dailyReturns = new List<double>();
             List<double> dailyDownsideReturns = new List<double>(); // For Sortino ratio (only negative returns)
@@ -750,6 +756,14 @@ namespace Quantra.DAL.Services
             {
                 double previousValue = result.EquityCurve[i - 1].Equity;
                 double currentValue = result.EquityCurve[i].Equity;
+                
+                // Skip if previous value is 0 to avoid division by zero
+                if (previousValue == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  WARNING: Previous equity value is 0 at index {i}");
+                    continue;
+                }
+                
                 double dailyReturn = (currentValue - previousValue) / previousValue;
 
                 dailyReturns.Add(dailyReturn);
@@ -760,6 +774,14 @@ namespace Quantra.DAL.Services
                     dailyDownsideReturns.Add(dailyReturn);
                 }
             }
+            
+            System.Diagnostics.Debug.WriteLine($"  Daily returns calculated: {dailyReturns.Count}");
+            if (dailyReturns.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"  Average daily return: {dailyReturns.Average():F6}");
+                System.Diagnostics.Debug.WriteLine($"  Min daily return: {dailyReturns.Min():F6}");
+                System.Diagnostics.Debug.WriteLine($"  Max daily return: {dailyReturns.Max():F6}");
+            }
 
             // 2. Calculate metrics
 
@@ -768,31 +790,81 @@ namespace Quantra.DAL.Services
             double riskFreeRate = 0.0;
             double averageReturn = dailyReturns.Count > 0 ? dailyReturns.Average() : 0;
             double returnStdDev = CalculateStandardDeviation(dailyReturns);
+            
+            System.Diagnostics.Debug.WriteLine($"  Return Std Dev: {returnStdDev:F6}");
+            System.Diagnostics.Debug.WriteLine($"  Average return: {averageReturn:F6}");
 
             // Annualize Sharpe ratio (assuming 252 trading days per year for stocks)
-            result.SharpeRatio = returnStdDev > 0 ?
-                (averageReturn - riskFreeRate) / returnStdDev * Math.Sqrt(252) : 0;
+            if (returnStdDev > 0.0001)  // Use small epsilon instead of exact zero check
+            {
+                result.SharpeRatio = (averageReturn - riskFreeRate) / returnStdDev * Math.Sqrt(252);
+                System.Diagnostics.Debug.WriteLine($"  Calculated Sharpe Ratio: {result.SharpeRatio:F2}");
+            }
+            else
+            {
+                result.SharpeRatio = 0;
+                System.Diagnostics.Debug.WriteLine($"  Sharpe Ratio set to 0 (stddev too low: {returnStdDev})");
+            }
 
             // Sortino Ratio - Similar to Sharpe but only considers downside risk
             double downsideDeviation = CalculateStandardDeviation(dailyDownsideReturns);
-            result.SortinoRatio = downsideDeviation > 0 ?
-                (averageReturn - riskFreeRate) / downsideDeviation * Math.Sqrt(252) : 0;
+            
+            System.Diagnostics.Debug.WriteLine($"  Downside returns count: {dailyDownsideReturns.Count}");
+            System.Diagnostics.Debug.WriteLine($"  Downside deviation: {downsideDeviation:F6}");
+            
+            if (downsideDeviation > 0.0001)  // Use small epsilon
+            {
+                result.SortinoRatio = (averageReturn - riskFreeRate) / downsideDeviation * Math.Sqrt(252);
+                System.Diagnostics.Debug.WriteLine($"  Calculated Sortino Ratio: {result.SortinoRatio:F2}");
+            }
+            else
+            {
+                result.SortinoRatio = 0;
+                System.Diagnostics.Debug.WriteLine($"  Sortino Ratio set to 0 (no downside or too low deviation)");
+            }
 
             // CAGR (Compound Annual Growth Rate)
             double totalDays = (result.EndDate - result.StartDate).TotalDays;
+            System.Diagnostics.Debug.WriteLine($"  Total days: {totalDays}");
+            
             if (totalDays > 0 && result.EquityCurve.Count > 0)
             {
                 double startValue = initialCapital;
                 double endValue = result.EquityCurve.Last().Equity;
-                result.CAGR = Math.Pow(endValue / startValue, 365.0 / totalDays) - 1;
+                
+                System.Diagnostics.Debug.WriteLine($"  Start value: {startValue:C2}");
+                System.Diagnostics.Debug.WriteLine($"  End value: {endValue:C2}");
+                
+                if (startValue > 0)
+                {
+                    result.CAGR = Math.Pow(endValue / startValue, 365.0 / totalDays) - 1;
+                    System.Diagnostics.Debug.WriteLine($"  Calculated CAGR: {result.CAGR:P2}");
+                }
+                else
+                {
+                    result.CAGR = 0;
+                    System.Diagnostics.Debug.WriteLine($"  CAGR set to 0 (start value is 0)");
+                }
             }
             else
             {
                 result.CAGR = 0;
+                System.Diagnostics.Debug.WriteLine($"  CAGR set to 0 (no time period or no equity curve)");
             }
 
             // Calmar Ratio = CAGR / Maximum Drawdown
-            result.CalmarRatio = result.MaxDrawdown > 0 ? result.CAGR / result.MaxDrawdown : 0;
+            System.Diagnostics.Debug.WriteLine($"  Max Drawdown: {result.MaxDrawdown:P2}");
+            
+            if (result.MaxDrawdown > 0.0001)  // Use small epsilon
+            {
+                result.CalmarRatio = result.CAGR / result.MaxDrawdown;
+                System.Diagnostics.Debug.WriteLine($"  Calculated Calmar Ratio: {result.CalmarRatio:F2}");
+            }
+            else
+            {
+                result.CalmarRatio = 0;
+                System.Diagnostics.Debug.WriteLine($"  Calmar Ratio set to 0 (no max drawdown)");
+            }
 
             // Profit Factor = Gross profit divided by gross loss
             double grossProfit = result.Trades
@@ -802,15 +874,51 @@ namespace Quantra.DAL.Services
             double grossLoss = Math.Abs(result.Trades
                 .Where(t => t.ExitPrice.HasValue && t.ProfitLoss < 0)
                 .Sum(t => t.ProfitLoss));
+            
+            System.Diagnostics.Debug.WriteLine($"  Gross profit: {grossProfit:C2}");
+            System.Diagnostics.Debug.WriteLine($"  Gross loss: {grossLoss:C2}");
 
-            result.ProfitFactor = grossLoss > 0 ? grossProfit / grossLoss :
-                grossProfit > 0 ? double.MaxValue : 0;
+            if (grossLoss > 0.01)  // Small threshold to avoid meaningless ratios
+            {
+                result.ProfitFactor = grossProfit / grossLoss;
+                System.Diagnostics.Debug.WriteLine($"  Calculated Profit Factor: {result.ProfitFactor:F2}");
+            }
+            else if (grossProfit > 0)
+            {
+                result.ProfitFactor = double.MaxValue;
+                System.Diagnostics.Debug.WriteLine($"  Profit Factor set to MaxValue (no losses)");
+            }
+            else
+            {
+                result.ProfitFactor = 0;
+                System.Diagnostics.Debug.WriteLine($"  Profit Factor set to 0 (no profit or loss)");
+            }
 
             // Information Ratio = (Portfolio Return - Benchmark Return) / Tracking Error
             // Since we don't have a direct benchmark here, we'll use the risk-free rate as a simple benchmark
             // Tracking error is the standard deviation of the difference between portfolio returns and benchmark returns
             double excessReturn = averageReturn - riskFreeRate; // Excess return over risk-free rate
-            result.InformationRatio = returnStdDev > 0 ? excessReturn / returnStdDev * Math.Sqrt(252) : 0;
+            
+            if (returnStdDev > 0.0001)  // Use small epsilon
+            {
+                result.InformationRatio = excessReturn / returnStdDev * Math.Sqrt(252);
+                System.Diagnostics.Debug.WriteLine($"  Calculated Information Ratio: {result.InformationRatio:F2}");
+            }
+            else
+            {
+                result.InformationRatio = 0;
+                System.Diagnostics.Debug.WriteLine($"  Information Ratio set to 0 (no volatility)");
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"\nFinal Metrics Summary:");
+            System.Diagnostics.Debug.WriteLine($"  Sharpe Ratio: {result.SharpeRatio:F2}");
+            System.Diagnostics.Debug.WriteLine($"  Sortino Ratio: {result.SortinoRatio:F2}");
+            System.Diagnostics.Debug.WriteLine($"  CAGR: {result.CAGR:P2}");
+            System.Diagnostics.Debug.WriteLine($"  Calmar Ratio: {result.CalmarRatio:F2}");
+            System.Diagnostics.Debug.WriteLine($"  Profit Factor: {result.ProfitFactor:F2}");
+            System.Diagnostics.Debug.WriteLine($"  Information Ratio: {result.InformationRatio:F2}");
+            System.Diagnostics.Debug.WriteLine($"  Win Rate: {result.WinRate:P2}");
+            System.Diagnostics.Debug.WriteLine($"  Max Drawdown: {result.MaxDrawdown:P2}");
         }
 
         /// <summary>

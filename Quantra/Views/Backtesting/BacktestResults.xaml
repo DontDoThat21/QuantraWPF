@@ -1,14 +1,14 @@
 <UserControl x:Class="Quantra.Views.Backtesting.BacktestResults"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:Quantra.Views.Backtesting"
              xmlns:converters="clr-namespace:Quantra.Converters"
              xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
-             mc:Ignorable="d" d:DesignWidth="900"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="1200"
              Background="#23233A"
-             Loaded="BacktestResults_Loaded" Height="948">
+             Loaded="BacktestResults_Loaded">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -21,10 +21,10 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="2*"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="4*"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="8*"/>
         </Grid.RowDefinitions>
 
         <!-- Performance Metrics Panel -->
@@ -106,51 +106,51 @@
 
                 <!-- Row 0-1: Basic Metrics -->
                 <TextBlock Grid.Column="0" Grid.Row="0" Text="Total Return:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="0" Grid.Row="1" x:Name="TotalReturnText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="1" x:Name="TotalReturnText" Text="{Binding TotalReturnText, FallbackValue='0.00%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="1" Grid.Row="0" Text="Max Drawdown:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="MaxDrawdownText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="MaxDrawdownText" Text="{Binding MaxDrawdownText, FallbackValue='0.00%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="2" Grid.Row="0" Text="Win Rate:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="2" Grid.Row="1" x:Name="WinRateText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="1" x:Name="WinRateText" Text="{Binding WinRateText, FallbackValue='0.00%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="3" Grid.Row="0" Text="CAGR:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="3" Grid.Row="1" x:Name="CAGRText" Text="0.00%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="3" Grid.Row="1" x:Name="CAGRText" Text="{Binding CagrText, FallbackValue='0.00%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="4" Grid.Row="0" Text="Sharpe Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="4" Grid.Row="1" x:Name="SharpeRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="4" Grid.Row="1" x:Name="SharpeRatioText" Text="{Binding SharpeRatioText, FallbackValue='0.00'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="5" Grid.Row="0" Text="Sortino Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="5" Grid.Row="1" x:Name="SortinoRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="5" Grid.Row="1" x:Name="SortinoRatioText" Text="{Binding SortinoRatioText, FallbackValue='0.00'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <!-- Row 2-3: Advanced Metrics -->
                 <TextBlock Grid.Column="0" Grid.Row="2" Text="Calmar Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="0" Grid.Row="3" x:Name="CalmarRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="3" x:Name="CalmarRatioText" Text="{Binding CalmarRatioText, FallbackValue='0.00'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="1" Grid.Row="2" Text="Profit Factor:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="1" Grid.Row="3" x:Name="ProfitFactorText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="3" x:Name="ProfitFactorText" Text="{Binding ProfitFactorText, FallbackValue='0.00'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="2" Grid.Row="2" Text="Information Ratio:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                <TextBlock Grid.Column="2" Grid.Row="3" x:Name="InformationRatioText" Text="0.00" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="3" x:Name="InformationRatioText" Text="{Binding InformationRatioText, FallbackValue='0.00'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="3" Grid.Row="2" Text="Ann. Volatility:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Annualized Volatility from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="3" Grid.Row="3" x:Name="AnnualizedVolatilityText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="3" Grid.Row="3" x:Name="AnnualizedVolatilityText" Text="{Binding AnnualizedVolatilityText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="4" Grid.Row="2" Text="Beta:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Beta relative to S&amp;P 500 (SPY) from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="4" Grid.Row="3" x:Name="BetaText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="4" Grid.Row="3" x:Name="BetaText" Text="{Binding BetaText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="5" Grid.Row="2" Text="Alpha:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Jensen's Alpha relative to S&amp;P 500 (SPY) from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="5" Grid.Row="3" x:Name="AlphaText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="5" Grid.Row="3" x:Name="AlphaText" Text="{Binding AlphaText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <!-- Row 4-5: Correlation Metrics from Alpha Vantage Analytics API -->
                 <TextBlock Grid.Column="0" Grid.Row="4" Text="Correlation SPY:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with S&amp;P 500 from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="0" Grid.Row="5" x:Name="CorrelationSPYText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="0" Grid.Row="5" x:Name="CorrelationSPYText" Text="{Binding CorrelationSPYText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="1" Grid.Row="4" Text="Correlation QQQ:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with NASDAQ 100 from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CorrelationQQQText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="1" Grid.Row="5" x:Name="CorrelationQQQText" Text="{Binding CorrelationQQQText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                 <TextBlock Grid.Column="2" Grid.Row="4" Text="Correlation IWM:" Style="{StaticResource EnhancedHeaderTextBlockStyle}" ToolTip="Correlation with Russell 2000 from Alpha Vantage Analytics API"/>
-                <TextBlock Grid.Column="2" Grid.Row="5" x:Name="CorrelationIWMText" Text="--" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                <TextBlock Grid.Column="2" Grid.Row="5" x:Name="CorrelationIWMText" Text="{Binding CorrelationIWMText, FallbackValue='--'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
             </Grid>
         </GroupBox>
 
@@ -479,19 +479,19 @@
                                                     </Grid.RowDefinitions>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="0" Text="5% Worst Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Return5PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Return5PercentText" Text="{Binding Return5PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="1" Text="25% Lower Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Return25PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Return25PercentText" Text="{Binding Return25PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="2" Text="50% Median:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Return50PercentText" Text="0.0%" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Return50PercentText" Text="{Binding Return50PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="3" Text="75% Upper Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Return75PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Return75PercentText" Text="{Binding Return75PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="4" Text="95% Best Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Return95PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Return95PercentText" Text="{Binding Return95PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
                                                 </Grid>
                                             </GroupBox>
 
@@ -510,19 +510,19 @@
                                                     </Grid.RowDefinitions>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="0" Text="5% Best Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Drawdown5PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="Drawdown5PercentText" Text="{Binding Drawdown5PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="1" Text="25% Lower Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Drawdown25PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="Drawdown25PercentText" Text="{Binding Drawdown25PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="2" Text="50% Median:" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Drawdown50PercentText" Text="0.0%" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="Drawdown50PercentText" Text="{Binding Drawdown50PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedHeaderTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="3" Text="75% Upper Quartile:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Drawdown75PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="Drawdown75PercentText" Text="{Binding Drawdown75PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="4" Text="95% Worst Case:" Style="{StaticResource EnhancedTextBlockStyle}"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Drawdown95PercentText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="Drawdown95PercentText" Text="{Binding Drawdown95PercentText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
                                                 </Grid>
                                             </GroupBox>
 
@@ -541,19 +541,19 @@
                                                     </Grid.RowDefinitions>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="0" Text="Value at Risk (95%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Maximum expected loss at 95% confidence level"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="VaR95Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="0" Name="VaR95Text" Text="{Binding VaR95Text, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="1" Text="Value at Risk (99%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Maximum expected loss at 99% confidence level"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="VaR99Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="1" Name="VaR99Text" Text="{Binding VaR99Text, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="2" Text="Expected Shortfall (95%):" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Average of worst 5% of outcomes"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="CVaR95Text" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="2" Name="CVaR95Text" Text="{Binding CVaR95Text, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="3" Text="Probability of Profit:" Style="{StaticResource EnhancedTextBlockStyle}" />
-                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="ProfitProbabilityText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="3" Name="ProfitProbabilityText" Text="{Binding ProfitProbabilityText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
 
                                                     <TextBlock Grid.Column="0" Grid.Row="4" Text="Prob. of Beating Backtest:" Style="{StaticResource EnhancedTextBlockStyle}" ToolTip="Probability of exceeding the original backtest return"/>
-                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="BeatBacktestProbabilityText" Text="0.0%" Style="{StaticResource EnhancedTextBlockStyle}"/>
+                                                    <TextBlock Grid.Column="1" Grid.Row="4" Name="BeatBacktestProbabilityText" Text="{Binding BeatBacktestProbabilityText, FallbackValue='0.0%'}" Style="{StaticResource EnhancedTextBlockStyle}"/>
                                                 </Grid>
                                             </GroupBox>
                                         </StackPanel>

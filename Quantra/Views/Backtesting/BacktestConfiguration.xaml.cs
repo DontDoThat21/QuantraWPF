@@ -119,6 +119,100 @@ namespace Quantra.Views.Backtesting
         {
             EndDatePicker.SelectedDate = DateTime.Today;
             StartDatePicker.SelectedDate = DateTime.Today.AddYears(-1);
+            
+            // Add event handlers for real-time validation
+            EndDatePicker.SelectedDateChanged += EndDatePicker_SelectedDateChanged;
+            StartDatePicker.SelectedDateChanged += StartDatePicker_SelectedDateChanged;
+        }
+        
+        /// <summary>
+        /// Handle end date selection changes to provide real-time validation feedback
+        /// </summary>
+        private void EndDatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (EndDatePicker.SelectedDate == null)
+                return;
+                
+            var endDate = EndDatePicker.SelectedDate.Value;
+            
+            // Check if end date is in the future
+            if (endDate > DateTime.Today)
+            {
+                // Apply error styling
+                EndDatePicker.BorderBrush = Brushes.Red;
+                EndDatePicker.BorderThickness = new Thickness(2);
+                ShowStatus($"⚠️ End date cannot be in the future! Please select {DateTime.Today:d} or earlier.");
+                StatusText.Foreground = Brushes.Orange;
+            }
+            else if (StartDatePicker.SelectedDate != null && endDate <= StartDatePicker.SelectedDate.Value)
+            {
+                // End date must be after start date
+                EndDatePicker.BorderBrush = Brushes.Orange;
+                EndDatePicker.BorderThickness = new Thickness(2);
+                ShowStatus("⚠️ End date must be after start date.");
+                StatusText.Foreground = Brushes.Orange;
+            }
+            else
+            {
+                // Valid date - remove error styling
+                EndDatePicker.BorderBrush = Brushes.Green;
+                EndDatePicker.BorderThickness = new Thickness(1);
+                
+                // Calculate and show the date range
+                if (StartDatePicker.SelectedDate != null)
+                {
+                    var days = (endDate - StartDatePicker.SelectedDate.Value).Days;
+                    ShowStatus($"✓ Valid date range: {days} days from {StartDatePicker.SelectedDate.Value:d} to {endDate:d}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Handle start date selection changes to provide real-time validation feedback
+        /// </summary>
+        private void StartDatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (StartDatePicker.SelectedDate == null)
+                return;
+                
+            var startDate = StartDatePicker.SelectedDate.Value;
+            
+            // Check if start date is too far in the past
+            if (startDate < DateTime.Today.AddYears(-20))
+            {
+                // Apply warning styling
+                StartDatePicker.BorderBrush = Brushes.Orange;
+                StartDatePicker.BorderThickness = new Thickness(2);
+                ShowStatus($"⚠️ Start date is very old. Historical data may not be available before {DateTime.Today.AddYears(-20):d}");
+                StatusText.Foreground = Brushes.Orange;
+            }
+            else if (EndDatePicker.SelectedDate != null && startDate >= EndDatePicker.SelectedDate.Value)
+            {
+                // Start date must be before end date
+                StartDatePicker.BorderBrush = Brushes.Orange;
+                StartDatePicker.BorderThickness = new Thickness(2);
+                ShowStatus("⚠️ Start date must be before end date.");
+                StatusText.Foreground = Brushes.Orange;
+            }
+            else
+            {
+                // Valid date - remove error styling
+                StartDatePicker.BorderBrush = Brushes.Green;
+                StartDatePicker.BorderThickness = new Thickness(1);
+                
+                // Calculate and show the date range
+                if (EndDatePicker.SelectedDate != null)
+                {
+                    var days = (EndDatePicker.SelectedDate.Value - startDate).Days;
+                    ShowStatus($"✓ Valid date range: {days} days from {startDate:d} to {EndDatePicker.SelectedDate.Value:d}");
+                }
+            }
+            
+            // Also revalidate end date to update its styling
+            if (EndDatePicker.SelectedDate != null)
+            {
+                EndDatePicker_SelectedDateChanged(EndDatePicker, null);
+            }
         }
 
         /// <summary>
@@ -449,6 +543,23 @@ namespace Quantra.Views.Backtesting
             if (StartDatePicker.SelectedDate >= EndDatePicker.SelectedDate)
             {
                 ShowError("Start date must be before end date");
+                return false;
+            }
+
+            // Validate that end date is not in the future
+            if (EndDatePicker.SelectedDate > DateTime.Today)
+            {
+                ShowError($"End date cannot be in the future. Please select a date on or before {DateTime.Today:d}.\n\n" +
+                         $"Current end date: {EndDatePicker.SelectedDate.Value:d}\n" +
+                         $"Today's date: {DateTime.Today:d}");
+                return false;
+            }
+
+            // Validate that dates are not too far in the past (reasonable data availability)
+            if (StartDatePicker.SelectedDate < DateTime.Today.AddYears(-20))
+            {
+                ShowError("Start date is too far in the past. Historical data may not be available before " +
+                         DateTime.Today.AddYears(-20).ToShortDateString());
                 return false;
             }
 

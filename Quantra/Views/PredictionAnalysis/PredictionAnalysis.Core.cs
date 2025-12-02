@@ -127,15 +127,15 @@ namespace Quantra.Controls
         /// </summary>
         public void SelectTopPredictionsTab()
         {
-            // Don't interfere with tab selection if user is manually navigating tabs
+            // Don't interfere with view selection if user is manually navigating views
             if (_isUserSelectingTab)
             {
                 return;
             }
 
-            // Also check if user has manually selected a tab other than the first one
+            // Also check if user has manually selected a view other than the first one
             // If so, respect their choice and don't force focus to the predictions grid
-            if (ResultsTabControl != null && _lastUserSelectedTabIndex > 0)
+            if (_lastUserSelectedTabIndex > 0)
             {
                 return;
             }

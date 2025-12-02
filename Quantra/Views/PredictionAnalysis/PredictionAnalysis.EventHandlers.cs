@@ -545,5 +545,41 @@ namespace Quantra.Controls
                 //DatabaseMonolith.Log("Error", "Error in ResultsTabControl_SelectionChanged", ex.ToString());
             }
         }
+
+        // Handle radio button selection changes for view navigation
+        private void ViewSelection_Changed(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is RadioButton radioButton && radioButton.IsChecked == true)
+                {
+                    // Mark that the user is manually selecting a view
+                    _isUserSelectingTab = true;
+
+                    // Update the selected index based on which radio button was checked
+                    if (radioButton.Name == "PredictionDetailsRadio")
+                    {
+                        _lastUserSelectedTabIndex = 0;
+                    }
+                    else if (radioButton.Name == "SentimentAnalysisRadio")
+                    {
+                        _lastUserSelectedTabIndex = 1;
+                    }
+                    else if (radioButton.Name == "TechnicalIndicatorsRadio")
+                    {
+                        _lastUserSelectedTabIndex = 2;
+                    }
+
+                    // Reset the flag after a short delay to allow the selection to complete
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                        new Action(() => _isUserSelectingTab = false),
+                        System.Windows.Threading.DispatcherPriority.Background);
+                }
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", "Error in ViewSelection_Changed", ex.ToString());
+            }
+        }
     }
 }

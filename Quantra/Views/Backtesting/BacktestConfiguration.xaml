@@ -111,12 +111,34 @@
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="Start Date:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
                 <DatePicker x:Name="StartDatePicker" Grid.Row="2" Grid.Column="3"
-                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,0,10"/>
+                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,0,10">
+                    <DatePicker.ToolTip>
+                        <ToolTip>
+                            <StackPanel>
+                                <TextBlock Text="Start date for backtest period" FontWeight="Bold"/>
+                                <TextBlock Text="⚠️ Must be before end date" Foreground="Orange" Margin="0,5,0,0"/>
+                                <TextBlock Text="⚠️ Data may be limited before 20 years ago" Foreground="Orange"/>
+                                <TextBlock Text="✓ Will turn green when valid" Foreground="LightGreen" Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </ToolTip>
+                    </DatePicker.ToolTip>
+                </DatePicker>
 
                 <TextBlock Grid.Row="3" Grid.Column="0" Text="End Date:" VerticalAlignment="Center"
                            Style="{StaticResource EnhancedTextBlockStyle}" Margin="0,0,0,10"/>
                 <DatePicker x:Name="EndDatePicker" Grid.Row="3" Grid.Column="1"
-                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,10,10"/>
+                            Style="{StaticResource EnhancedDatePickerStyle}" Margin="0,0,10,10">
+                    <DatePicker.ToolTip>
+                        <ToolTip>
+                            <StackPanel>
+                                <TextBlock Text="End date for backtest period" FontWeight="Bold"/>
+                                <TextBlock Text="⚠️ Must be today or earlier (no future dates)" Foreground="Orange" Margin="0,5,0,0"/>
+                                <TextBlock Text="⚠️ Must be after start date" Foreground="Orange"/>
+                                <TextBlock Text="✓ Will turn green when valid" Foreground="LightGreen" Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </ToolTip>
+                    </DatePicker.ToolTip>
+                </DatePicker>
 
                 <!-- Transaction Costs -->
                 <TextBlock Grid.Row="3" Grid.Column="2" Text="Cost Model:" VerticalAlignment="Center"
