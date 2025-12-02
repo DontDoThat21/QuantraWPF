@@ -340,10 +340,13 @@ if (LastUpdatedText != null)
                 }
                 token = analysisTokenSource.Token;
                 
-                if (StatusText != null) StatusText.Text = "Running automated stock analysis...";
-                // The Predictions collection is Quantra.Models.PredictionModel
-                this.Predictions.Clear(); 
-                if (PredictionDataGrid != null) PredictionDataGrid.ItemsSource = this.Predictions;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (StatusText != null) StatusText.Text = "Running automated stock analysis...";
+                    // The Predictions collection is Quantra.Models.PredictionModel
+                    this.Predictions.Clear(); 
+                    if (PredictionDataGrid != null) PredictionDataGrid.ItemsSource = this.Predictions;
+                });
 
                 //EnsureDatabaseTablesExist();
                 List<string> majorStocks = await FetchMajorUSStocks(token);
@@ -353,7 +356,10 @@ if (LastUpdatedText != null)
                 if (majorStocks == null || majorStocks.Count == 0)
                 {
                     //DatabaseMonolith.Log("Warning", "No stock symbols retrieved for automated analysis");
-                    if (StatusText != null) StatusText.Text = "Failed to retrieve stock symbols for analysis";
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (StatusText != null) StatusText.Text = "Failed to retrieve stock symbols for analysis";
+                    });
                     return;
                 }
 
@@ -396,7 +402,13 @@ if (LastUpdatedText != null)
                             ((DateTime.Now - lastStatusUpdate).TotalSeconds >= 2.0 || processedCount % 10 == 0))
                         {
                             lastStatusUpdate = DateTime.Now;
-                            StatusText.Text = $"Analyzing stocks... ({processedCount}/{majorStocks.Count})";
+                            int count = processedCount;
+                            int total = majorStocks.Count;
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                if (StatusText != null)
+                                    StatusText.Text = $"Analyzing stocks... ({count}/{total})";
+                            });
                         }
                         
                         await Task.Delay(250, token); 
@@ -438,21 +450,33 @@ if (LastUpdatedText != null)
 
                 if (isAutomatedMode && this.Predictions.Any())
                 {
-                     if (StatusText != null) StatusText.Text = "Executing trades based on predictions...";
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (StatusText != null) StatusText.Text = "Executing trades based on predictions...";
+                    });
                     // ExecuteTradesFromPredictionsAsync expects List<Quantra.Models.PredictionModel>
-                    await ExecuteTradesFromPredictionsAsync(this.Predictions.ToList()); 
-                     if (StatusText != null) StatusText.Text = "Automated trading complete.";
+                    await ExecuteTradesFromPredictionsAsync(this.Predictions.ToList());
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (StatusText != null) StatusText.Text = "Automated trading complete.";
+                    });
                 }
             }
             catch (OperationCanceledException)
             {
                 //DatabaseMonolith.Log("Info", "Automated analysis cancelled");
-                 if (StatusText != null) StatusText.Text = "Analysis cancelled";
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (StatusText != null) StatusText.Text = "Analysis cancelled";
+                });
             }
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", "Error during automated analysis", ex.ToString());
-                 if (StatusText != null) StatusText.Text = "Error during automated analysis";
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (StatusText != null) StatusText.Text = "Error during automated analysis";
+                });
             }
         }
 
@@ -489,8 +513,12 @@ if (LastUpdatedText != null)
                     double.IsNaN(prediction.PotentialReturn) || double.IsInfinity(prediction.PotentialReturn))
                 {
                     _loggingService?.Log("Error", $"Invalid prediction data for {prediction?.Symbol ?? "<null>"}. Skipping insert.");
-                    if (StatusText != null)
-                        StatusText.Text = $"Skipped invalid prediction for {prediction?.Symbol}";
+                    string symbol = prediction?.Symbol;
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (StatusText != null)
+                            StatusText.Text = $"Skipped invalid prediction for {symbol}";
+                    });
                     return;
                 }
 
@@ -515,14 +543,23 @@ if (LastUpdatedText != null)
             catch (OperationCanceledException)
             {
                 _loggingService?.Log("Warning", $"Timeout saving prediction for {prediction?.Symbol ?? "<null>"}");
-                if (StatusText != null)
-                    StatusText.Text = $"Timeout saving {prediction?.Symbol}";
+                string symbol = prediction?.Symbol;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (StatusText != null)
+                        StatusText.Text = $"Timeout saving {symbol}";
+                });
             }
             catch (Exception ex)
             {
                 _loggingService?.LogErrorWithContext(ex, $"Failed to save prediction for {prediction?.Symbol ?? "<null>"}");
-                if (StatusText != null)
-                    StatusText.Text = $"Error saving {prediction?.Symbol}: {ex.Message}";
+                string symbol = prediction?.Symbol;
+                string message = ex.Message;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (StatusText != null)
+                        StatusText.Text = $"Error saving {symbol}: {message}";
+                });
             }
         }
 

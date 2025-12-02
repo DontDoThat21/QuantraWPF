@@ -62,15 +62,40 @@ MinWidth="400" MinHeight="300">
                 <StackPanel Orientation="Vertical" Margin="0,0,10,0">
                     <TextBlock Text="Trading Strategy:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
                     <ComboBox x:Name="TradingStrategy" 
-                              ToolTip="Select this prediction control's trading strategy"
+                              ToolTip="Select trading strategy for prediction analysis and backtesting"
                               SelectionChanged="TradingStrategy_SelectionChanged"
                               Style="{StaticResource EnhancedComboBoxStyle}"
                               VerticalContentAlignment="Center"
-                              MinWidth="200">
-                        <ComboBoxItem Content="SMA Crossover" Tag="SMA"/>
-                        <ComboBoxItem Content="RSI Divergence" Tag="RSI"/>
-                        <ComboBoxItem Content="Bollinger Bands" Tag="BB"/>
-                        <ComboBoxItem Content="MACD Crossover" Tag="MACD" IsSelected="True"/>
+                              MinWidth="250">
+                        <!-- Built-In Technical Strategies -->
+                        <ComboBoxItem Content="SMA Crossover (20/50)" Tag="SMA" 
+                                      ToolTip="Fast/Slow moving average crossover - Best for trend-following"/>
+                        <ComboBoxItem Content="MACD Crossover" Tag="MACD" IsSelected="True"
+                                      ToolTip="MACD line crosses signal line - Best for momentum trading"/>
+                        <ComboBoxItem Content="RSI Divergence (14)" Tag="RSI"
+                                      ToolTip="Overbought/oversold conditions - Best for mean reversion"/>
+                        <ComboBoxItem Content="Bollinger Bands Mean Reversion" Tag="BB"
+                                      ToolTip="Price touches bands - Best for range-bound markets"/>
+                        
+                        <Separator Margin="0,5"/>
+                        
+                        <!-- ML-Driven Strategies (from documentation) -->
+                        <ComboBoxItem Content="ML High-Confidence Swing" Tag="ML_SWING"
+                                      ToolTip="Capture 5-10% moves with 75%+ confidence ML signals"/>
+                        <ComboBoxItem Content="ML Confirmed Breakouts" Tag="ML_BREAKOUT"
+                                      ToolTip="Technical breakouts confirmed by 80%+ confidence ML"/>
+                        <ComboBoxItem Content="Sentiment Reversal" Tag="SENTIMENT_REVERSAL"
+                                      ToolTip="Trade sentiment extremes with ML confirmation"/>
+                        <ComboBoxItem Content="Earnings Season Strategy" Tag="EARNINGS"
+                                      ToolTip="Trade around earnings using ML + sentiment analysis"/>
+                        <ComboBoxItem Content="ML Portfolio Optimization" Tag="ML_PORTFOLIO"
+                                      ToolTip="Build optimal ML-driven diversified portfolio"/>
+                        
+                        <Separator Margin="0,5"/>
+                        
+                        <!-- Custom Strategy Option -->
+                        <ComboBoxItem Content="Custom Strategy..." Tag="CUSTOM"
+                                      ToolTip="Create or load a custom trading strategy"/>
                     </ComboBox>
                 </StackPanel>
 
