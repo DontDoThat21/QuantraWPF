@@ -9,7 +9,9 @@
       "Bash(python:*)",
       "WebFetch(domain:www.alphavantage.co)",
       "WebSearch",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(Select-String -Pattern \"error|warning\" -Context 0,2)",
+      "Bash(Select-Object -First 30)"
     ],
     "deny": [],
     "ask": []

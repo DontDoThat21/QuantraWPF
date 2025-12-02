@@ -30,6 +30,12 @@ namespace Quantra.Controls
         private ObservableCollection<CachedSymbolInfo> _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
         private SymbolSelectionMode _currentSymbolMode = SymbolSelectionMode.Individual;
 
+        // Track if initial predictions have been loaded
+        private bool _initialPredictionsLoaded = false;
+
+        // Timer for debounced cached symbol search
+        private System.Windows.Threading.DispatcherTimer _cachedSymbolSearchTimer;
+
         /// <summary>
         /// Enum to track symbol selection mode
         /// </summary>
@@ -75,7 +81,17 @@ namespace Quantra.Controls
         }
 
         /// <summary>
-        /// Load cached symbols from StockDataCacheService
+        /// Initialize the cached symbol search timer
+        /// </summary>
+        private void InitializeCachedSymbolSearchTimer()
+        {
+            _cachedSymbolSearchTimer = new System.Windows.Threading.DispatcherTimer();
+            _cachedSymbolSearchTimer.Interval = TimeSpan.FromMilliseconds(300); // 300ms debounce delay for local database search
+            _cachedSymbolSearchTimer.Tick += CachedSymbolSearchTimer_Tick;
+        }
+
+        /// <summary>
+        /// Load all cached symbols and populate the search results listbox
         /// </summary>
         private void LoadCachedSymbols()
         {
@@ -97,12 +113,15 @@ namespace Quantra.Controls
                     _cachedSymbols.Add(new CachedSymbolInfo
                     {
                         Symbol = symbol,
-                        CacheInfo = "cached"
+                        CacheInfo = "cached in database"
                     });
                 }
 
-                if (CachedSymbolsComboBox != null)
-                    CachedSymbolsComboBox.ItemsSource = _cachedSymbols;
+                // Populate the search results listbox with all cached symbols
+                if (CachedSymbolSearchResultsListBox != null)
+                {
+                    CachedSymbolSearchResultsListBox.ItemsSource = _cachedSymbols;
+                }
 
                 _loggingService?.Log("Info", $"Loaded {_cachedSymbols.Count} cached symbols for prediction analysis");
             }
@@ -115,17 +134,181 @@ namespace Quantra.Controls
         }
 
         /// <summary>
-        /// Handle cached symbol selection from dropdown
+        /// Search cached symbols from pre-loaded collection (debounced)
         /// </summary>
-        private void CachedSymbolsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void CachedSymbolSearchTimer_Tick(object sender, EventArgs e)
         {
-            if (CachedSymbolsComboBox?.SelectedItem is CachedSymbolInfo selectedItem)
+            _cachedSymbolSearchTimer?.Stop();
+
+            try
             {
-                if (ManualSymbolTextBox != null)
-                    ManualSymbolTextBox.Text = selectedItem.Symbol;
-                if (StatusText != null)
-                    StatusText.Text = $"Selected cached symbol: {selectedItem.Symbol}";
+                var searchText = CachedSymbolSearchTextBox?.Text?.Trim() ?? "";
+
+                // If search text is empty, show all cached symbols
+                if (string.IsNullOrWhiteSpace(searchText))
+                {
+                    if (CachedSymbolSearchResultsListBox != null)
+                    {
+                        CachedSymbolSearchResultsListBox.ItemsSource = _cachedSymbols;
+                        
+                        if (_cachedSymbols.Count > 0 && CachedSymbolSearchPopup != null)
+                        {
+                            CachedSymbolSearchPopup.IsOpen = true;
+                        }
+                    }
+                    return;
+                }
+
+                // Filter the pre-loaded cached symbols based on search text
+                var matchingSymbols = _cachedSymbols
+                    .Where(s => s.Symbol.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(s => s.Symbol.StartsWith(searchText, StringComparison.OrdinalIgnoreCase) ? 0 : 1) // Prioritize symbols that start with search text
+                    .ThenBy(s => s.Symbol.Length) // Then shorter symbols
+                    .ThenBy(s => s.Symbol) // Then alphabetically
+                    .Take(50) // Limit to 50 results for performance
+                    .ToList();
+
+                if (CachedSymbolSearchResultsListBox != null)
+                {
+                    CachedSymbolSearchResultsListBox.ItemsSource = matchingSymbols;
+
+                    if (matchingSymbols.Count > 0 && CachedSymbolSearchPopup != null)
+                    {
+                        CachedSymbolSearchPopup.IsOpen = true;
+                    }
+                    else if (CachedSymbolSearchPopup != null)
+                    {
+                        CachedSymbolSearchPopup.IsOpen = false;
+                    }
+                }
+
+                _loggingService?.Log("Debug", $"Cached symbol search: '{searchText}' returned {matchingSymbols.Count} results");
             }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error performing cached symbol search");
+                if (StatusText != null)
+                    StatusText.Text = $"Error searching cached symbols: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Handle text change in cached symbol search box
+        /// </summary>
+        private void CachedSymbolSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _cachedSymbolSearchTimer?.Stop();
+            _cachedSymbolSearchTimer?.Start();
+        }
+
+        /// <summary>
+        /// Handle keyboard navigation in cached symbol search box
+        /// </summary>
+        private void CachedSymbolSearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Down && CachedSymbolSearchResultsListBox?.Items.Count > 0)
+            {
+                CachedSymbolSearchResultsListBox.SelectedIndex = 0;
+                CachedSymbolSearchResultsListBox.Focus();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Enter && CachedSymbolSearchResultsListBox?.SelectedItem is CachedSymbolInfo selected)
+            {
+                SelectCachedSymbol(selected);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && CachedSymbolSearchPopup != null)
+            {
+                CachedSymbolSearchPopup.IsOpen = false;
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// Show search results when focused
+        /// </summary>
+        private void CachedSymbolSearchTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            // If search text is empty, show all cached symbols
+            if (string.IsNullOrWhiteSpace(CachedSymbolSearchTextBox?.Text))
+            {
+                if (CachedSymbolSearchResultsListBox != null)
+                {
+                    CachedSymbolSearchResultsListBox.ItemsSource = _cachedSymbols;
+                }
+            }
+            
+            if (CachedSymbolSearchResultsListBox?.Items.Count > 0 && CachedSymbolSearchPopup != null)
+            {
+                CachedSymbolSearchPopup.IsOpen = true;
+            }
+        }
+
+        /// <summary>
+        /// Hide search results when focus lost
+        /// </summary>
+        private void CachedSymbolSearchTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            // Delay closing to allow click on results
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (CachedSymbolSearchResultsListBox != null && CachedSymbolSearchTextBox != null && CachedSymbolSearchPopup != null)
+                {
+                    if (!CachedSymbolSearchResultsListBox.IsMouseOver && !CachedSymbolSearchTextBox.IsKeyboardFocusWithin)
+                    {
+                        CachedSymbolSearchPopup.IsOpen = false;
+                    }
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// Handle mouse click on search result
+        /// </summary>
+        private void CachedSymbolSearchResultsListBox_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (CachedSymbolSearchResultsListBox?.SelectedItem is CachedSymbolInfo selected)
+            {
+                SelectCachedSymbol(selected);
+            }
+        }
+
+        /// <summary>
+        /// Handle keyboard navigation in search results
+        /// </summary>
+        private void CachedSymbolSearchResultsListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && CachedSymbolSearchResultsListBox?.SelectedItem is CachedSymbolInfo selected)
+            {
+                SelectCachedSymbol(selected);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape && CachedSymbolSearchPopup != null)
+            {
+                CachedSymbolSearchPopup.IsOpen = false;
+                CachedSymbolSearchTextBox?.Focus();
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// Select a cached symbol and populate the manual symbol textbox
+        /// </summary>
+        private void SelectCachedSymbol(CachedSymbolInfo symbol)
+        {
+            if (ManualSymbolTextBox != null)
+                ManualSymbolTextBox.Text = symbol.Symbol;
+
+            if (CachedSymbolSearchTextBox != null)
+                CachedSymbolSearchTextBox.Text = symbol.Symbol;
+
+            if (CachedSymbolSearchPopup != null)
+                CachedSymbolSearchPopup.IsOpen = false;
+
+            if (StatusText != null)
+                StatusText.Text = $"Selected cached symbol: {symbol.Symbol}";
+
+            _loggingService?.Log("Info", $"User selected cached symbol: {symbol.Symbol}");
         }
 
         /// <summary>
@@ -391,14 +574,80 @@ namespace Quantra.Controls
                 //DatabaseMonolith.Log("Error", "Error saving indicator settings", ex.ToString());
             }
         }
+        
+        /// <summary>
+        /// Load initial predictions from the database when the control loads
+        /// </summary>
+        private async Task LoadInitialPredictionsAsync()
+        {
+            if (_initialPredictionsLoaded)
+                return;
+                
+            try
+            {
+                if (StatusText != null)
+                    StatusText.Text = "Loading recent predictions...";
+                
+                // Get latest predictions from the database using PredictionAnalysisService
+                var predictionService = new Quantra.DAL.Services.PredictionAnalysisService();
+                var latestPredictions = await predictionService.GetLatestPredictionsAsync();
+                
+                if (latestPredictions != null && latestPredictions.Count > 0)
+                {
+                    // Add predictions to the collection on the UI thread
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        Predictions.Clear();
+                        foreach (var prediction in latestPredictions)
+                        {
+                            Predictions.Add(prediction);
+                        }
+                        
+                        // Force DataGrid refresh
+                        if (PredictionDataGrid != null)
+                        {
+                            PredictionDataGrid.ItemsSource = null;
+                            PredictionDataGrid.ItemsSource = Predictions;
+                            PredictionDataGrid.Items.Refresh();
+                        }
+                        
+                        if (StatusText != null)
+                            StatusText.Text = $"Loaded {latestPredictions.Count} recent predictions";
+                        
+                        if (LastUpdatedText != null)
+                            LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm}";
+                    });
+                    
+                    _initialPredictionsLoaded = true;
+                    _loggingService?.Log("Info", $"Loaded {latestPredictions.Count} initial predictions");
+                }
+                else
+                {
+                    if (StatusText != null)
+                        StatusText.Text = "No predictions found. Click Analyze to generate predictions.";
+                    
+                    _loggingService?.Log("Info", "No initial predictions found in database");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to load initial predictions");
+                if (StatusText != null)
+                    StatusText.Text = "Error loading predictions. Click Analyze to generate new predictions.";
+            }
+        }
 
-        private void PredictionAnalysisControl_Loaded(object sender, RoutedEventArgs e)
+        private async void PredictionAnalysisControl_Loaded(object sender, RoutedEventArgs e)
         {
             // Ensure trading components are initialized on load
             if (_tradingBot == null || _stockDataCache == null)
                 InitializeTradingComponents();
 
-            // ...existing code...
+            // Initialize the cached symbol search timer
+            InitializeCachedSymbolSearchTimer();
+
+            // Load initial predictions from database
+            await LoadInitialPredictionsAsync();
         }
 
         // If symbol selection logic is handled here, ensure "All Symbols" is supported.

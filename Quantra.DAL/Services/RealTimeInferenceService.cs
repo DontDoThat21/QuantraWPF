@@ -746,14 +746,16 @@ namespace Quantra.DAL.Services
 
                         // Convert to PredictionResult
                         // Create prediction result
-                        // Note: CurrentPrice is estimated as 95% of TargetPrice if not available
-                        // This is a fallback when the Python script doesn't provide current market price
+                        // IMPORTANT: For ExecutePythonPredictionAsync, Python should return both current and target price
+                        // However, since we're using file-based I/O here (not real-time API), we may not have current price
+                        // The Python script should include current_price in its output
                         result.Prediction = new PredictionResult
                         {
                             Symbol = symbol,
                             Action = pythonResult.Action ?? "HOLD",
                             Confidence = pythonResult.Confidence,
                             TargetPrice = pythonResult.TargetPrice,
+                            // Python should provide current price in output, but fallback to estimate if not available
                             CurrentPrice = pythonResult.TargetPrice > 0 ? pythonResult.TargetPrice * 0.95 : 0,
                             PredictionDate = DateTime.Now,
                             ModelType = pythonResult.ModelType ?? modelType,

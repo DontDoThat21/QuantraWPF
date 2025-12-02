@@ -93,4 +93,41 @@ namespace Quantra.Converters
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// Multi-value converter that calculates the width of a confidence bar
+    /// based on confidence value (0-1) and container width
+    /// </summary>
+    public class ConfidenceWidthConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values == null || values.Length < 2)
+                return 0.0;
+
+            if (values[0] == null || values[1] == null)
+                return 0.0;
+
+            // First value is confidence (0-1), second is container width
+            if (double.TryParse(values[0].ToString(), out double confidence) &&
+                double.TryParse(values[1].ToString(), out double containerWidth))
+            {
+                // Clamp confidence between 0 and 1
+                confidence = Math.Max(0, Math.Min(1, confidence));
+                
+                // Calculate width as percentage of container
+                double width = containerWidth * confidence;
+                
+                // Ensure minimum visible width for very small values
+                return width > 0 ? Math.Max(width, 3) : 0;
+            }
+
+            return 0.0;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

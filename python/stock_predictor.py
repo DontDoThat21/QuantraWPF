@@ -1304,9 +1304,20 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
             # Try alternate keys for current price
             current_price = features.get('close', features.get('price', 0.0))
         
+        # IMPORTANT: If we still don't have a valid price, try to estimate from feature data
+        # This is a fallback - the C# client should ALWAYS send current_price
+        if current_price <= 0:
+            logger.warning("No current_price in features. Attempting to estimate from available data.")
+            # Try to use any price-like features
+            for key in ['open', 'high', 'low', 'adj_close', 'adjclose']:
+                if key in features and features[key] > 0:
+                    current_price = features[key]
+                    logger.info(f"Using {key} as fallback current_price: {current_price}")
+                    break
+        
         if current_price <= 0:
             logger.error("No valid current_price provided in features. Cannot calculate target price.")
-            # Return error result with clear message - don't use a fake default
+            # Return error result with clear message
             return {
                 'action': 'HOLD',
                 'confidence': 0.0,
@@ -1326,7 +1337,7 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                 'patterns': [],
                 'modelType': 'error',
                 'architectureType': 'n/a',
-                'error': 'No current_price provided in features. Please include current_price, close, or price in the input.',
+                'error': 'No current_price provided in features. C# client must include current_price, close, or price in Features dictionary.',
                 'hyperparameterOptimization': {
                     'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
                     'used': False,

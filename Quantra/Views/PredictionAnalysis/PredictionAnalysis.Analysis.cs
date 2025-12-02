@@ -40,18 +40,22 @@ namespace Quantra.Controls
                     InitializeTradingComponents();
                 }
 
-                // API Call for current stock price removed.
-                // double currentPrice = await _tradingBot.GetMarketPrice(symbol);
-                // Use the correct AlphaVantageService method instead
+                // Get current stock price using AlphaVantageService
                 double currentPrice = 0.0;
                 try 
                 {
                     var quote = await _alphaVantageService.GetQuoteDataAsync(symbol);
                     currentPrice = quote?.Price ?? 0.0;
+                    
+                    // If quote price is 0, log a warning
+                    if (currentPrice <= 0)
+                    {
+                        _loggingService?.Log("Warning", $"Quote price is 0 for {symbol}, prediction may be inaccurate");
+                    }
                 } 
                 catch (Exception ex)
                 {
-                    //DatabaseMonolith.Log("Warning", $"Failed to get current price for {symbol}", ex.ToString());
+                    _loggingService?.Log("Warning", $"Failed to get current price for {symbol}: {ex.Message}");
                     currentPrice = 0.0;
                 }
 
@@ -203,12 +207,36 @@ namespace Quantra.Controls
                 Dictionary<string, double> weights = null;
                 List<string> featureNames = null;
 
-                // IMPORTANT: Pass current_price to Python for proper target price calculation
-                // The ML model predicts percentage change, which needs to be converted to actual price
-                // CRITICAL: Add current price to indicators so Python can convert percentage predictions to actual prices
+                // CRITICAL: Always pass current_price to Python for proper target price calculation
+                // The ML model predicts percentage change, which MUST be converted to actual price
+                // Python cannot calculate target price correctly without this value
                 if (currentPrice > 0)
                 {
                     indicators["current_price"] = currentPrice;
+                }
+                else
+                {
+                    // If we don't have current price, try to use any price indicator as a fallback
+                    // This should rarely happen but prevents completely broken predictions
+                    if (indicators.Count > 0)
+                    {
+                        // Try to find any price-like indicator
+                        var priceKey = indicators.Keys.FirstOrDefault(k => 
+                            k.ToLower().Contains("price") || 
+                            k.ToLower().Contains("close") ||
+                            k.ToLower().Contains("open"));
+                        
+                        if (priceKey != null && indicators[priceKey] > 0)
+                        {
+                            currentPrice = indicators[priceKey];
+                            indicators["current_price"] = currentPrice;
+                            _loggingService?.Log("Warning", $"Using {priceKey} ({currentPrice:F2}) as fallback current_price for {symbol}");
+                        }
+                        else
+                        {
+                            _loggingService?.Log("Error", $"No valid price data available for {symbol}, prediction will be unreliable");
+                        }
+                    }
                 }
 
                 // This should ALWAYS use the trained ML model from Python
