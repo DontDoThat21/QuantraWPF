@@ -213,6 +213,10 @@ class PyTorchStockPredictor:
             self._build_gru_model()
         elif self.architecture_type == 'transformer':
             self._build_transformer_model()
+        elif self.architecture_type == 'tft':
+            # TFT should use TFTStockPredictor, but if we get here, use transformer as fallback
+            logger.warning("TFT architecture should use TFTStockPredictor. Using transformer architecture instead.")
+            self._build_transformer_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
             self._build_lstm_model()
@@ -515,6 +519,10 @@ class TensorFlowStockPredictor:
         elif self.architecture_type == 'gru':
             self._build_gru_model()
         elif self.architecture_type == 'transformer':
+            self._build_transformer_model()
+        elif self.architecture_type == 'tft':
+            # TFT should use TFTStockPredictor, but if we get here, use transformer as fallback
+            logger.warning("TFT architecture should use TFTStockPredictor. Using transformer architecture instead.")
             self._build_transformer_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
@@ -1073,8 +1081,13 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
         tuple: (model, scaler, model_type)
     """
     # Handle TFT architecture type
-    if architecture_type.lower() == 'tft' and TFT_AVAILABLE:
-        model_type = 'tft'
+    if architecture_type.lower() == 'tft':
+        if TFT_AVAILABLE:
+            model_type = 'tft'
+        else:
+            # TFT not available, fall back to transformer for PyTorch/TensorFlow models
+            logger.warning("TFT not available (PyTorch required). Falling back to transformer architecture.")
+            architecture_type = 'transformer'
     
     # Determine the best available model type if 'auto' is specified
     if model_type == 'auto':
