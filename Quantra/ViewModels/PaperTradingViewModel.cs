@@ -7,9 +7,8 @@ using Quantra.DAL.TradingEngine.Time;
 using Quantra.ViewModels.Base;
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,7 +18,7 @@ namespace Quantra.ViewModels
     /// <summary>
     /// ViewModel for the Paper Trading control
     /// </summary>
-    public class PaperTradingViewModel : INotifyPropertyChanged, IDisposable
+    public class PaperTradingViewModel : ViewModelBase, IDisposable
     {
         private TradingEngine _tradingEngine;
         private PortfolioManager _portfolioManager;
@@ -56,8 +55,6 @@ namespace Quantra.ViewModels
         private ObservableCollection<TradingPosition> _positions;
         private ObservableCollection<Order> _orders;
         private Order _selectedOrder;
-
-        public event PropertyChangedEventHandler PropertyChanged;
 
         public PaperTradingViewModel()
         {
@@ -318,7 +315,7 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Places an order with the specified side
         /// </summary>
-        public async void PlaceOrder(OrderSide side)
+        public async Task PlaceOrderAsync(OrderSide side)
         {
             if (_tradingEngine == null || string.IsNullOrWhiteSpace(OrderSymbol))
             {
@@ -467,23 +464,6 @@ namespace Quantra.ViewModels
         private void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
         {
             RefreshPortfolio();
-        }
-
-        #endregion
-
-        #region INotifyPropertyChanged
-
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-        {
-            if (Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         #endregion
