@@ -33,7 +33,7 @@ namespace Quantra.Controls
             // Inject AlphaVantage service
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
 
-            _viewModel = new PaperTradingViewModel();
+            _viewModel = new PaperTradingViewModel(_alphaVantageService);
             DataContext = _viewModel;
 
             // Initialize symbol search timer

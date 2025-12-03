@@ -62,7 +62,7 @@ namespace Quantra.ViewModels
         private ObservableCollection<Order> _orders;
         private Order _selectedOrder;
 
-        public PaperTradingViewModel()
+        public PaperTradingViewModel(IAlphaVantageService alphaVantageService)
         {
             _positions = new ObservableCollection<TradingPosition>();
             _orders = new ObservableCollection<Order>();
@@ -91,6 +91,8 @@ namespace Quantra.ViewModels
 
             _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
         }
+
+        private IAlphaVantageService _alphaVantageService;
 
         #region Portfolio Properties
 
@@ -393,17 +395,22 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Toggles the trading engine on/off
         /// </summary>
-        public void ToggleEngine()
+        public async void ToggleEngine()
         {
             if (_tradingEngine == null) return;
 
             if (IsEngineRunning)
             {
+                // Stop the engine
                 _tradingEngine.Stop();
                 IsEngineRunning = false;
+
+                // Update session state in database
+                await UpdateSessionStateAsync();
             }
             else
             {
+                // Start the engine
                 _tradingEngine.Start();
                 IsEngineRunning = true;
             }
@@ -560,7 +567,7 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Resets the paper trading account
         /// </summary>
-        public void ResetAccount()
+        public async void ResetAccount()
         {
             _ = ResetAccountWithExceptionHandlingAsync();
         }
@@ -612,6 +619,7 @@ namespace Quantra.ViewModels
             }
 
             IsEngineRunning = false;
+
             RefreshPortfolio();
             RefreshPositions();
             RefreshOrders();
@@ -687,7 +695,7 @@ namespace Quantra.ViewModels
 
         #region Event Handlers
 
-        private void OnOrderFilled(object sender, OrderFilledEventArgs e)
+        private async void OnOrderFilled(object sender, OrderFilledEventArgs e)
         {
             // Save the fill and update position/order in the background
             // Note: SaveFillAsync already has exception handling
@@ -734,7 +742,7 @@ namespace Quantra.ViewModels
             RefreshOrders();
         }
 
-        private void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
+        private async void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
         {
             // Update session state in the background with exception handling
             _ = UpdateSessionStateWithExceptionHandlingAsync();

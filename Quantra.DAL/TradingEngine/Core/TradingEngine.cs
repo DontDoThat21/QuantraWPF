@@ -106,6 +106,20 @@ namespace Quantra.DAL.TradingEngine.Core
                 return order.Id;
             }
 
+            // Set expiration time for Day orders
+            if (order.TimeInForce == TimeInForce.Day && !order.ExpirationTime.HasValue)
+            {
+                var currentTime = _clock?.CurrentTime ?? DateTime.UtcNow;
+                // Set expiration to 4 PM ET of the current trading day
+                var expirationTime = currentTime.Date.AddHours(16);
+                // If it's already past 4 PM, set expiration to next trading day 4 PM
+                if (currentTime.Hour >= 16)
+                {
+                    expirationTime = expirationTime.AddDays(1);
+                }
+                order.ExpirationTime = expirationTime;
+            }
+
             // Add order to tracking
             order.State = OrderState.Submitted;
             order.SubmittedTime = _clock?.CurrentTime ?? DateTime.UtcNow;
@@ -359,11 +373,8 @@ namespace Quantra.DAL.TradingEngine.Core
                 switch (order.TimeInForce)
                 {
                     case TimeInForce.Day:
-                        // Expire at market close (4 PM ET)
-                        if (time.Hour >= 16)
-                        {
-                            shouldExpire = true;
-                        }
+                        // Only expire if past the explicit expiration time
+                        // Don't use simple hour comparison which causes immediate expiration
                         break;
 
                     case TimeInForce.IOC:
@@ -376,6 +387,7 @@ namespace Quantra.DAL.TradingEngine.Core
                         break;
                 }
 
+                // Check explicit expiration time
                 if (order.ExpirationTime.HasValue && time >= order.ExpirationTime.Value)
                 {
                     shouldExpire = true;
