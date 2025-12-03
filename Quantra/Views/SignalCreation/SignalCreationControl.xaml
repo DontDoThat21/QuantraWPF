@@ -463,6 +463,14 @@
                                           Style="{StaticResource EnhancedComboBoxStyle}"/>
                             </StackPanel>
                         </Grid>
+                        
+                        <!-- Test Email Button -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                            <Button Content="📧 Send Test Email" 
+                                    Style="{StaticResource ActionButtonStyle}"
+                                    Command="{Binding SendTestEmailCommand}"
+                                    ToolTip="Send a test email to the logged-in user's alert email address"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
                 

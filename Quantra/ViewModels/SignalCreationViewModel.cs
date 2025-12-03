@@ -8,6 +8,7 @@ using Quantra.Commands;
 using Quantra.DAL.Models;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels.Base;
+using Quantra.DAL.Services;
 
 namespace Quantra.ViewModels
 {
@@ -17,6 +18,8 @@ namespace Quantra.ViewModels
     public class SignalCreationViewModel : ViewModelBase
     {
         private readonly ITradingSignalService _tradingSignalService;
+        private readonly ISettingsService _settingsService;
+        private readonly IEmailService _emailService;
 
         private TradingSignal _currentSignal;
         private bool _isEditing;
@@ -29,9 +32,14 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Constructor with dependency injection
         /// </summary>
-        public SignalCreationViewModel(ITradingSignalService tradingSignalService)
+        public SignalCreationViewModel(
+            ITradingSignalService tradingSignalService,
+            ISettingsService settingsService,
+            IEmailService emailService)
         {
             _tradingSignalService = tradingSignalService ?? throw new ArgumentNullException(nameof(tradingSignalService));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
 
             // Initialize collections
             Signals = new ObservableCollection<TradingSignal>();
@@ -160,6 +168,7 @@ namespace Quantra.ViewModels
         public ICommand RemoveConditionCommand { get; private set; }
         public ICommand LoadSignalCommand { get; private set; }
         public ICommand RefreshCommand { get; private set; }
+        public ICommand SendTestEmailCommand { get; private set; }
 
         #endregion
 
@@ -177,6 +186,7 @@ namespace Quantra.ViewModels
             RemoveConditionCommand = new RelayCommand(ExecuteRemoveCondition, CanExecuteRemoveCondition);
             LoadSignalCommand = new RelayCommand(ExecuteLoadSignal);
             RefreshCommand = new RelayCommand(async param => await LoadSignalsAsync());
+            SendTestEmailCommand = new RelayCommand(async param => await ExecuteSendTestEmailAsync(), CanExecuteSendTestEmail);
         }
 
         private void InitializeIndicators()
@@ -506,6 +516,79 @@ namespace Quantra.ViewModels
             CurrentSignal = signal;
             IsEditing = true;
             StatusMessage = $"Editing signal: {signal.Name}";
+        }
+
+        private bool CanExecuteSendTestEmail(object parameter)
+        {
+            return !IsBusy;
+        }
+
+        private async Task ExecuteSendTestEmailAsync()
+        {
+            try
+            {
+                IsBusy = true;
+                StatusMessage = "Sending test email...";
+
+                // Get the default settings profile (for the logged-in user)
+                var settingsProfile = await _settingsService.GetDefaultSettingsProfileAsync();
+
+                if (settingsProfile == null)
+                {
+                    StatusMessage = "Error: Could not retrieve user settings.";
+                    MessageBox.Show("Could not retrieve user settings. Please check your settings configuration.", 
+                        "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(settingsProfile.AlertEmail))
+                {
+                    StatusMessage = "Error: No alert email configured.";
+                    MessageBox.Show("No alert email address is configured. Please set your alert email in the Settings.", 
+                        "Email Not Configured", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Build test email
+                string subject = "Quantra Signal Creation - Test Email";
+                string body = $"This is a test email from Quantra Signal Creation.\n\n" +
+                             $"Recipient: {settingsProfile.AlertEmail}\n" +
+                             $"Sent: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n\n" +
+                             $"Signal Email Alerts Configuration:\n" +
+                             $"- Email Alerts Enabled: {settingsProfile.EnableEmailAlerts}\n" +
+                             $"- Standard Alerts: {settingsProfile.EnableStandardAlertEmails}\n" +
+                             $"- Opportunity Alerts: {settingsProfile.EnableOpportunityAlertEmails}\n" +
+                             $"- Prediction Alerts: {settingsProfile.EnablePredictionAlertEmails}\n" +
+                             $"- Global Alerts: {settingsProfile.EnableGlobalAlertEmails}\n" +
+                             $"- System Health Alerts: {settingsProfile.EnableSystemHealthAlertEmails}\n\n" +
+                             $"If you received this email, your email notification configuration is working correctly.\n\n" +
+                             $"This test was sent from the Signal Creation module.";
+
+                // Send the email
+                await _emailService.SendEmailAsync(settingsProfile.AlertEmail, subject, body);
+
+                StatusMessage = $"Test email sent successfully to {settingsProfile.AlertEmail}";
+                MessageBox.Show(
+                    $"Test email sent successfully to:\n{settingsProfile.AlertEmail}\n\n" +
+                    $"Please check your inbox (and spam folder) for the test email.",
+                    "Test Email Sent",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error sending test email: {ex.Message}";
+                MessageBox.Show(
+                    $"Failed to send test email:\n\n{ex.Message}\n\n" +
+                    $"Please check your email configuration in Settings.",
+                    "Email Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         #endregion
