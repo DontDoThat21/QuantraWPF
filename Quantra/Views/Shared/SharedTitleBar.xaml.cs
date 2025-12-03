@@ -504,15 +504,35 @@ namespace Quantra
         /// <param name="username">The username to display, or null/empty to hide</param>
         public static void UpdateLoggedInUsername(string username)
         {
-            if (_currentInstance != null)
+            // Capture the current instance to ensure thread safety
+            var instance = _currentInstance;
+            if (instance != null)
             {
-                if (!string.IsNullOrEmpty(username))
+                // Use the Dispatcher to ensure UI updates happen on the UI thread
+                if (instance.Dispatcher.CheckAccess())
                 {
-                    _currentInstance.LoggedInUserDisplay = $" - {username}";
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        instance.LoggedInUserDisplay = $" - {username}";
+                    }
+                    else
+                    {
+                        instance.LoggedInUserDisplay = "";
+                    }
                 }
                 else
                 {
-                    _currentInstance.LoggedInUserDisplay = "";
+                    instance.Dispatcher.Invoke(() =>
+                    {
+                        if (!string.IsNullOrEmpty(username))
+                        {
+                            instance.LoggedInUserDisplay = $" - {username}";
+                        }
+                        else
+                        {
+                            instance.LoggedInUserDisplay = "";
+                        }
+                    });
                 }
             }
         }

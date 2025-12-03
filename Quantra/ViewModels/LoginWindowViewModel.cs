@@ -427,6 +427,7 @@ namespace Quantra.ViewModels
                             AlphaVantageService = _alphaVantageService,
                             TechnicalIndicatorService = _technicalIndicatorService,
                             SavedWindowState = savedWindowState,
+                            UserId = null, // Legacy authentication doesn't have user ID
                             Username = Username
                         });
                     }
