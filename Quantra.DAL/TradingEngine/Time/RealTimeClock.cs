@@ -8,7 +8,7 @@ namespace Quantra.DAL.TradingEngine.Time
     /// </summary>
     public class RealTimeClock : IClock, IDisposable
     {
-        private readonly Timer _timer;
+        private readonly System.Timers.Timer _timer;
         private bool _isRunning;
         private bool _disposed;
 
@@ -20,7 +20,7 @@ namespace Quantra.DAL.TradingEngine.Time
         /// <param name="tickIntervalMs">Interval in milliseconds for time updates (default: 1000ms)</param>
         public RealTimeClock(int tickIntervalMs = 1000)
         {
-            _timer = new Timer(tickIntervalMs);
+            _timer = new System.Timers.Timer(tickIntervalMs);
             _timer.Elapsed += OnTimerElapsed;
             _timer.AutoReset = true;
         }

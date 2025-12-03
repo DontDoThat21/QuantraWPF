@@ -184,6 +184,13 @@
                                                 <TextBlock Text="Insider Transactions"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add Paper Trading control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartAreaspline" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Paper Trading"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>

@@ -1,0 +1,639 @@
+<UserControl x:Class="Quantra.Controls.PaperTradingControl"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Quantra"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:converters="clr-namespace:Quantra.Converters"
+        Background="{StaticResource DarkBlueBrush}"
+        MinHeight="400" MinWidth="600">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <converters:ProfitLossColorConverter x:Key="ProfitLossColorConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Border Background="{StaticResource DarkBlueBrush}" CornerRadius="10" Margin="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Title Block -->
+                <Border Grid.Row="0" Background="#262638" BorderThickness="0,0,0,1" BorderBrush="#3E3E56" Padding="15,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Paper Trading" FontSize="16" FontWeight="SemiBold" Foreground="White"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border Background="{Binding EngineStatusColor}" CornerRadius="3" Padding="8,3" Margin="0,0,10,0">
+                                <TextBlock Text="{Binding EngineStatusText}" Foreground="White" FontWeight="SemiBold" FontSize="11"/>
+                            </Border>
+                            <Button x:Name="StartStopButton" Content="{Binding StartStopButtonText}"
+                                    Style="{StaticResource ButtonStyle1}" Width="80" Height="28"
+                                    Background="{Binding StartStopButtonColor}" Foreground="White"
+                                    Click="StartStopButton_Click">
+                                <Button.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Start/Stop Engine" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Start or stop the paper trading engine. When running, the engine will monitor positions and execute simulated trades based on real market data."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </Button.ToolTip>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Row="1" Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Panel: Order Entry & Portfolio Summary -->
+                    <Grid Grid.Column="0" Margin="0,0,10,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Portfolio Summary Card -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,10" Style="{StaticResource EnhancedContentCardStyle}">
+                            <Grid Margin="15,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Portfolio Summary" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{StaticResource LightBlueBrush}" Margin="0,0,0,10"/>
+
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Total Value -->
+                                    <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,8">
+                                        <TextBlock Text="Total Value" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding TotalValue, StringFormat=C2}" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Cash Balance -->
+                                    <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,0,8">
+                                        <TextBlock Text="Cash Balance" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding CashBalance, StringFormat=C2}" Foreground="White" FontSize="16" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Unrealized P&L -->
+                                    <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,8">
+                                        <TextBlock Text="Unrealized P/L" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding UnrealizedPnL, StringFormat=C2}" 
+                                                   Foreground="{Binding UnrealizedPnL, Converter={StaticResource ProfitLossColorConverter}}" 
+                                                   FontSize="14" FontWeight="SemiBold"/>
+                                    </StackPanel>
+
+                                    <!-- Realized P&L -->
+                                    <StackPanel Grid.Column="1" Grid.Row="1" Margin="0,0,0,8">
+                                        <TextBlock Text="Realized P/L" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding RealizedPnL, StringFormat=C2}" 
+                                                   Foreground="{Binding RealizedPnL, Converter={StaticResource ProfitLossColorConverter}}" 
+                                                   FontSize="14" FontWeight="SemiBold"/>
+                                    </StackPanel>
+
+                                    <!-- Buying Power -->
+                                    <StackPanel Grid.Column="0" Grid.Row="2">
+                                        <TextBlock Text="Buying Power" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding BuyingPower, StringFormat=C2}" Foreground="#50C878" FontSize="14" FontWeight="SemiBold"/>
+                                    </StackPanel>
+
+                                    <!-- Position Count -->
+                                    <StackPanel Grid.Column="1" Grid.Row="2">
+                                        <TextBlock Text="Open Positions" Foreground="#99CCFF" FontSize="11"/>
+                                        <TextBlock Text="{Binding PositionCount}" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </materialDesign:Card>
+
+                        <!-- Order Entry Card -->
+                        <materialDesign:Card Grid.Row="1" Margin="0,0,0,10" Style="{StaticResource EnhancedContentCardStyle}">
+                            <Grid Margin="15,10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Order Entry" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{StaticResource LightBlueBrush}" Margin="0,0,0,10"/>
+
+                                <StackPanel Grid.Row="1">
+                                    <!-- Symbol Input with Search Dropdown -->
+                                    <Label Content="Symbol:" Style="{StaticResource EnhancedLabelStyle}" Padding="0" Margin="0,0,0,3"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="SymbolSearchTextBox"
+                                                 Style="{StaticResource EnhancedTextBoxStyle}"
+                                                 Text="{Binding OrderSymbol, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Search symbol (e.g., AAPL)"
+                                                 CharacterCasing="Upper"
+                                                 Margin="0,0,0,8"
+                                                 TextChanged="SymbolSearchTextBox_TextChanged"
+                                                 PreviewKeyDown="SymbolSearchTextBox_PreviewKeyDown"
+                                                 GotFocus="SymbolSearchTextBox_GotFocus"
+                                                 LostFocus="SymbolSearchTextBox_LostFocus">
+                                            <TextBox.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Stock Symbol" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Enter the ticker symbol of the stock you want to trade. Start typing to search for stocks. Examples: AAPL (Apple), MSFT (Microsoft), TSLA (Tesla)."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+                                        <Popup x:Name="SymbolSearchPopup"
+                                               PlacementTarget="{Binding ElementName=SymbolSearchTextBox}"
+                                               Placement="Bottom"
+                                               Width="290"
+                                               MaxHeight="300"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Background="#2D2D4D"
+                                                    BorderBrush="#3E3E56"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock x:Name="SearchLoadingText"
+                                                               Grid.Row="0"
+                                                               Text="Searching..."
+                                                               Foreground="White"
+                                                               FontStyle="Italic"
+                                                               Margin="10,5"
+                                                               Visibility="Collapsed"/>
+
+                                                    <ListBox x:Name="SymbolSearchListBox"
+                                                             Grid.Row="1"
+                                                             Background="Transparent"
+                                                             BorderThickness="0"
+                                                             Foreground="White"
+                                                             MouseLeftButtonUp="SymbolSearchListBox_MouseLeftButtonUp"
+                                                             PreviewKeyDown="SymbolSearchListBox_PreviewKeyDown">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Vertical" Margin="5">
+                                                                    <TextBlock Text="{Binding Symbol}" FontWeight="Bold" Foreground="White"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="#99CCFF" FontSize="10" TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Grid>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+
+                                    <!-- Quote Data Display -->
+                                    <Border x:Name="QuoteDataPanel"
+                                            Background="#1E2A40"
+                                            BorderBrush="#3E3E56"
+                                            BorderThickness="1"
+                                            CornerRadius="3"
+                                            Padding="8"
+                                            Margin="0,0,0,8"
+                                            Visibility="Collapsed">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Price -->
+                                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,5,3">
+                                                <TextBlock Text="Price" Foreground="#99CCFF" FontSize="9"/>
+                                                <TextBlock x:Name="QuotePriceText" Text="$0.00" Foreground="White" FontSize="13" FontWeight="Bold"/>
+                                            </StackPanel>
+
+                                            <!-- Change -->
+                                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="5,0,0,3">
+                                                <TextBlock Text="Change" Foreground="#99CCFF" FontSize="9"/>
+                                                <TextBlock x:Name="QuoteChangeText" Text="0.00 (0.00%)" Foreground="White" FontSize="11"/>
+                                            </StackPanel>
+
+                                            <!-- Day Range -->
+                                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,3,5,0">
+                                                <TextBlock Text="Day Range" Foreground="#99CCFF" FontSize="9"/>
+                                                <TextBlock x:Name="QuoteDayRangeText" Text="$0.00 - $0.00" Foreground="White" FontSize="10"/>
+                                            </StackPanel>
+
+                                            <!-- Volume -->
+                                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="5,3,0,0">
+                                                <TextBlock Text="Volume" Foreground="#99CCFF" FontSize="9"/>
+                                                <TextBlock x:Name="QuoteVolumeText" Text="0" Foreground="White" FontSize="10"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Order Type -->
+                                    <Label Content="Order Type:" Style="{StaticResource EnhancedLabelStyle}" Padding="0" Margin="0,0,0,3"/>
+                                    <ComboBox x:Name="OrderTypeComboBox" Style="{StaticResource EnhancedComboBoxStyle}"
+                                              SelectedItem="{Binding SelectedOrderType}" Margin="0,0,0,8">
+                                        <ComboBoxItem Content="Market" IsSelected="True">
+                                            <ComboBoxItem.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Market Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Executes immediately at the current market price. Guarantees execution but not price. Best for highly liquid stocks when speed is more important than price precision."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </ComboBoxItem.ToolTip>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Content="Limit">
+                                            <ComboBoxItem.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Limit Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Executes only at the specified limit price or better. Buy limits execute at or below the limit price, sell limits execute at or above. Guarantees price but not execution."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </ComboBoxItem.ToolTip>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Content="Stop">
+                                            <ComboBoxItem.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Stop Order (Stop-Loss)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Becomes a market order when the stop price is reached. Used to limit losses or protect profits. Buy stops trigger above the stop price, sell stops trigger below. Does not guarantee execution price."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </ComboBoxItem.ToolTip>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Content="Stop Limit">
+                                            <ComboBoxItem.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Stop-Limit Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Combines stop and limit orders. When the stop price is reached, the order becomes a limit order at the specified limit price. Provides price control but may not execute if the limit price isn't reached."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </ComboBoxItem.ToolTip>
+                                        </ComboBoxItem>
+                                    </ComboBox>
+
+                                    <!-- Quantity -->
+                                    <Label Content="Quantity:" Style="{StaticResource EnhancedLabelStyle}" Padding="0" Margin="0,0,0,3"/>
+                                    <TextBox x:Name="QuantityTextBox" Style="{StaticResource EnhancedTextBoxStyle}"
+                                             Text="{Binding OrderQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                             materialDesign:HintAssist.Hint="Number of shares"
+                                             Margin="0,0,0,8">
+                                        <TextBox.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Quantity" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Enter the number of shares you want to buy or sell. This must be a positive whole number. The total cost will be quantity multiplied by the share price."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </TextBox.ToolTip>
+                                    </TextBox>
+
+                                    <!-- Limit Price (visible when order type requires it) -->
+                                    <StackPanel Visibility="{Binding ShowLimitPrice}">
+                                        <Label Content="Limit Price:" Style="{StaticResource EnhancedLabelStyle}" Padding="0" Margin="0,0,0,3"/>
+                                        <TextBox Style="{StaticResource EnhancedTextBoxStyle}"
+                                                 Text="{Binding LimitPrice, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Limit price"
+                                                 Margin="0,0,0,8">
+                                            <TextBox.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Limit Price" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="The maximum price you're willing to pay when buying, or the minimum price you're willing to accept when selling. For buy orders, the order executes at this price or lower. For sell orders, it executes at this price or higher."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+                                    </StackPanel>
+
+                                    <!-- Stop Price (visible when order type requires it) -->
+                                    <StackPanel Visibility="{Binding ShowStopPrice}">
+                                        <Label Content="Stop Price:" Style="{StaticResource EnhancedLabelStyle}" Padding="0" Margin="0,0,0,3"/>
+                                        <TextBox Style="{StaticResource EnhancedTextBoxStyle}"
+                                                 Text="{Binding StopPrice, UpdateSourceTrigger=PropertyChanged}"
+                                                 materialDesign:HintAssist.Hint="Stop price"
+                                                 Margin="0,0,0,8">
+                                            <TextBox.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Stop Price" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="The trigger price that activates your order. For buy stops, the order triggers when price reaches or exceeds this level. For sell stops (stop-loss), the order triggers when price falls to or below this level. Used to limit losses or enter positions on breakouts."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
+                                    </StackPanel>
+
+                                    <!-- Buy/Sell Buttons -->
+                                    <Grid Margin="0,5,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="10"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Button Grid.Column="0" Content="BUY" Height="36"
+                                                Style="{StaticResource ButtonStyle1}"
+                                                Background="#228B22" Foreground="White"
+                                                Click="BuyButton_Click">
+                                            <Button.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Buy Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Submit a buy order for the specified symbol and quantity. This will open a long position or reduce an existing short position using the selected order type and prices."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Button.ToolTip>
+                                        </Button>
+
+                                        <Button Grid.Column="2" Content="SELL" Height="36"
+                                                Style="{StaticResource ButtonStyle1}"
+                                                Background="#DC143C" Foreground="White"
+                                                Click="SellButton_Click">
+                                            <Button.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Sell Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Submit a sell order for the specified symbol and quantity. This will close or reduce an existing long position or open a new short position using the selected order type and prices."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Button.ToolTip>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </materialDesign:Card>
+
+                        <!-- Account Actions -->
+                        <materialDesign:Card Grid.Row="2" Style="{StaticResource EnhancedContentCardStyle}">
+                            <StackPanel Margin="15,10">
+                                <TextBlock Text="Account Actions" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{StaticResource LightBlueBrush}" Margin="0,0,0,10"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="0" Content="Reset Account" Height="32" Margin="0,0,5,0"
+                                            Style="{StaticResource ButtonStyle1}"
+                                            Background="#3E3E56" Foreground="White"
+                                            Click="ResetAccountButton_Click">
+                                        <Button.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Reset Account" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Reset the paper trading account to its initial state. This will close all open positions, cancel all pending orders, and restore the starting cash balance. This action cannot be undone."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </Button.ToolTip>
+                                    </Button>
+
+                                    <Button Grid.Column="1" Content="Refresh" Height="32" Margin="5,0,0,0"
+                                            Style="{StaticResource ButtonStyle1}"
+                                            Background="#3E90FF" Foreground="White"
+                                            Click="RefreshButton_Click">
+                                        <Button.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Refresh Data" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Refresh all account data, positions, and orders. This will update current prices, recalculate profit/loss values, and sync the display with the latest trading engine state."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </Button.ToolTip>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
+
+                    <!-- Right Panel: Positions & Orders -->
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Positions Section -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,5" Style="{StaticResource EnhancedContentCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="Open Positions" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{StaticResource LightBlueBrush}" Margin="15,15,0,10"/>
+
+                                <DataGrid x:Name="PositionsGrid" Grid.Row="1"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          ItemsSource="{Binding Positions}"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          GridLinesVisibility="None"
+                                          RowBackground="#1A253A"
+                                          AlternatingRowBackground="#1E2A40"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#262638"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                            <Setter Property="BorderBrush" Value="#3E3E56"/>
+                                        </Style>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                        </Style>
+                                    </DataGrid.Resources>
+
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="70"/>
+                                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="60"/>
+                                        <DataGridTextColumn Header="Avg Cost" Binding="{Binding AverageCost, StringFormat=N2}" Width="80"/>
+                                        <DataGridTextColumn Header="Current" Binding="{Binding CurrentPrice, StringFormat=N2}" Width="80"/>
+                                        <DataGridTextColumn Header="Mkt Value" Binding="{Binding MarketValue, StringFormat=N2}" Width="90"/>
+                                        <DataGridTemplateColumn Header="Unrealized P/L" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding UnrealizedPnL, StringFormat=N2}"
+                                                               Foreground="{Binding UnrealizedPnL, Converter={StaticResource ProfitLossColorConverter}}"
+                                                               HorizontalAlignment="Right" Margin="0,0,8,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="P/L %" Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding UnrealizedPnLPercent, StringFormat=N2}"
+                                                               Foreground="{Binding UnrealizedPnLPercent, Converter={StaticResource ProfitLossColorConverter}}"
+                                                               HorizontalAlignment="Right" Margin="0,0,8,0"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </materialDesign:Card>
+
+                        <!-- Orders Section -->
+                        <materialDesign:Card Grid.Row="1" Margin="0,5,0,0" Style="{StaticResource EnhancedContentCardStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <TextBlock Grid.Column="0" Text="Orders" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{StaticResource LightBlueBrush}" Margin="15,15,0,10"/>
+                                    
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,10,15,10">
+                                        <CheckBox x:Name="ShowAllOrdersCheckBox" Content="Show All"
+                                                  Foreground="White" Margin="0,0,10,0"
+                                                  IsChecked="{Binding ShowAllOrders}"
+                                                  Checked="ShowAllOrdersCheckBox_Changed"
+                                                  Unchecked="ShowAllOrdersCheckBox_Changed">
+                                            <CheckBox.ToolTip>
+                                                <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Show All Orders" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                        <TextBlock TextWrapping="Wrap" Text="Toggle to display all orders including filled, cancelled, and rejected orders. When unchecked, only active pending orders are shown. Check this to review your complete order history."/>
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </CheckBox.ToolTip>
+                                        </CheckBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <DataGrid x:Name="OrdersGrid" Grid.Row="1"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          ItemsSource="{Binding Orders}"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          GridLinesVisibility="None"
+                                          RowBackground="#1A253A"
+                                          AlternatingRowBackground="#1E2A40"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          CanUserDeleteRows="False"
+                                          SelectedItem="{Binding SelectedOrder}">
+                                    <DataGrid.Resources>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#262638"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                            <Setter Property="BorderBrush" Value="#3E3E56"/>
+                                        </Style>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                        </Style>
+                                    </DataGrid.Resources>
+
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Time" Binding="{Binding CreatedTime, StringFormat=HH:mm:ss}" Width="70"/>
+                                        <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="60"/>
+                                        <DataGridTextColumn Header="Side" Binding="{Binding Side}" Width="50"/>
+                                        <DataGridTextColumn Header="Type" Binding="{Binding OrderType}" Width="60"/>
+                                        <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="50"/>
+                                        <DataGridTextColumn Header="Filled" Binding="{Binding FilledQuantity}" Width="50"/>
+                                        <DataGridTextColumn Header="Limit" Binding="{Binding LimitPrice, StringFormat=N2}" Width="70"/>
+                                        <DataGridTextColumn Header="Stop" Binding="{Binding StopPrice, StringFormat=N2}" Width="70"/>
+                                        <DataGridTextColumn Header="Avg Fill" Binding="{Binding AvgFillPrice, StringFormat=N2}" Width="70"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding State}" Width="80"/>
+                                        <DataGridTemplateColumn Header="Action" Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Cancel" Height="24" Padding="8,2"
+                                                            Style="{StaticResource ButtonStyle1}"
+                                                            Background="#DC143C" Foreground="White" FontSize="11"
+                                                            Visibility="{Binding CanCancel, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                            Click="CancelOrderButton_Click"
+                                                            Tag="{Binding Id}">
+                                                        <Button.ToolTip>
+                                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                                <StackPanel>
+                                                                    <TextBlock Text="Cancel Order" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                                    <TextBlock TextWrapping="Wrap" Text="Cancel this pending order. Only orders with 'Pending' status can be cancelled. Filled, partially filled, or already cancelled orders cannot be cancelled."/>
+                                                                </StackPanel>
+                                                            </ToolTip>
+                                                        </Button.ToolTip>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </materialDesign:Card>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Notification Panel -->
+        <Border x:Name="NotificationPanel" Visibility="Collapsed"
+                Background="{StaticResource DarkBlueAccentBrush}"
+                BorderBrush="{Binding NotificationBorderBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="15"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20"
+                MinWidth="300">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <materialDesign:PackIcon Grid.Column="0" Kind="{Binding NotificationIcon}"
+                       Width="24" Height="24" Margin="0,0,15,0"
+                       Foreground="{Binding NotificationIconColor}"/>
+
+                <TextBlock Grid.Column="1" Text="{Binding NotificationText}"
+                         Foreground="White" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
