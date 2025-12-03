@@ -100,19 +100,9 @@ namespace Quantra.Views.Intelligence
             await LoadNewsSentiment();
         }
 
-        private async void TickerTextBox_KeyDown(object sender, KeyEventArgs e)
+        private async void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
-            {
-                await LoadNewsSentiment();
-            }
-        }
-
-        private async void TopicComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // Only auto-load if we have the service initialized
-            // Note: This fires on initial selection too, which is acceptable behavior
-            if (_alphaVantageService != null)
             {
                 await LoadNewsSentiment();
             }
@@ -132,36 +122,70 @@ namespace Quantra.Views.Intelligence
                 LoadButton.IsEnabled = false;
                 StatusText.Text = "Loading news sentiment data...";
 
-                var ticker = TickerTextBox.Text?.Trim().ToUpper();
-                string topic = null;
+                var searchInput = SearchTextBox.Text?.Trim();
+                string tickers = null;
+                string topics = null;
 
-                // Get selected topic from Tag property (contains AlphaVantage API topic value)
-                if (TopicComboBox.SelectedItem is ComboBoxItem selectedTopic)
+                // Parse limit parameter
+                int limit = 50; // Default
+                if (!string.IsNullOrWhiteSpace(LimitTextBox.Text))
                 {
-                    topic = selectedTopic.Tag as string;
+                    if (int.TryParse(LimitTextBox.Text, out int parsedLimit))
+                    {
+                        limit = Math.Min(1000, Math.Max(1, parsedLimit)); // Clamp between 1 and 1000
+                    }
+                }
+
+                // Intelligent search detection
+                if (!string.IsNullOrWhiteSpace(searchInput))
+                {
+                    // Check if input looks like a comma-separated ticker list
+                    // Criteria: Contains commas OR is all uppercase letters with 1-5 chars (typical ticker)
+                    bool looksLikeTickers = searchInput.Contains(',') || 
+                                           (searchInput.Length <= 5 && searchInput.All(c => char.IsLetterOrDigit(c) || c == ':' || c == '.'));
+
+                    // Additional check: if it contains spaces and no commas, it's likely a topic/phrase
+                    if (searchInput.Contains(' ') && !searchInput.Contains(','))
+                    {
+                        looksLikeTickers = false;
+                    }
+
+                    if (looksLikeTickers)
+                    {
+                        // Treat as tickers - convert to uppercase and clean up
+                        tickers = searchInput.ToUpper().Replace(" ", "");
+                        _loggingService?.Log("Info", $"Detected ticker input: {tickers}");
+                    }
+                    else
+                    {
+                        // Treat as topic search - use as-is
+                        topics = searchInput;
+                        _loggingService?.Log("Info", $"Detected topic input: {topics}");
+                    }
                 }
 
                 var response = await _alphaVantageService.GetNewsSentimentAsync(
-                    tickers: string.IsNullOrEmpty(ticker) ? null : ticker,
-                    topics: topic,
-                    limit: 50
+                    tickers: tickers,
+                    topics: topics,
+                    limit: limit
                 );
 
                 // Build search criteria description for status message
                 var searchCriteria = new List<string>();
-                if (!string.IsNullOrEmpty(ticker))
-                    searchCriteria.Add($"ticker(s): {ticker}");
-                if (!string.IsNullOrEmpty(topic))
-                    searchCriteria.Add($"topic: {topic}");
+                if (!string.IsNullOrEmpty(tickers))
+                    searchCriteria.Add($"ticker(s): {tickers}");
+                if (!string.IsNullOrEmpty(topics))
+                    searchCriteria.Add($"topic: '{topics}'");
                 var criteriaText = searchCriteria.Count > 0 ? string.Join(", ", searchCriteria) : "all news";
 
                 if (response != null && response.Feed.Count > 0)
                 {
-                    _newsItems = response.Feed;
+                    // Sort by TimePublished in descending order (newest first)
+                    _newsItems = response.Feed.OrderByDescending(item => item.TimePublished).ToList();
                     NewsListView.ItemsSource = _newsItems;
                     UpdateSummary();
                     SummaryPanel.Visibility = Visibility.Visible;
-                    StatusText.Text = $"Last updated: {DateTime.Now:g} | {_newsItems.Count} articles loaded for {criteriaText}";
+                    StatusText.Text = $"Last updated: {DateTime.Now:g} | {_newsItems.Count} articles loaded for {criteriaText} (limit: {limit})";
                     _loggingService?.Log("Info", $"Loaded {_newsItems.Count} news sentiment items");
                 }
                 else
@@ -235,7 +259,7 @@ namespace Quantra.Views.Intelligence
         {
             if (!string.IsNullOrWhiteSpace(ticker))
             {
-                TickerTextBox.Text = ticker.ToUpper();
+                SearchTextBox.Text = ticker.ToUpper();
                 await LoadNewsSentiment();
             }
         }

@@ -693,7 +693,12 @@ namespace Quantra
                 // Use DB-based count for accuracy
                 int used = await Task.Run(() => _alphaVantageService.GetCurrentDbApiCallCount());
                 int limit = AlphaVantageService.ApiCallLimit;
-                ApiUsageDisplay = $"AlphaVantage API: {used}/{limit}/min";
+                
+                // Ensure UI update happens on the UI thread
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ApiUsageDisplay = $"AlphaVantage API: {used}/{limit}/min";
+                });
             }
             finally
             {
