@@ -619,6 +619,7 @@ namespace Quantra
                             "News Sentiment" => CreateNewsSentimentCard(),
                             "Top Movers" => CreateTopMoversCard(),
                             "Insider Transactions" => CreateInsiderTransactionsCard(),
+                            "Paper Trading" => CreatePaperTradingCard(),
                             _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                         };
                     }
@@ -2113,6 +2114,7 @@ namespace Quantra
                     "News Sentiment" => CreateNewsSentimentCard(),
                     "Top Movers" => CreateTopMoversCard(),
                     "Insider Transactions" => CreateInsiderTransactionsCard(),
+                    "Paper Trading" => CreatePaperTradingCard(),
                     _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                 };
                 
@@ -2547,6 +2549,53 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Insider Transactions",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreatePaperTradingCard()
+        {
+            try
+            {
+                var paperTradingControl = new Controls.PaperTradingControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                paperTradingControl.Width = double.NaN; // Auto width
+                paperTradingControl.Height = double.NaN; // Auto height
+                paperTradingControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                paperTradingControl.VerticalAlignment = VerticalAlignment.Stretch;
+                paperTradingControl.MinWidth = 600;
+                paperTradingControl.MinHeight = 400;
+
+                // Force layout calculation to ensure control is properly sized
+                paperTradingControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                paperTradingControl.Arrange(new Rect(0, 0, paperTradingControl.DesiredSize.Width, paperTradingControl.DesiredSize.Height));
+                paperTradingControl.UpdateLayout();
+
+                return paperTradingControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Paper Trading",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
