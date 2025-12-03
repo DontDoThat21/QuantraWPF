@@ -44,14 +44,11 @@ namespace Quantra.DAL.Data.Entities
         [MaxLength(10)]
         public string TransactionCode { get; set; }
 
-        [Required]
-        public int SharesTraded { get; set; }
+        public int? SharesTraded { get; set; }
 
-        [Required]
-        public double PricePerShare { get; set; }
+        public double? PricePerShare { get; set; }
 
-        [Required]
-        public int SharesOwnedFollowing { get; set; }
+        public int? SharesOwnedFollowing { get; set; }
 
         [MaxLength(10)]
         public string AcquisitionOrDisposal { get; set; }

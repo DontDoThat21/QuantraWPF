@@ -336,21 +336,30 @@ namespace Quantra.Views.Intelligence
 
                 // Get all existing transactions for the symbols in this batch to minimize database queries
                 var symbols = transactions.Select(t => t.Symbol).Distinct().ToList();
+                
+                // Select only the necessary fields to avoid null value exceptions
                 var existingTransactions = context.InsiderTransactions
                     .Where(t => symbols.Contains(t.Symbol))
+                    .Select(t => new
+                    {
+                        Entity = t,
+                        t.Symbol,
+                        t.FilingDate,
+                        t.TransactionDate,
+                        OwnerCik = t.OwnerCik ?? string.Empty
+                    })
                     .ToList();
 
                 // Create a lookup for faster duplicate checking
-                // Handle NULL OwnerCik by using empty string as key
                 var existingLookup = existingTransactions
                     .GroupBy(t => new 
                     { 
                         t.Symbol, 
                         t.FilingDate, 
                         t.TransactionDate, 
-                        OwnerCik = t.OwnerCik ?? string.Empty 
+                        t.OwnerCik
                     })
-                    .ToDictionary(g => g.Key, g => g.First());
+                    .ToDictionary(g => g.Key, g => g.First().Entity);
 
                 foreach (var transaction in transactions)
                 {
@@ -443,9 +452,9 @@ namespace Quantra.Views.Intelligence
                     OwnerTitle = t.OwnerTitle,
                     SecurityType = t.SecurityType,
                     TransactionCode = t.TransactionCode,
-                    SharesTraded = t.SharesTraded,
-                    PricePerShare = t.PricePerShare,
-                    SharesOwnedFollowing = t.SharesOwnedFollowing,
+                    SharesTraded = t.SharesTraded ?? 0,
+                    PricePerShare = t.PricePerShare ?? 0,
+                    SharesOwnedFollowing = t.SharesOwnedFollowing ?? 0,
                     AcquisitionOrDisposal = t.AcquisitionOrDisposal
                 }).ToList();
             }
