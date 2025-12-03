@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -227,6 +228,75 @@ namespace Quantra.DAL.Services
 
             return !await _dbContext.UserCredentials
                 .AnyAsync(u => u.Username.ToLower() == username.ToLower());
+        }
+
+        /// <summary>
+        /// Gets a list of all previously logged-in users (users with a LastLoginDate)
+        /// </summary>
+        /// <returns>List of usernames that have previously logged in</returns>
+        public async Task<List<string>> GetPreviouslyLoggedInUsersAsync()
+        {
+            try
+            {
+                return await _dbContext.UserCredentials
+                    .Where(u => u.IsActive && u.LastLoginDate != null)
+                    .OrderByDescending(u => u.LastLoginDate)
+                    .Select(u => u.Username)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Failed to get previously logged-in users", ex.ToString());
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Gets the username for the currently logged-in user
+        /// </summary>
+        /// <returns>Username of the current user, or null if not logged in</returns>
+        public async Task<string> GetCurrentUsernameAsync()
+        {
+            if (!CurrentUserId.HasValue)
+            {
+                return null;
+            }
+
+            try
+            {
+                var user = await _dbContext.UserCredentials
+                    .FirstOrDefaultAsync(u => u.Id == CurrentUserId.Value);
+                return user?.Username;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to get username for user ID: {CurrentUserId.Value}", ex.ToString());
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the username for the currently logged-in user (synchronous version)
+        /// </summary>
+        /// <returns>Username of the current user, or null if not logged in</returns>
+        public string GetCurrentUsername()
+        {
+            if (!CurrentUserId.HasValue)
+            {
+                return null;
+            }
+
+            try
+            {
+                var user = _dbContext.UserCredentials
+                    .FirstOrDefault(u => u.Id == CurrentUserId.Value);
+                return user?.Username;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to get username for user ID: {CurrentUserId.Value}", ex.ToString());
+                return null;
+            }
         }
 
         /// <summary>

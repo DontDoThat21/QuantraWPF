@@ -116,6 +116,7 @@ namespace Quantra
                 ConfirmPasswordContainer.Visibility = Visibility.Visible;
                 EmailContainer.Visibility = Visibility.Visible;
                 AccountSelectionContainer.Visibility = Visibility.Collapsed;
+                PreviousUsersContainer.Visibility = Visibility.Collapsed;
                 RememberMeCheckBox.Visibility = Visibility.Collapsed;
                 PinTextBoxContainer.Visibility = Visibility.Collapsed;
                 ToggleModeButton.Content = "Back to Login";
@@ -130,6 +131,7 @@ namespace Quantra
                 ConfirmPasswordContainer.Visibility = Visibility.Collapsed;
                 EmailContainer.Visibility = Visibility.Collapsed;
                 AccountSelectionContainer.Visibility = Visibility.Visible;
+                PreviousUsersContainer.Visibility = Visibility.Visible;
                 RememberMeCheckBox.Visibility = Visibility.Visible;
                 ToggleModeButton.Content = "Create Account";
             }
@@ -147,6 +149,9 @@ namespace Quantra
             {
                 mainWindow.WindowState = e.SavedWindowState.Value;
             }
+
+            // Update the SharedTitleBar with the logged-in username
+            SharedTitleBar.UpdateLoggedInUsername(e.Username);
 
             mainWindow.Show();
             this.Close();

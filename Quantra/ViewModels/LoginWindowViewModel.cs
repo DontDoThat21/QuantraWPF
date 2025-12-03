@@ -53,9 +53,11 @@ namespace Quantra.ViewModels
 
             _rememberedAccounts = new Dictionary<string, (string Username, string Password, string Pin)>();
             RememberedAccountsList = new ObservableCollection<string>();
+            PreviouslyLoggedInUsersList = new ObservableCollection<string>();
 
             InitializeCommands();
             LoadRememberedAccounts();
+            _ = LoadPreviouslyLoggedInUsersAsync();
         }
 
         #region Properties
@@ -133,6 +135,27 @@ namespace Quantra.ViewModels
         /// List of remembered account names
         /// </summary>
         public ObservableCollection<string> RememberedAccountsList { get; }
+
+        /// <summary>
+        /// List of previously logged-in users from the database
+        /// </summary>
+        public ObservableCollection<string> PreviouslyLoggedInUsersList { get; }
+
+        /// <summary>
+        /// Selected user from previously logged-in users dropdown
+        /// </summary>
+        private string _selectedPreviousUser;
+        public string SelectedPreviousUser
+        {
+            get => _selectedPreviousUser;
+            set
+            {
+                if (SetProperty(ref _selectedPreviousUser, value))
+                {
+                    LoadSelectedPreviousUser();
+                }
+            }
+        }
 
         /// <summary>
         /// PIN visibility flag
@@ -250,6 +273,56 @@ namespace Quantra.ViewModels
             }
         }
 
+        /// <summary>
+        /// Loads previously logged-in users from the database
+        /// </summary>
+        private async Task LoadPreviouslyLoggedInUsersAsync()
+        {
+            try
+            {
+                var users = await _authenticationService.GetPreviouslyLoggedInUsersAsync();
+                
+                // Ensure we're on the UI thread when updating the collection
+                if (Application.Current?.Dispatcher?.CheckAccess() == false)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        PreviouslyLoggedInUsersList.Clear();
+                        foreach (var username in users)
+                        {
+                            PreviouslyLoggedInUsersList.Add(username);
+                        }
+                    });
+                }
+                else
+                {
+                    PreviouslyLoggedInUsersList.Clear();
+                    foreach (var username in users)
+                    {
+                        PreviouslyLoggedInUsersList.Add(username);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't prevent login window from opening
+                System.Diagnostics.Debug.WriteLine($"Error loading previously logged-in users: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Loads the selected user from the previously logged-in users dropdown
+        /// </summary>
+        private void LoadSelectedPreviousUser()
+        {
+            if (!string.IsNullOrEmpty(SelectedPreviousUser))
+            {
+                Username = SelectedPreviousUser;
+                // Clear password - user must enter it again for security
+                Password = string.Empty;
+            }
+        }
+
         private void LoadSelectedAccount()
         {
             if (!string.IsNullOrEmpty(SelectedAccount) && _rememberedAccounts.ContainsKey(SelectedAccount))
@@ -306,7 +379,8 @@ namespace Quantra.ViewModels
                         AlphaVantageService = _alphaVantageService,
                         TechnicalIndicatorService = _technicalIndicatorService,
                         SavedWindowState = savedWindowState,
-                        UserId = authResult.UserId
+                        UserId = authResult.UserId,
+                        Username = authResult.Username
                     });
                 }
                 else
@@ -352,7 +426,8 @@ namespace Quantra.ViewModels
                             HistoricalDataService = _historicalDataService,
                             AlphaVantageService = _alphaVantageService,
                             TechnicalIndicatorService = _technicalIndicatorService,
-                            SavedWindowState = savedWindowState
+                            SavedWindowState = savedWindowState,
+                            Username = Username
                         });
                     }
                     else
@@ -446,5 +521,6 @@ namespace Quantra.ViewModels
         public TechnicalIndicatorService TechnicalIndicatorService { get; set; }
         public WindowState? SavedWindowState { get; set; }
         public int? UserId { get; set; }
+        public string Username { get; set; }
     }
 }

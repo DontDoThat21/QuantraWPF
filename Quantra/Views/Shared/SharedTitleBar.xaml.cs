@@ -35,6 +35,7 @@ namespace Quantra
         private TechnicalIndicatorService _technicalIndicatorService;
         private YahooFinanceService _yahooFinanceService;
         private LoggingService _loggingService;
+        private AuthenticationService _authenticationService;
 
         public static readonly DependencyProperty TitleProperty =
             DependencyProperty.Register("Title", typeof(string), typeof(SharedTitleBar), new PropertyMetadata(string.Empty));
@@ -44,6 +45,38 @@ namespace Quantra
             get { return (string)GetValue(TitleProperty); }
             set { SetValue(TitleProperty, value); }
         }
+
+        // Logged-in user display property
+        private string _loggedInUserDisplay = "";
+        public string LoggedInUserDisplay
+        {
+            get => _loggedInUserDisplay;
+            set
+            {
+                if (_loggedInUserDisplay != value)
+                {
+                    // Ensure property updates happen on UI thread
+                    if (Dispatcher.CheckAccess())
+                    {
+                        _loggedInUserDisplay = value;
+                        OnPropertyChanged(nameof(LoggedInUserDisplay));
+                        OnPropertyChanged(nameof(IsUserLoggedIn));
+                    }
+                    else
+                    {
+                        Dispatcher.Invoke(() =>
+                        {
+                            _loggedInUserDisplay = value;
+                            OnPropertyChanged(nameof(LoggedInUserDisplay));
+                            OnPropertyChanged(nameof(IsUserLoggedIn));
+                        });
+                    }
+                }
+            }
+        }
+
+        // Flag indicating if a user is logged in
+        public bool IsUserLoggedIn => !string.IsNullOrEmpty(_loggedInUserDisplay);
 
         // New property for the settings button
         public Button SettingsButton
@@ -427,6 +460,61 @@ namespace Quantra
 
             // Start VIX monitoring
             StartVixMonitoringTimer();
+
+            // Load and display the current logged-in username
+            LoadLoggedInUsername();
+        }
+
+        /// <summary>
+        /// Loads the currently logged-in username and updates the title bar display
+        /// </summary>
+        private void LoadLoggedInUsername()
+        {
+            try
+            {
+                // Get the authentication service from DI
+                if (App.ServiceProvider != null)
+                {
+                    _authenticationService = App.ServiceProvider.GetService<AuthenticationService>();
+                }
+
+                if (_authenticationService != null)
+                {
+                    var username = _authenticationService.GetCurrentUsername();
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        LoggedInUserDisplay = $" - {username}";
+                    }
+                    else
+                    {
+                        LoggedInUserDisplay = "";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Failed to load logged-in username", ex.ToString());
+                LoggedInUserDisplay = "";
+            }
+        }
+
+        /// <summary>
+        /// Updates the logged-in username display. Call this after login to update the title bar.
+        /// </summary>
+        /// <param name="username">The username to display, or null/empty to hide</param>
+        public static void UpdateLoggedInUsername(string username)
+        {
+            if (_currentInstance != null)
+            {
+                if (!string.IsNullOrEmpty(username))
+                {
+                    _currentInstance.LoggedInUserDisplay = $" - {username}";
+                }
+                else
+                {
+                    _currentInstance.LoggedInUserDisplay = "";
+                }
+            }
         }
 
         private void StartApiUsageTimer()
