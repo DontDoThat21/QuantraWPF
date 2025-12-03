@@ -2630,7 +2630,9 @@ namespace Quantra
                     throw new InvalidOperationException("ITradingSignalService not registered in DI container");
                 }
 
-                var signalCreationControl = new Views.SignalCreation.SignalCreationControl(tradingSignalService);
+
+
+                var signalCreationControl = new Views.SignalCreation.SignalCreationControl(tradingSignalService, _loggingService, _notificationService, _settingsService, _emailService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 signalCreationControl.Width = double.NaN; // Auto width

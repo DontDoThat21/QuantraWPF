@@ -312,6 +312,7 @@ namespace Quantra.ViewModels
 
         /// <summary>
         /// Loads the selected user from the previously logged-in users dropdown
+        /// This properly updates the Username property which is bound to the UI
         /// </summary>
         private void LoadSelectedPreviousUser()
         {
@@ -320,6 +321,8 @@ namespace Quantra.ViewModels
                 Username = SelectedPreviousUser;
                 // Clear password - user must enter it again for security
                 Password = string.Empty;
+                // Notify the UI that Username has changed
+                OnPropertyChanged(nameof(Username));
             }
         }
 
@@ -352,6 +355,22 @@ namespace Quantra.ViewModels
         private async Task ExecuteLoginAsync()
         {
             if (IsLoggingIn) return;
+
+            // Validate username
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                StatusMessage = "Please enter a username.";
+                LoginFailed?.Invoke(this, "Username is required.");
+                return;
+            }
+
+            // Validate password
+            if (string.IsNullOrWhiteSpace(Password))
+            {
+                StatusMessage = "Please enter a password.";
+                LoginFailed?.Invoke(this, "Password is required.");
+                return;
+            }
 
             IsLoggingIn = true;
             StatusMessage = string.Empty;

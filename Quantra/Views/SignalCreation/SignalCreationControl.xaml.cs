@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using Quantra.DAL.Services;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.ViewModels;
 
@@ -15,11 +16,11 @@ namespace Quantra.Views.SignalCreation
         /// Constructor with dependency injection
         /// </summary>
         /// <param name="tradingSignalService">Trading signal service</param>
-        public SignalCreationControl(ITradingSignalService tradingSignalService)
+        public SignalCreationControl(ITradingSignalService tradingSignalService, LoggingService loggingService, INotificationService notificationService, ISettingsService settingsService, IEmailService emailService)
         {
             InitializeComponent();
 
-            _viewModel = new SignalCreationViewModel(tradingSignalService);
+            _viewModel = new SignalCreationViewModel(tradingSignalService, settingsService, emailService);
             DataContext = _viewModel;
         }
 

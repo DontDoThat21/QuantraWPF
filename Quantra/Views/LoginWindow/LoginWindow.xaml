@@ -76,7 +76,9 @@
                                     <TextBlock Text="Username" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
                                               Margin="2,0,0,0" 
                                               VerticalAlignment="Top"/>
-                                    <TextBox x:Name="UsernameTextBox" Style="{StaticResource EnhancedTextBoxStyle}" 
+                                    <TextBox x:Name="UsernameTextBox" 
+                                            Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource EnhancedTextBoxStyle}" 
                                             GotFocus="UsernameTextBox_GotFocus" 
                                             KeyDown="UsernameTextBox_KeyDown" 
                                             Height="38" Width="240"

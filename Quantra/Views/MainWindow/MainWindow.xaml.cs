@@ -222,9 +222,38 @@ namespace Quantra
             }
 
             this.Loaded += MainWindow_Loaded;
+            
+            // Update the title bar with the logged-in username
+            UpdateTitleBarUsername();
         }
 
         #region Core functionality methods
+        
+        /// <summary>
+        /// Updates the title bar to display the logged-in username
+        /// </summary>
+        private void UpdateTitleBarUsername()
+        {
+            try
+            {
+                // Get the authentication service from DI
+                var authService = App.ServiceProvider?.GetService<AuthenticationService>();
+                
+                if (authService != null)
+                {
+                    var username = authService.GetCurrentUsername();
+                    if (!string.IsNullOrEmpty(username))
+                    {
+                        // Update the SharedTitleBar to show the username
+                        SharedTitleBar.UpdateLoggedInUsername(username);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Failed to update title bar with username", ex.ToString());
+            }
+        }
 
         protected override void OnClosed(EventArgs e)
         {
