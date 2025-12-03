@@ -72,6 +72,12 @@ namespace Quantra.DAL.Data
         public DbSet<ModelTrainingHistory> ModelTrainingHistory { get; set; }
         public DbSet<SymbolTrainingResult> SymbolTrainingResults { get; set; }
 
+        // Paper Trading Persistence
+        public DbSet<PaperTradingSessionEntity> PaperTradingSessions { get; set; }
+        public DbSet<PaperTradingPositionEntity> PaperTradingPositions { get; set; }
+        public DbSet<PaperTradingOrderEntity> PaperTradingOrders { get; set; }
+        public DbSet<PaperTradingFillEntity> PaperTradingFills { get; set; }
+
         public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {
         }

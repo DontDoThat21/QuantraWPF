@@ -266,4 +266,85 @@ namespace Quantra.DAL.Data.Configurations
             builder.HasIndex(i => i.LastUpdated);
         }
     }
+
+    public class PaperTradingSessionConfiguration : IEntityTypeConfiguration<PaperTradingSessionEntity>
+    {
+        public void Configure(EntityTypeBuilder<PaperTradingSessionEntity> builder)
+        {
+            // Unique constraint on SessionId
+            builder.HasIndex(s => s.SessionId).IsUnique();
+
+            // Index for active sessions
+            builder.HasIndex(s => s.IsActive);
+            builder.HasIndex(s => s.StartedAt);
+
+            // Configure cascade delete for positions and orders
+            builder.HasMany(s => s.Positions)
+                   .WithOne(p => p.Session)
+                   .HasForeignKey(p => p.SessionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasMany(s => s.Orders)
+                   .WithOne(o => o.Session)
+                   .HasForeignKey(o => o.SessionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    public class PaperTradingPositionConfiguration : IEntityTypeConfiguration<PaperTradingPositionEntity>
+    {
+        public void Configure(EntityTypeBuilder<PaperTradingPositionEntity> builder)
+        {
+            // Indexes for efficient querying
+            builder.HasIndex(p => p.SessionId);
+            builder.HasIndex(p => p.Symbol);
+            builder.HasIndex(p => new { p.SessionId, p.Symbol });
+            builder.HasIndex(p => p.IsClosed);
+            builder.HasIndex(p => new { p.SessionId, p.IsClosed });
+
+            // Configure relationship with fills
+            builder.HasMany(p => p.Fills)
+                   .WithOne(f => f.Position)
+                   .HasForeignKey(f => f.PositionEntityId)
+                   .OnDelete(DeleteBehavior.SetNull);
+        }
+    }
+
+    public class PaperTradingOrderConfiguration : IEntityTypeConfiguration<PaperTradingOrderEntity>
+    {
+        public void Configure(EntityTypeBuilder<PaperTradingOrderEntity> builder)
+        {
+            // Unique constraint on OrderId (Guid string)
+            builder.HasIndex(o => o.OrderId).IsUnique();
+
+            // Indexes for efficient querying
+            builder.HasIndex(o => o.SessionId);
+            builder.HasIndex(o => o.Symbol);
+            builder.HasIndex(o => o.State);
+            builder.HasIndex(o => new { o.SessionId, o.Symbol });
+            builder.HasIndex(o => new { o.SessionId, o.State });
+            builder.HasIndex(o => o.CreatedAt);
+
+            // Configure cascade delete for fills
+            builder.HasMany(o => o.Fills)
+                   .WithOne(f => f.Order)
+                   .HasForeignKey(f => f.OrderEntityId)
+                   .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+
+    public class PaperTradingFillConfiguration : IEntityTypeConfiguration<PaperTradingFillEntity>
+    {
+        public void Configure(EntityTypeBuilder<PaperTradingFillEntity> builder)
+        {
+            // Unique constraint on FillId (Guid string)
+            builder.HasIndex(f => f.FillId).IsUnique();
+
+            // Indexes for efficient querying
+            builder.HasIndex(f => f.OrderEntityId);
+            builder.HasIndex(f => f.PositionEntityId);
+            builder.HasIndex(f => f.Symbol);
+            builder.HasIndex(f => f.FillTime);
+        }
+    }
 }
