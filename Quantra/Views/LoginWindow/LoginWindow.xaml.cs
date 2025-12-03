@@ -11,6 +11,7 @@ using Quantra.DAL.Services;
 using Quantra.ViewModels;
 using System.ComponentModel;
 using Microsoft.EntityFrameworkCore;
+using Quantra.Views.Shared;
 
 namespace Quantra
 {
@@ -100,6 +101,15 @@ namespace Quantra
                     StatusMessageText.Visibility = Visibility.Collapsed;
                 }
             }
+            else if (e.PropertyName == nameof(LoginWindowViewModel.Username))
+            {
+                // Update the Username TextBox when the ViewModel property changes
+                // This ensures the previously logged-in user selection updates the UI
+                if (UsernameTextBox.Text != _viewModel.Username)
+                {
+                    UsernameTextBox.Text = _viewModel.Username;
+                }
+            }
         }
 
         private void UpdateUIForMode(bool isRegistrationMode)
@@ -116,6 +126,7 @@ namespace Quantra
                 ConfirmPasswordContainer.Visibility = Visibility.Visible;
                 EmailContainer.Visibility = Visibility.Visible;
                 AccountSelectionContainer.Visibility = Visibility.Collapsed;
+                PreviousUsersContainer.Visibility = Visibility.Collapsed;
                 RememberMeCheckBox.Visibility = Visibility.Collapsed;
                 PinTextBoxContainer.Visibility = Visibility.Collapsed;
                 ToggleModeButton.Content = "Back to Login";
@@ -130,6 +141,7 @@ namespace Quantra
                 ConfirmPasswordContainer.Visibility = Visibility.Collapsed;
                 EmailContainer.Visibility = Visibility.Collapsed;
                 AccountSelectionContainer.Visibility = Visibility.Visible;
+                PreviousUsersContainer.Visibility = Visibility.Visible;
                 RememberMeCheckBox.Visibility = Visibility.Visible;
                 ToggleModeButton.Content = "Create Account";
             }
@@ -148,13 +160,16 @@ namespace Quantra
                 mainWindow.WindowState = e.SavedWindowState.Value;
             }
 
+            // Update the SharedTitleBar with the logged-in username
+            SharedTitleBar.UpdateLoggedInUsername(e.Username);
+
             mainWindow.Show();
             this.Close();
         }
 
         private void OnLoginFailed(object sender, string errorMessage)
         {
-            MessageBox.Show(errorMessage, "Login Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            CustomModal.ShowError(errorMessage, "Login Error", this);
         }
 
         private void OnRegistrationSuccessful(object sender, string message)
@@ -164,7 +179,7 @@ namespace Quantra
 
         private void OnRegistrationFailed(object sender, string errorMessage)
         {
-            MessageBox.Show(errorMessage, "Registration Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            CustomModal.ShowError(errorMessage, "Registration Error", this);
         }
 
         private void OnSettingsRequested(object sender, EventArgs e)
@@ -199,6 +214,20 @@ namespace Quantra
                 _viewModel.Password = PasswordBox.Password;
                 _viewModel.Pin = PinTextBox.Text;
                 _viewModel.RememberMe = RememberMeCheckBox.IsChecked == true;
+
+                // Validate username
+                if (string.IsNullOrWhiteSpace(_viewModel.Username))
+                {
+                    CustomModal.ShowError("Please enter a username.", "Validation Error", this);
+                    return;
+                }
+
+                // Validate password
+                if (string.IsNullOrWhiteSpace(_viewModel.Password))
+                {
+                    CustomModal.ShowError("Please enter a password.", "Validation Error", this);
+                    return;
+                }
                 
                 // Execute login command
                 if (_viewModel.LoginCommand.CanExecute(null))
