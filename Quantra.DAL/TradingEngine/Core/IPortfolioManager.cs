@@ -68,6 +68,18 @@ namespace Quantra.DAL.TradingEngine.Core
         void Reset(decimal initialCash);
 
         /// <summary>
+        /// Restores a position from persistence (for app restart recovery)
+        /// </summary>
+        /// <param name="position">The position to restore</param>
+        void RestorePosition(TradingPosition position);
+
+        /// <summary>
+        /// Sets the realized P&L (for restoration from persistence)
+        /// </summary>
+        /// <param name="realizedPnL">The realized P&L value to set</param>
+        void SetRealizedPnL(decimal realizedPnL);
+
+        /// <summary>
         /// Event raised when portfolio value changes
         /// </summary>
         event EventHandler<PortfolioChangedEventArgs>? PortfolioChanged;

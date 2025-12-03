@@ -291,7 +291,22 @@ namespace Quantra.ViewModels
         /// </summary>
         public void Initialize()
         {
-            _ = InitializeAsync();
+            _ = InitializeWithExceptionHandlingAsync();
+        }
+
+        /// <summary>
+        /// Wrapper for async initialization with exception handling
+        /// </summary>
+        private async Task InitializeWithExceptionHandlingAsync()
+        {
+            try
+            {
+                await InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in background initialization: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -346,15 +361,17 @@ namespace Quantra.ViewModels
 
                 if (_currentSession != null)
                 {
-                    // Restore portfolio state
+                    // Restore portfolio state with saved cash balance
                     _portfolioManager.Reset(_currentSession.CashBalance);
 
-                    // Restore positions - we need to manually restore them since PortfolioManager.Reset clears positions
+                    // Restore realized P&L from the session
+                    _portfolioManager.SetRealizedPnL(_currentSession.RealizedPnL);
+
+                    // Restore positions from the database
                     var positions = await _persistenceService.RestorePositionsAsync(_currentSession.Id);
                     foreach (var position in positions.Values)
                     {
-                        // Note: We need access to internal _positions dictionary of PortfolioManager
-                        // For now, we'll track that positions were restored and they'll be recreated on fills
+                        _portfolioManager.RestorePosition(position);
                     }
 
                     System.Diagnostics.Debug.WriteLine($"Restored session: {_currentSession.SessionId} with {positions.Count} positions");
@@ -518,7 +535,7 @@ namespace Quantra.ViewModels
                 var order = _tradingEngine.GetOrder(orderId);
                 if (order != null)
                 {
-                    _ = UpdateOrderAsync(order);
+                    _ = UpdateOrderWithExceptionHandlingAsync(order);
                 }
                 RefreshOrders();
             }
@@ -526,11 +543,41 @@ namespace Quantra.ViewModels
         }
 
         /// <summary>
+        /// Wrapper for async order update with exception handling
+        /// </summary>
+        private async Task UpdateOrderWithExceptionHandlingAsync(Order order)
+        {
+            try
+            {
+                await UpdateOrderAsync(order);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating order in background: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Resets the paper trading account
         /// </summary>
         public void ResetAccount()
         {
-            _ = ResetAccountAsync();
+            _ = ResetAccountWithExceptionHandlingAsync();
+        }
+
+        /// <summary>
+        /// Wrapper for async reset with exception handling
+        /// </summary>
+        private async Task ResetAccountWithExceptionHandlingAsync()
+        {
+            try
+            {
+                await ResetAccountAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in background reset: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -643,6 +690,7 @@ namespace Quantra.ViewModels
         private void OnOrderFilled(object sender, OrderFilledEventArgs e)
         {
             // Save the fill and update position/order in the background
+            // Note: SaveFillAsync already has exception handling
             _ = SaveFillAsync(e);
 
             RefreshPortfolio();
@@ -680,18 +728,33 @@ namespace Quantra.ViewModels
 
         private void OnOrderStateChanged(object sender, OrderStateChangedEventArgs e)
         {
-            // Update order state in the background
-            _ = UpdateOrderAsync(e.Order);
+            // Update order state in the background with exception handling
+            _ = UpdateOrderWithExceptionHandlingAsync(e.Order);
 
             RefreshOrders();
         }
 
         private void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
         {
-            // Update session state in the background
-            _ = UpdateSessionStateAsync();
+            // Update session state in the background with exception handling
+            _ = UpdateSessionStateWithExceptionHandlingAsync();
 
             RefreshPortfolio();
+        }
+
+        /// <summary>
+        /// Wrapper for async session state update with exception handling
+        /// </summary>
+        private async Task UpdateSessionStateWithExceptionHandlingAsync()
+        {
+            try
+            {
+                await UpdateSessionStateAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating session state in background: {ex.Message}");
+            }
         }
 
         #endregion
@@ -710,8 +773,8 @@ namespace Quantra.ViewModels
             {
                 if (disposing)
                 {
-                    // Save final state before disposing
-                    SaveFinalStateAsync().GetAwaiter().GetResult();
+                    // Save final state before disposing using a synchronous-safe approach
+                    SaveFinalStateSafe();
 
                     // Unsubscribe from events
                     if (_tradingEngine != null)
@@ -729,6 +792,22 @@ namespace Quantra.ViewModels
                     _clock?.Dispose();
                 }
                 _isDisposed = true;
+            }
+        }
+
+        /// <summary>
+        /// Saves the final state synchronously without risking deadlock
+        /// </summary>
+        private void SaveFinalStateSafe()
+        {
+            try
+            {
+                // Use Task.Run to avoid deadlock in synchronization context
+                Task.Run(async () => await SaveFinalStateAsync().ConfigureAwait(false)).Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving final state: {ex.Message}");
             }
         }
 
