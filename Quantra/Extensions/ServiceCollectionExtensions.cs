@@ -124,6 +124,15 @@ namespace Quantra.Extensions
             services.AddScoped<TransactionService>();
             services.AddScoped<ITransactionService>(sp => sp.GetRequiredService<TransactionService>());
 
+            // Register TradingSignalService as both concrete type and interface
+            services.AddSingleton<TradingSignalService>(sp =>
+            {
+                var alphaVantageService = sp.GetRequiredService<AlphaVantageService>();
+                var technicalIndicatorService = sp.GetRequiredService<ITechnicalIndicatorService>();
+                return new TradingSignalService(alphaVantageService, technicalIndicatorService);
+            });
+            services.AddSingleton<ITradingSignalService>(sp => sp.GetRequiredService<TradingSignalService>());
+
             // System Health Monitoring Services
             services.AddSingleton<IApiConnectivityService, ApiConnectivityService>();
             services.AddSingleton<RealTimeInferenceService>();
@@ -270,6 +279,7 @@ namespace Quantra.Extensions
             services.AddTransient<AlertsControlViewModel>();
             services.AddTransient<MoveControlWindowViewModel>();
             services.AddTransient<TradingRulesControlViewModel>();
+            services.AddTransient<SignalCreationViewModel>();
             services.AddTransient<TransactionsViewModel>();
             services.AddTransient<ResizeControlWindowViewModel>();
             services.AddTransient<SentimentDashboardControlViewModel>(sp =>

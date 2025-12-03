@@ -621,6 +621,7 @@ namespace Quantra
                             "Top Movers" => CreateTopMoversCard(),
                             "Insider Transactions" => CreateInsiderTransactionsCard(),
                             "Paper Trading" => CreatePaperTradingCard(),
+                            "Signal Creation" => CreateSignalCreationCard(),
                             _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                         };
                     }
@@ -2116,6 +2117,7 @@ namespace Quantra
                     "Top Movers" => CreateTopMoversCard(),
                     "Insider Transactions" => CreateInsiderTransactionsCard(),
                     "Paper Trading" => CreatePaperTradingCard(),
+                    "Signal Creation" => CreateSignalCreationCard(),
                     _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                 };
                 
@@ -2598,6 +2600,60 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Paper Trading",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateSignalCreationCard()
+        {
+            try
+            {
+                // Get trading signal service from DI
+                var tradingSignalService = App.ServiceProvider.GetService(typeof(ITradingSignalService)) as ITradingSignalService;
+                if (tradingSignalService == null)
+                {
+                    throw new InvalidOperationException("ITradingSignalService not registered in DI container");
+                }
+
+                var signalCreationControl = new Views.SignalCreation.SignalCreationControl(tradingSignalService);
+
+                // Ensure the control has proper sizing and stretching behavior
+                signalCreationControl.Width = double.NaN; // Auto width
+                signalCreationControl.Height = double.NaN; // Auto height
+                signalCreationControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                signalCreationControl.VerticalAlignment = VerticalAlignment.Stretch;
+                signalCreationControl.MinWidth = 600;
+                signalCreationControl.MinHeight = 400;
+
+                // Force layout calculation to ensure control is properly sized
+                signalCreationControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                signalCreationControl.Arrange(new Rect(0, 0, signalCreationControl.DesiredSize.Width, signalCreationControl.DesiredSize.Height));
+                signalCreationControl.UpdateLayout();
+
+                return signalCreationControl;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Signal Creation",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
