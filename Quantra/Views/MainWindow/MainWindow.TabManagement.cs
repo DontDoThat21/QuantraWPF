@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Extensions.DependencyInjection;
 using Quantra.Controls;
 using Quantra.DAL.Data;
 using Quantra.DAL.Services;
@@ -2572,7 +2573,8 @@ namespace Quantra
         {
             try
             {
-                var paperTradingControl = new Controls.PaperTradingControl();
+                var alphaVantageService = App.ServiceProvider.GetRequiredService<IAlphaVantageService>();
+                var paperTradingControl = new Controls.PaperTradingControl(alphaVantageService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 paperTradingControl.Width = double.NaN; // Auto width

@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Quantra;
 using Quantra.Models;
 
 public interface IAlphaVantageService
@@ -21,6 +23,20 @@ public interface IAlphaVantageService
     /// <param name="symbol">The stock symbol.</param>
     /// <returns>A list of indicator data.</returns>
     Task<List<StockIndicator>> GetIndicatorsAsync(string symbol);
+
+    /// <summary>
+    /// Searches for symbols using the Alpha Vantage SYMBOL_SEARCH endpoint
+    /// </summary>
+    /// <param name="keywords">Keywords to search for</param>
+    /// <returns>List of matching symbols</returns>
+    Task<List<SymbolSearchResult>> SearchSymbolsAsync(string keywords);
+
+    /// <summary>
+    /// Gets quote data for a specific symbol
+    /// </summary>
+    /// <param name="symbol">Stock symbol</param>
+    /// <returns>Quote data</returns>
+    Task<QuoteData> GetQuoteDataAsync(string symbol);
 
     // Analytics API Methods
     /// <summary>
