@@ -4,6 +4,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Quantra.DAL.TradingEngine.Orders;
 
 namespace Quantra.Controls
@@ -14,6 +15,7 @@ namespace Quantra.Controls
     public partial class PaperTradingControl : UserControl
     {
         private PaperTradingViewModel _viewModel;
+        private DispatcherTimer _notificationTimer;
 
         public PaperTradingControl()
         {
@@ -21,6 +23,13 @@ namespace Quantra.Controls
 
             _viewModel = new PaperTradingViewModel();
             DataContext = _viewModel;
+            
+            // Initialize notification timer
+            _notificationTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            _notificationTimer.Tick += NotificationTimer_Tick;
 
             // Load data when control is loaded
             Loaded += (s, e) =>
@@ -31,8 +40,15 @@ namespace Quantra.Controls
             // Clean up when control is unloaded
             Unloaded += (s, e) =>
             {
+                _notificationTimer.Stop();
                 _viewModel.Dispose();
             };
+        }
+        
+        private void NotificationTimer_Tick(object sender, EventArgs e)
+        {
+            NotificationPanel.Visibility = Visibility.Collapsed;
+            _notificationTimer.Stop();
         }
 
         private void StartStopButton_Click(object sender, RoutedEventArgs e)
@@ -47,13 +63,13 @@ namespace Quantra.Controls
             }
         }
 
-        private void BuyButton_Click(object sender, RoutedEventArgs e)
+        private async void BuyButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 if (ValidateOrderEntry())
                 {
-                    _viewModel.PlaceOrder(OrderSide.Buy);
+                    await _viewModel.PlaceOrderAsync(OrderSide.Buy);
                     ShowNotification($"Buy order placed for {_viewModel.OrderSymbol}", PackIconKind.CheckCircle, Colors.LimeGreen);
                     ClearOrderEntry();
                 }
@@ -64,13 +80,13 @@ namespace Quantra.Controls
             }
         }
 
-        private void SellButton_Click(object sender, RoutedEventArgs e)
+        private async void SellButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 if (ValidateOrderEntry())
                 {
-                    _viewModel.PlaceOrder(OrderSide.Sell);
+                    await _viewModel.PlaceOrderAsync(OrderSide.Sell);
                     ShowNotification($"Sell order placed for {_viewModel.OrderSymbol}", PackIconKind.CheckCircle, Colors.LimeGreen);
                     ClearOrderEntry();
                 }
@@ -193,17 +209,9 @@ namespace Quantra.Controls
             // Show the notification
             NotificationPanel.Visibility = Visibility.Visible;
 
-            // Create and start a timer to hide the notification after a delay
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(3)
-            };
-            timer.Tick += (s, args) =>
-            {
-                NotificationPanel.Visibility = Visibility.Collapsed;
-                timer.Stop();
-            };
-            timer.Start();
+            // Restart the class-level timer to hide the notification after a delay
+            _notificationTimer.Stop();
+            _notificationTimer.Start();
         }
 
         /// <summary>

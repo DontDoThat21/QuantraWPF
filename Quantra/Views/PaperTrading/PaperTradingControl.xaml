@@ -9,6 +9,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <converters:ProfitLossColorConverter x:Key="ProfitLossColorConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
