@@ -1344,11 +1344,15 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
             
         # Convert features to DataFrame for feature engineering
         feature_df = pd.DataFrame([features])
+        
+        logger.info(f"Input features: {list(features.keys())}")
+        logger.info(f"Feature count before processing: {len(features)}")
             
         # Check if we have OHLCV data for feature engineering
         has_ohlcv = all(col in feature_df.columns for col in ['open', 'high', 'low', 'close'])
-            
-        # Apply feature engineering if we have OHLCV data and feature engineering is enabled
+        
+        # IMPORTANT: For model prediction, we should NOT apply feature engineering if we don't have OHLCV data
+        # Just use the features as-is from C#
         if has_ohlcv and FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering:
             try:
                 # Try to load saved pipeline
@@ -1363,29 +1367,43 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                     logger.info("No saved pipeline found, using basic feature creation")
             except Exception as e:
                 logger.warning(f"Error in feature engineering: {str(e)}. Using raw features.")
+        else:
+            logger.info(f"Using raw features (no OHLCV data or feature engineering disabled). Feature count: {feature_df.shape[1]}")
             
         # Prepare feature array for prediction
         feature_names = list(feature_df.columns)
         feature_array = feature_df.values
+        logger.info(f"Feature array shape: {feature_array.shape}")
             
         # CRITICAL FIX: Check feature count consistency with scaler
+        # If features don't match, we need to retrain the model, but NOT with synthetic data
+        # Instead, we should return an error asking C# to provide proper training data
         if used_model_type == 'random_forest' and scaler is not None:
             expected_features = scaler.n_features_in_ if hasattr(scaler, 'n_features_in_') else None
             actual_features = feature_array.shape[1]
                 
             if expected_features is not None and actual_features != expected_features:
-                logger.warning(f"Feature mismatch detected: model expects {expected_features} features but got {actual_features}. Forcing retrain...")
-                    
-                # Force retrain with current feature set to match
-                model, scaler, used_model_type = load_or_train_model(
-                    X_train=feature_array,  # Use current features for training
-                    y_train=np.random.rand(feature_array.shape[0]),  # Dummy target
-                    model_type=model_type,
-                    architecture_type=architecture_type,
-                    force_retrain=True  # Force retrain flag
-                )
-                    
-                logger.info(f"Model retrained with {feature_array.shape[1]} features to match input")
+                error_msg = f"Feature mismatch: model expects {expected_features} features but got {actual_features}. Model needs retraining with proper historical data."
+                logger.error(error_msg)
+                
+                # Return error result instead of forcing retrain with synthetic data
+                return {
+                    'action': 'HOLD',
+                    'confidence': 0.0,
+                    'targetPrice': features.get('current_price', features.get('close', 0.0)),
+                    'weights': {},
+                    'timeSeries': {'prices': [], 'dates': [], 'confidence': 0.0},
+                    'risk': {'var': 0.0, 'maxDrawdown': 0.0, 'sharpeRatio': 0.0, 'riskScore': 1.0},
+                    'patterns': [],
+                    'modelType': 'error',
+                    'architectureType': 'n/a',
+                    'error': error_msg,
+                    'hyperparameterOptimization': {
+                        'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                        'used': False,
+                        'optimizedParams': False
+                    }
+                }
             
         # Align feature names with model if possible
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):

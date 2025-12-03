@@ -13,305 +13,355 @@ namespace Quantra.DAL.Services
 {
     public class SettingsService : ISettingsService
     {
-        private readonly QuantraDbContext _context;
+        private readonly DbContextOptions<QuantraDbContext> _contextOptions;
 
         public SettingsService(QuantraDbContext context)
         {
-            _context = context;
+            // Extract options from the provided context for creating new instances
+            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+            {
+                sqlServerOptions.CommandTimeout(30);
+            });
+            _contextOptions = optionsBuilder.Options;
         }
 
         // Parameterless constructor for backward compatibility
         public SettingsService()
         {
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
-            _context = new QuantraDbContext(optionsBuilder.Options);
+            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+            {
+                sqlServerOptions.CommandTimeout(30);
+            });
+            _contextOptions = optionsBuilder.Options;
+        }
+
+        /// <summary>
+        /// Creates a new DbContext instance for each operation to ensure thread-safety
+        /// </summary>
+        private QuantraDbContext CreateContext()
+        {
+            return new QuantraDbContext(_contextOptions);
         }
 
         // Ensure the settings profiles table exists
         public void EnsureSettingsProfilesTable()
         {
             ResilienceHelper.Retry(() =>
-   {
-       // With EF Core, tables are created via migrations or EnsureCreated
-       // We'll use EnsureCreated for backward compatibility
-       _context.Database.EnsureCreated();
+            {
+                using (var context = CreateContext())
+                {
+                    // With EF Core, tables are created via migrations or EnsureCreated
+                    // We'll use EnsureCreated for backward compatibility
+                    context.Database.EnsureCreated();
 
-       // Check if any profiles exist, if not create a default one
-       if (!_context.SettingsProfiles.Any())
-       {
-           var defaultProfile = new DatabaseSettingsProfile
-           {
-               Name = "Default",
-               Description = "Default system settings",
-               IsDefault = true,
-               CreatedDate = DateTime.Now,
-               ModifiedDate = DateTime.Now,
-               EnableApiModalChecks = true,
-               ApiTimeoutSeconds = 30,
-               CacheDurationMinutes = 15,
-               EnableHistoricalDataCache = true,
-               EnableDarkMode = true,
-               ChartUpdateIntervalSeconds = 2,
-               DefaultGridRows = 4,
-               DefaultGridColumns = 4,
-               GridBorderColor = "#FF00FFFF",
-               EnablePriceAlerts = true,
-               EnableTradeNotifications = true,
-               EnablePaperTrading = true,
-               RiskLevel = "Low",
-               AlertEmail = "test@gmail.com",
-               EnableEmailAlerts = false,
-               EnableStandardAlertEmails = false,
-               EnableOpportunityAlertEmails = false,
-               EnablePredictionAlertEmails = false,
-               EnableGlobalAlertEmails = false,
-               EnableSystemHealthAlertEmails = false
-           };
-           CreateSettingsProfile(defaultProfile);
-       }
-   }, RetryOptions.ForCriticalOperation());
+                    // Check if any profiles exist, if not create a default one
+                    if (!context.SettingsProfiles.Any())
+                    {
+                        var defaultProfile = new DatabaseSettingsProfile
+                        {
+                            Name = "Default",
+                            Description = "Default system settings",
+                            IsDefault = true,
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            EnableApiModalChecks = true,
+                            ApiTimeoutSeconds = 30,
+                            CacheDurationMinutes = 15,
+                            EnableHistoricalDataCache = true,
+                            EnableDarkMode = true,
+                            ChartUpdateIntervalSeconds = 2,
+                            DefaultGridRows = 4,
+                            DefaultGridColumns = 4,
+                            GridBorderColor = "#FF00FFFF",
+                            EnablePriceAlerts = true,
+                            EnableTradeNotifications = true,
+                            EnablePaperTrading = true,
+                            RiskLevel = "Low",
+                            AlertEmail = "test@gmail.com",
+                            EnableEmailAlerts = false,
+                            EnableStandardAlertEmails = false,
+                            EnableOpportunityAlertEmails = false,
+                            EnablePredictionAlertEmails = false,
+                            EnableGlobalAlertEmails = false,
+                            EnableSystemHealthAlertEmails = false
+                        };
+                        CreateSettingsProfile(defaultProfile);
+                    }
+                }
+            }, RetryOptions.ForCriticalOperation());
         }
 
         // Create a new settings profile
         public int CreateSettingsProfile(DatabaseSettingsProfile profile)
         {
             return ResilienceHelper.Retry(() =>
-               {
-                   // If this is set as default, clear other defaults first
-                   if (profile.IsDefault)
-                   {
-                       var existingDefaults = _context.SettingsProfiles.Where(p => p.IsDefault);
-                       foreach (var p in existingDefaults)
-                       {
-                           p.IsDefault = false;
-                       }
-                   }
+            {
+                using (var context = CreateContext())
+                {
+                    // If this is set as default, clear other defaults first
+                    if (profile.IsDefault)
+                    {
+                        var existingDefaults = context.SettingsProfiles.Where(p => p.IsDefault);
+                        foreach (var p in existingDefaults)
+                        {
+                            p.IsDefault = false;
+                        }
+                    }
 
-                   // Map DatabaseSettingsProfile to SettingsProfile entity
-                   var entity = MapToEntity(profile);
+                    // Map DatabaseSettingsProfile to SettingsProfile entity
+                    var entity = MapToEntity(profile);
 
-                   _context.SettingsProfiles.Add(entity);
-                   _context.SaveChanges();
+                    context.SettingsProfiles.Add(entity);
+                    context.SaveChanges();
 
-                   return entity.Id;
-               }, RetryOptions.ForCriticalOperation());
+                    return entity.Id;
+                }
+            }, RetryOptions.ForCriticalOperation());
         }
 
         // Update an existing settings profile
         public bool UpdateSettingsProfile(DatabaseSettingsProfile profile)
         {
             return ResilienceHelper.Retry(() =>
-         {
-             var entity = _context.SettingsProfiles.Find(profile.Id);
-             if (entity == null)
-                 return false;
+            {
+                using (var context = CreateContext())
+                {
+                    var entity = context.SettingsProfiles.Find(profile.Id);
+                    if (entity == null)
+                        return false;
 
-             // If this is set as default, clear other defaults first
-             if (profile.IsDefault)
-             {
-                 var existingDefaults = _context.SettingsProfiles
-                     .Where(p => p.IsDefault && p.Id != profile.Id);
-                 foreach (var p in existingDefaults)
-                 {
-                     p.IsDefault = false;
-                 }
-             }
+                    // If this is set as default, clear other defaults first
+                    if (profile.IsDefault)
+                    {
+                        var existingDefaults = context.SettingsProfiles
+                            .Where(p => p.IsDefault && p.Id != profile.Id);
+                        foreach (var p in existingDefaults)
+                        {
+                            p.IsDefault = false;
+                        }
+                    }
 
-             // Update entity properties
-             UpdateEntityFromProfile(entity, profile);
-             entity.LastModified = DateTime.Now;
+                    // Update entity properties
+                    UpdateEntityFromProfile(entity, profile);
+                    entity.LastModified = DateTime.Now;
 
-             _context.SaveChanges();
-             return true;
-         }, RetryOptions.ForCriticalOperation());
+                    context.SaveChanges();
+                    return true;
+                }
+            }, RetryOptions.ForCriticalOperation());
         }
 
         // Delete a settings profile
         public bool DeleteSettingsProfile(int profileId)
         {
             return ResilienceHelper.Retry(() =>
-       {
-           var entity = _context.SettingsProfiles.Find(profileId);
-           if (entity == null)
-               return false;
+            {
+                using (var context = CreateContext())
+                {
+                    var entity = context.SettingsProfiles.Find(profileId);
+                    if (entity == null)
+                        return false;
 
-           // Don't allow deleting the default profile if it's the only one
-           if (entity.IsDefault)
-           {
-               var count = _context.SettingsProfiles.Count();
-               if (count <= 1)
-                   return false; // Can't delete the only profile
-           }
+                    // Don't allow deleting the default profile if it's the only one
+                    if (entity.IsDefault)
+                    {
+                        var count = context.SettingsProfiles.Count();
+                        if (count <= 1)
+                            return false; // Can't delete the only profile
+                    }
 
-           bool wasDefault = entity.IsDefault;
-           _context.SettingsProfiles.Remove(entity);
-           _context.SaveChanges();
+                    bool wasDefault = entity.IsDefault;
+                    context.SettingsProfiles.Remove(entity);
+                    context.SaveChanges();
 
-           // If we deleted the default profile, set another one as default
-           if (wasDefault)
-           {
-               var newDefault = _context.SettingsProfiles.FirstOrDefault();
-               if (newDefault != null)
-               {
-                   newDefault.IsDefault = true;
-                   _context.SaveChanges();
-               }
-           }
+                    // If we deleted the default profile, set another one as default
+                    if (wasDefault)
+                    {
+                        var newDefault = context.SettingsProfiles.FirstOrDefault();
+                        if (newDefault != null)
+                        {
+                            newDefault.IsDefault = true;
+                            context.SaveChanges();
+                        }
+                    }
 
-           return true;
-       }, RetryOptions.ForCriticalOperation());
+                    return true;
+                }
+            }, RetryOptions.ForCriticalOperation());
         }
 
         // Get a specific settings profile
         public DatabaseSettingsProfile GetSettingsProfile(int profileId)
         {
             return ResilienceHelper.Retry(() =>
-        {
-            var entity = _context.SettingsProfiles
-                         .AsNoTracking()
-          .FirstOrDefault(p => p.Id == profileId);
+            {
+                using (var context = CreateContext())
+                {
+                    var entity = context.SettingsProfiles
+                        .AsNoTracking()
+                        .FirstOrDefault(p => p.Id == profileId);
 
-            return entity != null ? MapFromEntity(entity) : null;
-        }, RetryOptions.ForUserFacingOperation());
+                    return entity != null ? MapFromEntity(entity) : null;
+                }
+            }, RetryOptions.ForUserFacingOperation());
         }
 
         // Get the default settings profile (filters by current user if logged in)
         public DatabaseSettingsProfile GetDefaultSettingsProfile()
         {
             return ResilienceHelper.Retry(() =>
-        {
-            // Ensure database is created
-            _context.Database.EnsureCreated();
+            {
+                using (var context = CreateContext())
+                {
+                    // Ensure database is created
+                    context.Database.EnsureCreated();
 
-            var currentUserId = AuthenticationService.CurrentUserId;
+                    var currentUserId = AuthenticationService.CurrentUserId;
 
-            // Try to get default profile for current user
-            var entity = _context.SettingsProfiles
-               .AsNoTracking()
-             .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
+                    // Try to get default profile for current user
+                    var entity = context.SettingsProfiles
+                        .AsNoTracking()
+                        .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
-            if (entity != null)
-                return MapFromEntity(entity);
+                    if (entity != null)
+                        return MapFromEntity(entity);
 
-            // If no default for user, get first profile for user
-            entity = _context.SettingsProfiles
-              .AsNoTracking()
-            .FirstOrDefault(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
+                    // If no default for user, get first profile for user
+                    entity = context.SettingsProfiles
+                        .AsNoTracking()
+                        .FirstOrDefault(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
 
-            if (entity != null)
-                return MapFromEntity(entity);
+                    if (entity != null)
+                        return MapFromEntity(entity);
 
-            // If still no profile, ensure profiles exist
-            EnsureSettingsProfiles();
+                    // If still no profile, ensure profiles exist
+                    EnsureSettingsProfiles();
 
-            // Try one more time
-            entity = _context.SettingsProfiles
-                  .AsNoTracking()
-              .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
+                    // Try one more time with a fresh context
+                    using (var context2 = CreateContext())
+                    {
+                        entity = context2.SettingsProfiles
+                            .AsNoTracking()
+                            .FirstOrDefault(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
-            return entity != null ? MapFromEntity(entity) : null;
-        }, RetryOptions.ForUserFacingOperation());
+                        return entity != null ? MapFromEntity(entity) : null;
+                    }
+                }
+            }, RetryOptions.ForUserFacingOperation());
         }
 
         // Get the default settings profile asynchronously (filters by current user if logged in)
         public async Task<DatabaseSettingsProfile> GetDefaultSettingsProfileAsync()
         {
-            await _context.Database.EnsureCreatedAsync();
+            using (var context = CreateContext())
+            {
+                await context.Database.EnsureCreatedAsync();
 
-            var currentUserId = AuthenticationService.CurrentUserId;
+                var currentUserId = AuthenticationService.CurrentUserId;
 
-            // Try to get default profile for current user
-            var entity = await _context.SettingsProfiles
-            .AsNoTracking()
-             .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
+                // Try to get default profile for current user
+                var entity = await context.SettingsProfiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
-            if (entity != null)
-                return MapFromEntity(entity);
+                if (entity != null)
+                    return MapFromEntity(entity);
 
-            // If no default for user, get first profile for user
-            entity = await _context.SettingsProfiles
-               .AsNoTracking()
-                   .FirstOrDefaultAsync(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
+                // If no default for user, get first profile for user
+                entity = await context.SettingsProfiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null));
 
-            if (entity != null)
-                return MapFromEntity(entity);
+                if (entity != null)
+                    return MapFromEntity(entity);
 
-            // If still no profile, ensure profiles exist
-            EnsureSettingsProfiles();
+                // If still no profile, ensure profiles exist
+                EnsureSettingsProfiles();
 
-            // Try one more time
-            entity = await _context.SettingsProfiles
-                 .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
+                // Try one more time with a fresh context
+                using (var context2 = CreateContext())
+                {
+                    entity = await context2.SettingsProfiles
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.IsDefault && (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
 
-            return entity != null ? MapFromEntity(entity) : null;
+                    return entity != null ? MapFromEntity(entity) : null;
+                }
+            }
         }
 
         // Get all settings profiles for the current user
         public List<DatabaseSettingsProfile> GetAllSettingsProfiles()
         {
             return ResilienceHelper.Retry(() =>
-                  {
-                      // Ensure database is created
-                      _context.Database.EnsureCreated();
+            {
+                using (var context = CreateContext())
+                {
+                    // Ensure database is created
+                    context.Database.EnsureCreated();
 
-                      var currentUserId = AuthenticationService.CurrentUserId;
+                    var currentUserId = AuthenticationService.CurrentUserId;
 
-                      var entities = _context.SettingsProfiles
-     .AsNoTracking()
-     .Where(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null))
-           .OrderByDescending(p => p.IsDefault)
-        .ThenBy(p => p.Name)
-               .ToList();
+                    var entities = context.SettingsProfiles
+                        .AsNoTracking()
+                        .Where(p => p.UserId == currentUserId || (currentUserId == null && p.UserId == null))
+                        .OrderByDescending(p => p.IsDefault)
+                        .ThenBy(p => p.Name)
+                        .ToList();
 
-                      return entities.Select(MapFromEntity).ToList();
-                  }, RetryOptions.ForUserFacingOperation());
+                    return entities.Select(MapFromEntity).ToList();
+                }
+            }, RetryOptions.ForUserFacingOperation());
         }
 
         // Ensure at least one settings profile exists
         public void EnsureSettingsProfiles()
         {
             ResilienceHelper.Retry(() =>
-          {
-              // First ensure the table exists
-              EnsureSettingsProfilesTable();
+            {
+                // First ensure the table exists
+                EnsureSettingsProfilesTable();
 
-              // Check if any profiles exist
-              if (!_context.SettingsProfiles.Any())
-              {
-                  var defaultProfile = new DatabaseSettingsProfile
-                  {
-                      Name = "Default",
-                      Description = "Default system settings",
-                      IsDefault = true,
-                      CreatedDate = DateTime.Now,
-                      ModifiedDate = DateTime.Now,
-                      EnableApiModalChecks = true,
-                      ApiTimeoutSeconds = 30,
-                      CacheDurationMinutes = 15,
-                      EnableHistoricalDataCache = true,
-                      EnableDarkMode = true,
-                      ChartUpdateIntervalSeconds = 2,
-                      DefaultGridRows = 4,
-                      DefaultGridColumns = 4,
-                      GridBorderColor = "#FF00FFFF",
-                      EnablePriceAlerts = true,
-                      EnableTradeNotifications = true,
-                      EnablePaperTrading = true,
-                      RiskLevel = "Low",
-                      AlertEmail = "test@gmail.com",
-                      EnableEmailAlerts = true,
-                      EnableStandardAlertEmails = true,
-                      EnableOpportunityAlertEmails = true,
-                      EnablePredictionAlertEmails = true,
-                      EnableGlobalAlertEmails = true,
-                      EnableSystemHealthAlertEmails = true,
-                      EnableVixMonitoring = true
-                  };
-                  CreateSettingsProfile(defaultProfile);
-              }
-          }, RetryOptions.ForCriticalOperation());
+                // Check if any profiles exist with a fresh context
+                using (var context = CreateContext())
+                {
+                    if (!context.SettingsProfiles.Any())
+                    {
+                        var defaultProfile = new DatabaseSettingsProfile
+                        {
+                            Name = "Default",
+                            Description = "Default system settings",
+                            IsDefault = true,
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            EnableApiModalChecks = true,
+                            ApiTimeoutSeconds = 30,
+                            CacheDurationMinutes = 15,
+                            EnableHistoricalDataCache = true,
+                            EnableDarkMode = true,
+                            ChartUpdateIntervalSeconds = 2,
+                            DefaultGridRows = 4,
+                            DefaultGridColumns = 4,
+                            GridBorderColor = "#FF00FFFF",
+                            EnablePriceAlerts = true,
+                            EnableTradeNotifications = true,
+                            EnablePaperTrading = true,
+                            RiskLevel = "Low",
+                            AlertEmail = "test@gmail.com",
+                            EnableEmailAlerts = true,
+                            EnableStandardAlertEmails = true,
+                            EnableOpportunityAlertEmails = true,
+                            EnablePredictionAlertEmails = true,
+                            EnableGlobalAlertEmails = true,
+                            EnableSystemHealthAlertEmails = true,
+                            EnableVixMonitoring = true
+                        };
+                        CreateSettingsProfile(defaultProfile);
+                    }
+                }
+            }, RetryOptions.ForCriticalOperation());
         }
 
         // Set a profile as the default
@@ -319,21 +369,24 @@ namespace Quantra.DAL.Services
         {
             return ResilienceHelper.Retry(() =>
             {
-                // Clear existing defaults
-                var existingDefaults = _context.SettingsProfiles.Where(p => p.IsDefault);
-                foreach (var p in existingDefaults)
+                using (var context = CreateContext())
                 {
-                    p.IsDefault = false;
+                    // Clear existing defaults
+                    var existingDefaults = context.SettingsProfiles.Where(p => p.IsDefault);
+                    foreach (var p in existingDefaults)
+                    {
+                        p.IsDefault = false;
+                    }
+
+                    // Set new default
+                    var entity = context.SettingsProfiles.Find(profileId);
+                    if (entity == null)
+                        return false;
+
+                    entity.IsDefault = true;
+                    context.SaveChanges();
+                    return true;
                 }
-
-                // Set new default
-                var entity = _context.SettingsProfiles.Find(profileId);
-                if (entity == null)
-                    return false;
-
-                entity.IsDefault = true;
-                _context.SaveChanges();
-                return true;
             }, RetryOptions.ForCriticalOperation());
         }
 
