@@ -182,22 +182,47 @@
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   CanUserDeleteRows="False"
-                                  Background="#3E3E56"
-                                  Foreground="White"
+                                  Background="#1A1A2E"
+                                  Foreground="GhostWhite"
                                   BorderBrush="#555577"
-                                  RowBackground="#3E3E56"
-                                  AlternatingRowBackground="#454560"
+                                  RowBackground="#1A1A2E"
+                                  AlternatingRowBackground="#2A2A3B"
                                   GridLinesVisibility="Horizontal"
-                                  HorizontalGridLinesBrush="#555577"
+                                  HorizontalGridLinesBrush="#3E3E56"
                                   MinHeight="120"
                                   MaxHeight="250">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="Black"/>
+                                    <Setter Property="Foreground" Value="GhostWhite"/>
+                                    <Setter Property="BorderBrush" Value="#3E3E56"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                    <Setter Property="Padding" Value="10,8"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="GhostWhite"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Padding" Value="5"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#007ACC"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Symbol" Width="150">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding Symbol, UpdateSourceTrigger=PropertyChanged}"
-                                                     Background="#3E3E56"
-                                                     Foreground="White"
+                                                     Background="Transparent"
+                                                     Foreground="GhostWhite"
                                                      BorderThickness="0"
                                                      Padding="5"/>
                                         </DataTemplate>
@@ -208,8 +233,8 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding AllocationPercentage, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-                                                     Background="#3E3E56"
-                                                     Foreground="White"
+                                                     Background="Transparent"
+                                                     Foreground="GhostWhite"
                                                      BorderThickness="0"
                                                      Padding="5"/>
                                         </DataTemplate>
@@ -223,7 +248,7 @@
                                 <DataGridTemplateColumn Header="Status" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Horizontal" Background="Transparent">
                                                 <Ellipse Width="10" Height="10" Margin="5,0">
                                                     <Ellipse.Style>
                                                         <Style TargetType="Ellipse">
@@ -237,7 +262,7 @@
                                                     </Ellipse.Style>
                                                 </Ellipse>
                                                 <TextBlock Text="{Binding ValidationMessage}" 
-                                                           Foreground="#888899"
+                                                           Foreground="GhostWhite"
                                                            VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DataTemplate>
@@ -247,7 +272,7 @@
                                 <DataGridTemplateColumn Header="Actions" Width="140">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Horizontal" Background="Transparent">
                                                 <Button Content="Validate" 
                                                         Background="#17A2B8" 
                                                         Foreground="White"
@@ -345,30 +370,27 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <!-- Logical Operator -->
+                            <!-- Logical Operator -->
                                             <ComboBox Grid.Column="0"
                                                       ItemsSource="{Binding DataContext.LogicalOperators, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       SelectedItem="{Binding LogicalOperator}"
-                                                      Background="#3E3E56"
-                                                      Foreground="White"
+                                                      Style="{StaticResource EnhancedComboBoxStyle}"
                                                       Margin="0,0,5,0"/>
                                             
-                                            <!-- Indicator Selection -->
+                            <!-- Indicator Selection -->
                                             <ComboBox Grid.Column="1"
                                                       ItemsSource="{Binding DataContext.AvailableIndicators, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       DisplayMemberPath="DisplayName"
                                                       SelectedValuePath="IndicatorType"
                                                       SelectedValue="{Binding Indicator}"
-                                                      Background="#3E3E56"
-                                                      Foreground="White"
+                                                      Style="{StaticResource EnhancedComboBoxStyle}"
                                                       Margin="0,0,5,0"/>
                                             
-                                            <!-- Comparison Operator -->
+                            <!-- Comparison Operator -->
                                             <ComboBox Grid.Column="2"
                                                       ItemsSource="{Binding DataContext.ComparisonOperators, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       SelectedItem="{Binding ComparisonOperator}"
-                                                      Background="#3E3E56"
-                                                      Foreground="White"
+                                                      Style="{StaticResource EnhancedComboBoxStyle}"
                                                       Margin="0,0,5,0"/>
                                             
                                             <!-- Threshold Value -->
@@ -438,8 +460,7 @@
                                 <TextBlock Text="Alert Severity" Foreground="White" Margin="0,0,0,5"/>
                                 <ComboBox ItemsSource="{Binding SeverityLevels}"
                                           SelectedItem="{Binding CurrentSignal.AlertConfiguration.AlertSeverity}"
-                                          Background="#3E3E56"
-                                          Foreground="White"/>
+                                          Style="{StaticResource EnhancedComboBoxStyle}"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>

@@ -191,6 +191,13 @@
                                                 <TextBlock Text="Paper Trading"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add Signal Creation control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Creation" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Signal Creation"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>
