@@ -398,11 +398,12 @@ namespace Quantra.Controls
                 }
 
                 // Calculate potential return
+                // Positive return = price expected to rise (BUY signal)
+                // Negative return = price expected to fall (SELL signal)
                 double potentialReturn = 0;
                 if (currentPrice != 0) // Avoid division by zero
                 {
                     potentialReturn = (targetPrice - currentPrice) / currentPrice;
-                    if (action == "SELL") potentialReturn *= -1;
                 }
                 
                 //DatabaseMonolith.Log("Debug", $"AnalyzeStockWithAllAlgorithms (ML+API): symbol={symbol}, action={action}, currentPrice={currentPrice}, targetPrice={targetPrice}, potentialReturn={potentialReturn}, sentiment={sentimentScore}, earnings_quarter={earningsQuarter}, weights={weights}");

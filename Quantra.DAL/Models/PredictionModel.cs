@@ -96,16 +96,20 @@ namespace Quantra.Models
         public string RiskSummary => $"Risk: {RiskScore:P0} | VaR: ${ValueAtRisk:F2} | Sharpe: {SharpeRatio:F2}";
 
         /// <summary>
-        /// Calculates potential return based on prediction action and prices
+        /// Calculates potential return based on target price vs current price.
+        /// Positive return indicates price expected to rise (BUY signal).
+        /// Negative return indicates price expected to fall (SELL signal).
         /// </summary>
         public void CalculatePotentialReturn()
         {
-            PotentialReturn = PredictedAction switch
+            if (CurrentPrice != 0)
             {
-                "BUY" => (TargetPrice - CurrentPrice) / CurrentPrice,
-                "SELL" => (CurrentPrice - TargetPrice) / CurrentPrice,
-                _ => 0
-            };
+                PotentialReturn = (TargetPrice - CurrentPrice) / CurrentPrice;
+            }
+            else
+            {
+                PotentialReturn = 0;
+            }
         }
 
         // Feature importances/weights from ML model (Python interop)
