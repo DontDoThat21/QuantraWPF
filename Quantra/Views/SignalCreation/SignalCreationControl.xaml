@@ -402,14 +402,6 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        
-                        <!-- Empty State -->
-                        <TextBlock Text="No conditions defined. Click 'Add Condition' to create one."
-                                   Foreground="#555577"
-                                   FontStyle="Italic"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,20"
-                                   Visibility="{Binding CurrentSignal.Conditions.Count, Converter={StaticResource NullToCollapsedConverter}}"/>
                     </StackPanel>
                 </Border>
                 

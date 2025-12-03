@@ -10,10 +10,17 @@ namespace Quantra.DAL.Services
     /// <summary>
     /// Service for managing trading signals
     /// </summary>
+    /// <remarks>
+    /// TODO: Replace in-memory storage with database persistence using Entity Framework Core
+    /// when TradingSignalEntity is added to QuantraDbContext. Current implementation is for
+    /// MVP/prototype purposes and signals will be lost when the application restarts.
+    /// </remarks>
     public class TradingSignalService : ITradingSignalService
     {
         private readonly AlphaVantageService _alphaVantageService;
         private readonly ITechnicalIndicatorService _technicalIndicatorService;
+        
+        // TODO: Replace with database persistence - signals are currently stored in memory only
         private readonly List<TradingSignal> _signals = new List<TradingSignal>();
         private int _nextId = 1;
 
@@ -143,6 +150,11 @@ namespace Quantra.DAL.Services
         /// <summary>
         /// Evaluates a trading signal against current market data
         /// </summary>
+        /// <remarks>
+        /// Evaluation logic: Conditions are evaluated in order. The first condition's logical operator is ignored.
+        /// For subsequent conditions, if the logical operator is AND, both the previous result and current condition
+        /// must be true. If OR, either the previous result or current condition can be true.
+        /// </remarks>
         public async Task<bool> EvaluateSignalAsync(TradingSignal signal)
         {
             if (signal == null || !signal.IsEnabled)
@@ -158,31 +170,59 @@ namespace Quantra.DAL.Services
                     var indicatorValues = await _technicalIndicatorService.GetIndicatorsForPrediction(
                         symbolConfig.Symbol, "1day");
 
-                    // Evaluate all conditions
-                    bool allConditionsMet = true;
-                    bool anyConditionMet = false;
+                    // Evaluate conditions in order with proper chaining
+                    var orderedConditions = signal.Conditions.OrderBy(c => c.Order).ToList();
+                    
+                    if (!orderedConditions.Any())
+                    {
+                        continue;
+                    }
 
-                    foreach (var condition in signal.Conditions.OrderBy(c => c.Order))
+                    // Evaluate first condition (its logical operator is ignored)
+                    bool cumulativeResult = false;
+                    bool firstCondition = true;
+
+                    foreach (var condition in orderedConditions)
                     {
                         if (!indicatorValues.TryGetValue(condition.Indicator, out var value))
                         {
+                            // If indicator not found, treat as false for this condition
+                            if (firstCondition)
+                            {
+                                cumulativeResult = false;
+                                firstCondition = false;
+                            }
+                            else if (condition.LogicalOperator == "AND")
+                            {
+                                cumulativeResult = false;
+                            }
+                            // For OR, keep the previous result
                             continue;
                         }
 
                         bool conditionMet = EvaluateCondition(value, condition.ComparisonOperator, condition.ThresholdValue);
 
-                        if (condition.LogicalOperator == "OR")
+                        if (firstCondition)
                         {
-                            anyConditionMet = anyConditionMet || conditionMet;
+                            cumulativeResult = conditionMet;
+                            firstCondition = false;
                         }
                         else
                         {
-                            allConditionsMet = allConditionsMet && conditionMet;
+                            // Apply logical operator to chain with previous result
+                            if (condition.LogicalOperator == "OR")
+                            {
+                                cumulativeResult = cumulativeResult || conditionMet;
+                            }
+                            else // AND (default)
+                            {
+                                cumulativeResult = cumulativeResult && conditionMet;
+                            }
                         }
                     }
 
-                    // If conditions are met, return true
-                    if (allConditionsMet || anyConditionMet)
+                    // If conditions are met for this symbol, return true
+                    if (cumulativeResult)
                     {
                         return true;
                     }
