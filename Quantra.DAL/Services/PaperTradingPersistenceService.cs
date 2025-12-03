@@ -15,10 +15,12 @@ namespace Quantra.DAL.Services
     /// <summary>
     /// Service for persisting paper trading state to the database
     /// </summary>
-    public class PaperTradingPersistenceService : IPaperTradingPersistenceService
+    public class PaperTradingPersistenceService : IPaperTradingPersistenceService, IDisposable
     {
         private readonly QuantraDbContext _context;
         private readonly ILogger<PaperTradingPersistenceService> _logger;
+        private readonly bool _ownsContext;
+        private bool _disposed;
 
         /// <summary>
         /// Constructor with dependency injection
@@ -27,6 +29,7 @@ namespace Quantra.DAL.Services
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger;
+            _ownsContext = false; // Context managed externally
         }
 
         /// <summary>
@@ -37,6 +40,7 @@ namespace Quantra.DAL.Services
             var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
             optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
             _context = new QuantraDbContext(optionsBuilder.Options);
+            _ownsContext = true; // We own this context and must dispose it
         }
 
         #region Session Operations
@@ -60,7 +64,7 @@ namespace Quantra.DAL.Services
                 var newSession = new PaperTradingSessionEntity
                 {
                     SessionId = Guid.NewGuid().ToString(),
-                    Name = name ?? $"Paper Trading Session {DateTime.Now:yyyy-MM-dd HH:mm}",
+                    Name = name ?? $"Paper Trading Session {DateTime.UtcNow:yyyy-MM-dd HH:mm}",
                     InitialCash = initialCash,
                     CashBalance = initialCash,
                     RealizedPnL = 0,
@@ -687,6 +691,28 @@ namespace Quantra.DAL.Services
             {
                 _logger?.LogError(ex, "Failed to restore orders for session: {SessionId}", sessionId);
                 throw new InvalidOperationException($"Failed to restore orders for session: {sessionId}", ex);
+            }
+        }
+
+        #endregion
+
+        #region IDisposable
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing && _ownsContext)
+                {
+                    _context?.Dispose();
+                }
+                _disposed = true;
             }
         }
 

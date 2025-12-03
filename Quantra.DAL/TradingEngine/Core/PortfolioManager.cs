@@ -251,6 +251,29 @@ namespace Quantra.DAL.TradingEngine.Core
         }
 
         /// <summary>
+        /// Restores a position from persistence (for app restart recovery)
+        /// </summary>
+        /// <param name="position">The position to restore</param>
+        public void RestorePosition(TradingPosition position)
+        {
+            if (position == null || string.IsNullOrEmpty(position.Symbol))
+            {
+                return;
+            }
+
+            _positions[position.Symbol] = position;
+        }
+
+        /// <summary>
+        /// Sets the realized P&L (for restoration from persistence)
+        /// </summary>
+        /// <param name="realizedPnL">The realized P&L value to set</param>
+        public void SetRealizedPnL(decimal realizedPnL)
+        {
+            _realizedPnL = realizedPnL;
+        }
+
+        /// <summary>
         /// Gets portfolio performance metrics
         /// </summary>
         public PortfolioPerformance GetPerformance()
