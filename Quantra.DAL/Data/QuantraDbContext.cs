@@ -46,7 +46,6 @@ namespace Quantra.DAL.Data
         public DbSet<TradeRecordEntity> TradeRecords { get; set; }
         public DbSet<TradingRuleEntity> TradingRules { get; set; }
         public DbSet<BacktestResultEntity> BacktestResults { get; set; }
-        public DbSet<PaperTradingSessionEntity> PaperTradingSessions { get; set; }
 
         // Predictions and Analysis
         public DbSet<StockPredictionEntity> StockPredictions { get; set; }
@@ -72,6 +71,12 @@ namespace Quantra.DAL.Data
         // Model Training History
         public DbSet<ModelTrainingHistory> ModelTrainingHistory { get; set; }
         public DbSet<SymbolTrainingResult> SymbolTrainingResults { get; set; }
+
+        // Paper Trading Persistence
+        public DbSet<PaperTradingSessionEntity> PaperTradingSessions { get; set; }
+        public DbSet<PaperTradingPositionEntity> PaperTradingPositions { get; set; }
+        public DbSet<PaperTradingOrderEntity> PaperTradingOrders { get; set; }
+        public DbSet<PaperTradingFillEntity> PaperTradingFills { get; set; }
 
         public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {

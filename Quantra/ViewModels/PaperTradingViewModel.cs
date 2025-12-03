@@ -1,7 +1,8 @@
 using MaterialDesignThemes.Wpf;
-using Microsoft.EntityFrameworkCore;
 using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 using Quantra.DAL.Services;
+using Quantra.DAL.Services.Interfaces;
 using Quantra.DAL.TradingEngine.Core;
 using Quantra.DAL.TradingEngine.Data;
 using Quantra.DAL.TradingEngine.Orders;
@@ -26,9 +27,9 @@ namespace Quantra.ViewModels
         private TradingEngine _tradingEngine;
         private PortfolioManager _portfolioManager;
         private RealTimeClock _clock;
-        private IDataSource _dataSource;
-        private PaperTradingSessionService _sessionService;
-        private Guid? _currentSessionId;
+        private HistoricalDataSource _dataSource;
+        private IPaperTradingPersistenceService _persistenceService;
+        private PaperTradingSessionEntity _currentSession;
         private bool _isDisposed;
 
         // Portfolio properties
@@ -71,13 +72,24 @@ namespace Quantra.ViewModels
             _totalValue = 100000m;
             _buyingPower = 100000m;
 
-            // Initialize session service with connection string (not DbContext instance)
-            // This allows the service to create its own DbContext per operation, avoiding threading issues
-            var loggingService = new LoggingService();
-            _sessionService = new PaperTradingSessionService(ConnectionHelper.ConnectionString, loggingService);
+            // Initialize persistence service
+            _persistenceService = new PaperTradingPersistenceService();
+        }
 
-            // Store AlphaVantage service for initialization
-            _alphaVantageService = alphaVantageService;
+        /// <summary>
+        /// Constructor with dependency injection
+        /// </summary>
+        public PaperTradingViewModel(IPaperTradingPersistenceService persistenceService)
+        {
+            _positions = new ObservableCollection<TradingPosition>();
+            _orders = new ObservableCollection<Order>();
+
+            // Initialize with default values
+            _cashBalance = 100000m;
+            _totalValue = 100000m;
+            _buyingPower = 100000m;
+
+            _persistenceService = persistenceService ?? throw new ArgumentNullException(nameof(persistenceService));
         }
 
         private IAlphaVantageService _alphaVantageService;
@@ -281,13 +293,39 @@ namespace Quantra.ViewModels
         /// </summary>
         public void Initialize()
         {
+            _ = InitializeWithExceptionHandlingAsync();
+        }
+
+        /// <summary>
+        /// Wrapper for async initialization with exception handling
+        /// </summary>
+        private async Task InitializeWithExceptionHandlingAsync()
+        {
             try
             {
-                // Create components with REAL-TIME data source
-                _dataSource = new RealTimeDataSource(_alphaVantageService);
+                await InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in background initialization: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Initializes the trading engine and components asynchronously
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            try
+            {
+                // Create components
+                _dataSource = new HistoricalDataSource();
                 _clock = new RealTimeClock(1000); // 1 second tick interval
                 _portfolioManager = new PortfolioManager(100000m);
                 _tradingEngine = new TradingEngine();
+
+                // Try to restore from an existing active session
+                await RestoreSessionAsync();
 
                 // Initialize the engine
                 _tradingEngine.Initialize(_dataSource, _clock, _portfolioManager);
@@ -309,6 +347,52 @@ namespace Quantra.ViewModels
         }
 
         /// <summary>
+        /// Restores session state from the database
+        /// </summary>
+        private async Task RestoreSessionAsync()
+        {
+            try
+            {
+                if (_persistenceService == null)
+                {
+                    return;
+                }
+
+                // Try to get active session
+                _currentSession = await _persistenceService.GetActiveSessionAsync();
+
+                if (_currentSession != null)
+                {
+                    // Restore portfolio state with saved cash balance
+                    _portfolioManager.Reset(_currentSession.CashBalance);
+
+                    // Restore realized P&L from the session
+                    _portfolioManager.SetRealizedPnL(_currentSession.RealizedPnL);
+
+                    // Restore positions from the database
+                    var positions = await _persistenceService.RestorePositionsAsync(_currentSession.Id);
+                    foreach (var position in positions.Values)
+                    {
+                        _portfolioManager.RestorePosition(position);
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"Restored session: {_currentSession.SessionId} with {positions.Count} positions");
+                }
+                else
+                {
+                    // Create a new session
+                    _currentSession = await _persistenceService.CreateSessionAsync(null, 100000m);
+                    System.Diagnostics.Debug.WriteLine($"Created new session: {_currentSession.SessionId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error restoring session: {ex.Message}");
+                // Continue without persistence if it fails
+            }
+        }
+
+        /// <summary>
         /// Toggles the trading engine on/off
         /// </summary>
         public async void ToggleEngine()
@@ -321,30 +405,14 @@ namespace Quantra.ViewModels
                 _tradingEngine.Stop();
                 IsEngineRunning = false;
 
-                // Save session to database
-                if (_currentSessionId.HasValue && _portfolioManager != null)
-                {
-                    await _sessionService.StopSessionAsync(
-                        _currentSessionId.Value,
-                        _portfolioManager.CashBalance,
-                        _portfolioManager.TotalValue,
-                        _portfolioManager.RealizedPnL,
-                        _portfolioManager.UnrealizedPnL
-                    );
-                    _currentSessionId = null;
-                }
+                // Update session state in database
+                await UpdateSessionStateAsync();
             }
             else
             {
                 // Start the engine
                 _tradingEngine.Start();
                 IsEngineRunning = true;
-
-                // Create new session in database
-                if (_portfolioManager != null)
-                {
-                    _currentSessionId = await _sessionService.StartSessionAsync(_portfolioManager.CashBalance);
-                }
             }
         }
 
@@ -378,7 +446,86 @@ namespace Quantra.ViewModels
             }
 
             await _tradingEngine.PlaceOrderAsync(order);
+
+            // Persist the order
+            await SaveOrderAsync(order);
+
             RefreshOrders();
+        }
+
+        /// <summary>
+        /// Saves an order to the database
+        /// </summary>
+        private async Task SaveOrderAsync(Order order)
+        {
+            try
+            {
+                if (_persistenceService != null && _currentSession != null)
+                {
+                    await _persistenceService.SaveOrderAsync(_currentSession.Id, order);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving order: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates an order in the database
+        /// </summary>
+        private async Task UpdateOrderAsync(Order order)
+        {
+            try
+            {
+                if (_persistenceService != null && _currentSession != null)
+                {
+                    await _persistenceService.UpdateOrderAsync(order.Id, order);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating order: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves a position to the database
+        /// </summary>
+        private async Task SavePositionAsync(TradingPosition position)
+        {
+            try
+            {
+                if (_persistenceService != null && _currentSession != null)
+                {
+                    await _persistenceService.SavePositionAsync(_currentSession.Id, position);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving position: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Updates the session state in the database
+        /// </summary>
+        private async Task UpdateSessionStateAsync()
+        {
+            try
+            {
+                if (_persistenceService != null && _currentSession != null && _portfolioManager != null)
+                {
+                    await _persistenceService.UpdateSessionStateAsync(
+                        _currentSession.Id, 
+                        _portfolioManager.CashBalance, 
+                        _portfolioManager.RealizedPnL);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating session state: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -391,15 +538,59 @@ namespace Quantra.ViewModels
             var result = _tradingEngine.CancelOrder(orderId);
             if (result)
             {
+                // Update order in database
+                var order = _tradingEngine.GetOrder(orderId);
+                if (order != null)
+                {
+                    _ = UpdateOrderWithExceptionHandlingAsync(order);
+                }
                 RefreshOrders();
             }
             return result;
         }
 
         /// <summary>
+        /// Wrapper for async order update with exception handling
+        /// </summary>
+        private async Task UpdateOrderWithExceptionHandlingAsync(Order order)
+        {
+            try
+            {
+                await UpdateOrderAsync(order);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating order in background: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Resets the paper trading account
         /// </summary>
         public async void ResetAccount()
+        {
+            _ = ResetAccountWithExceptionHandlingAsync();
+        }
+
+        /// <summary>
+        /// Wrapper for async reset with exception handling
+        /// </summary>
+        private async Task ResetAccountWithExceptionHandlingAsync()
+        {
+            try
+            {
+                await ResetAccountAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in background reset: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Resets the paper trading account asynchronously
+        /// </summary>
+        public async Task ResetAccountAsync()
         {
             if (_tradingEngine != null)
             {
@@ -409,13 +600,25 @@ namespace Quantra.ViewModels
             _portfolioManager?.Reset(100000m);
             _tradingEngine?.Reset();
 
-            IsEngineRunning = false;
-
-            // Reset session in database
-            if (_currentSessionId.HasValue)
+            // Clear persistence data and create new session
+            try
             {
-                _currentSessionId = await _sessionService.ResetSessionAsync(_currentSessionId.Value, 100000m);
+                if (_persistenceService != null && _currentSession != null)
+                {
+                    await _persistenceService.ClearPositionsAsync(_currentSession.Id);
+                    await _persistenceService.ClearOrdersAsync(_currentSession.Id);
+                    await _persistenceService.EndSessionAsync(_currentSession.Id);
+
+                    // Create a new session
+                    _currentSession = await _persistenceService.CreateSessionAsync(null, 100000m);
+                }
             }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error resetting persistence: {ex.Message}");
+            }
+
+            IsEngineRunning = false;
 
             RefreshPortfolio();
             RefreshPositions();
@@ -494,66 +697,71 @@ namespace Quantra.ViewModels
 
         private async void OnOrderFilled(object sender, OrderFilledEventArgs e)
         {
+            // Save the fill and update position/order in the background
+            // Note: SaveFillAsync already has exception handling
+            _ = SaveFillAsync(e);
+
             RefreshPortfolio();
             RefreshPositions();
             RefreshOrders();
+        }
 
-            // Update session in database
-            await UpdateSessionInDatabaseAsync();
+        private async Task SaveFillAsync(OrderFilledEventArgs e)
+        {
+            try
+            {
+                if (_persistenceService == null || _currentSession == null)
+                {
+                    return;
+                }
+
+                // Update the order
+                await _persistenceService.UpdateOrderAsync(e.Order.Id, e.Order);
+
+                // Save position if we have one
+                var position = _portfolioManager?.GetPosition(e.Fill.Symbol);
+                if (position != null)
+                {
+                    await _persistenceService.SavePositionAsync(_currentSession.Id, position);
+                }
+
+                // Update session state
+                await UpdateSessionStateAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving fill: {ex.Message}");
+            }
         }
 
         private void OnOrderStateChanged(object sender, OrderStateChangedEventArgs e)
         {
+            // Update order state in the background with exception handling
+            _ = UpdateOrderWithExceptionHandlingAsync(e.Order);
+
             RefreshOrders();
         }
 
         private async void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
         {
-            RefreshPortfolio();
+            // Update session state in the background with exception handling
+            _ = UpdateSessionStateWithExceptionHandlingAsync();
 
-            // Update session in database
-            await UpdateSessionInDatabaseAsync();
+            RefreshPortfolio();
         }
 
         /// <summary>
-        /// Updates the current session statistics in the database
+        /// Wrapper for async session state update with exception handling
         /// </summary>
-        private async System.Threading.Tasks.Task UpdateSessionInDatabaseAsync()
+        private async Task UpdateSessionStateWithExceptionHandlingAsync()
         {
-            if (!_currentSessionId.HasValue || _portfolioManager == null || _tradingEngine == null)
-                return;
-
             try
             {
-                // Calculate trade statistics
-                var fills = _tradingEngine.GetFills();
-                int winningTrades = 0;
-                int losingTrades = 0;
-
-                foreach (var fill in fills)
-                {
-                    // Simple win/loss calculation based on whether we made or lost money
-                    // In a real implementation, you'd track individual position P&L
-                    if (_portfolioManager.RealizedPnL > 0)
-                        winningTrades++;
-                    else if (_portfolioManager.RealizedPnL < 0)
-                        losingTrades++;
-                }
-
-                await _sessionService.UpdateSessionAsync(
-                    _currentSessionId.Value,
-                    _portfolioManager.CashBalance,
-                    _portfolioManager.TotalValue,
-                    _portfolioManager.RealizedPnL,
-                    _portfolioManager.UnrealizedPnL,
-                    fills.Count,
-                    winningTrades,
-                    losingTrades
-                );
+                await UpdateSessionStateAsync();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating session in database: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating session state in background: {ex.Message}");
             }
         }
 
@@ -573,6 +781,9 @@ namespace Quantra.ViewModels
             {
                 if (disposing)
                 {
+                    // Save final state before disposing using a synchronous-safe approach
+                    SaveFinalStateSafe();
+
                     // Unsubscribe from events
                     if (_tradingEngine != null)
                     {
@@ -589,6 +800,60 @@ namespace Quantra.ViewModels
                     _clock?.Dispose();
                 }
                 _isDisposed = true;
+            }
+        }
+
+        /// <summary>
+        /// Saves the final state synchronously without risking deadlock
+        /// </summary>
+        private void SaveFinalStateSafe()
+        {
+            try
+            {
+                // Use Task.Run to avoid deadlock in synchronization context
+                Task.Run(async () => await SaveFinalStateAsync().ConfigureAwait(false)).Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving final state: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves the final state to the database before disposal
+        /// </summary>
+        private async Task SaveFinalStateAsync()
+        {
+            try
+            {
+                if (_persistenceService == null || _currentSession == null || _portfolioManager == null)
+                {
+                    return;
+                }
+
+                // Save all positions
+                foreach (var position in _portfolioManager.Positions.Values)
+                {
+                    await _persistenceService.SavePositionAsync(_currentSession.Id, position);
+                }
+
+                // Save all orders
+                if (_tradingEngine != null)
+                {
+                    foreach (var order in _tradingEngine.GetAllOrders())
+                    {
+                        await _persistenceService.SaveOrderAsync(_currentSession.Id, order);
+                    }
+                }
+
+                // Update session state
+                await UpdateSessionStateAsync();
+
+                System.Diagnostics.Debug.WriteLine("Paper trading state saved successfully");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving final state: {ex.Message}");
             }
         }
 

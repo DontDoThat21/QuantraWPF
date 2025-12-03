@@ -35,29 +35,27 @@ namespace Quantra.DAL.Services
         /// Starts a new paper trading session
         /// </summary>
         /// <param name="initialBalance">Starting cash balance</param>
-        /// <param name="userId">Optional user ID</param>
-        /// <returns>The session ID</returns>
-        public async Task<Guid> StartSessionAsync(decimal initialBalance, int? userId = null)
+        /// <param name="name">Optional session name</param>
+        /// <returns>The session ID as string</returns>
+        public async Task<string> StartSessionAsync(decimal initialBalance, string name = null)
         {
             try
             {
                 using var context = CreateDbContext();
                 
-                var sessionId = Guid.NewGuid();
+                var sessionId = Guid.NewGuid().ToString();
                 var now = DateTime.UtcNow;
 
                 var session = new PaperTradingSessionEntity
                 {
                     SessionId = sessionId,
-                    UserId = userId,
-                    StartTime = now,
-                    InitialBalance = initialBalance,
-                    Status = "Active",
-                    TradeCount = 0,
-                    WinningTrades = 0,
-                    LosingTrades = 0,
-                    CreatedAt = now,
-                    UpdatedAt = now
+                    Name = name,
+                    InitialCash = initialBalance,
+                    CashBalance = initialBalance,
+                    RealizedPnL = 0,
+                    IsActive = true,
+                    StartedAt = now,
+                    LastUpdatedAt = now
                 };
 
                 context.PaperTradingSessions.Add(session);
@@ -79,19 +77,16 @@ namespace Quantra.DAL.Services
         /// </summary>
         /// <param name="sessionId">Session to stop</param>
         /// <param name="finalBalance">Final cash balance</param>
-        /// <param name="finalPortfolioValue">Final total portfolio value</param>
         /// <param name="realizedPnL">Realized profit/loss</param>
-        /// <param name="unrealizedPnL">Unrealized profit/loss</param>
         /// <returns>True if successful</returns>
-        public async Task<bool> StopSessionAsync(Guid sessionId, decimal finalBalance, decimal finalPortfolioValue, 
-            decimal realizedPnL, decimal unrealizedPnL)
+        public async Task<bool> StopSessionAsync(string sessionId, decimal finalBalance, decimal realizedPnL)
         {
             try
             {
                 using var context = CreateDbContext();
                 
                 var session = await context.PaperTradingSessions
-                    .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.Status == "Active");
+                    .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.IsActive);
 
                 if (session == null)
                 {
@@ -100,24 +95,15 @@ namespace Quantra.DAL.Services
                 }
 
                 var now = DateTime.UtcNow;
-                session.EndTime = now;
-                session.FinalBalance = finalBalance;
-                session.FinalPortfolioValue = finalPortfolioValue;
+                session.EndedAt = now;
+                session.CashBalance = finalBalance;
                 session.RealizedPnL = realizedPnL;
-                session.UnrealizedPnL = unrealizedPnL;
-                session.TotalPnL = realizedPnL + unrealizedPnL;
-                session.Status = "Completed";
-                session.UpdatedAt = now;
-
-                // Calculate win rate if there are trades
-                if (session.TradeCount > 0)
-                {
-                    session.WinRate = (decimal)session.WinningTrades / session.TradeCount * 100;
-                }
+                session.IsActive = false;
+                session.LastUpdatedAt = now;
 
                 await context.SaveChangesAsync();
 
-                _loggingService.Log("Info", $"Paper trading session stopped: {sessionId}, Total PnL: {session.TotalPnL:C}");
+                _loggingService.Log("Info", $"Paper trading session stopped: {sessionId}, Realized PnL: {realizedPnL:C}");
 
                 return true;
             }
@@ -133,43 +119,25 @@ namespace Quantra.DAL.Services
         /// </summary>
         /// <param name="sessionId">Session to update</param>
         /// <param name="currentBalance">Current cash balance</param>
-        /// <param name="currentPortfolioValue">Current total portfolio value</param>
         /// <param name="realizedPnL">Current realized profit/loss</param>
-        /// <param name="unrealizedPnL">Current unrealized profit/loss</param>
-        /// <param name="tradeCount">Total number of trades</param>
-        /// <param name="winningTrades">Number of winning trades</param>
-        /// <param name="losingTrades">Number of losing trades</param>
         /// <returns>True if successful</returns>
-        public async Task<bool> UpdateSessionAsync(Guid sessionId, decimal currentBalance, decimal currentPortfolioValue,
-            decimal realizedPnL, decimal unrealizedPnL, int tradeCount, int winningTrades, int losingTrades)
+        public async Task<bool> UpdateSessionAsync(string sessionId, decimal currentBalance, decimal realizedPnL)
         {
             try
             {
                 using var context = CreateDbContext();
                 
                 var session = await context.PaperTradingSessions
-                    .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.Status == "Active");
+                    .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.IsActive);
 
                 if (session == null)
                 {
                     return false;
                 }
 
-                session.FinalBalance = currentBalance;
-                session.FinalPortfolioValue = currentPortfolioValue;
+                session.CashBalance = currentBalance;
                 session.RealizedPnL = realizedPnL;
-                session.UnrealizedPnL = unrealizedPnL;
-                session.TotalPnL = realizedPnL + unrealizedPnL;
-                session.TradeCount = tradeCount;
-                session.WinningTrades = winningTrades;
-                session.LosingTrades = losingTrades;
-                session.UpdatedAt = DateTime.UtcNow;
-
-                // Calculate win rate
-                if (tradeCount > 0)
-                {
-                    session.WinRate = (decimal)winningTrades / tradeCount * 100;
-                }
+                session.LastUpdatedAt = DateTime.UtcNow;
 
                 await context.SaveChangesAsync();
 
@@ -183,26 +151,18 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets the active session ID for the current user
+        /// Gets the active session ID
         /// </summary>
-        /// <param name="userId">Optional user ID</param>
         /// <returns>Active session ID or null</returns>
-        public async Task<Guid?> GetActiveSessionIdAsync(int? userId = null)
+        public async Task<string> GetActiveSessionIdAsync()
         {
             try
             {
                 using var context = CreateDbContext();
                 
-                var query = context.PaperTradingSessions
-                    .Where(s => s.Status == "Active");
-
-                if (userId.HasValue)
-                {
-                    query = query.Where(s => s.UserId == userId);
-                }
-
-                var session = await query
-                    .OrderByDescending(s => s.StartTime)
+                var session = await context.PaperTradingSessions
+                    .Where(s => s.IsActive)
+                    .OrderByDescending(s => s.StartedAt)
                     .FirstOrDefaultAsync();
 
                 return session?.SessionId;
@@ -219,7 +179,7 @@ namespace Quantra.DAL.Services
         /// </summary>
         /// <param name="sessionId">Session ID to retrieve</param>
         /// <returns>Session entity or null</returns>
-        public async Task<PaperTradingSessionEntity> GetSessionAsync(Guid sessionId)
+        public async Task<PaperTradingSessionEntity> GetSessionAsync(string sessionId)
         {
             try
             {
@@ -236,12 +196,12 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Resets a session (marks it as reset and creates a new one)
+        /// Resets a session (marks it as inactive and creates a new one)
         /// </summary>
         /// <param name="sessionId">Session to reset</param>
         /// <param name="newInitialBalance">New starting balance</param>
         /// <returns>New session ID</returns>
-        public async Task<Guid> ResetSessionAsync(Guid sessionId, decimal newInitialBalance)
+        public async Task<string> ResetSessionAsync(string sessionId, decimal newInitialBalance)
         {
             try
             {
@@ -250,17 +210,17 @@ namespace Quantra.DAL.Services
                 var oldSession = await context.PaperTradingSessions
                     .FirstOrDefaultAsync(s => s.SessionId == sessionId);
 
-                if (oldSession != null && oldSession.Status == "Active")
+                if (oldSession != null && oldSession.IsActive)
                 {
-                    // Mark old session as reset
-                    oldSession.Status = "Reset";
-                    oldSession.EndTime = DateTime.UtcNow;
-                    oldSession.UpdatedAt = DateTime.UtcNow;
+                    // Mark old session as inactive
+                    oldSession.IsActive = false;
+                    oldSession.EndedAt = DateTime.UtcNow;
+                    oldSession.LastUpdatedAt = DateTime.UtcNow;
                     await context.SaveChangesAsync();
                 }
 
                 // Create new session (will use its own context)
-                var newSessionId = await StartSessionAsync(newInitialBalance, oldSession?.UserId);
+                var newSessionId = await StartSessionAsync(newInitialBalance, oldSession?.Name);
 
                 _loggingService.Log("Info", $"Paper trading session reset: {sessionId} -> {newSessionId}");
 
