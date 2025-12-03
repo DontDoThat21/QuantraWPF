@@ -1,4 +1,7 @@
 using MaterialDesignThemes.Wpf;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
+using Quantra.DAL.Services;
 using Quantra.DAL.TradingEngine.Core;
 using Quantra.DAL.TradingEngine.Data;
 using Quantra.DAL.TradingEngine.Orders;
@@ -23,7 +26,9 @@ namespace Quantra.ViewModels
         private TradingEngine _tradingEngine;
         private PortfolioManager _portfolioManager;
         private RealTimeClock _clock;
-        private HistoricalDataSource _dataSource;
+        private IDataSource _dataSource;
+        private PaperTradingSessionService _sessionService;
+        private Guid? _currentSessionId;
         private bool _isDisposed;
 
         // Portfolio properties
@@ -56,7 +61,7 @@ namespace Quantra.ViewModels
         private ObservableCollection<Order> _orders;
         private Order _selectedOrder;
 
-        public PaperTradingViewModel()
+        public PaperTradingViewModel(IAlphaVantageService alphaVantageService)
         {
             _positions = new ObservableCollection<TradingPosition>();
             _orders = new ObservableCollection<Order>();
@@ -65,7 +70,17 @@ namespace Quantra.ViewModels
             _cashBalance = 100000m;
             _totalValue = 100000m;
             _buyingPower = 100000m;
+
+            // Initialize session service with connection string (not DbContext instance)
+            // This allows the service to create its own DbContext per operation, avoiding threading issues
+            var loggingService = new LoggingService();
+            _sessionService = new PaperTradingSessionService(ConnectionHelper.ConnectionString, loggingService);
+
+            // Store AlphaVantage service for initialization
+            _alphaVantageService = alphaVantageService;
         }
+
+        private IAlphaVantageService _alphaVantageService;
 
         #region Portfolio Properties
 
@@ -268,8 +283,8 @@ namespace Quantra.ViewModels
         {
             try
             {
-                // Create components
-                _dataSource = new HistoricalDataSource();
+                // Create components with REAL-TIME data source
+                _dataSource = new RealTimeDataSource(_alphaVantageService);
                 _clock = new RealTimeClock(1000); // 1 second tick interval
                 _portfolioManager = new PortfolioManager(100000m);
                 _tradingEngine = new TradingEngine();
@@ -296,19 +311,40 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Toggles the trading engine on/off
         /// </summary>
-        public void ToggleEngine()
+        public async void ToggleEngine()
         {
             if (_tradingEngine == null) return;
 
             if (IsEngineRunning)
             {
+                // Stop the engine
                 _tradingEngine.Stop();
                 IsEngineRunning = false;
+
+                // Save session to database
+                if (_currentSessionId.HasValue && _portfolioManager != null)
+                {
+                    await _sessionService.StopSessionAsync(
+                        _currentSessionId.Value,
+                        _portfolioManager.CashBalance,
+                        _portfolioManager.TotalValue,
+                        _portfolioManager.RealizedPnL,
+                        _portfolioManager.UnrealizedPnL
+                    );
+                    _currentSessionId = null;
+                }
             }
             else
             {
+                // Start the engine
                 _tradingEngine.Start();
                 IsEngineRunning = true;
+
+                // Create new session in database
+                if (_portfolioManager != null)
+                {
+                    _currentSessionId = await _sessionService.StartSessionAsync(_portfolioManager.CashBalance);
+                }
             }
         }
 
@@ -363,7 +399,7 @@ namespace Quantra.ViewModels
         /// <summary>
         /// Resets the paper trading account
         /// </summary>
-        public void ResetAccount()
+        public async void ResetAccount()
         {
             if (_tradingEngine != null)
             {
@@ -374,6 +410,13 @@ namespace Quantra.ViewModels
             _tradingEngine?.Reset();
 
             IsEngineRunning = false;
+
+            // Reset session in database
+            if (_currentSessionId.HasValue)
+            {
+                _currentSessionId = await _sessionService.ResetSessionAsync(_currentSessionId.Value, 100000m);
+            }
+
             RefreshPortfolio();
             RefreshPositions();
             RefreshOrders();
@@ -449,11 +492,14 @@ namespace Quantra.ViewModels
 
         #region Event Handlers
 
-        private void OnOrderFilled(object sender, OrderFilledEventArgs e)
+        private async void OnOrderFilled(object sender, OrderFilledEventArgs e)
         {
             RefreshPortfolio();
             RefreshPositions();
             RefreshOrders();
+
+            // Update session in database
+            await UpdateSessionInDatabaseAsync();
         }
 
         private void OnOrderStateChanged(object sender, OrderStateChangedEventArgs e)
@@ -461,9 +507,54 @@ namespace Quantra.ViewModels
             RefreshOrders();
         }
 
-        private void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
+        private async void OnPortfolioChanged(object sender, PortfolioChangedEventArgs e)
         {
             RefreshPortfolio();
+
+            // Update session in database
+            await UpdateSessionInDatabaseAsync();
+        }
+
+        /// <summary>
+        /// Updates the current session statistics in the database
+        /// </summary>
+        private async System.Threading.Tasks.Task UpdateSessionInDatabaseAsync()
+        {
+            if (!_currentSessionId.HasValue || _portfolioManager == null || _tradingEngine == null)
+                return;
+
+            try
+            {
+                // Calculate trade statistics
+                var fills = _tradingEngine.GetFills();
+                int winningTrades = 0;
+                int losingTrades = 0;
+
+                foreach (var fill in fills)
+                {
+                    // Simple win/loss calculation based on whether we made or lost money
+                    // In a real implementation, you'd track individual position P&L
+                    if (_portfolioManager.RealizedPnL > 0)
+                        winningTrades++;
+                    else if (_portfolioManager.RealizedPnL < 0)
+                        losingTrades++;
+                }
+
+                await _sessionService.UpdateSessionAsync(
+                    _currentSessionId.Value,
+                    _portfolioManager.CashBalance,
+                    _portfolioManager.TotalValue,
+                    _portfolioManager.RealizedPnL,
+                    _portfolioManager.UnrealizedPnL,
+                    fills.Count,
+                    winningTrades,
+                    losingTrades
+                );
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating session in database: {ex.Message}");
+            }
         }
 
         #endregion

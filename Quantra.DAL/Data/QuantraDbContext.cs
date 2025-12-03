@@ -46,6 +46,7 @@ namespace Quantra.DAL.Data
         public DbSet<TradeRecordEntity> TradeRecords { get; set; }
         public DbSet<TradingRuleEntity> TradingRules { get; set; }
         public DbSet<BacktestResultEntity> BacktestResults { get; set; }
+        public DbSet<PaperTradingSessionEntity> PaperTradingSessions { get; set; }
 
         // Predictions and Analysis
         public DbSet<StockPredictionEntity> StockPredictions { get; set; }
