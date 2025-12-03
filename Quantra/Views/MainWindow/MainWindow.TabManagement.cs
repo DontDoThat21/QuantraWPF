@@ -607,6 +607,7 @@ namespace Quantra
                             "Alerts" => CreateAlertsCard(),
                             "Configuration" => CreateConfigurationCard(),
                             "Prediction Analysis" => CreatePredictionAnalysisCard(),
+                            "Batch Prediction" => CreateBatchPredictionCard(),
                             "Sector Momentum Heatmap" => CreateSectorMomentumHeatmapCard(),
                             "Transactions" => CreateTransactionsCard(),
                             "Backtest Chart" => CreateBacktestingCard(), // Accept alias
@@ -854,6 +855,59 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Prediction Analysis",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateBatchPredictionCard()
+        {
+            try
+            {
+                // Create the BatchPredictionControl
+                var batchPredictionControl = new Controls.BatchPredictionControl();
+
+                // Ensure the control has proper sizing and stretching behavior
+                batchPredictionControl.Width = double.NaN; // Auto width
+                batchPredictionControl.Height = double.NaN; // Auto height
+                batchPredictionControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                batchPredictionControl.VerticalAlignment = VerticalAlignment.Stretch;
+                batchPredictionControl.MinWidth = 800;
+                batchPredictionControl.MinHeight = 600;
+
+                // Force layout calculation to ensure control is properly sized
+                batchPredictionControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                batchPredictionControl.Arrange(new Rect(0, 0, batchPredictionControl.DesiredSize.Width, batchPredictionControl.DesiredSize.Height));
+                batchPredictionControl.UpdateLayout();
+
+                // Log success
+                //DatabaseMonolith.Log("Info", "Successfully created BatchPredictionControl");
+
+                return batchPredictionControl;
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", $"Failed to create BatchPredictionControl: {ex.Message}", ex.ToString());
+
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Batch Prediction Control",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
@@ -2046,6 +2100,7 @@ namespace Quantra
                     "Alerts" => CreateAlertsCard(),
                     "Configuration" => CreateConfigurationCard(),
                     "Prediction Analysis" => CreatePredictionAnalysisCard(),
+                    "Batch Prediction" => CreateBatchPredictionCard(),
                     "Sector Momentum Heatmap" => CreateSectorMomentumHeatmapCard(),
                     "Transactions" => CreateTransactionsCard(),
                     "Backtesting" => CreateBacktestingCard(),

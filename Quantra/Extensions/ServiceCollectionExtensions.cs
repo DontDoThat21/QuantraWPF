@@ -1,6 +1,7 @@
 using System; // Added for Exception reference
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Quantra.Configuration;
 using Quantra.Configuration.Models;
 using Quantra.Models;
@@ -27,6 +28,9 @@ namespace Quantra.Extensions
         /// <returns>The service collection with Quantra services added</returns>
         public static IServiceCollection AddQuantraServices(this IServiceCollection services)
         {
+            // Register logging services for dependency injection
+            services.AddLogging();
+
             // Register DbContext
             services.AddDbContext<QuantraDbContext>(options =>
             {
@@ -105,6 +109,10 @@ namespace Quantra.Extensions
             // Logging service
             services.AddSingleton<LoggingService>();
 
+            // Register custom ILogger from CrossCutting for services that need it
+            services.AddSingleton<Quantra.CrossCutting.Logging.ILogger>(sp => 
+                Quantra.CrossCutting.Logging.Log.ForContext("DependencyInjection"));
+
             // Register AuthenticationService for user login and registration
             services.AddScoped<AuthenticationService>();
 
@@ -135,6 +143,12 @@ namespace Quantra.Extensions
             // Register PredictionDataService
             services.AddScoped<PredictionDataService>();
             services.AddScoped<IPredictionDataService>(sp => sp.GetRequiredService<PredictionDataService>());
+
+            // Register BatchPredictionService
+            services.AddScoped<BatchPredictionService>();
+
+            // Register ScheduledPredictionService
+            services.AddScoped<ScheduledPredictionService>();
 
             // Register CacheManagementService (MarketChat story 10)
             services.AddSingleton<CacheManagementService>(sp =>
