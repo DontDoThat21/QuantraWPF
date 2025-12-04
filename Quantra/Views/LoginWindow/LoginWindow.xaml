@@ -115,17 +115,6 @@
                                             Margin="0,18,0,0"/>
                                 </Grid>
                                 
-                                <!-- Account Selection (Login only) -->
-                                <Grid x:Name="AccountSelectionContainer" Margin="0,10,0,5">
-                                    <TextBlock Text="Saved Accounts" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
-                                              Margin="2,0,0,0" 
-                                              VerticalAlignment="Top"/>
-                                    <ComboBox x:Name="AccountComboBox" Style="{StaticResource EnhancedComboBoxStyle}" 
-                                            SelectionChanged="AccountComboBox_SelectionChanged" 
-                                            Height="38" Width="240"
-                                            Margin="0,18,0,0"/>
-                                </Grid>
-                                
                                 <!-- Previously Logged-In Users (Login only) -->
                                 <Grid x:Name="PreviousUsersContainer" Margin="0,10,0,5">
                                     <TextBlock Text="Previously Logged-In Users" Style="{StaticResource EnhancedSmallTextBlockStyle}" 
@@ -139,10 +128,13 @@
                                             ToolTip="Select a user who previously logged in to this app"/>
                                 </Grid>
                                 
-                                <!-- Remember Me Checkbox (Login only) -->
-                                <CheckBox x:Name="RememberMeCheckBox" Content="Remember this account" 
+                                <!-- Remember Me Checkbox (Login only) - Currently not functional, auto-remembers by LastLoginDate -->
+                                <CheckBox x:Name="RememberMeCheckBox" Content="Remember this account (Auto-populated on restart)" 
                                          Style="{StaticResource EnhancedCheckBoxStyle}" 
-                                         Margin="0,15,0,5"/>
+                                         Margin="0,15,0,5"
+                                         IsChecked="True"
+                                         IsEnabled="False"
+                                         ToolTip="Your username will be automatically populated on next login. You must re-enter your password for security."/>
                                 
                                 <!-- PIN Field - Hidden by default -->
                                 <Grid x:Name="PinTextBoxContainer" Visibility="Collapsed" Margin="0,10,0,5">

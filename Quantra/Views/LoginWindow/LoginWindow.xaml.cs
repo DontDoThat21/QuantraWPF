@@ -125,7 +125,6 @@ namespace Quantra
                 RegisterButton.Visibility = Visibility.Visible;
                 ConfirmPasswordContainer.Visibility = Visibility.Visible;
                 EmailContainer.Visibility = Visibility.Visible;
-                AccountSelectionContainer.Visibility = Visibility.Collapsed;
                 PreviousUsersContainer.Visibility = Visibility.Collapsed;
                 RememberMeCheckBox.Visibility = Visibility.Collapsed;
                 PinTextBoxContainer.Visibility = Visibility.Collapsed;
@@ -140,7 +139,6 @@ namespace Quantra
                 RegisterButton.Visibility = Visibility.Collapsed;
                 ConfirmPasswordContainer.Visibility = Visibility.Collapsed;
                 EmailContainer.Visibility = Visibility.Collapsed;
-                AccountSelectionContainer.Visibility = Visibility.Visible;
                 PreviousUsersContainer.Visibility = Visibility.Visible;
                 RememberMeCheckBox.Visibility = Visibility.Visible;
                 ToggleModeButton.Content = "Create Account";
@@ -266,20 +264,6 @@ namespace Quantra
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
             _viewModel?.OpenSettingsCommand?.Execute(null);
-        }
-
-        private void AccountComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (_viewModel != null && AccountComboBox.SelectedItem != null)
-            {
-                _viewModel.SelectedAccount = AccountComboBox.SelectedItem.ToString();
-                
-                // Update UI from ViewModel
-                UsernameTextBox.Text = _viewModel.Username;
-                PasswordBox.Password = _viewModel.Password;
-                PinTextBox.Text = _viewModel.Pin;
-                PinTextBoxContainer.Visibility = _viewModel.IsPinVisible ? Visibility.Visible : Visibility.Collapsed;
-            }
         }
 
         private void UsernameTextBox_GotFocus(object sender, RoutedEventArgs e)

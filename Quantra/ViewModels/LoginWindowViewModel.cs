@@ -57,6 +57,9 @@ namespace Quantra.ViewModels
 
             InitializeCommands();
             LoadRememberedAccounts();
+            
+            // Load previously logged-in users asynchronously (also auto-populates username)
+            // Fire-and-forget is safe here because we use AsNoTracking queries
             _ = LoadPreviouslyLoggedInUsersAsync();
         }
 
@@ -274,12 +277,14 @@ namespace Quantra.ViewModels
         }
 
         /// <summary>
-        /// Loads previously logged-in users from the database
+        /// Loads previously logged-in users from the database and auto-populates the most recent one
+        /// This combines both operations to avoid concurrent DbContext access
         /// </summary>
         private async Task LoadPreviouslyLoggedInUsersAsync()
         {
             try
             {
+                // Get previously logged-in users (only one DbContext call)
                 var users = await _authenticationService.GetPreviouslyLoggedInUsersAsync();
                 
                 // Ensure we're on the UI thread when updating the collection
@@ -292,6 +297,13 @@ namespace Quantra.ViewModels
                         {
                             PreviouslyLoggedInUsersList.Add(username);
                         }
+                        
+                        // Auto-populate the most recent user
+                        if (users != null && users.Count > 0)
+                        {
+                            Username = users[0];
+                            System.Diagnostics.Debug.WriteLine($"Auto-populated username: {Username}");
+                        }
                     });
                 }
                 else
@@ -300,6 +312,13 @@ namespace Quantra.ViewModels
                     foreach (var username in users)
                     {
                         PreviouslyLoggedInUsersList.Add(username);
+                    }
+                    
+                    // Auto-populate the most recent user
+                    if (users != null && users.Count > 0)
+                    {
+                        Username = users[0];
+                        System.Diagnostics.Debug.WriteLine($"Auto-populated username: {Username}");
                     }
                 }
             }
@@ -376,16 +395,26 @@ namespace Quantra.ViewModels
             StatusMessage = string.Empty;
             try
             {
-                // First try to authenticate with the AuthenticationService (registered users)
+                // Check if user exists in the database (query database for username)
+                bool isRegisteredUser = !await _authenticationService.IsUsernameAvailableAsync(Username);
+                
+                if (!isRegisteredUser)
+                {
+                    // Username doesn't exist in database - reject immediately
+                    StatusMessage = "Invalid username or password.";
+                    LoginFailed?.Invoke(this, "Invalid username or password.");
+                    return;
+                }
+                
+                // User exists in database - attempt authentication with password validation
                 var authResult = await _authenticationService.AuthenticateAsync(Username, Password);
                 
                 if (authResult.Success)
                 {
-                    // Save credentials if remember me is checked
-                    if (RememberMe)
-                    {
-                        DatabaseMonolith.RememberAccount(Username, Password, Pin);
-                    }
+                    // Authentication successful
+                    // Note: RememberMe checkbox no longer stores password for security reasons.
+                    // Username is automatically remembered via LastLoginDate in UserCredentials table.
+                    // Password must be re-entered each time for security.
 
                     // Get saved window state
                     var savedWindowState = _userSettingsService.GetSavedWindowState();
@@ -404,57 +433,9 @@ namespace Quantra.ViewModels
                 }
                 else
                 {
-                    // Fall back to WebullTradingBot authentication for backward compatibility
-                    var tradingBot = new WebullTradingBot(
-                        _userSettingsService,
-                        _historicalDataService,
-                        _alphaVantageService,
-                        _technicalIndicatorService);
-
-                    bool isAuthenticated = false;
-
-                    // Authenticate with PIN if available and remembered
-                    if (!string.IsNullOrEmpty(Pin) && _rememberedAccounts.Values.Any(a => a.Pin == Pin))
-                    {
-                        var account = _rememberedAccounts.Values.First(a => a.Pin == Pin);
-                        isAuthenticated = await tradingBot.Authenticate(account.Username, account.Password);
-                    }
-                    else
-                    {
-                        isAuthenticated = await tradingBot.Authenticate(Username, Password);
-                    }
-
-                    if (isAuthenticated)
-                    {
-                        // Clear user context for legacy authentication (no user-specific settings)
-                        AuthenticationService.SetCurrentUserId(null);
-
-                        // Save credentials if remember me is checked
-                        if (RememberMe)
-                        {
-                            DatabaseMonolith.RememberAccount(Username, Password, Pin);
-                        }
-
-                        // Get saved window state
-                        var savedWindowState = _userSettingsService.GetSavedWindowState();
-
-                        // Fire success event with context needed to open MainWindow
-                        LoginSuccessful?.Invoke(this, new LoginSuccessEventArgs
-                        {
-                            UserSettingsService = _userSettingsService,
-                            HistoricalDataService = _historicalDataService,
-                            AlphaVantageService = _alphaVantageService,
-                            TechnicalIndicatorService = _technicalIndicatorService,
-                            SavedWindowState = savedWindowState,
-                            UserId = null, // Legacy authentication doesn't have user ID
-                            Username = Username
-                        });
-                    }
-                    else
-                    {
-                        StatusMessage = "Invalid username or password.";
-                        LoginFailed?.Invoke(this, "Authentication unsuccessful.");
-                    }
+                    // User exists but password is incorrect
+                    StatusMessage = "Invalid username or password.";
+                    LoginFailed?.Invoke(this, "Invalid username or password.");
                 }
             }
             catch (Exception ex)

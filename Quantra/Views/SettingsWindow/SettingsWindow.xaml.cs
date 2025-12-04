@@ -122,6 +122,7 @@ namespace Quantra
             // ComboBox event handlers
             RiskLevelComboBox.SelectionChanged += OnSettingChanged;
             GridBorderColorComboBox.SelectionChanged += OnSettingChanged;
+            AlphaVantageApiPlanComboBox.SelectionChanged += OnSettingChanged;
         }
 
         private async Task LoadProfilesAsync()
@@ -178,6 +179,15 @@ namespace Quantra
             EnableVixMonitoring.IsChecked = profile.EnableVixMonitoring;
             // Alpha Vantage API Key setting
             AlphaVantageApiKeyBox.Password = profile.AlphaVantageApiKey ?? "";
+            // Alpha Vantage API Plan setting
+            foreach (ComboBoxItem item in AlphaVantageApiPlanComboBox.Items)
+            {
+                if (int.TryParse((string)item.Tag, out int callsPerMinute) && callsPerMinute == profile.AlphaVantageApiCallsPerMinute)
+                {
+                    AlphaVantageApiPlanComboBox.SelectedItem = item;
+                    break;
+                }
+            }
         }
 
         private void ProfilesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -298,12 +308,24 @@ namespace Quantra
                 _selectedProfile.EnableVixMonitoring = EnableVixMonitoring.IsChecked == true;
                 // Alpha Vantage API Key setting - saved to database only (no environment variable)
                 _selectedProfile.AlphaVantageApiKey = AlphaVantageApiKeyBox.Password.Trim();
+                // Alpha Vantage API Plan setting
+                if (AlphaVantageApiPlanComboBox.SelectedItem is ComboBoxItem apiPlanItem)
+                {
+                    if (int.TryParse((string)apiPlanItem.Tag, out int callsPerMinute))
+                    {
+                        _selectedProfile.AlphaVantageApiCallsPerMinute = callsPerMinute;
+                    }
+                }
 
                 _selectedProfile.ModifiedDate = DateTime.Now;
                 _settingsService.UpdateSettingsProfile(_selectedProfile);
 
                 // Clear API key cache to ensure updated key is used
                 Quantra.DAL.Utilities.Utilities.ClearApiKeyCache();
+
+                // Update AlphaVantageService rate limit if it's initialized
+                var alphaVantageService = App.ServiceProvider?.GetService<Quantra.DAL.Services.AlphaVantageService>();
+                alphaVantageService?.UpdateApiRateLimitFromSettings();
             }
             catch (Exception ex)
             {
@@ -363,6 +385,13 @@ namespace Quantra
         {
             // Same functionality as button click
             SaveProfileButton_Click(sender, e);
+        }
+
+        private void AlphaVantageApiPlanComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            // Trigger auto-save
+            OnSettingChanged(sender, e);
         }
     }
 }
