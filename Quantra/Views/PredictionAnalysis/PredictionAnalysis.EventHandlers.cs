@@ -603,13 +603,14 @@ namespace Quantra.Controls
                     return await _modelTrainingHistoryService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
                 }
 
-                // Fallback: Create the service if not available
+                // Fallback: Create the service if not available (with proper disposal)
                 var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
                 optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
-                var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
-                var historyService = new ModelTrainingHistoryService(dbContext, _loggingService);
-
-                return await historyService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                using (var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options))
+                {
+                    var historyService = new ModelTrainingHistoryService(dbContext, _loggingService);
+                    return await historyService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                }
             }
             catch (Exception ex)
             {
@@ -624,6 +625,7 @@ namespace Quantra.Controls
 
         /// <summary>
         /// Calculates the expected fruition date based on the selected timeframe
+        /// Uses DateTime.UtcNow for consistency across time zones
         /// </summary>
         private DateTime? GetExpectedFruitionDate()
         {
@@ -632,14 +634,15 @@ namespace Quantra.Controls
                 var selectedTimeframe = TimeframeComboBox?.SelectedItem as ComboBoxItem;
                 if (selectedTimeframe?.Tag is string timeframeTag)
                 {
+                    // Use UTC time for consistency across time zones
                     return timeframeTag.ToLower() switch
                     {
-                        "1day" => DateTime.Now.AddDays(1),
-                        "1week" => DateTime.Now.AddDays(7),
-                        "1month" => DateTime.Now.AddMonths(1),
-                        "3month" => DateTime.Now.AddMonths(3),
-                        "1year" => DateTime.Now.AddYears(1),
-                        _ => DateTime.Now.AddMonths(1) // Default to 1 month
+                        "1day" => DateTime.UtcNow.AddDays(1),
+                        "1week" => DateTime.UtcNow.AddDays(7),
+                        "1month" => DateTime.UtcNow.AddMonths(1),
+                        "3month" => DateTime.UtcNow.AddMonths(3),
+                        "1year" => DateTime.UtcNow.AddYears(1),
+                        _ => DateTime.UtcNow.AddMonths(1) // Default to 1 month
                     };
                 }
             }

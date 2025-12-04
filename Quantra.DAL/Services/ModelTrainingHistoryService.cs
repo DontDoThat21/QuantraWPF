@@ -431,7 +431,16 @@ namespace Quantra.DAL.Services
                 // Check for local model file
                 string pythonModelsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "models");
                 result.ModelFilePath = GetModelFilePath(resolvedModelType, pythonModelsDir);
-                result.HasLocalModelFile = !string.IsNullOrEmpty(result.ModelFilePath) && File.Exists(result.ModelFilePath);
+                
+                // TensorFlow SavedModel format saves as a directory, not a file
+                if (resolvedModelType == "tensorflow")
+                {
+                    result.HasLocalModelFile = !string.IsNullOrEmpty(result.ModelFilePath) && Directory.Exists(result.ModelFilePath);
+                }
+                else
+                {
+                    result.HasLocalModelFile = !string.IsNullOrEmpty(result.ModelFilePath) && File.Exists(result.ModelFilePath);
+                }
 
                 // Model is available only if both DB record and local file exist
                 result.IsModelAvailable = result.HasDatabaseRecord && result.HasLocalModelFile;
@@ -505,15 +514,18 @@ namespace Quantra.DAL.Services
                     return false;
 
                 // Check for any of the known model files
+                // Note: TensorFlow SavedModel format saves as a directory, not a file
                 var modelFiles = new[]
                 {
                     Path.Combine(pythonModelsDir, "stock_pytorch_model.pt"),
-                    Path.Combine(pythonModelsDir, "stock_tensorflow_model"),
                     Path.Combine(pythonModelsDir, "stock_rf_model.pkl"),
                     Path.Combine(pythonModelsDir, "tft_model.pt")
                 };
 
-                return modelFiles.Any(f => File.Exists(f) || Directory.Exists(f));
+                // TensorFlow saves as a directory (SavedModel format)
+                var tensorflowModelPath = Path.Combine(pythonModelsDir, "stock_tensorflow_model");
+
+                return modelFiles.Any(f => File.Exists(f)) || Directory.Exists(tensorflowModelPath);
             }
             catch (Exception ex)
             {
