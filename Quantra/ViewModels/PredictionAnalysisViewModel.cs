@@ -61,8 +61,14 @@ namespace Quantra.ViewModels
             {
                 _topPredictions = value;
                 OnPropertyChanged(nameof(TopPredictions));
+                OnPropertyChanged(nameof(TopPredictionsCountText));
             }
         }
+
+        // Count text for UI binding
+        public string TopPredictionsCountText => TopPredictions.Count > 0 
+            ? $"({TopPredictions.Count} predictions)" 
+            : "";
 
         // Filtering and status
         private string _statusText = "Ready";
@@ -298,12 +304,11 @@ namespace Quantra.ViewModels
                 
                 var predictions = await _predictionAnalysisService.GetAllPredictionsAsync(1000);
                 
-                TopPredictions.Clear();
-                foreach (var prediction in predictions)
-                {
-                    TopPredictions.Add(prediction);
-                }
+                // Create a new collection for efficiency
+                var newCollection = new ObservableCollection<PredictionModel>(predictions);
+                TopPredictions = newCollection;
                 
+                OnPropertyChanged(nameof(TopPredictionsCountText));
                 StatusText = $"Loaded {TopPredictions.Count} predictions from database.";
             }
             catch (Exception ex)
@@ -322,6 +327,7 @@ namespace Quantra.ViewModels
             
             // Insert at the beginning of the collection (most recent first)
             TopPredictions.Insert(0, prediction);
+            OnPropertyChanged(nameof(TopPredictionsCountText));
         }
 
         private void ApplyFilter()

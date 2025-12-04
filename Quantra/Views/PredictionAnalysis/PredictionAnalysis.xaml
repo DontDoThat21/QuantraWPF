@@ -566,8 +566,8 @@ MinWidth="400" MinHeight="300">
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                     <TextBlock Text="📊 Top Predictions" FontSize="16" FontWeight="Bold" 
                                Foreground="Cyan" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TopPredictionsCountText" Text="" Foreground="#AAAAAA" 
-                               FontSize="12" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TopPredictionsCountText" Text="{Binding TopPredictionsCountText}" 
+                               Foreground="#AAAAAA" FontSize="12" Margin="15,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- DataGrid -->

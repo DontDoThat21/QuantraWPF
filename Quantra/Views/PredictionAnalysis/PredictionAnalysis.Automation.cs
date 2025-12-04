@@ -322,17 +322,10 @@ if (LastUpdatedText != null)
         {
             try
             {
-                // Use the ViewModel if available
+                // Use the ViewModel if available - count text is bound via TopPredictionsCountText property
                 if (_viewModel != null)
                 {
                     await _viewModel.LoadTopPredictionsAsync();
-                    
-                    // Update count text
-                    var countText = this.FindName("TopPredictionsCountText") as TextBlock;
-                    if (countText != null)
-                    {
-                        countText.Text = $"({_viewModel.TopPredictions.Count} predictions)";
-                    }
                 }
                 else
                 {
@@ -351,13 +344,6 @@ if (LastUpdatedText != null)
                         await Dispatcher.InvokeAsync(() =>
                         {
                             grid.ItemsSource = predictions;
-                            
-                            // Update count text
-                            var countText = this.FindName("TopPredictionsCountText") as TextBlock;
-                            if (countText != null)
-                            {
-                                countText.Text = $"({predictions.Count} predictions)";
-                            }
                         });
                     }
                 }

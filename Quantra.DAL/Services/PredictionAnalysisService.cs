@@ -478,11 +478,12 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Synchronous version of GetAllPredictionsAsync for backward compatibility
+        /// Synchronous version of GetAllPredictionsAsync for backward compatibility.
+        /// WARNING: This uses Task.Run to avoid deadlocks in UI contexts. Prefer using the async version when possible.
         /// </summary>
         public List<PredictionModel> GetAllPredictions(int count = 1000)
         {
-            return GetAllPredictionsAsync(count).GetAwaiter().GetResult();
+            return Task.Run(() => GetAllPredictionsAsync(count)).Result;
         }
     }
 }
