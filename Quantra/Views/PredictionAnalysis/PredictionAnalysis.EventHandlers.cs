@@ -361,6 +361,10 @@ namespace Quantra.Controls
                     await Dispatcher.InvokeAsync(() =>
                     {
                         Predictions.Add(prediction);
+                        
+                        // Also add to the TopPredictions grid if ViewModel is available
+                        // The count text is bound to ViewModel.TopPredictionsCountText
+                        _viewModel?.AddToTopPredictions(prediction);
 
                         if (StatusText != null)
                             StatusText.Text = $"Analysis complete for {symbol}. Action: {prediction.PredictedAction}, Confidence: {prediction.Confidence:P0}";

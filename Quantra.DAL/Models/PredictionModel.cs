@@ -122,6 +122,14 @@ namespace Quantra.Models
         public bool IsRealTime { get; set; } // Flag indicating if this is a real-time prediction
         public string Error { get; set; } // Any error that occurred during prediction
         public DateTime InferenceTimestamp { get; set; } = DateTime.Now; // When the inference was made
+
+        // Database-related prediction properties
+        public int Id { get; set; } // Database Id
+        public DateTime? ExpectedFruitionDate { get; set; } // Date when the prediction is expected to come to fruition
+        public string ArchitectureType { get; set; } // Neural network architecture (lstm, gru, transformer, tft)
+        public int? TrainingHistoryId { get; set; } // Reference to the training history used
+        public string UserQuery { get; set; } // Original user query that triggered this prediction
+        public int? ChatHistoryId { get; set; } // Links prediction to a chat history record
     }
 
     public class TechnicalPattern
