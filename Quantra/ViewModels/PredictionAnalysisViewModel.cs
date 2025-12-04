@@ -13,6 +13,8 @@ using System.Windows.Data;
 using System.Collections.Generic;
 using Quantra.Commands;
 using Quantra.Repositories;
+using Quantra.DAL.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.ViewModels
 {
@@ -24,6 +26,7 @@ namespace Quantra.ViewModels
         private readonly ISettingsService _settingsService;
         private readonly IEmailService _emailService;
         private readonly ITradingRuleService _tradingRuleService;
+        private readonly PredictionAnalysisService _predictionAnalysisService;
         private double _currentPrice;
         private string _symbol;
         private object _selectedStrategyProfile;
@@ -46,6 +49,18 @@ namespace Quantra.ViewModels
             {
                 _models = value;
                 OnPropertyChanged(nameof(Models));
+            }
+        }
+
+        // Top Predictions from database (StockPredictions table)
+        private ObservableCollection<PredictionModel> _topPredictions = new();
+        public ObservableCollection<PredictionModel> TopPredictions
+        {
+            get => _topPredictions;
+            private set
+            {
+                _topPredictions = value;
+                OnPropertyChanged(nameof(TopPredictions));
             }
         }
 
@@ -154,11 +169,16 @@ namespace Quantra.ViewModels
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             _tradingRuleService = tradingRuleService ?? throw new ArgumentNullException(nameof(tradingRuleService));
+            
+            // Initialize PredictionAnalysisService for database operations
+            _predictionAnalysisService = new PredictionAnalysisService();
+            
             AnalyzeCommand = new RelayCommand(async _ => await AnalyzeAsync(), _ => true);
             RefreshCommand = new RelayCommand(async _ => await RefreshAsync(), _ => true);
 
             LoadCachedPredictions();
             BindingOperations.EnableCollectionSynchronization(Predictions, new object());
+            BindingOperations.EnableCollectionSynchronization(TopPredictions, new object());
         }
 
         public async Task AnalyzeAsync()
@@ -262,8 +282,46 @@ namespace Quantra.ViewModels
         public async Task OnLoaded()
         {
             LoadCachedPredictions();
+            await LoadTopPredictionsAsync();
             await LoadTradingRulesAsync();
             await RefreshAsync();
+        }
+
+        /// <summary>
+        /// Loads top predictions from the StockPredictions database table
+        /// </summary>
+        public async Task LoadTopPredictionsAsync()
+        {
+            try
+            {
+                StatusText = "Loading top predictions from database...";
+                
+                var predictions = await _predictionAnalysisService.GetAllPredictionsAsync(1000);
+                
+                TopPredictions.Clear();
+                foreach (var prediction in predictions)
+                {
+                    TopPredictions.Add(prediction);
+                }
+                
+                StatusText = $"Loaded {TopPredictions.Count} predictions from database.";
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Error loading predictions: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Adds a prediction to the TopPredictions collection (for when analyzing a ticker)
+        /// </summary>
+        /// <param name="prediction">The prediction to add</param>
+        public void AddToTopPredictions(PredictionModel prediction)
+        {
+            if (prediction == null) return;
+            
+            // Insert at the beginning of the collection (most recent first)
+            TopPredictions.Insert(0, prediction);
         }
 
         private void ApplyFilter()

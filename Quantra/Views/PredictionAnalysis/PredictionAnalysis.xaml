@@ -38,8 +38,8 @@ MinWidth="400" MinHeight="300">
             <!-- Title and Controls -->
             <RowDefinition Height="Auto"/>
             <!-- Analysis Parameters -->
-            <RowDefinition Height="*"/>
-            <!-- Results and Charts (fills available space) -->
+            <RowDefinition Height="*" MinHeight="150"/>
+            <!-- Top Predictions Grid (fills available space) -->
             <RowDefinition Height="Auto"/>
             <!-- Status Bar -->
         </Grid.RowDefinitions>
@@ -552,6 +552,59 @@ MinWidth="400" MinHeight="300">
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- Top Predictions Grid -->
+        <Border Grid.Row="2" Background="#23233A" BorderBrush="Cyan" BorderThickness="1" 
+                CornerRadius="5" Margin="0,10,0,0" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="📊 Top Predictions" FontSize="16" FontWeight="Bold" 
+                               Foreground="Cyan" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TopPredictionsCountText" Text="" Foreground="#AAAAAA" 
+                               FontSize="12" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- DataGrid -->
+                <DataGrid Grid.Row="1" x:Name="TopPredictionsGrid" 
+                          ItemsSource="{Binding TopPredictions}"
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True"
+                          Foreground="White"
+                          Background="#23233A"
+                          RowBackground="#23233A"
+                          AlternatingRowBackground="#26264A"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#3E3E56"
+                          BorderThickness="0"
+                          CanUserReorderColumns="True"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
+                          RowStyle="{StaticResource EnhancedDataGridRowStyle}"
+                          CellStyle="{StaticResource EnhancedDataGridCellStyle}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80"/>
+                        <DataGridTextColumn Header="Action" Binding="{Binding PredictedAction}" Width="70"/>
+                        <DataGridTextColumn Header="Confidence" Binding="{Binding Confidence, StringFormat=P1}" Width="90"/>
+                        <DataGridTextColumn Header="Current $" Binding="{Binding CurrentPrice, StringFormat=C2}" Width="90"/>
+                        <DataGridTextColumn Header="Target $" Binding="{Binding TargetPrice, StringFormat=C2}" Width="90"/>
+                        <DataGridTextColumn Header="Return" Binding="{Binding PotentialReturn, StringFormat=P2}" Width="80"/>
+                        <DataGridTextColumn Header="Created" Binding="{Binding PredictionDate, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
+                        <DataGridTextColumn Header="Target Date" Binding="{Binding ExpectedFruitionDate, StringFormat=yyyy-MM-dd}" Width="100"/>
+                        <DataGridTextColumn Header="Model" Binding="{Binding ModelType}" Width="80"/>
+                        <DataGridTextColumn Header="Arch" Binding="{Binding ArchitectureType}" Width="70"/>
+                        <DataGridTextColumn Header="Rule" Binding="{Binding TradingRule}" Width="120"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
 
         <!-- Status Bar -->
         <Grid Grid.Row="3" Margin="0,5,0,0">

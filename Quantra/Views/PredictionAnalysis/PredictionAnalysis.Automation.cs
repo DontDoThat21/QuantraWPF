@@ -302,12 +302,70 @@ if (LastUpdatedText != null)
                 if (autoMode)
                 {
                     StartAutoMode();
+                    // Still load top predictions
+                    _ = LoadTopPredictionsGridAsync();
                     return;
                 }
             }
 
             // If not in auto mode, load cached predictions from database
             LoadLatestPredictionsFromDatabase();
+            
+            // Load top predictions grid
+            _ = LoadTopPredictionsGridAsync();
+        }
+
+        /// <summary>
+        /// Loads all predictions from the database into the TopPredictions grid
+        /// </summary>
+        private async Task LoadTopPredictionsGridAsync()
+        {
+            try
+            {
+                // Use the ViewModel if available
+                if (_viewModel != null)
+                {
+                    await _viewModel.LoadTopPredictionsAsync();
+                    
+                    // Update count text
+                    var countText = this.FindName("TopPredictionsCountText") as TextBlock;
+                    if (countText != null)
+                    {
+                        countText.Text = $"({_viewModel.TopPredictions.Count} predictions)";
+                    }
+                }
+                else
+                {
+                    // Fallback: Load directly using service
+                    if (_predictionService == null)
+                    {
+                        _predictionService = new PredictionAnalysisService();
+                    }
+                    
+                    var predictions = await _predictionService.GetAllPredictionsAsync(1000);
+                    
+                    // Update the DataGrid directly
+                    var grid = this.FindName("TopPredictionsGrid") as DataGrid;
+                    if (grid != null)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            grid.ItemsSource = predictions;
+                            
+                            // Update count text
+                            var countText = this.FindName("TopPredictionsCountText") as TextBlock;
+                            if (countText != null)
+                            {
+                                countText.Text = $"({predictions.Count} predictions)";
+                            }
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to load top predictions grid");
+            }
         }
         
         public void OnControlUnloaded(object sender, RoutedEventArgs e)
