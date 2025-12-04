@@ -42,7 +42,6 @@ namespace Quantra.Controls
         private readonly IndicatorDisplayModule _indicatorModule;
         private readonly PredictionChartModuleType _chartModule;
         private string _pacId; // Unique identifier for this PAC instance
-        private ComboBox _strategyProfileComboBox;
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
         // NOTE: Sentiment analysis service fields are declared in PredictionAnalysis.Analysis.cs
@@ -145,152 +144,6 @@ if (chartContainer != null)
     Loaded += OnPredictionAnalysisControlLoaded;
   }
 
-        // Initialize strategy profile selection in this separate method
-        private void InitializeStrategyProfileSelection()
-        {
-            // Generate a unique PAC ID
-            _pacId = this.GetHashCode().ToString();
-
-            // Find or create the ComboBox for strategy selection
-            if (_strategyProfileComboBox == null)
-            {
-                // Create the list of strategies with proper explicit typing to avoid ambiguity
-                var strategies = new List<object>();
-                
-                // Add only the strategies that are available in your project
-                // First, try with TradingStrategyProfile type if it exists
-                try
-                {
-                    // Try to create and add a SmaCrossoverStrategy
-                    var smaCrossover = Activator.CreateInstance(Type.GetType("Quantra.Models.SmaCrossoverStrategy, Quantra.DAL"));
-                    if (smaCrossover != null)
-                        strategies.Add(smaCrossover);
-                }
-                catch
-                {
-                    // If that fails, try with SmaCrossoverStrategy directly
-                    try
-                    {
-                        // Fallback to basic implementation if needed
-                        strategies.Add(new object()); // Placeholder for SmaCrossoverStrategy
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Could not create strategy: {ex.Message}");
-                    }
-                }
-
-                // Add other strategies if they exist in your project
-                try {
-                    // Add EMA/SMA cross strategy if it exists
-                    var emaSmaStrategy = Activator.CreateInstance(Type.GetType("Quantra.Models.EmaSmaCrossStrategy, Quantra.DAL"));
-                    if (emaSmaStrategy != null)
-                        strategies.Add(emaSmaStrategy);
-                } catch (Exception ex) {
-                    // Silently ignore missing strategy classes
-                    System.Diagnostics.Debug.WriteLine($"Some strategy classes could not be loaded: {ex.Message}");
-                }
-
-                _strategyProfileComboBox = new ComboBox
-                {
-                    Margin = new Thickness(4),
-                    Width = 180,
-                    ItemsSource = strategies,
-                    DisplayMemberPath = "Name",
-                    SelectedIndex = strategies.Count > 0 ? 0 : -1
-                };
-                _strategyProfileComboBox.SelectionChanged += StrategyProfileComboBox_SelectionChanged;
-                
-                // Add to UI - find an appropriate panel in the XAML
-                var tradingStrategyCombo = this.FindName("TradingStrategy") as ComboBox;
-                if (tradingStrategyCombo != null)
-                {
-                    // Get parent grid or panel
-                    var parent = tradingStrategyCombo.Parent as FrameworkElement;
-                    while (parent != null && !(parent is Panel))
-                    {
-                        parent = parent.Parent as FrameworkElement;
-                    }
-                    
-                    if (parent is Panel panel)
-                    {
-                        panel.Children.Add(_strategyProfileComboBox);
-                    }
-                }
-            }
-            
-            // Set the initial strategy in the ViewModel if possible
-            if (_strategyProfileComboBox.SelectedItem != null)
-            {
-                var selectedItem = _strategyProfileComboBox.SelectedItem;
-                try
-                {
-                    // Use dynamic to avoid type casting issues
-                    dynamic selectedStrategy = selectedItem;
-                    _viewModel.SelectedStrategyProfile = selectedStrategy;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error setting strategy: {ex.Message}");
-                }
-            }
-        }
-
-        // Helper to get selected strategy for this PAC
-        public object GetSelectedStrategyProfile()
-        {
-            if (_strategyProfileComboBox == null || _strategyProfileComboBox.SelectedItem == null)
-                return null; // Default strategy
-                
-            return _strategyProfileComboBox.SelectedItem;
-        }
-
-        private async void StrategyProfileComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_strategyProfileComboBox.SelectedItem != null)
-            {
-                var strategy = _strategyProfileComboBox.SelectedItem;
-                
-                try
-                {
-                    // Set the selected strategy profile in the ViewModel
-                    // Use dynamic to avoid type casting issues
-                    dynamic dynamicStrategy = strategy;
-                    _viewModel.SelectedStrategyProfile = dynamicStrategy;
-                    
-                    // Save this strategy as associated with this PAC instance
-                    SaveStrategyProfileForPac(_pacId, dynamicStrategy.Name);
-                    
-                    // Re-analyze with new strategy
-                    await _viewModel.AnalyzeAsync();
-                    
-                    ShowNotification($"Applied {dynamicStrategy.Name} strategy profile", PackIconKind.ChartLineVariant, Colors.Blue);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error applying strategy: {ex.Message}");
-                    ShowNotification("Error applying strategy", PackIconKind.Alert, Colors.Red);
-                }
-            }
-        }
-
-        // Method to save a strategy profile for a PAC instance
-        private void SaveStrategyProfileForPac(string pacId, string strategyName)
-        {
-            try
-            {
-                // Store in local dictionary if needed
-                var pacMappings = new Dictionary<string, string>();
-                pacMappings[pacId] = strategyName;
-                
-                // Persist to settings if needed
-                // DatabaseMonolith.SaveUserPreference($"PAC_Strategy_{pacId}", strategyName);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error saving strategy profile: {ex.Message}");
-            }
-        }
 
         private void ShowNotification(string message, PackIconKind icon, Color iconColor)
         {
@@ -301,7 +154,6 @@ if (chartContainer != null)
         // Changed name to avoid duplication with the method in other partial classes
         private void OnPredictionAnalysisControlLoaded(object sender, RoutedEventArgs e)
         {
-            InitializeStrategyProfileSelection();
             InitializeComponents();
             CheckInitializeSentimentVisualizationOnLoad(sender, e);
             
