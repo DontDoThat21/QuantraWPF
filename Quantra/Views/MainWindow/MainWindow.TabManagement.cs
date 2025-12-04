@@ -2156,7 +2156,7 @@ namespace Quantra
                     //DatabaseMonolith.Log("Info", $"Force updated Prediction Analysis layout in tab '{tabName}'");
                     
                     // Optional: Select the first tab in the control to ensure content is visible
-                    predictionControl.SelectTopPredictionsTab();
+                    //predictionControl.SelectTopPredictionsTab();
                 }
                 catch (Exception ex)
                 {
@@ -2213,7 +2213,7 @@ namespace Quantra
                                         
                                         // Also try to select the first tab in the control to ensure content is visible
                                         try {
-                                            predictionControl.SelectTopPredictionsTab();
+                                            //predictionControl.SelectTopPredictionsTab();
                                         } 
                                         catch (Exception ex) {
                                             //DatabaseMonolith.Log("Warning", "Could not select tab in Prediction Analysis control during refresh", ex.ToString());

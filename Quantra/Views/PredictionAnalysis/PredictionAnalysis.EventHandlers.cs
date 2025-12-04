@@ -23,10 +23,6 @@ namespace Quantra.Controls
         // Renamed to Predictions for clarity and to avoid conflict if xaml.cs has 'predictions'
         public ObservableCollection<Quantra.Models.PredictionModel> Predictions { get; set; } = new ObservableCollection<Quantra.Models.PredictionModel>();
 
-        // Track if user is manually interacting with tabs to prevent automatic tab switching
-        private bool _isUserSelectingTab = false;
-        private int _lastUserSelectedTabIndex = 0;
-
         // Symbol selection mode fields
         private ObservableCollection<CachedSymbolInfo> _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
         private SymbolSelectionMode _currentSymbolMode = SymbolSelectionMode.Individual;
@@ -366,15 +362,6 @@ namespace Quantra.Controls
                     {
                         Predictions.Add(prediction);
 
-                        // Force DataGrid refresh
-                        if (PredictionDataGrid != null)
-                        {
-                            PredictionDataGrid.ItemsSource = null;
-                            PredictionDataGrid.ItemsSource = Predictions;
-                            PredictionDataGrid.Items.Refresh();
-                            PredictionDataGrid.UpdateLayout();
-                        }
-
                         if (StatusText != null)
                             StatusText.Text = $"Analysis complete for {symbol}. Action: {prediction.PredictedAction}, Confidence: {prediction.Confidence:P0}";
                     });
@@ -563,7 +550,7 @@ namespace Quantra.Controls
                 {
                     // Fallback if CollectionView is not available (should not happen with ObservableCollection)
                     var filteredPredictions = this.Predictions.Where(p => p.Confidence >= minConfidence).ToList();
-                    PredictionDataGrid.ItemsSource = filteredPredictions; // This would detach from the ObservableCollection, less ideal
+                    // Note: Without PredictionDataGrid, we just show the count
                     if (StatusText != null)
                         StatusText.Text = $"Analysis complete. Found {filteredPredictions.Count} predictions meeting criteria (fallback filter).";
                 }
@@ -654,27 +641,6 @@ namespace Quantra.Controls
             return DateTime.Now.AddMonths(1); // Default to 1 month
         }
 
-        private void PredictionDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            try
-            {
-                if (PredictionDataGrid?.SelectedItem is Quantra.Models.PredictionModel prediction)
-                {
-                    // Update chart module with selected symbol
-                    if (_chartModule != null && !string.IsNullOrEmpty(prediction.Symbol))
-                    {
-                        _chartModule.Symbol = prediction.Symbol;
-                    }
-                    // Assign to a field if needed, or handle selection logic here
-                    // selectedPrediction = prediction; // If you need to keep track, declare the field in a single partial class only
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error in PredictionDataGrid_SelectionChanged", ex.ToString());
-            }
-        }
-
         // Add a new method to batch UI updates for the sector charts
         private void UpdateSectorChartsBatched(string sector)
         {
@@ -743,14 +709,6 @@ namespace Quantra.Controls
                         foreach (var prediction in latestPredictions)
                         {
                             Predictions.Add(prediction);
-                        }
-                        
-                        // Force DataGrid refresh
-                        if (PredictionDataGrid != null)
-                        {
-                            PredictionDataGrid.ItemsSource = null;
-                            PredictionDataGrid.ItemsSource = Predictions;
-                            PredictionDataGrid.Items.Refresh();
                         }
                         
                         if (StatusText != null)
@@ -874,12 +832,8 @@ namespace Quantra.Controls
             // Example logic: set the displayed symbols to all available symbols.
             try
             {
-                // If you need to update a UI element, do so here.
-                if (PredictionDataGrid != null)
-                {
-                    // Use the Predictions ObservableCollection
-                    PredictionDataGrid.ItemsSource = Predictions;
-                }
+                // Predictions ObservableCollection is already available for binding
+                // No need to manually set ItemsSource
 
                 // Optionally update status text or other UI elements.
                 if (StatusText != null)
@@ -909,68 +863,6 @@ namespace Quantra.Controls
                     Indicators = new Dictionary<string, double> { { "RSI", 32.1 }, { "MACDHistogram", 0.12 } }
                 }
             };
-        }
-
-        // Handle tab selection changes to track user interaction
-        private void ResultsTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            try
-            {
-                if (sender is TabControl tabControl)
-                {
-                    // Mark that the user is manually selecting a tab
-                    _isUserSelectingTab = true;
-                    _lastUserSelectedTabIndex = tabControl.SelectedIndex;
-
-                    // Reset the flag after a short delay to allow the selection to complete
-                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
-                        new Action(() => _isUserSelectingTab = false),
-                        System.Windows.Threading.DispatcherPriority.Background);
-                    
-                    // Note: Removed any automatic tab navigation logic to allow user to freely select tabs
-                    // The IndicatorsTabItem can now be selected and will remain selected
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error in ResultsTabControl_SelectionChanged", ex.ToString());
-            }
-        }
-
-        // Handle radio button selection changes for view navigation
-        private void ViewSelection_Changed(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                if (sender is RadioButton radioButton && radioButton.IsChecked == true)
-                {
-                    // Mark that the user is manually selecting a view
-                    _isUserSelectingTab = true;
-
-                    // Update the selected index based on which radio button was checked
-                    if (radioButton.Name == "PredictionDetailsRadio")
-                    {
-                        _lastUserSelectedTabIndex = 0;
-                    }
-                    else if (radioButton.Name == "SentimentAnalysisRadio")
-                    {
-                        _lastUserSelectedTabIndex = 1;
-                    }
-                    else if (radioButton.Name == "TechnicalIndicatorsRadio")
-                    {
-                        _lastUserSelectedTabIndex = 2;
-                    }
-
-                    // Reset the flag after a short delay to allow the selection to complete
-                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
-                        new Action(() => _isUserSelectingTab = false),
-                        System.Windows.Threading.DispatcherPriority.Background);
-                }
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Error in ViewSelection_Changed", ex.ToString());
-            }
         }
     }
 }

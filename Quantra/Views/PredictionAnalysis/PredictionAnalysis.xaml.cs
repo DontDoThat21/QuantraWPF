@@ -39,8 +39,6 @@ namespace Quantra.Controls
         private readonly UserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
         private readonly OrderHistoryService _orderHistoryService;
-        private readonly IndicatorDisplayModule _indicatorModule;
-        private readonly PredictionChartModuleType _chartModule;
         private string _pacId; // Unique identifier for this PAC instance
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
@@ -108,37 +106,12 @@ namespace Quantra.Controls
     _insiderTradingService = insiderTradingService ?? throw new ArgumentNullException(nameof(insiderTradingService));
     _userSettings = _userSettingsService.GetUserSettings();
 
-    _indicatorModule = new IndicatorDisplayModule(
-        _settingsService, 
-        _indicatorService, 
-        _notificationService, 
-        _emailService, 
-        _tradingRuleService, 
-        _userSettingsService, 
-        _historicalDataService, 
-        _alphaVantageService, 
-        _orderHistoryService);
-    _chartModule = new PredictionChartModuleType(_indicatorService, _notificationService, _stockDataCacheService);
-
     // Initialize model training service
     InitializeTrainingService();
 
          DataContext = _viewModel;
 
-    // Ensure the PredictionDataGrid is bound to the Predictions collection
-            if (PredictionDataGrid != null)
-   {
- PredictionDataGrid.ItemsSource = Predictions;
-      }
-
-       // Attach modules to containers if they exist
-      var indicatorContainer = this.FindName("indicatorContainer") as Panel;
-      if (indicatorContainer != null)
-indicatorContainer.Children.Add(_indicatorModule);
-
-       var chartContainer = this.FindName("chartContainer") as Panel;
-if (chartContainer != null)
-     chartContainer.Children.Add(_chartModule);
+    // Predictions collection is now available for any other UI binding
 
         // Register for Loaded event - use OnPredictionAnalysisControlLoaded to avoid duplicate
     Loaded += OnPredictionAnalysisControlLoaded;
@@ -221,34 +194,6 @@ if (chartContainer != null)
             }
         }
 
-        private void TradingRule_Click(object sender, RoutedEventArgs e)
-        {
-            if (_indicatorModule?.SelectedTradingRule != null)
-            {
-                try
-                {
-                    // Show the trading rule details
-                    var rule = _indicatorModule.SelectedTradingRule;
-                    var confirmationMessage = $"Trading Rule Details:\nSymbol: {rule.Symbol}\n" +
-                                           $"Order Type: {rule.OrderType}\n" +
-                                           $"Entry Price: ${rule.EntryPrice:F2}\n" +
-                                           $"Exit Price: ${rule.ExitPrice:F2}\n" +
-                                           $"Stop Loss: ${rule.StopLoss:F2}\n" +
-                                           $"Quantity: {rule.Quantity}";
-
-                    MessageBox.Show(confirmationMessage, "Trading Rule Details", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    _notificationService.ShowError($"Error displaying trading rule: {ex.Message}");
-                }
-            }
-            else
-            {
-                _notificationService.ShowWarning("No trading rule selected");
-            }
-        }
-
         private void CreateRule_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -271,43 +216,11 @@ if (chartContainer != null)
                 // Save the rule
                 SaveTradingRule(rule);
 
-                // Refresh the rules list
-                _indicatorModule?.LoadTradingRules();
-
                 _notificationService.ShowInfo("New trading rule created successfully");
             }
             catch (Exception ex)
             {
                 _notificationService.ShowError($"Error creating trading rule: {ex.Message}");
-            }
-        }
-
-        private async void ExecuteTradeButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_indicatorModule?.SelectedTradingRule == null)
-            {
-                _notificationService.ShowWarning("No trading rule selected");
-                return;
-            }
-
-            try
-            {
-                var rule = _indicatorModule.SelectedTradingRule;
-                var confirmResult = MessageBox.Show(
-                    $"Execute {rule.OrderType} order for {rule.Quantity} shares of {rule.Symbol}?",
-                    "Confirm Trade",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question
-                );
-
-                if (confirmResult == MessageBoxResult.Yes)
-                {
-                    await ExecuteTrade(rule);
-                }
-            }
-            catch (Exception ex)
-            {
-                _notificationService.ShowError($"Error executing trade: {ex.Message}");
             }
         }
 
@@ -376,7 +289,7 @@ if (chartContainer != null)
             try
             {
                 var indicators = await _indicatorService.GetIndicatorsForPrediction(_viewModel.Symbol, "5min");
-                _indicatorModule?.UpdateIndicatorValues(indicators);
+                // Indicators can be displayed in another way if needed
             }
             catch (Exception ex)
             {

@@ -108,18 +108,12 @@ namespace Quantra.Controls.Components
 
         public void UpdatePredictions(IEnumerable<Quantra.Models.PredictionModel> predictions)  // Use fully qualified type
         {
-            PredictionDataGrid.ItemsSource = predictions;
+            // Note: PredictionDataGrid has been removed from parent control
+            // This method can be updated to use alternative UI or removed if no longer needed
         }
 
         // Event handlers
-        private void PredictionDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            SelectedPrediction = PredictionDataGrid.SelectedItem as Quantra.Models.PredictionModel;  // Use fully qualified type
-            if (SelectedPrediction != null)
-            {
-                PredictionDetail.UpdatePrediction(SelectedPrediction);
-            }
-        }
+        // Note: PredictionDataGrid_SelectionChanged has been removed since PredictionDataGrid no longer exists
 
         private void CreateRule_Click(object sender, RoutedEventArgs e)
         {

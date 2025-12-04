@@ -26,7 +26,6 @@
                   AutoGenerateColumns="False" 
                   Background="#2D2D42" Foreground="Black" 
                   BorderBrush="#3E3E56" AlternatingRowBackground="#3E3E56"
-                  SelectionChanged="PredictionDataGrid_SelectionChanged"
                   CanUserAddRows="False" CanUserDeleteRows="False"
                   IsReadOnly="True"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"

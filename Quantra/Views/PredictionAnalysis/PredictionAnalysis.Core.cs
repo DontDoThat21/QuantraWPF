@@ -87,13 +87,6 @@ namespace Quantra.Controls
 
             // Set axis formatter
             DateFormatter = value => DateTime.FromOADate(value).ToString("MM/dd");
-
-            // Register PredictionDataGrid event handler here to make it centralized
-            if (PredictionDataGrid != null)
-            {
-                PredictionDataGrid.SelectionChanged -= PredictionDataGrid_SelectionChanged; // Remove to avoid duplicates
-                PredictionDataGrid.SelectionChanged += PredictionDataGrid_SelectionChanged;
-            }
         }
 
         // Add this method to manually measure and update the control layout
@@ -120,39 +113,6 @@ namespace Quantra.Controls
             // Simple check for technology sector companies
             string[] techCompanies = { "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "META", "NVDA", "AMD", "INTC", "ADBE", "CRM", "CSCO" };
             return techCompanies.Contains(symbol);
-        }
-        
-        /// <summary>
-        /// Programmatically selects or focuses the Top Predictions section.
-        /// </summary>
-        public void SelectTopPredictionsTab()
-        {
-            // Don't interfere with view selection if user is manually navigating views
-            if (_isUserSelectingTab)
-            {
-                return;
-            }
-
-            // Also check if user has manually selected a view other than the first one
-            // If so, respect their choice and don't force focus to the predictions grid
-            if (_lastUserSelectedTabIndex > 0)
-            {
-                return;
-            }
-
-            // If the PredictionDataGrid exists, set focus to it.
-            if (PredictionDataGrid != null)
-            {
-                PredictionDataGrid.Focus();
-                // Optionally, select the first row if available
-                if (PredictionDataGrid.Items.Count > 0)
-                {
-                    PredictionDataGrid.SelectedIndex = 0;
-                    var row = (DataGridRow)PredictionDataGrid.ItemContainerGenerator.ContainerFromIndex(0);
-                    if (row != null)
-                        row.MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next));
-                }
-            }
         }
 
         private async Task<double> GetCurrentStockPrice(string symbol)

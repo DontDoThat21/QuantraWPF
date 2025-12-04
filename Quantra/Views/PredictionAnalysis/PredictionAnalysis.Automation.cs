@@ -252,7 +252,7 @@ namespace Quantra.Controls
       // Use the service to get latest predictions
   var latestPredictions = await _predictionService.GetLatestPredictionsAsync();
   
-    if (latestPredictions != null && latestPredictions.Count > 0)
+      if (latestPredictions != null && latestPredictions.Count > 0)
   {
         // Update UI on dispatcher thread
         await Dispatcher.InvokeAsync(() =>
@@ -264,9 +264,6 @@ namespace Quantra.Controls
         {
       this.Predictions.Add(prediction);
       }
-
-  if (PredictionDataGrid != null)
-     PredictionDataGrid.ItemsSource = this.Predictions;
 
     if (StatusText != null)
   StatusText.Text = $"Loaded {this.Predictions.Count} cached predictions from database.";
@@ -344,8 +341,7 @@ if (LastUpdatedText != null)
                 {
                     if (StatusText != null) StatusText.Text = "Running automated stock analysis...";
                     // The Predictions collection is Quantra.Models.PredictionModel
-                    this.Predictions.Clear(); 
-                    if (PredictionDataGrid != null) PredictionDataGrid.ItemsSource = this.Predictions;
+                    this.Predictions.Clear();
                 });
 
                 //EnsureDatabaseTablesExist();
@@ -430,16 +426,7 @@ if (LastUpdatedText != null)
                         this.Predictions.Add(prediction);
                     }
                     
-                    // Explicitly set ItemsSource and refresh the DataGrid
-                    if (PredictionDataGrid != null)
-                    {
-                        PredictionDataGrid.ItemsSource = null; // Force refresh
-                        PredictionDataGrid.ItemsSource = this.Predictions;
-                        PredictionDataGrid.Items.Refresh();
-                        PredictionDataGrid.UpdateLayout();
-                    }
-                    
-                    // Update status and timestamp in same dispatcher call
+                    // Update status and timestamp
                     if (StatusText != null)
                         StatusText.Text = $"Automated analysis complete. Found {this.Predictions.Count} predictions";
                     if (LastUpdatedText != null)
