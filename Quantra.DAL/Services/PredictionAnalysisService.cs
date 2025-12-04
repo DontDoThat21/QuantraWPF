@@ -422,5 +422,68 @@ namespace Quantra.DAL.Services
                 return 0;
             }
         }
+
+        /// <summary>
+        /// Gets all predictions from the database with full entity data including model type and expected fruition date
+        /// </summary>
+        /// <param name="count">Maximum number of predictions to return (default 1000)</param>
+        /// <returns>List of all predictions, ordered by creation date descending</returns>
+        public async Task<List<PredictionModel>> GetAllPredictionsAsync(int count = 1000)
+        {
+            try
+            {
+                using var context = _contextFactory();
+                
+                var predictions = await context.StockPredictions
+                    .AsNoTracking()
+                    .OrderByDescending(p => p.CreatedDate)
+                    .Take(count)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
+                var result = new List<PredictionModel>();
+
+                foreach (var prediction in predictions)
+                {
+                    var model = new PredictionModel
+                    {
+                        Id = prediction.Id,
+                        Symbol = prediction.Symbol,
+                        PredictedAction = prediction.PredictedAction,
+                        Confidence = prediction.Confidence,
+                        CurrentPrice = prediction.CurrentPrice,
+                        TargetPrice = prediction.TargetPrice,
+                        PotentialReturn = prediction.PotentialReturn,
+                        PredictionDate = prediction.CreatedDate,
+                        TradingRule = prediction.TradingRule,
+                        UserQuery = prediction.UserQuery,
+                        ChatHistoryId = prediction.ChatHistoryId,
+                        ExpectedFruitionDate = prediction.ExpectedFruitionDate,
+                        ModelType = prediction.ModelType,
+                        ArchitectureType = prediction.ArchitectureType,
+                        TrainingHistoryId = prediction.TrainingHistoryId,
+                        Indicators = new Dictionary<string, double>()
+                    };
+
+                    result.Add(model);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Failed to retrieve all predictions from database", ex.ToString());
+                return new List<PredictionModel>();
+            }
+        }
+
+        /// <summary>
+        /// Synchronous version of GetAllPredictionsAsync for backward compatibility.
+        /// WARNING: This uses Task.Run to avoid deadlocks in UI contexts. Prefer using the async version when possible.
+        /// </summary>
+        public List<PredictionModel> GetAllPredictions(int count = 1000)
+        {
+            return Task.Run(() => GetAllPredictionsAsync(count)).Result;
+        }
     }
 }
