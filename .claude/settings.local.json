@@ -11,7 +11,9 @@
       "WebSearch",
       "WebFetch(domain:pypi.org)",
       "Bash(Select-String -Pattern \"error|warning\" -Context 0,2)",
-      "Bash(Select-Object -First 30)"
+      "Bash(Select-Object -First 30)",
+      "Bash(Select-String -Pattern \"error|Build succeeded|Build FAILED\" -Context 0,2)",
+      "Bash(powershell -Command \"dotnet build Quantra.sln --configuration Debug 2>&1 | Select-String -Pattern ''error|Build succeeded|Build FAILED'' -Context 0,2\")"
     ],
     "deny": [],
     "ask": []
