@@ -25,6 +25,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+# Add BASE_DIR to sys.path to ensure module imports work
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 # Model paths
 MODEL_PATH = os.path.join(MODEL_DIR, 'stock_rf_model.pkl')
 SCALER_PATH = os.path.join(MODEL_DIR, 'stock_scaler.pkl')
@@ -41,9 +45,9 @@ try:
     )
     FEATURE_ENGINEERING_AVAILABLE = True
     logger.info("Feature Engineering module is available")
-except ImportError:
+except ImportError as e:
     FEATURE_ENGINEERING_AVAILABLE = False
-    logger.warning("Feature Engineering module is not available. Using basic feature creation.")
+    logger.warning(f"Feature Engineering module is not available: {str(e)}. Using basic feature creation.")
 
 # Try to import hyperparameter optimization module
 try:
@@ -56,9 +60,10 @@ try:
     )
     HYPERPARAMETER_OPTIMIZATION_AVAILABLE = True
     logger.info("Hyperparameter Optimization module is available")
-except ImportError:
+except ImportError as e:
     HYPERPARAMETER_OPTIMIZATION_AVAILABLE = False
-    logger.warning("Hyperparameter Optimization module is not available. Using default parameters.")
+    logger.warning(f"Hyperparameter Optimization module is not available: {str(e)}. Using default parameters.")
+    logger.info("To enable hyperparameter optimization, install required packages: pip install optuna scikit-learn")
 
 # Try to import machine learning libraries
 # These imports are optional - we'll fall back to RandomForest if they're not available
@@ -199,6 +204,8 @@ class PyTorchStockPredictor:
             self._build_gru_model()
         elif self.architecture_type == 'transformer':
             self._build_transformer_model()
+        elif self.architecture_type == 'tft':
+            self._build_tft_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
             self._build_lstm_model()
@@ -307,6 +314,129 @@ class PyTorchStockPredictor:
         self.hidden_dim = nhead * (self.hidden_dim // nhead)  # Adjust hidden_dim to be divisible by nhead
         
         self.model = TransformerModel(
+            input_dim=self.input_dim,
+            hidden_dim=self.hidden_dim,
+            num_layers=self.num_layers,
+            dropout=self.dropout,
+            nhead=nhead
+        ).to(self.device)
+        
+    def _build_tft_model(self):
+        """Build a Temporal Fusion Transformer model architecture."""
+        class TemporalFusionTransformer(nn.Module):
+            def __init__(self, input_dim, hidden_dim, num_layers, dropout, nhead=4):
+                super().__init__()
+                self.input_dim = input_dim
+                self.hidden_dim = hidden_dim
+                
+                # Variable Selection Networks (VSN)
+                self.static_vsn = nn.Sequential(
+                    nn.Linear(input_dim, hidden_dim),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dim, input_dim),
+                    nn.Softmax(dim=-1)
+                )
+                
+                # LSTM Encoder-Decoder
+                self.encoder_lstm = nn.LSTM(
+                    input_size=input_dim,
+                    hidden_size=hidden_dim,
+                    num_layers=num_layers,
+                    batch_first=True,
+                    dropout=dropout if num_layers > 1 else 0
+                )
+                
+                self.decoder_lstm = nn.LSTM(
+                    input_size=hidden_dim,
+                    hidden_size=hidden_dim,
+                    num_layers=num_layers,
+                    batch_first=True,
+                    dropout=dropout if num_layers > 1 else 0
+                )
+                
+                # Gated Linear Unit (GLU)
+                self.glu = nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim * 2),
+                    nn.GLU(dim=-1)
+                )
+                
+                # Multi-head attention
+                self.attention = nn.MultiheadAttention(
+                    embed_dim=hidden_dim,
+                    num_heads=nhead,
+                    dropout=dropout,
+                    batch_first=True
+                )
+                
+                # Layer normalization
+                self.layer_norm1 = nn.LayerNorm(hidden_dim)
+                self.layer_norm2 = nn.LayerNorm(hidden_dim)
+                self.layer_norm3 = nn.LayerNorm(hidden_dim)
+                
+                # Position-wise feed-forward
+                self.ffn = nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim * 4),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(hidden_dim * 4, hidden_dim)
+                )
+                
+                # Gating mechanisms
+                self.gate_norm = nn.LayerNorm(hidden_dim)
+                self.gate = nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.Sigmoid()
+                )
+                
+                # Output layers
+                self.dropout = nn.Dropout(dropout)
+                self.output_layer = nn.Linear(hidden_dim, 1)
+            
+            def forward(self, x):
+                # x shape: (batch_size, seq_length, input_dim)
+                batch_size, seq_len, _ = x.shape
+                
+                # Variable selection
+                # Apply VSN to select important features
+                vsn_weights = self.static_vsn(x.mean(dim=1, keepdim=True))  # (batch, 1, input_dim)
+                x_selected = x * vsn_weights  # Weighted input features
+                
+                # Encoder LSTM
+                encoder_out, (h_n, c_n) = self.encoder_lstm(x_selected)
+                encoder_out = self.layer_norm1(encoder_out)
+                
+                # Decoder LSTM
+                decoder_out, _ = self.decoder_lstm(encoder_out, (h_n, c_n))
+                decoder_out = self.layer_norm2(decoder_out)
+                
+                # Apply GLU
+                glu_out = self.glu(decoder_out)
+                
+                # Multi-head attention with residual connection
+                attn_out, _ = self.attention(glu_out, glu_out, glu_out)
+                attn_out = self.dropout(attn_out)
+                attn_out = self.layer_norm3(attn_out + glu_out)  # Residual connection
+                
+                # Position-wise feed-forward with gating
+                ffn_out = self.ffn(attn_out)
+                ffn_out = self.dropout(ffn_out)
+                
+                # Gated residual connection
+                gate_values = self.gate(self.gate_norm(attn_out))
+                gated_out = gate_values * ffn_out + (1 - gate_values) * attn_out
+                
+                # Take the last time step for prediction
+                final_out = gated_out[:, -1, :]
+                
+                # Output
+                output = self.output_layer(final_out)
+                return output.squeeze(1)
+        
+        # Ensure hidden_dim is divisible by nhead
+        nhead = max(4, self.hidden_dim // 16)
+        self.hidden_dim = nhead * (self.hidden_dim // nhead)
+        
+        self.model = TemporalFusionTransformer(
             input_dim=self.input_dim,
             hidden_dim=self.hidden_dim,
             num_layers=self.num_layers,
@@ -537,6 +667,8 @@ class TensorFlowStockPredictor:
             self._build_gru_model()
         elif self.architecture_type == 'transformer':
             self._build_transformer_model()
+        elif self.architecture_type == 'tft':
+            self._build_tft_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
             self._build_lstm_model()
@@ -645,6 +777,92 @@ class TensorFlowStockPredictor:
         if self.dropout > 0:
             x = layers.Dropout(self.dropout)(x)
         outputs = layers.Dense(1)(x)
+        
+        # Build the model
+        self.model = keras.Model(inputs=inputs, outputs=outputs)
+        
+    def _build_tft_model(self):
+        """Build a Temporal Fusion Transformer model architecture using Keras."""
+        # Ensure hidden_dim is divisible by num_heads
+        num_heads = min(8, max(4, self.hidden_dim // 16))
+        self.hidden_dim = num_heads * (self.hidden_dim // num_heads)
+        
+        # Create input layer
+        inputs = layers.Input(shape=(1, self.input_dim))
+        
+        # Variable Selection Network (VSN)
+        # Global context vector from average of inputs
+        context = layers.GlobalAveragePooling1D()(inputs)
+        context = layers.RepeatVector(1)(context)
+        
+        # VSN: Feature importance weights
+        vsn = layers.Dense(self.hidden_dim, activation='relu')(context)
+        vsn_weights = layers.Dense(self.input_dim, activation='softmax')(vsn)
+        vsn_weights = layers.Reshape((1, self.input_dim))(vsn_weights)
+        
+        # Apply variable selection
+        x = layers.Multiply()([inputs, vsn_weights])
+        
+        # Encoder LSTM
+        encoder = layers.LSTM(
+            units=self.hidden_dim,
+            return_sequences=True,
+            return_state=True
+        )
+        encoder_out, state_h, state_c = encoder(x)
+        encoder_out = layers.LayerNormalization(epsilon=1e-6)(encoder_out)
+        
+        # Decoder LSTM
+        decoder = layers.LSTM(
+            units=self.hidden_dim,
+            return_sequences=True
+        )
+        decoder_out = decoder(encoder_out, initial_state=[state_h, state_c])
+        decoder_out = layers.LayerNormalization(epsilon=1e-6)(decoder_out)
+        
+        # Gated Linear Unit (GLU)
+        glu_dense = layers.Dense(self.hidden_dim * 2)(decoder_out)
+        # Split into two parts and apply gating
+        glu_a = glu_dense[:, :, :self.hidden_dim]
+        glu_b = glu_dense[:, :, self.hidden_dim:]
+        glu_out = layers.Multiply()([glu_a, layers.Activation('sigmoid')(glu_b)])
+        
+        # Multi-head attention
+        attention_output = layers.MultiHeadAttention(
+            num_heads=num_heads,
+            key_dim=self.hidden_dim // num_heads,
+            dropout=self.dropout
+        )(glu_out, glu_out)
+        
+        # Add & Norm (residual connection)
+        attention_output = layers.Add()([glu_out, attention_output])
+        if self.dropout > 0:
+            attention_output = layers.Dropout(self.dropout)(attention_output)
+        attention_output = layers.LayerNormalization(epsilon=1e-6)(attention_output)
+        
+        # Position-wise Feed-Forward Network
+        ffn = keras.Sequential([
+            layers.Dense(self.hidden_dim * 4, activation='relu'),
+            layers.Dropout(self.dropout) if self.dropout > 0 else layers.Lambda(lambda x: x),
+            layers.Dense(self.hidden_dim)
+        ])
+        ffn_output = ffn(attention_output)
+        
+        # Gated residual connection
+        gate_layer = layers.Dense(self.hidden_dim, activation='sigmoid')(attention_output)
+        gated_output = layers.Add()([
+            layers.Multiply()([gate_layer, ffn_output]),
+            layers.Multiply()([layers.Lambda(lambda x: 1 - x)(gate_layer), attention_output])
+        ])
+        gated_output = layers.LayerNormalization(epsilon=1e-6)(gated_output)
+        
+        # Extract the last sequence element for prediction
+        final_repr = gated_output[:, -1, :]
+        
+        # Output layers
+        if self.dropout > 0:
+            final_repr = layers.Dropout(self.dropout)(final_repr)
+        outputs = layers.Dense(1)(final_repr)
         
         # Build the model
         self.model = keras.Model(inputs=inputs, outputs=outputs)
@@ -1640,7 +1858,8 @@ def main():
         result['availableArchitectures'] = {
             'lstm': True,
             'gru': True,
-            'transformer': True
+            'transformer': True,
+            'tft': True
         }
         result['availableFeatureEngineering'] = FEATURE_ENGINEERING_AVAILABLE
         result['availableHyperparameterOptimization'] = HYPERPARAMETER_OPTIMIZATION_AVAILABLE
