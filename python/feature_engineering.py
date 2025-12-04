@@ -205,8 +205,10 @@ class FinancialFeatureGenerator(BaseEstimator, TransformerMixin):
         
         # Historical volatility
         vol_df = pd.DataFrame(index=df.index)
+        # Calculate returns locally since it may not be in the original df
+        returns = df['close'].pct_change()
         for window in self.rolling_windows:
-            vol_df[f'volatility_{window}'] = df['returns'].rolling(window=window).std() * np.sqrt(252)
+            vol_df[f'volatility_{window}'] = returns.rolling(window=window).std() * np.sqrt(252)
         
         results.append(vol_df)
         

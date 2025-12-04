@@ -1407,6 +1407,13 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
         feature_names = list(feature_df.columns)
         feature_array = feature_df.values
 
+        # Get current price from features early - this is required for error handling
+        # The model predicts percentage change, not actual price
+        current_price = features.get('current_price', 0.0)
+        if current_price <= 0:
+            # Try alternate keys for current price
+            current_price = features.get('close', features.get('price', 0.0))
+
         # Check for feature dimension mismatch and retrain if necessary
         expected_features = None
         if used_model_type in ['pytorch', 'tensorflow']:
@@ -1471,13 +1478,6 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
         # Align feature names with model if possible
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):
             model.feature_names = feature_names
-        
-        # Get current price from features - this is required to calculate actual target price
-        # The model predicts percentage change, not actual price
-        current_price = features.get('current_price', 0.0)
-        if current_price <= 0:
-            # Try alternate keys for current price
-            current_price = features.get('close', features.get('price', 0.0))
         
         # IMPORTANT: If we still don't have a valid price, try to estimate from feature data
         # This is a fallback - the C# client should ALWAYS send current_price
