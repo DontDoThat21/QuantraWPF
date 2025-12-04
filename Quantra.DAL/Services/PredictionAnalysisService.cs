@@ -14,27 +14,29 @@ namespace Quantra.DAL.Services
     /// </summary>
     public class PredictionAnalysisService
     {
-        private readonly QuantraDbContext _context;
+        private readonly Func<QuantraDbContext> _contextFactory;
         private readonly LoggingService _loggingService;
 
-        public PredictionAnalysisService(QuantraDbContext context, LoggingService loggingService)
+        public PredictionAnalysisService(Func<QuantraDbContext> contextFactory, LoggingService loggingService)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
         }
 
         // Parameterless constructor for backward compatibility
         public PredictionAnalysisService()
         {
-            var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
-
-            // Use SQL Server with QuantraRelational database via ConnectionHelper
-            optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+            // Create a factory that generates new DbContext instances for each operation
+            _contextFactory = () =>
             {
-                sqlServerOptions.CommandTimeout(30);
-            });
-
-            _context = new QuantraDbContext(optionsBuilder.Options);
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+                {
+                    sqlServerOptions.CommandTimeout(30);
+                });
+                return new QuantraDbContext(optionsBuilder.Options);
+            };
+            
             _loggingService = new LoggingService();
         }
 
@@ -46,8 +48,10 @@ namespace Quantra.DAL.Services
         {
             try
             {
+                using var context = _contextFactory();
+                
                 // Get all symbols first
-                var symbols = await _context.StockPredictions
+                var symbols = await context.StockPredictions
                     .AsNoTracking()
                     .Select(p => p.Symbol)
                     .Distinct()
@@ -59,7 +63,7 @@ namespace Quantra.DAL.Services
                 // For each symbol, get the most recent prediction
                 foreach (var symbol in symbols)
                 {
-                    var prediction = await _context.StockPredictions
+                    var prediction = await context.StockPredictions
                         .AsNoTracking()
                         .Where(p => p.Symbol == symbol)
                         .OrderByDescending(p => p.CreatedDate)
@@ -82,7 +86,7 @@ namespace Quantra.DAL.Services
                         };
 
                         // Load indicators for this prediction using EF Core
-                        var indicators = await _context.PredictionIndicators
+                        var indicators = await context.PredictionIndicators
                             .AsNoTracking()
                             .Where(i => i.PredictionId == prediction.Id)
                             .ToListAsync()
@@ -125,7 +129,9 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var predictions = await _context.StockPredictions
+                using var context = _contextFactory();
+                
+                var predictions = await context.StockPredictions
                     .AsNoTracking()
                     .Where(p => p.Symbol == symbol)
                     .OrderByDescending(p => p.CreatedDate)
@@ -151,7 +157,7 @@ namespace Quantra.DAL.Services
                     };
 
                     // Load indicators
-                    var indicators = await _context.PredictionIndicators
+                    var indicators = await context.PredictionIndicators
                         .AsNoTracking()
                         .Where(i => i.PredictionId == prediction.Id)
                         .ToListAsync()
@@ -184,8 +190,10 @@ namespace Quantra.DAL.Services
         {
             try
             {
+                using var context = _contextFactory();
+                
                 // Get all symbols with the specified action and confidence
-                var symbols = await _context.StockPredictions
+                var symbols = await context.StockPredictions
                     .AsNoTracking()
                     .Where(p => p.PredictedAction == action && p.Confidence >= minConfidence)
                     .Select(p => p.Symbol)
@@ -198,7 +206,7 @@ namespace Quantra.DAL.Services
                 // For each symbol, get the most recent prediction with the specified action
                 foreach (var symbol in symbols)
                 {
-                    var prediction = await _context.StockPredictions
+                    var prediction = await context.StockPredictions
                         .AsNoTracking()
                         .Where(p => p.Symbol == symbol && p.PredictedAction == action && p.Confidence >= minConfidence)
                         .OrderByDescending(p => p.CreatedDate)
@@ -221,7 +229,7 @@ namespace Quantra.DAL.Services
                         };
 
                         // Load indicators
-                        var indicators = await _context.PredictionIndicators
+                        var indicators = await context.PredictionIndicators
                             .AsNoTracking()
                             .Where(i => i.PredictionId == prediction.Id)
                             .ToListAsync()
@@ -251,8 +259,18 @@ namespace Quantra.DAL.Services
         /// </summary>
         /// <param name="prediction">The prediction model to save</param>
         /// <param name="cancellationToken">Optional cancellation token for timeout control</param>
+        /// <param name="expectedFruitionDate">Optional date when the prediction is expected to come to fruition</param>
+        /// <param name="modelType">Optional model type used for the prediction</param>
+        /// <param name="architectureType">Optional architecture type used for the prediction</param>
+        /// <param name="trainingHistoryId">Optional training history ID reference</param>
         /// <returns>The ID of the saved prediction</returns>
-        public async Task<int> SavePredictionAsync(PredictionModel prediction, CancellationToken cancellationToken = default)
+        public async Task<int> SavePredictionAsync(
+            PredictionModel prediction, 
+            CancellationToken cancellationToken = default,
+            DateTime? expectedFruitionDate = null,
+            string modelType = null,
+            string architectureType = null,
+            int? trainingHistoryId = null)
         {
             if (prediction == null)
                 throw new ArgumentNullException(nameof(prediction));
@@ -272,8 +290,11 @@ namespace Quantra.DAL.Services
             {
                 _loggingService.Log("Info", $"SavePredictionAsync started for {prediction.Symbol}");
 
+                // Create a new DbContext instance for this operation to avoid concurrency issues
+                using var context = _contextFactory();
+                
                 // Ensure the stock symbol exists in the database
-                var stockSymbol = await _context.StockSymbols
+                var stockSymbol = await context.StockSymbols
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.Symbol == prediction.Symbol, cancellationToken)
                     .ConfigureAwait(false);
@@ -286,8 +307,8 @@ namespace Quantra.DAL.Services
                         Symbol = prediction.Symbol,
                         LastUpdated = DateTime.Now
                     };
-                    _context.StockSymbols.Add(stockSymbol);
-                    await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    context.StockSymbols.Add(stockSymbol);
+                    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                     _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} created successfully");
                 }
                 else
@@ -295,7 +316,7 @@ namespace Quantra.DAL.Services
                     _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} already exists");
                 }
 
-                // Create prediction entity (TradingRule not saved since it's not in the entity)
+                // Create prediction entity with new fields
                 var predictionEntity = new StockPredictionEntity
                 {
                     Symbol = prediction.Symbol,
@@ -304,12 +325,17 @@ namespace Quantra.DAL.Services
                     CurrentPrice = prediction.CurrentPrice,
                     TargetPrice = prediction.TargetPrice,
                     PotentialReturn = prediction.PotentialReturn,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = DateTime.Now,
+                    ExpectedFruitionDate = expectedFruitionDate,
+                    ModelType = modelType,
+                    ArchitectureType = architectureType,
+                    TrainingHistoryId = trainingHistoryId,
+                    TradingRule = prediction.TradingRule
                 };
 
-                _context.StockPredictions.Add(predictionEntity);
+                context.StockPredictions.Add(predictionEntity);
                 _loggingService.Log("Info", $"Saving prediction entity for {prediction.Symbol}");
-                await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 _loggingService.Log("Info", $"Prediction entity saved with ID {predictionEntity.Id}");
 
                 // Save indicators if any
@@ -324,9 +350,9 @@ namespace Quantra.DAL.Services
                             IndicatorName = indicator.Key,
                             IndicatorValue = indicator.Value
                         };
-                        _context.PredictionIndicators.Add(indicatorEntity);
+                        context.PredictionIndicators.Add(indicatorEntity);
                     }
-                    await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                     _loggingService.Log("Info", $"Indicators saved successfully for prediction {predictionEntity.Id}");
                 }
                 else
@@ -363,7 +389,9 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var oldPredictions = await _context.StockPredictions
+                using var context = _contextFactory();
+                
+                var oldPredictions = await context.StockPredictions
                     .Where(p => p.CreatedDate < olderThan)
                     .ToListAsync()
                     .ConfigureAwait(false);
@@ -372,15 +400,15 @@ namespace Quantra.DAL.Services
                 {
                     // Delete associated indicators first
                     var predictionIds = oldPredictions.Select(p => p.Id).ToList();
-                    var indicators = await _context.PredictionIndicators
+                    var indicators = await context.PredictionIndicators
                         .Where(i => predictionIds.Contains(i.PredictionId))
                         .ToListAsync()
                         .ConfigureAwait(false);
 
-                    _context.PredictionIndicators.RemoveRange(indicators);
-                    _context.StockPredictions.RemoveRange(oldPredictions);
+                    context.PredictionIndicators.RemoveRange(indicators);
+                    context.StockPredictions.RemoveRange(oldPredictions);
 
-                    await _context.SaveChangesAsync().ConfigureAwait(false);
+                    await context.SaveChangesAsync().ConfigureAwait(false);
 
                     _loggingService.Log("Info", $"Deleted {oldPredictions.Count} old predictions");
                     return oldPredictions.Count;

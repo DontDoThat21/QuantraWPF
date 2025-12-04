@@ -1406,7 +1406,68 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
         # Prepare feature array for prediction
         feature_names = list(feature_df.columns)
         feature_array = feature_df.values
-        
+
+        # Check for feature dimension mismatch and retrain if necessary
+        expected_features = None
+        if used_model_type in ['pytorch', 'tensorflow']:
+            if hasattr(model, 'input_dim'):
+                expected_features = model.input_dim
+        elif used_model_type == 'random_forest':
+            if scaler and hasattr(scaler, 'n_features_in_'):
+                expected_features = scaler.n_features_in_
+
+        if expected_features is not None and feature_array.shape[1] != expected_features:
+            logger.warning(f"Feature dimension mismatch: model expects {expected_features} features but got {feature_array.shape[1]}")
+            logger.warning(f"Deleting old model and retraining with correct features...")
+
+            # Delete old model files
+            try:
+                if used_model_type == 'pytorch' and os.path.exists(PYTORCH_MODEL_PATH):
+                    os.remove(PYTORCH_MODEL_PATH)
+                    logger.info(f"Deleted old PyTorch model")
+                elif used_model_type == 'tensorflow' and os.path.exists(TENSORFLOW_MODEL_PATH):
+                    import shutil
+                    shutil.rmtree(TENSORFLOW_MODEL_PATH)
+                    logger.info(f"Deleted old TensorFlow model")
+                elif used_model_type == 'random_forest' and os.path.exists(MODEL_PATH):
+                    os.remove(MODEL_PATH)
+                    logger.info(f"Deleted old Random Forest model")
+
+                if os.path.exists(SCALER_PATH):
+                    os.remove(SCALER_PATH)
+                    logger.info(f"Deleted old scaler")
+            except Exception as e:
+                logger.error(f"Error deleting old model: {e}")
+
+            # Return error indicating model needs retraining
+            return {
+                'action': 'HOLD',
+                'confidence': 0.0,
+                'targetPrice': current_price,
+                'weights': {},
+                'timeSeries': {
+                    'prices': [current_price],
+                    'dates': [datetime.now().strftime('%Y-%m-%d')],
+                    'confidence': 0.0
+                },
+                'risk': {
+                    'var': 0.0,
+                    'maxDrawdown': 0.0,
+                    'sharpeRatio': 0.0,
+                    'riskScore': 0.5
+                },
+                'patterns': [],
+                'modelType': 'error',
+                'architectureType': 'n/a',
+                'error': f'Feature dimension mismatch: model expects {expected_features} features but got {feature_array.shape[1]}. Old model deleted. Please train a new model using the "Train Model" button.',
+                'hyperparameterOptimization': {
+                    'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                    'used': False,
+                    'optimizedParams': False
+                },
+                'needsRetraining': True
+            }
+
         # Align feature names with model if possible
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):
             model.feature_names = feature_names
