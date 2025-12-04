@@ -276,11 +276,45 @@ namespace Quantra
 
         private void UsernameTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            //if (e.Key == Key.Back && UsernameTextBox.Text == DictionaryEn.DefaultUsername)
-            //{
-            //    UsernameTextBox.Clear();
-            //    e.Handled = true;
-            //}
+            if (e.Key == Key.Enter)
+            {
+                // Move focus to password field or trigger login if in registration mode
+                if (_isRegistrationMode)
+                {
+                    PasswordBox.Focus();
+                }
+                else
+                {
+                    // In login mode, move to password or trigger login if password is filled
+                    if (string.IsNullOrEmpty(PasswordBox.Password))
+                    {
+                        PasswordBox.Focus();
+                    }
+                    else
+                    {
+                        LoginButton_Click(sender, new RoutedEventArgs());
+                    }
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                if (_isRegistrationMode)
+                {
+                    // In registration mode, move to confirm password field
+                    ConfirmPasswordBox.Focus();
+                }
+                else
+                {
+                    // In login mode, trigger login
+                    LoginButton_Click(sender, new RoutedEventArgs());
+                }
+                e.Handled = true;
+            }
         }
         
         // New resize grip functionality
