@@ -486,13 +486,24 @@ namespace Quantra.Models
                         if (result == null)
                             throw new Exception($"Failed to deserialize prediction result. Output: {stdOut}\nStdErr: {stdErr}");
 
+                        // Check for Python-side errors first
+                        if (!string.IsNullOrEmpty(result.error))
+                        {
+                            if (result.needsRetraining)
+                            {
+                                throw new Exception($"MODEL NEEDS RETRAINING: {result.error}");
+                            }
+                            throw new Exception($"Python prediction error: {result.error}");
+                        }
+
                         // Create the full prediction result with all data
                         var predictionResult = new PredictionResult
                         {
                             Action = result.action,
                             Confidence = result.confidence,
                             TargetPrice = result.targetPrice,
-                            FeatureWeights = result.weights ?? new Dictionary<string, double>()
+                            FeatureWeights = result.weights ?? new Dictionary<string, double>(),
+                            Error = result.error
                         };
 
                         // Map time series data if available
@@ -580,6 +591,8 @@ namespace Quantra.Models
             public TimeSeriesData timeSeries { get; set; }
             public RiskData risk { get; set; }
             public List<PatternData> patterns { get; set; }
+            public string error { get; set; }
+            public bool needsRetraining { get; set; }
         }
 
         private class TimeSeriesData
