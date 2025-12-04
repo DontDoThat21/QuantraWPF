@@ -251,8 +251,18 @@ namespace Quantra.DAL.Services
         /// </summary>
         /// <param name="prediction">The prediction model to save</param>
         /// <param name="cancellationToken">Optional cancellation token for timeout control</param>
+        /// <param name="expectedFruitionDate">Optional date when the prediction is expected to come to fruition</param>
+        /// <param name="modelType">Optional model type used for the prediction</param>
+        /// <param name="architectureType">Optional architecture type used for the prediction</param>
+        /// <param name="trainingHistoryId">Optional training history ID reference</param>
         /// <returns>The ID of the saved prediction</returns>
-        public async Task<int> SavePredictionAsync(PredictionModel prediction, CancellationToken cancellationToken = default)
+        public async Task<int> SavePredictionAsync(
+            PredictionModel prediction, 
+            CancellationToken cancellationToken = default,
+            DateTime? expectedFruitionDate = null,
+            string modelType = null,
+            string architectureType = null,
+            int? trainingHistoryId = null)
         {
             if (prediction == null)
                 throw new ArgumentNullException(nameof(prediction));
@@ -295,7 +305,7 @@ namespace Quantra.DAL.Services
                     _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} already exists");
                 }
 
-                // Create prediction entity (TradingRule not saved since it's not in the entity)
+                // Create prediction entity with new fields
                 var predictionEntity = new StockPredictionEntity
                 {
                     Symbol = prediction.Symbol,
@@ -304,7 +314,12 @@ namespace Quantra.DAL.Services
                     CurrentPrice = prediction.CurrentPrice,
                     TargetPrice = prediction.TargetPrice,
                     PotentialReturn = prediction.PotentialReturn,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = DateTime.Now,
+                    ExpectedFruitionDate = expectedFruitionDate,
+                    ModelType = modelType,
+                    ArchitectureType = architectureType,
+                    TrainingHistoryId = trainingHistoryId,
+                    TradingRule = prediction.TradingRule
                 };
 
                 _context.StockPredictions.Add(predictionEntity);

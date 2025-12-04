@@ -38,6 +38,28 @@ namespace Quantra.DAL.Data.Entities
         public DateTime CreatedDate { get; set; }
 
         /// <summary>
+        /// The date when the prediction is expected to come to fruition (target date for the price prediction)
+        /// </summary>
+        public DateTime? ExpectedFruitionDate { get; set; }
+
+        /// <summary>
+        /// The model type used for this prediction (pytorch, tensorflow, random_forest)
+        /// </summary>
+        [MaxLength(50)]
+        public string? ModelType { get; set; }
+
+        /// <summary>
+        /// The architecture type used for this prediction (lstm, gru, transformer, tft)
+        /// </summary>
+        [MaxLength(50)]
+        public string? ArchitectureType { get; set; }
+
+        /// <summary>
+        /// Reference to the training history ID that was used to generate this prediction
+        /// </summary>
+        public int? TrainingHistoryId { get; set; }
+
+        /// <summary>
         /// Trading rule or strategy name that generated this prediction (optional)
         /// </summary>
         [MaxLength(200)]

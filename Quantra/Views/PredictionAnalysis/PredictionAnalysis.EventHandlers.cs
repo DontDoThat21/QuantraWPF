@@ -10,6 +10,7 @@ using System.Collections.ObjectModel; // Added for ObservableCollection
 using System.Windows.Data;
 using Quantra.DAL.Services; // Added for CollectionViewSource
 using System.Windows.Input; // Added for KeyEventArgs
+using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls
 {
@@ -357,8 +358,8 @@ namespace Quantra.Controls
 
                 if (prediction != null && prediction.PredictedAction != "ERROR")
                 {
-                    // Save prediction to database
-                    await SavePredictionToDatabaseAsync(prediction);
+                    // Save prediction to database with expected fruition date and model info
+                    await SavePredictionWithModelInfoAsync(prediction);
 
                     // Add to UI collection on UI thread
                     await Dispatcher.InvokeAsync(() =>
@@ -400,8 +401,81 @@ namespace Quantra.Controls
             }
         }
 
+        /// <summary>
+        /// Saves a prediction to the database with model and expected fruition date info
+        /// </summary>
+        private async Task SavePredictionWithModelInfoAsync(Quantra.Models.PredictionModel prediction)
+        {
+            try
+            {
+                // Get selected model type, architecture, and expected fruition date
+                string modelType = GetSelectedModelType();
+                string architectureType = GetSelectedArchitectureType();
+                DateTime? expectedFruitionDate = GetExpectedFruitionDate();
+
+                // Get active training history ID
+                int? trainingHistoryId = null;
+                try
+                {
+                    if (_modelTrainingHistoryService != null)
+                    {
+                        var activeModel = await _modelTrainingHistoryService.GetActiveModelAsync(modelType, architectureType);
+                        trainingHistoryId = activeModel?.Id;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Could not get active model ID: {ex.Message}");
+                }
+
+                // Save with timeout protection (10 seconds)
+                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    if (_predictionService != null)
+                    {
+                        var id = await _predictionService.SavePredictionAsync(
+                            prediction, 
+                            cts.Token,
+                            expectedFruitionDate,
+                            modelType,
+                            architectureType,
+                            trainingHistoryId
+                        ).ConfigureAwait(false);
+                        
+                        _loggingService?.Log("Info", $"Successfully saved prediction ID {id} for {prediction.Symbol} with expected fruition date {expectedFruitionDate:d}");
+                    }
+                    else
+                    {
+                        // Fallback to the old method if _predictionService is not available
+                        await SavePredictionToDatabaseAsync(prediction);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, $"Error saving prediction with model info for {prediction.Symbol}");
+                // Fall back to the old method
+                await SavePredictionToDatabaseAsync(prediction);
+            }
+        }
+
         private async void AnalyzeButton_Click(object sender, RoutedEventArgs e)
         {
+            // First, check if a trained model is available
+            var modelAvailability = await CheckTrainedModelAvailabilityAsync();
+            if (!modelAvailability.IsModelAvailable)
+            {
+                if (StatusText != null)
+                    StatusText.Text = modelAvailability.StatusMessage;
+
+                MessageBox.Show(
+                    $"{modelAvailability.StatusMessage}\n\nPlease use the 'Train Model' button to train a model before running analysis.",
+                    "Model Not Available",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             // Check if individual symbol mode is selected
             if (_currentSymbolMode == SymbolSelectionMode.Individual)
             {
@@ -510,6 +584,71 @@ namespace Quantra.Controls
                 if (AnalyzeButton != null)
                     AnalyzeButton.IsEnabled = true;
             }
+        }
+
+        /// <summary>
+        /// Checks if a trained model is available (both DB record and local file)
+        /// </summary>
+        private async Task<TrainedModelAvailability> CheckTrainedModelAvailabilityAsync()
+        {
+            try
+            {
+                // Get selected model type and architecture from UI
+                string modelType = GetSelectedModelType();
+                string architectureType = GetSelectedArchitectureType();
+
+                // Check for model availability using the service
+                if (_modelTrainingHistoryService != null)
+                {
+                    return await _modelTrainingHistoryService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                }
+
+                // Fallback: Create the service if not available
+                var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+                optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+                var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
+                var historyService = new ModelTrainingHistoryService(dbContext, _loggingService);
+
+                return await historyService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error checking trained model availability");
+                return new TrainedModelAvailability
+                {
+                    IsModelAvailable = false,
+                    StatusMessage = $"Error checking model availability: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Calculates the expected fruition date based on the selected timeframe
+        /// </summary>
+        private DateTime? GetExpectedFruitionDate()
+        {
+            try
+            {
+                var selectedTimeframe = TimeframeComboBox?.SelectedItem as ComboBoxItem;
+                if (selectedTimeframe?.Tag is string timeframeTag)
+                {
+                    return timeframeTag.ToLower() switch
+                    {
+                        "1day" => DateTime.Now.AddDays(1),
+                        "1week" => DateTime.Now.AddDays(7),
+                        "1month" => DateTime.Now.AddMonths(1),
+                        "3month" => DateTime.Now.AddMonths(3),
+                        "1year" => DateTime.Now.AddYears(1),
+                        _ => DateTime.Now.AddMonths(1) // Default to 1 month
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Warning", $"Error getting expected fruition date: {ex.Message}");
+            }
+
+            return DateTime.Now.AddMonths(1); // Default to 1 month
         }
 
         private void PredictionDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
