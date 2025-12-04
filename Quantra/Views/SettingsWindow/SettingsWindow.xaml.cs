@@ -201,26 +201,64 @@ namespace Quantra
 
         private void NewProfileButton_Click(object sender, RoutedEventArgs e)
         {
-            var newProfile = DatabaseSettingsProfile.CreateDefault($"Profile {_profiles.Count + 1}");
-            newProfile.Name = $"Profile {_profiles.Count + 1}";
-            newProfile.Description = "Custom profile";
-            newProfile.IsDefault = false;
-            newProfile.CreatedDate = DateTime.Now;
-            newProfile.ModifiedDate = DateTime.Now;
-            int id = _settingsService.CreateSettingsProfile(newProfile);
-            _ = LoadProfilesAsync();
-            ProfilesListView.SelectedItem = _profiles.FirstOrDefault(p => p.Id == id);
+            try
+            {
+                // Generate a unique profile name
+                string newProfileName;
+                int profileNumber = _profiles.Count + 1;
+                do
+                {
+                    newProfileName = $"Profile {profileNumber}";
+                    profileNumber++;
+                } while (_profiles.Any(p => p.Name == newProfileName));
+
+                var newProfile = DatabaseSettingsProfile.CreateDefault(newProfileName);
+                newProfile.Name = newProfileName;
+                newProfile.Description = "Custom profile";
+                newProfile.IsDefault = false;
+                newProfile.UserId = AuthenticationService.CurrentUserId;
+                newProfile.CreatedDate = DateTime.Now;
+                newProfile.ModifiedDate = DateTime.Now;
+                
+                int id = _settingsService.CreateSettingsProfile(newProfile);
+                _ = LoadProfilesAsync();
+                ProfilesListView.SelectedItem = _profiles.FirstOrDefault(p => p.Id == id);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "Cannot Create Profile", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to create profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void RenameProfileButton_Click(object sender, RoutedEventArgs e)
         {
             if (_selectedProfile == null) return;
+            
             var input = Microsoft.VisualBasic.Interaction.InputBox("Enter new profile name:", "Rename Profile", _selectedProfile.Name);
             if (!string.IsNullOrWhiteSpace(input))
             {
-                _selectedProfile.Name = input;
-                _settingsService.UpdateSettingsProfile(_selectedProfile);
-                _ = LoadProfilesAsync();
+                // Check if the new name conflicts with existing profiles
+                if (_profiles.Any(p => p.Id != _selectedProfile.Id && p.Name == input))
+                {
+                    MessageBox.Show($"A profile with the name '{input}' already exists. Please choose a different name.", 
+                                  "Duplicate Profile Name", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                
+                try
+                {
+                    _selectedProfile.Name = input;
+                    _settingsService.UpdateSettingsProfile(_selectedProfile);
+                    _ = LoadProfilesAsync();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to rename profile: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

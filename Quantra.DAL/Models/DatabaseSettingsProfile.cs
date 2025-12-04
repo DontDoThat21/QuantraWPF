@@ -75,6 +75,43 @@ namespace Quantra.Models
         // Alpha Vantage API Plan Settings
         public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
 
+        // Risk management settings (matching SettingsProfile entity)
+        public decimal AccountSize { get; set; } = 100000m;
+        public decimal BaseRiskPercentage { get; set; } = 0.01m; // 1%
+        public string PositionSizingMethod { get; set; } = "FixedRisk";
+        public decimal MaxPositionSizePercent { get; set; } = 0.1m; // 10%
+        public decimal FixedTradeAmount { get; set; } = 5000m;
+        public bool UseVolatilityBasedSizing { get; set; } = false;
+        public decimal ATRMultiple { get; set; } = 2m;
+        public bool UseKellyCriterion { get; set; } = false;
+        public decimal HistoricalWinRate { get; set; } = 0.55m;
+        public decimal HistoricalRewardRiskRatio { get; set; } = 2m;
+        public decimal KellyFractionMultiplier { get; set; } = 0.5m;
+
+        // News sentiment settings
+        public bool EnableNewsSentimentAnalysis { get; set; } = true;
+        public int NewsArticleRefreshIntervalMinutes { get; set; } = 30;
+        public int MaxNewsArticlesPerSymbol { get; set; } = 15;
+        public bool EnableNewsSourceFiltering { get; set; } = true;
+        public string EnabledNewsSources { get; set; } = "";
+
+        // Analyst ratings settings
+        public bool EnableAnalystRatings { get; set; } = true;
+        public int RatingsCacheExpiryHours { get; set; } = 24;
+        public bool EnableRatingChangeAlerts { get; set; } = true;
+        public bool EnableConsensusChangeAlerts { get; set; } = true;
+        public decimal AnalystRatingSentimentWeight { get; set; } = 2m;
+
+        // Insider trading settings
+        public bool EnableInsiderTradingAnalysis { get; set; } = true;
+        public int InsiderDataRefreshIntervalMinutes { get; set; } = 120;
+        public bool EnableInsiderTradingAlerts { get; set; } = true;
+        public bool TrackNotableInsiders { get; set; } = true;
+        public decimal InsiderTradingSentimentWeight { get; set; } = 2.5m;
+        public bool HighlightCEOTransactions { get; set; } = true;
+        public bool HighlightOptionsActivity { get; set; } = true;
+        public bool EnableInsiderTransactionNotifications { get; set; } = true;
+
         // Create a new profile from a UserSettings object
         public static DatabaseSettingsProfile FromUserSettings(UserSettings settings, string name, string description, bool isDefault)
         {

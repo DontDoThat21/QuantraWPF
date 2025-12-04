@@ -100,6 +100,19 @@ namespace Quantra.DAL.Services
             {
                 using (var context = CreateContext())
                 {
+                    // Check if a profile with the same name already exists for this user
+                    var currentUserId = profile.UserId ?? AuthenticationService.CurrentUserId;
+                    var existingProfile = context.SettingsProfiles
+                        .FirstOrDefault(p => p.Name == profile.Name && 
+                                           (p.UserId == currentUserId || (currentUserId == null && p.UserId == null)));
+                    
+                    if (existingProfile != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"A profile with the name '{profile.Name}' already exists for this user. " +
+                            "Please choose a different name.");
+                    }
+
                     // If this is set as default, clear other defaults first
                     if (profile.IsDefault)
                     {
@@ -456,6 +469,43 @@ namespace Quantra.DAL.Services
                 // Alpha Vantage API Plan Settings
                 AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute,
 
+                // Risk management settings
+                AccountSize = profile.AccountSize,
+                BaseRiskPercentage = profile.BaseRiskPercentage,
+                PositionSizingMethod = profile.PositionSizingMethod,
+                MaxPositionSizePercent = profile.MaxPositionSizePercent,
+                FixedTradeAmount = profile.FixedTradeAmount,
+                UseVolatilityBasedSizing = profile.UseVolatilityBasedSizing,
+                ATRMultiple = profile.ATRMultiple,
+                UseKellyCriterion = profile.UseKellyCriterion,
+                HistoricalWinRate = profile.HistoricalWinRate,
+                HistoricalRewardRiskRatio = profile.HistoricalRewardRiskRatio,
+                KellyFractionMultiplier = profile.KellyFractionMultiplier,
+
+                // News sentiment settings
+                EnableNewsSentimentAnalysis = profile.EnableNewsSentimentAnalysis,
+                NewsArticleRefreshIntervalMinutes = profile.NewsArticleRefreshIntervalMinutes,
+                MaxNewsArticlesPerSymbol = profile.MaxNewsArticlesPerSymbol,
+                EnableNewsSourceFiltering = profile.EnableNewsSourceFiltering,
+                EnabledNewsSources = profile.EnabledNewsSources,
+
+                // Analyst ratings settings
+                EnableAnalystRatings = profile.EnableAnalystRatings,
+                RatingsCacheExpiryHours = profile.RatingsCacheExpiryHours,
+                EnableRatingChangeAlerts = profile.EnableRatingChangeAlerts,
+                EnableConsensusChangeAlerts = profile.EnableConsensusChangeAlerts,
+                AnalystRatingSentimentWeight = profile.AnalystRatingSentimentWeight,
+
+                // Insider trading settings
+                EnableInsiderTradingAnalysis = profile.EnableInsiderTradingAnalysis,
+                InsiderDataRefreshIntervalMinutes = profile.InsiderDataRefreshIntervalMinutes,
+                EnableInsiderTradingAlerts = profile.EnableInsiderTradingAlerts,
+                TrackNotableInsiders = profile.TrackNotableInsiders,
+                InsiderTradingSentimentWeight = profile.InsiderTradingSentimentWeight,
+                HighlightCEOTransactions = profile.HighlightCEOTransactions,
+                HighlightOptionsActivity = profile.HighlightOptionsActivity,
+                EnableInsiderTransactionNotifications = profile.EnableInsiderTransactionNotifications,
+
                 CreatedAt = profile.CreatedDate,
                 LastModified = profile.ModifiedDate
             };
@@ -520,6 +570,43 @@ namespace Quantra.DAL.Services
 
             // Alpha Vantage API Plan Settings
             entity.AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute;
+
+            // Risk management settings
+            entity.AccountSize = profile.AccountSize;
+            entity.BaseRiskPercentage = profile.BaseRiskPercentage;
+            entity.PositionSizingMethod = profile.PositionSizingMethod;
+            entity.MaxPositionSizePercent = profile.MaxPositionSizePercent;
+            entity.FixedTradeAmount = profile.FixedTradeAmount;
+            entity.UseVolatilityBasedSizing = profile.UseVolatilityBasedSizing;
+            entity.ATRMultiple = profile.ATRMultiple;
+            entity.UseKellyCriterion = profile.UseKellyCriterion;
+            entity.HistoricalWinRate = profile.HistoricalWinRate;
+            entity.HistoricalRewardRiskRatio = profile.HistoricalRewardRiskRatio;
+            entity.KellyFractionMultiplier = profile.KellyFractionMultiplier;
+
+            // News sentiment settings
+            entity.EnableNewsSentimentAnalysis = profile.EnableNewsSentimentAnalysis;
+            entity.NewsArticleRefreshIntervalMinutes = profile.NewsArticleRefreshIntervalMinutes;
+            entity.MaxNewsArticlesPerSymbol = profile.MaxNewsArticlesPerSymbol;
+            entity.EnableNewsSourceFiltering = profile.EnableNewsSourceFiltering;
+            entity.EnabledNewsSources = profile.EnabledNewsSources;
+
+            // Analyst ratings settings
+            entity.EnableAnalystRatings = profile.EnableAnalystRatings;
+            entity.RatingsCacheExpiryHours = profile.RatingsCacheExpiryHours;
+            entity.EnableRatingChangeAlerts = profile.EnableRatingChangeAlerts;
+            entity.EnableConsensusChangeAlerts = profile.EnableConsensusChangeAlerts;
+            entity.AnalystRatingSentimentWeight = profile.AnalystRatingSentimentWeight;
+
+            // Insider trading settings
+            entity.EnableInsiderTradingAnalysis = profile.EnableInsiderTradingAnalysis;
+            entity.InsiderDataRefreshIntervalMinutes = profile.InsiderDataRefreshIntervalMinutes;
+            entity.EnableInsiderTradingAlerts = profile.EnableInsiderTradingAlerts;
+            entity.TrackNotableInsiders = profile.TrackNotableInsiders;
+            entity.InsiderTradingSentimentWeight = profile.InsiderTradingSentimentWeight;
+            entity.HighlightCEOTransactions = profile.HighlightCEOTransactions;
+            entity.HighlightOptionsActivity = profile.HighlightOptionsActivity;
+            entity.EnableInsiderTransactionNotifications = profile.EnableInsiderTransactionNotifications;
         }
 
         /// <summary>
@@ -586,7 +673,44 @@ namespace Quantra.DAL.Services
                 AlphaVantageApiKey = entity.AlphaVantageApiKey ?? "",
 
                 // Alpha Vantage API Plan Settings
-                AlphaVantageApiCallsPerMinute = entity.AlphaVantageApiCallsPerMinute
+                AlphaVantageApiCallsPerMinute = entity.AlphaVantageApiCallsPerMinute,
+
+                // Risk management settings
+                AccountSize = entity.AccountSize,
+                BaseRiskPercentage = entity.BaseRiskPercentage,
+                PositionSizingMethod = entity.PositionSizingMethod ?? "FixedRisk",
+                MaxPositionSizePercent = entity.MaxPositionSizePercent,
+                FixedTradeAmount = entity.FixedTradeAmount,
+                UseVolatilityBasedSizing = entity.UseVolatilityBasedSizing,
+                ATRMultiple = entity.ATRMultiple,
+                UseKellyCriterion = entity.UseKellyCriterion,
+                HistoricalWinRate = entity.HistoricalWinRate,
+                HistoricalRewardRiskRatio = entity.HistoricalRewardRiskRatio,
+                KellyFractionMultiplier = entity.KellyFractionMultiplier,
+
+                // News sentiment settings
+                EnableNewsSentimentAnalysis = entity.EnableNewsSentimentAnalysis,
+                NewsArticleRefreshIntervalMinutes = entity.NewsArticleRefreshIntervalMinutes,
+                MaxNewsArticlesPerSymbol = entity.MaxNewsArticlesPerSymbol,
+                EnableNewsSourceFiltering = entity.EnableNewsSourceFiltering,
+                EnabledNewsSources = entity.EnabledNewsSources ?? "",
+
+                // Analyst ratings settings
+                EnableAnalystRatings = entity.EnableAnalystRatings,
+                RatingsCacheExpiryHours = entity.RatingsCacheExpiryHours,
+                EnableRatingChangeAlerts = entity.EnableRatingChangeAlerts,
+                EnableConsensusChangeAlerts = entity.EnableConsensusChangeAlerts,
+                AnalystRatingSentimentWeight = entity.AnalystRatingSentimentWeight,
+
+                // Insider trading settings
+                EnableInsiderTradingAnalysis = entity.EnableInsiderTradingAnalysis,
+                InsiderDataRefreshIntervalMinutes = entity.InsiderDataRefreshIntervalMinutes,
+                EnableInsiderTradingAlerts = entity.EnableInsiderTradingAlerts,
+                TrackNotableInsiders = entity.TrackNotableInsiders,
+                InsiderTradingSentimentWeight = entity.InsiderTradingSentimentWeight,
+                HighlightCEOTransactions = entity.HighlightCEOTransactions,
+                HighlightOptionsActivity = entity.HighlightOptionsActivity,
+                EnableInsiderTransactionNotifications = entity.EnableInsiderTransactionNotifications
             };
         }
 

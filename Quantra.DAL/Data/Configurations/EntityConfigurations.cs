@@ -172,6 +172,11 @@ namespace Quantra.DAL.Data.Configurations
             // Index for efficient lookup by user
             builder.HasIndex(p => p.UserId);
 
+            // Unique constraint on UserId and Name combination
+            builder.HasIndex(p => new { p.UserId, p.Name })
+                   .IsUnique()
+                   .HasDatabaseName("UC_SettingsProfiles_UserId_Name");
+
             // Create a converter for double to decimal conversion
             var doubleToDecimalConverter = new ValueConverter<decimal, double>(
                 v => (double)v,           // decimal to double for writing to DB
