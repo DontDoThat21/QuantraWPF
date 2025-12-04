@@ -374,21 +374,22 @@ namespace Quantra
         }
 
         /// <summary>
-        /// Gets remembered accounts
+        /// Gets remembered accounts (SECURITY: No longer returns passwords)
         /// </summary>
-        [Obsolete("Use UserSettingsService.GetRememberedAccounts via dependency injection")]
+        [Obsolete("Use AuthenticationService.GetPreviouslyLoggedInUsersAsync via dependency injection")]
         public static Dictionary<string, (string Username, string Password, String Pin)> GetRememberedAccounts()
         {
             try
             {
                 // Create a temporary DbContext and service for backward compatibility
-                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>
-        ();
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
                 var loggingService = new LoggingService();
                 var service = new UserSettingsService(dbContext, loggingService);
+                #pragma warning disable CS0618 // Type or member is obsolete
                 return service.GetRememberedAccounts();
+                #pragma warning restore CS0618 // Type or member is obsolete
             }
             catch (Exception ex)
             {
@@ -398,9 +399,9 @@ namespace Quantra
         }
 
         /// <summary>
-        /// Remembers an account
+        /// Remembers an account (SECURITY: No longer stores passwords)
         /// </summary>
-        [Obsolete("Use UserSettingsService.RememberAccount via dependency injection")]
+        [Obsolete("LastLoginDate is automatically updated during authentication. This method is no longer needed.")]
         public static void RememberAccount(string username, string password, string pin)
         {
             try
@@ -411,7 +412,9 @@ namespace Quantra
                 using var dbContext = new QuantraDbContext(optionsBuilder.Options);
                 var loggingService = new LoggingService();
                 var service = new UserSettingsService(dbContext, loggingService);
+                #pragma warning disable CS0618 // Type or member is obsolete
                 service.RememberAccount(username, password, pin);
+                #pragma warning restore CS0618 // Type or member is obsolete
             }
             catch (Exception ex)
             {
