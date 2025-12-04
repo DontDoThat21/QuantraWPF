@@ -203,6 +203,10 @@ class FinancialFeatureGenerator(BaseEstimator, TransformerMixin):
         """Generate volatility indicators."""
         results = []
         
+        # Ensure 'close' column exists before calculating returns
+        if 'close' not in df.columns:
+            return results
+        
         # Historical volatility
         vol_df = pd.DataFrame(index=df.index)
         # Calculate returns locally since it may not be in the original df
