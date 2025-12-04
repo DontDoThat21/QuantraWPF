@@ -126,5 +126,8 @@ namespace Quantra.Models
 
         // API Keys settings
         public string AlphaVantageApiKey { get; set; } = "";
+
+        // Alpha Vantage API Plan Settings
+        public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
     }
 }

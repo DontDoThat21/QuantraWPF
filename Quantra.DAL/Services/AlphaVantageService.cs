@@ -51,9 +51,21 @@ namespace Quantra.DAL.Services
             };
             _apiKey = GetApiKey();
             _apiSemaphore = new SemaphoreSlim(1, 1);
-            _maxApiCallsPerMinute = StandardApiCallsPerMinute;
+
+            // Load API rate limit from user settings
+            var settings = _userSettingsService.GetUserSettings();
+            _maxApiCallsPerMinute = settings?.AlphaVantageApiCallsPerMinute ?? StandardApiCallsPerMinute;
 
             Instance = this;
+        }
+
+        /// <summary>
+        /// Updates the API rate limit from current user settings
+        /// </summary>
+        public void UpdateApiRateLimitFromSettings()
+        {
+            var settings = _userSettingsService.GetUserSettings();
+            _maxApiCallsPerMinute = settings?.AlphaVantageApiCallsPerMinute ?? StandardApiCallsPerMinute;
         }
 
         /// <summary>

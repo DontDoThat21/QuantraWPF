@@ -72,6 +72,9 @@ namespace Quantra.Models
         // API Keys settings
         public string AlphaVantageApiKey { get; set; } = "";
 
+        // Alpha Vantage API Plan Settings
+        public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
+
         // Create a new profile from a UserSettings object
         public static DatabaseSettingsProfile FromUserSettings(UserSettings settings, string name, string description, bool isDefault)
         {
@@ -125,7 +128,9 @@ namespace Quantra.Models
                 // VIX monitoring settings
                 EnableVixMonitoring = settings.EnableVixMonitoring,
                 // API Keys settings
-                AlphaVantageApiKey = settings.AlphaVantageApiKey ?? ""
+                AlphaVantageApiKey = settings.AlphaVantageApiKey ?? "",
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = settings.AlphaVantageApiCallsPerMinute
             };
         }
 
@@ -177,7 +182,9 @@ namespace Quantra.Models
                 // VIX monitoring settings
                 EnableVixMonitoring = this.EnableVixMonitoring,
                 // API Keys settings
-                AlphaVantageApiKey = this.AlphaVantageApiKey ?? ""
+                AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute
             };
         }
 
@@ -234,7 +241,9 @@ namespace Quantra.Models
                 // VIX monitoring settings
                 EnableVixMonitoring = this.EnableVixMonitoring,
                 // API Keys settings
-                AlphaVantageApiKey = this.AlphaVantageApiKey ?? ""
+                AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute
             };
         }
 
@@ -292,7 +301,9 @@ namespace Quantra.Models
                 // VIX monitoring settings
                 EnableVixMonitoring = true,
                 // API Keys settings
-                AlphaVantageApiKey = ""
+                AlphaVantageApiKey = "",
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = 75 // Default to 75 calls/minute (standard plan)
             };
         }
     }

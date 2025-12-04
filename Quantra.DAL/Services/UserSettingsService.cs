@@ -167,20 +167,27 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets remembered accounts using UserCredentials table
+        /// Gets remembered accounts using UserCredentials table.
+        /// SECURITY NOTE: This method no longer returns passwords for security reasons.
+        /// It only returns usernames and pins. Passwords are stored securely as hashes.
         /// </summary>
+        [Obsolete("This method no longer returns passwords for security reasons. Use AuthenticationService.GetPreviouslyLoggedInUsersAsync() instead.")]
         public Dictionary<string, (string Username, string Password, string Pin)> GetRememberedAccounts()
         {
             try
             {
-                var credentials = _dbContext.UserCredentials.ToList();
+                var credentials = _dbContext.UserCredentials
+                    .Where(c => c.IsActive && c.LastLoginDate != null)
+                    .OrderByDescending(c => c.LastLoginDate)
+                    .ToList();
 
                 var accounts = new Dictionary<string, (string Username, string Password, string Pin)>();
 
                 foreach (var cred in credentials)
                 {
                     var key = $"{cred.Username}_{cred.Pin}";
-                    accounts[key] = (cred.Username, cred.Password, cred.Pin);
+                    // Password is returned as empty string for security - user must re-enter
+                    accounts[key] = (cred.Username, string.Empty, cred.Pin ?? string.Empty);
                 }
 
                 return accounts;
@@ -193,8 +200,12 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Remembers an account by storing it in UserCredentials table
+        /// Remembers an account by updating LastLoginDate in UserCredentials table.
+        /// SECURITY NOTE: This method no longer stores passwords in plain text.
+        /// Password storage is handled securely by AuthenticationService using password hashing.
+        /// This method only updates the LastLoginDate for auto-population of username on next login.
         /// </summary>
+        [Obsolete("This method no longer stores passwords for security reasons. LastLoginDate is automatically updated during authentication.")]
         public void RememberAccount(string username, string password, string pin)
         {
             if (string.IsNullOrWhiteSpace(username))
@@ -204,36 +215,30 @@ namespace Quantra.DAL.Services
 
             try
             {
-                // Check if account already exists by username (username is unique)
+                // Only update LastLoginDate - do not store password in plain text
                 var existing = _dbContext.UserCredentials
                     .FirstOrDefault(c => c.Username.ToLower() == username.ToLower());
 
                 if (existing != null)
                 {
-                    // Update existing credentials
-                    existing.Password = password;
-                    existing.Pin = pin ?? string.Empty;
+                    // Only update last login date - password is already securely hashed in the database
                     existing.LastLoginDate = DateTime.Now;
+                    // Pin is not used for security purposes, but keep it for backward compatibility
+                    if (!string.IsNullOrEmpty(pin))
+                    {
+                        existing.Pin = pin;
+                    }
+                    _dbContext.SaveChanges();
                 }
                 else
                 {
-                    // Add new credentials (this should rarely happen since registration creates the user)
-                    _dbContext.UserCredentials.Add(new UserCredential
-                    {
-                        Username = username,
-                        Password = password,
-                        Pin = pin ?? string.Empty,
-                        LastLoginDate = DateTime.Now,
-                        CreatedDate = DateTime.Now,
-                        IsActive = true
-                    });
+                    _loggingService.Log("Warning", $"Attempted to remember non-existent user: {username}");
+                    // Do not create new credentials here - they should be created via registration
                 }
-
-                _dbContext.SaveChanges();
             }
             catch (Exception ex)
             {
-                _loggingService.Log("Error", $"Failed to remember account: {username}", ex.ToString());
+                _loggingService.Log("Error", $"Failed to update last login for account: {username}", ex.ToString());
                 throw;
             }
         }

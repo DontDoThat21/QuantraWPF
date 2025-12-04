@@ -82,6 +82,7 @@ namespace Quantra.DAL.Services
             {
                 // Check if username already exists
                 var existingUser = await _dbContext.UserCredentials
+                    .AsNoTracking()  // Read-only check
                     .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
 
                 if (existingUser != null)
@@ -142,6 +143,7 @@ namespace Quantra.DAL.Services
 
             try
             {
+                // Query user credentials - tracking is needed here because we'll update LastLoginDate
                 var user = await _dbContext.UserCredentials
                     .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower());
 
@@ -227,6 +229,7 @@ namespace Quantra.DAL.Services
             }
 
             return !await _dbContext.UserCredentials
+                .AsNoTracking()  // Read-only query - no tracking needed
                 .AnyAsync(u => u.Username.ToLower() == username.ToLower());
         }
 
@@ -239,6 +242,7 @@ namespace Quantra.DAL.Services
             try
             {
                 return await _dbContext.UserCredentials
+                    .AsNoTracking()  // Read-only query - no tracking needed
                     .Where(u => u.IsActive && u.LastLoginDate != null)
                     .OrderByDescending(u => u.LastLoginDate)
                     .Select(u => u.Username)
@@ -265,6 +269,7 @@ namespace Quantra.DAL.Services
             try
             {
                 var user = await _dbContext.UserCredentials
+                    .AsNoTracking()  // Read-only query - no tracking needed
                     .FirstOrDefaultAsync(u => u.Id == CurrentUserId.Value);
                 return user?.Username;
             }
@@ -289,6 +294,7 @@ namespace Quantra.DAL.Services
             try
             {
                 var user = _dbContext.UserCredentials
+                    .AsNoTracking()  // Read-only query - no tracking needed
                     .FirstOrDefault(u => u.Id == CurrentUserId.Value);
                 return user?.Username;
             }

@@ -449,10 +449,13 @@ namespace Quantra.DAL.Services
                 
                 // VIX monitoring
                 EnableVixMonitoring = profile.EnableVixMonitoring,
-                
+
                 // API Keys
                 AlphaVantageApiKey = profile.AlphaVantageApiKey,
-                
+
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute,
+
                 CreatedAt = profile.CreatedDate,
                 LastModified = profile.ModifiedDate
             };
@@ -511,9 +514,12 @@ namespace Quantra.DAL.Services
             
             // VIX monitoring
             entity.EnableVixMonitoring = profile.EnableVixMonitoring;
-            
+
             // API Keys
             entity.AlphaVantageApiKey = profile.AlphaVantageApiKey;
+
+            // Alpha Vantage API Plan Settings
+            entity.AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute;
         }
 
         /// <summary>
@@ -575,9 +581,12 @@ namespace Quantra.DAL.Services
                 
                 // VIX monitoring
                 EnableVixMonitoring = entity.EnableVixMonitoring,
-                
+
                 // API Keys
-                AlphaVantageApiKey = entity.AlphaVantageApiKey ?? ""
+                AlphaVantageApiKey = entity.AlphaVantageApiKey ?? "",
+
+                // Alpha Vantage API Plan Settings
+                AlphaVantageApiCallsPerMinute = entity.AlphaVantageApiCallsPerMinute
             };
         }
 
