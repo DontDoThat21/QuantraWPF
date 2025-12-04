@@ -513,77 +513,114 @@ def optimize_pytorch_model(
         params = {}
         for param_name, param_func in param_ranges.items():
             params[param_name] = param_func(trial)
-        
-        # Create model
-        model = model_class(**params).to(device)
-        
-        # Define loss function and optimizer
-        criterion = nn.MSELoss()
-        
-        # Get optimizer from trial if specified, otherwise use Adam
-        if 'optimizer_type' in param_ranges:
-            optimizer_type = param_ranges['optimizer_type'](trial)
-            if optimizer_type == 'adam':
-                optimizer = optim.Adam(model.parameters(), lr=params.get('lr', 0.001))
-            elif optimizer_type == 'sgd':
-                optimizer = optim.SGD(model.parameters(), lr=params.get('lr', 0.01), 
-                                      momentum=params.get('momentum', 0.9))
-            elif optimizer_type == 'rmsprop':
-                optimizer = optim.RMSprop(model.parameters(), lr=params.get('lr', 0.001))
+
+        # Check if model_class is a wrapper (like PyTorchStockPredictor) or a raw nn.Module
+        # Check class attributes instead of instantiating to avoid parameter mismatches
+        is_wrapper = (
+            hasattr(model_class, 'fit') and
+            hasattr(model_class, 'predict') and
+            not issubclass(model_class, nn.Module)
+        )
+
+        if is_wrapper:
+            # Use wrapper's fit/predict interface (e.g., PyTorchStockPredictor)
+            wrapper = model_class(**params)
+
+            # Convert tensors to numpy for wrapper's fit method
+            if isinstance(X_train_tensor, torch.Tensor):
+                X_train_np = X_train_tensor.cpu().numpy()
+                y_train_np = y_train_tensor.cpu().numpy()
+                X_val_np = X_val_tensor.cpu().numpy()
+                y_val_np = y_val_tensor.cpu().numpy()
+            else:
+                X_train_np = X_train_tensor
+                y_train_np = y_train_tensor
+                X_val_np = X_val_tensor
+                y_val_np = y_val_tensor
+
+            # Train using wrapper's fit method
+            lr = params.get('lr', 0.001)
+            local_batch_size = params.get('batch_size', batch_size)
+            wrapper.fit(X_train_np, y_train_np, epochs=max_epochs, batch_size=local_batch_size, lr=lr, verbose=False)
+
+            # Validate using wrapper's predict method
+            val_predictions = wrapper.predict(X_val_np)
+
+            # Calculate validation loss
+            val_loss = np.mean((val_predictions - y_val_np) ** 2)
+            best_val_loss = float(val_loss)
+
+        else:
+            # Raw nn.Module - use manual training loop
+            model = model_class(**params).to(device)
+
+            # Define loss function and optimizer
+            criterion = nn.MSELoss()
+
+            # Get optimizer from trial if specified, otherwise use Adam
+            if 'optimizer_type' in param_ranges:
+                optimizer_type = param_ranges['optimizer_type'](trial)
+                if optimizer_type == 'adam':
+                    optimizer = optim.Adam(model.parameters(), lr=params.get('lr', 0.001))
+                elif optimizer_type == 'sgd':
+                    optimizer = optim.SGD(model.parameters(), lr=params.get('lr', 0.01),
+                                          momentum=params.get('momentum', 0.9))
+                elif optimizer_type == 'rmsprop':
+                    optimizer = optim.RMSprop(model.parameters(), lr=params.get('lr', 0.001))
+                else:
+                    optimizer = optim.Adam(model.parameters(), lr=params.get('lr', 0.001))
             else:
                 optimizer = optim.Adam(model.parameters(), lr=params.get('lr', 0.001))
-        else:
-            optimizer = optim.Adam(model.parameters(), lr=params.get('lr', 0.001))
-        
-        # Create DataLoader
-        local_batch_size = params.get('batch_size', batch_size)
-        train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-        train_loader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
-        
-        # Training loop
-        best_val_loss = float('inf')
-        epochs_no_improve = 0
-        
-        for epoch in range(max_epochs):
-            model.train()
-            for X_batch, y_batch in train_loader:
-                X_batch = X_batch.to(device)
-                y_batch = y_batch.to(device)
-                
-                # Forward pass
-                optimizer.zero_grad()
-                outputs = model(X_batch)
-                loss = criterion(outputs, y_batch)
-                
-                # Backward pass and optimize
-                loss.backward()
-                optimizer.step()
-            
-            # Validation
-            model.eval()
-            with torch.no_grad():
-                X_val_tensor_local = X_val_tensor.to(device)
-                y_val_tensor_local = y_val_tensor.to(device)
-                val_outputs = model(X_val_tensor_local)
-                val_loss = criterion(val_outputs, y_val_tensor_local).item()
-                
-                # Check for improvement
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    epochs_no_improve = 0
-                else:
-                    epochs_no_improve += 1
-                    
-                # Early stopping check
-                if epochs_no_improve >= patience:
-                    if verbose:
-                        logger.info(f"Early stopping after {epoch+1} epochs")
-                    break
-        
+
+            # Create DataLoader
+            local_batch_size = params.get('batch_size', batch_size)
+            train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+            train_loader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
+
+            # Training loop
+            best_val_loss = float('inf')
+            epochs_no_improve = 0
+
+            for epoch in range(max_epochs):
+                model.train()
+                for X_batch, y_batch in train_loader:
+                    X_batch = X_batch.to(device)
+                    y_batch = y_batch.to(device)
+
+                    # Forward pass
+                    optimizer.zero_grad()
+                    outputs = model(X_batch)
+                    loss = criterion(outputs, y_batch)
+
+                    # Backward pass and optimize
+                    loss.backward()
+                    optimizer.step()
+
+                # Validation
+                model.eval()
+                with torch.no_grad():
+                    X_val_tensor_local = X_val_tensor.to(device)
+                    y_val_tensor_local = y_val_tensor.to(device)
+                    val_outputs = model(X_val_tensor_local)
+                    val_loss = criterion(val_outputs, y_val_tensor_local).item()
+
+                    # Check for improvement
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        epochs_no_improve = 0
+                    else:
+                        epochs_no_improve += 1
+
+                    # Early stopping check
+                    if epochs_no_improve >= patience:
+                        if verbose:
+                            logger.info(f"Early stopping after {epoch+1} epochs")
+                        break
+
         # Store the parameters and score
         all_params.append(params)
         all_scores.append(-best_val_loss)  # Convert to maximize (negative loss)
-        
+
         return best_val_loss
     
     # Create a study for optimization

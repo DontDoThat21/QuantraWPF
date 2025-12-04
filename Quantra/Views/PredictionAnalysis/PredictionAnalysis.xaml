@@ -117,7 +117,7 @@ MinWidth="400" MinHeight="300">
 
                 <!-- Auto Mode Toggle -->
                 <Border Background="#3E3E56" BorderThickness="1" Margin="0,0,10,0" 
-                        CornerRadius="3" Padding="6,6">
+                        CornerRadius="3" Padding="6,6" Height="40">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Auto Mode" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ToggleButton x:Name="AutoModeToggle" Width="40" Height="20"
@@ -153,7 +153,7 @@ MinWidth="400" MinHeight="300">
                     </StackPanel>
                 </Border>
 
-                <Button x:Name="RefreshButton" Content="↻" Width="40" Height="30" 
+                <Button x:Name="RefreshButton" Content="↻" Width="40" Height="40" 
                         Click="RefreshButton_Click"
                         Background="#3E3E56" Foreground="White" 
                         BorderBrush="Cyan" Margin="0,0,5,0"/>
@@ -334,7 +334,7 @@ MinWidth="400" MinHeight="300">
                     <!-- Minimum Confidence -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <TextBlock Text="Min Confidence:" Foreground="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="ConfidenceComboBox" Width="60"
+                        <ComboBox x:Name="ConfidenceComboBox" Width="70"
                                   Style="{StaticResource EnhancedComboBoxStyle}">
                             <ComboBoxItem Content="50%" Tag="0.5"/>
                             <ComboBoxItem Content="60%" Tag="0.6" IsSelected="True"/>
