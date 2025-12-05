@@ -769,6 +769,93 @@ namespace Quantra.Controls
             // ...existing logic for other filters...
         }
 
+        /// <summary>
+        /// Handles the delete prediction context menu click
+        /// </summary>
+        private async void DeletePrediction_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Get the selected prediction from the DataGrid
+                if (TopPredictionsGrid?.SelectedItem is Quantra.Models.PredictionModel selectedPrediction)
+                {
+                    // Confirm deletion with user
+                    var result = MessageBox.Show(
+                        $"Are you sure you want to delete the prediction for {selectedPrediction.Symbol}?\n\n" +
+                        $"Action: {selectedPrediction.PredictedAction}\n" +
+                        $"Confidence: {selectedPrediction.Confidence:P1}\n" +
+                        $"Created: {selectedPrediction.PredictionDate:yyyy-MM-dd HH:mm}",
+                        "Delete Prediction",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // Delete from database using the service
+                        if (_predictionService != null)
+                        {
+                            bool deleted = await _predictionService.DeletePredictionAsync(selectedPrediction.Id);
+
+                            if (deleted)
+                            {
+                                // Remove from the ViewModel collection
+                                if (_viewModel?.TopPredictions != null)
+                                {
+                                    _viewModel.TopPredictions.Remove(selectedPrediction);
+                                }
+
+                                // Update status
+                                if (StatusText != null)
+                                    StatusText.Text = $"Deleted prediction for {selectedPrediction.Symbol}";
+
+                                _loggingService?.Log("Info", $"User deleted prediction ID {selectedPrediction.Id} for {selectedPrediction.Symbol}");
+                            }
+                            else
+                            {
+                                if (StatusText != null)
+                                    StatusText.Text = $"Failed to delete prediction for {selectedPrediction.Symbol}";
+
+                                MessageBox.Show(
+                                    $"Failed to delete the prediction for {selectedPrediction.Symbol}. Please try again.",
+                                    "Delete Failed",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Prediction service is not available. Cannot delete prediction.",
+                                "Service Unavailable",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+                        }
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Please select a prediction to delete.",
+                        "No Selection",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error deleting prediction");
+                
+                if (StatusText != null)
+                    StatusText.Text = "Error deleting prediction";
+
+                MessageBox.Show(
+                    $"An error occurred while deleting the prediction: {ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         // Update the event handler for SymbolFilterComboBox selection change
         private void SymbolFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

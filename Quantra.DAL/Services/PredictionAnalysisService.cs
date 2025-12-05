@@ -485,5 +485,53 @@ namespace Quantra.DAL.Services
         {
             return Task.Run(() => GetAllPredictionsAsync(count)).Result;
         }
+
+        /// <summary>
+        /// Deletes a specific prediction by ID using Entity Framework Core
+        /// </summary>
+        /// <param name="predictionId">The ID of the prediction to delete</param>
+        /// <returns>True if deleted successfully, false otherwise</returns>
+        public async Task<bool> DeletePredictionAsync(int predictionId)
+        {
+            try
+            {
+                using var context = _contextFactory();
+                
+                // Find the prediction
+                var prediction = await context.StockPredictions
+                    .FirstOrDefaultAsync(p => p.Id == predictionId)
+                    .ConfigureAwait(false);
+
+                if (prediction == null)
+                {
+                    _loggingService.Log("Warning", $"Prediction with ID {predictionId} not found");
+                    return false;
+                }
+
+                // Delete associated indicators first (due to foreign key relationship)
+                var indicators = await context.PredictionIndicators
+                    .Where(i => i.PredictionId == predictionId)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
+                if (indicators.Any())
+                {
+                    context.PredictionIndicators.RemoveRange(indicators);
+                }
+
+                // Delete the prediction
+                context.StockPredictions.Remove(prediction);
+                
+                await context.SaveChangesAsync().ConfigureAwait(false);
+
+                _loggingService.Log("Info", $"Successfully deleted prediction ID {predictionId} for {prediction.Symbol}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", $"Failed to delete prediction ID {predictionId}", ex.ToString());
+                return false;
+            }
+        }
     }
 }

@@ -11,7 +11,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Quantra.Models;
 using LiveCharts;
-using System.Drawing;
 
 namespace Quantra.Controls.Components
 {
@@ -900,57 +899,93 @@ namespace Quantra.Controls.Components
             
             try
             {
-                // Create a simple dashboard with System.Drawing
-                using (var bitmap = new System.Drawing.Bitmap(800, 600))
-                using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+                // Create a simple dashboard with WPF DrawingVisual
+                int width = 800;
+                int height = 600;
+                
+                var drawingVisual = new DrawingVisual();
+                using (DrawingContext dc = drawingVisual.RenderOpen())
                 {
                     // Fill background
-                    graphics.FillRectangle(System.Drawing.Brushes.MidnightBlue, 0, 0, 800, 600);
+                    dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(25, 25, 112)), null, new Rect(0, 0, width, height));
                     
                     // Add title
-                    using (var font = new System.Drawing.Font("Arial", 24, System.Drawing.FontStyle.Bold))
-                    {
-                        graphics.DrawString($"{symbol}: ML Model Performance Dashboard", 
-                                          font, System.Drawing.Brushes.White, 20, 20);
-                    }
+                    var titleText = new FormattedText(
+                        $"{symbol}: ML Model Performance Dashboard",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Arial"),
+                        24,
+                        Brushes.White,
+                        VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                    dc.DrawText(titleText, new Point(20, 20));
                     
                     // Add model type
-                    using (var font = new System.Drawing.Font("Arial", 16))
-                    {
-                        graphics.DrawString($"Model Type: {modelType}", 
-                                          font, System.Drawing.Brushes.LightGreen, 20, 70);
-                    }
+                    var modelTypeText = new FormattedText(
+                        $"Model Type: {modelType}",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Arial"),
+                        16,
+                        Brushes.LightGreen,
+                        VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                    dc.DrawText(modelTypeText, new Point(20, 70));
                     
                     // Add timestamp
-                    using (var font = new System.Drawing.Font("Arial", 12))
-                    {
-                        graphics.DrawString($"Generated: {DateTime.Now}", 
-                                          font, System.Drawing.Brushes.LightGray, 20, 100);
-                    }
+                    var timestampText = new FormattedText(
+                        $"Generated: {DateTime.Now}",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Arial"),
+                        12,
+                        Brushes.LightGray,
+                        VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                    dc.DrawText(timestampText, new Point(20, 100));
                     
-                    // Draw some placeholder charts
-                    // Confidence trend chart
-                    graphics.DrawRectangle(System.Drawing.Pens.Gray, 50, 150, 700, 150);
-                    graphics.DrawString("Confidence Trend (Last 30 Days)", 
-                                      new System.Drawing.Font("Arial", 14), 
-                                      System.Drawing.Brushes.White, 60, 160);
+                    // Draw confidence trend chart
+                    dc.DrawRectangle(null, new Pen(Brushes.Gray, 1), new Rect(50, 150, 700, 150));
+                    var chartTitleText = new FormattedText(
+                        "Confidence Trend (Last 30 Days)",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Arial"),
+                        14,
+                        Brushes.White,
+                        VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                    dc.DrawText(chartTitleText, new Point(60, 160));
                     
                     // Draw sample confidence line
-                    var points = new System.Drawing.Point[10];
+                    var random = new Random(symbol.GetHashCode());
+                    var points = new Point[10];
                     for (int i = 0; i < 10; i++)
                     {
-                        points[i] = new System.Drawing.Point(
+                        points[i] = new Point(
                             100 + i * 60,
-                            250 - (int)(new Random(i + symbol.GetHashCode()).NextDouble() * 80)
-                        );
+                            250 - (random.NextDouble() * 80));
                     }
-                    graphics.DrawLines(System.Drawing.Pens.Cyan, points);
+                    
+                    var geometry = new StreamGeometry();
+                    using (var ctx = geometry.Open())
+                    {
+                        ctx.BeginFigure(points[0], false, false);
+                        for (int i = 1; i < points.Length; i++)
+                        {
+                            ctx.LineTo(points[i], true, false);
+                        }
+                    }
+                    dc.DrawGeometry(null, new Pen(Brushes.Cyan, 2), geometry);
                     
                     // Feature importance chart
-                    graphics.DrawRectangle(System.Drawing.Pens.Gray, 50, 330, 700, 200);
-                    graphics.DrawString("Feature Importance", 
-                                      new System.Drawing.Font("Arial", 14), 
-                                      System.Drawing.Brushes.White, 60, 340);
+                    dc.DrawRectangle(null, new Pen(Brushes.Gray, 1), new Rect(50, 330, 700, 200));
+                    var featureTitleText = new FormattedText(
+                        "Feature Importance",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Arial"),
+                        14,
+                        Brushes.White,
+                        VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                    dc.DrawText(featureTitleText, new Point(60, 340));
                     
                     // Draw sample feature bars if we have feature weights
                     if (featureWeights != null && featureWeights.Count > 0)
@@ -963,20 +998,36 @@ namespace Quantra.Controls.Components
                         for (int i = 0; i < topFeatures.Count; i++)
                         {
                             var feature = topFeatures[i];
-                            var barWidth = (int)(Math.Abs(feature.Value) * 500);
+                            var barWidth = Math.Abs(feature.Value) * 500;
                             var brush = feature.Value >= 0 ? 
-                                System.Drawing.Brushes.LimeGreen : 
-                                System.Drawing.Brushes.Crimson;
+                                Brushes.LimeGreen : 
+                                Brushes.Crimson;
                             
-                            graphics.FillRectangle(brush, 150, 380 + i * 30, barWidth, 20);
-                            graphics.DrawString(feature.Key, 
-                                              new System.Drawing.Font("Arial", 10), 
-                                              System.Drawing.Brushes.White, 60, 380 + i * 30);
+                            dc.DrawRectangle(brush, null, new Rect(150, 380 + i * 30, barWidth, 20));
+                            
+                            var featureText = new FormattedText(
+                                feature.Key,
+                                System.Globalization.CultureInfo.CurrentCulture,
+                                FlowDirection.LeftToRight,
+                                new Typeface("Arial"),
+                                10,
+                                Brushes.White,
+                                VisualTreeHelper.GetDpi(drawingVisual).PixelsPerDip);
+                            dc.DrawText(featureText, new Point(60, 380 + i * 30));
                         }
                     }
-                    
-                    // Save the bitmap as a file
-                    bitmap.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                
+                // Render to bitmap
+                var renderBitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                renderBitmap.Render(drawingVisual);
+                
+                // Save to file
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(renderBitmap));
+                using (var fileStream = new FileStream(outputPath, FileMode.Create))
+                {
+                    encoder.Save(fileStream);
                 }
 
                 return true;

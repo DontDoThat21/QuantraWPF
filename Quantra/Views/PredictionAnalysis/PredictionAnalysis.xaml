@@ -589,6 +589,15 @@ MinWidth="400" MinHeight="300">
                           ColumnHeaderStyle="{StaticResource EnhancedDataGridColumnHeaderStyle}"
                           RowStyle="{StaticResource EnhancedDataGridRowStyle}"
                           CellStyle="{StaticResource EnhancedDataGridCellStyle}">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Background="#2D2D42" Foreground="White">
+                            <MenuItem Header="Delete" Click="DeletePrediction_Click">
+                                <MenuItem.Icon>
+                                    <TextBlock Text="🗑️" Foreground="Red"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Symbol" Binding="{Binding Symbol}" Width="80"/>
                         <DataGridTextColumn Header="Action" Binding="{Binding PredictedAction}" Width="70"/>
