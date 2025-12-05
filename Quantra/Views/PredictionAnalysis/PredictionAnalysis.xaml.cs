@@ -19,6 +19,7 @@ using Quantra.Repositories;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Quantra.Controls
 {
@@ -341,6 +342,27 @@ namespace Quantra.Controls
             {
                 //DatabaseMonolith.Log("Error", "Failed to initialize sentiment visualization on load", ex.ToString());
             }
+        }
+        
+        // Event handlers for DEBUGPY checkbox in the XAML UI
+        private void DebugpyCheckbox_Checked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Set environment variable so child python processes inherit DEBUGPY=1
+                Environment.SetEnvironmentVariable("DEBUGPY", "1", EnvironmentVariableTarget.Process);
+            }
+            catch { /* ignore */ }
+        }
+
+        private void DebugpyCheckbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Remove environment variable for this process
+                Environment.SetEnvironmentVariable("DEBUGPY", null, EnvironmentVariableTarget.Process);
+            }
+            catch { /* ignore */ }
         }
     }
 }

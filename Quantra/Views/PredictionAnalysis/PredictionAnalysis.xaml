@@ -56,6 +56,19 @@ MinWidth="400" MinHeight="300">
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
 
+                <!-- Debugging: enable debugpy for Python child processes -->
+                <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <TextBlock Text="Python Remote Debug" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
+                    <CheckBox x:Name="DebugpyCheckbox"
+                              Content="Enable DEBUGPY (remote debug)"
+                              ToolTip="If enabled, child Python processes will start debugpy listener (port 5678)."
+                              Checked="DebugpyCheckbox_Checked"
+                              Unchecked="DebugpyCheckbox_Unchecked"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"
+                              VerticalAlignment="Center"/>
+                </StackPanel>
+
+
                 <!-- Selected Trading Strategy -->
                 <StackPanel Orientation="Vertical" Margin="0,0,10,0">
                     <TextBlock Text="Trading Strategy:" Foreground="White" FontSize="11" Margin="0,0,0,3"/>
