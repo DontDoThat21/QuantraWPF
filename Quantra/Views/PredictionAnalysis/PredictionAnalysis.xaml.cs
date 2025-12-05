@@ -351,6 +351,13 @@ namespace Quantra.Controls
             {
                 // Set environment variable so child python processes inherit DEBUGPY=1
                 Environment.SetEnvironmentVariable("DEBUGPY", "1", EnvironmentVariableTarget.Process);
+                
+                // Update status text to inform the user
+                if (StatusText != null)
+                {
+                    StatusText.Text = "Python remote debug ENABLED - Scripts will wait 30s for debugger on port 5678";
+                    StatusText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 215, 0)); // Gold/Yellow
+                }
             }
             catch { /* ignore */ }
         }
@@ -361,6 +368,13 @@ namespace Quantra.Controls
             {
                 // Remove environment variable for this process
                 Environment.SetEnvironmentVariable("DEBUGPY", null, EnvironmentVariableTarget.Process);
+                
+                // Update status text
+                if (StatusText != null)
+                {
+                    StatusText.Text = "Ready";
+                    StatusText.Foreground = new SolidColorBrush(System.Windows.Media.Colors.White);
+                }
             }
             catch { /* ignore */ }
         }

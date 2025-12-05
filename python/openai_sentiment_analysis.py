@@ -7,6 +7,13 @@ import re
 import logging
 from datetime import datetime
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -198,6 +205,10 @@ def enrich_prediction_with_openai(prediction_data, texts, api_key, model="gpt-3.
 
 def main():
     """Main function to process input from stdin."""
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     try:
         # Read JSON from stdin
         input_json = sys.stdin.readline()

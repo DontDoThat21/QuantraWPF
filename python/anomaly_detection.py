@@ -25,6 +25,13 @@ from datetime import datetime
 import joblib
 import logging
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -1004,6 +1011,10 @@ def detect_market_anomalies(market_data, use_feature_engineering=True, sensitivi
 
 def main():
     """Main function to handle command-line operation"""
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     if len(sys.argv) != 3:
         print("Usage: python anomaly_detection.py input_file output_file", file=sys.stderr)
         sys.exit(1)

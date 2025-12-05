@@ -11,6 +11,13 @@ import nltk
 import spacy
 import re
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 # Download NLTK resources (if needed)
 try:
     nltk.data.find('tokenizers/punkt')
@@ -202,6 +209,10 @@ def analyze_transcript(transcript):
     }
 
 def main():
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     # Read JSON with transcript data from stdin
     input_json = sys.stdin.readline().strip()
     try:
