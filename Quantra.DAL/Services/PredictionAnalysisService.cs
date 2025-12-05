@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Quantra.Models;
 using Quantra.DAL.Data;
 using Quantra.DAL.Data.Entities;
+using Quantra.DAL.Helpers;
 
 namespace Quantra.DAL.Services
 {
@@ -484,6 +485,86 @@ namespace Quantra.DAL.Services
         public List<PredictionModel> GetAllPredictions(int count = 1000)
         {
             return Task.Run(() => GetAllPredictionsAsync(count)).Result;
+        }
+
+        /// <summary>
+        /// Makes a Python prediction with optional debugging enabled
+        /// </summary>
+        /// <param name="features">Dictionary of feature names and values</param>
+        /// <param name="enableDebugging">Whether to enable Python debugging (only works in DEBUG builds)</param>
+        /// <param name="debugPort">Port for debugpy to listen on</param>
+        /// <returns>Prediction result from Python</returns>
+        public async Task<PredictionResult> GetPythonPredictionAsync(
+            Dictionary<string, double> features, 
+            bool enableDebugging = false,
+            int debugPort = 5678)
+        {
+            if (features == null)
+                throw new ArgumentNullException(nameof(features));
+
+            try
+            {
+                // Enable Python debugging if requested (only in DEBUG builds)
+                if (enableDebugging)
+                {
+#if DEBUG
+                    _loggingService.Log("Info", $"Enabling Python debugging on port {debugPort}");
+                    PythonDebugHelper.EnablePythonDebugging(debugPort);
+                    _loggingService.Log("Info", "Python debugging enabled. Attach debugger now.");
+#else
+                    _loggingService.Log("Warning", "Python debugging requested but application is not in DEBUG mode");
+#endif
+                }
+
+                // Make the prediction
+                var result = await PythonStockPredictor.PredictAsync(features);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Python prediction failed", ex.ToString());
+                throw;
+            }
+            finally
+            {
+                // Clean up debugging settings
+                if (enableDebugging)
+                {
+#if DEBUG
+                    PythonDebugHelper.DisablePythonDebugging();
+                    _loggingService.Log("Info", "Python debugging disabled");
+#endif
+                }
+            }
+        }
+
+        /// <summary>
+        /// Convenience method to make a Python prediction with automatic debug scope
+        /// </summary>
+        /// <remarks>
+        /// Uses AutoDebugScope which automatically enables/disables debugging in DEBUG builds
+        /// </remarks>
+        public async Task<PredictionResult> GetPythonPredictionWithAutoDebugAsync(
+            Dictionary<string, double> features,
+            int debugPort = 5678)
+        {
+            if (features == null)
+                throw new ArgumentNullException(nameof(features));
+
+            try
+            {
+                using (PythonDebugHelper.AutoDebugScope(debugPort))
+                {
+                    _loggingService.Log("Info", "Making Python prediction with auto-debug scope");
+                    return await PythonStockPredictor.PredictAsync(features);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", "Python prediction with auto-debug failed", ex.ToString());
+                throw;
+            }
         }
 
         /// <summary>

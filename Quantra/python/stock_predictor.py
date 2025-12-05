@@ -14,6 +14,23 @@ import warnings
 import logging
 import time
 
+# Configure debugpy for remote debugging
+ENABLE_DEBUGPY = os.environ.get('ENABLE_PYTHON_DEBUG', 'false').lower() == 'true'
+DEBUGPY_PORT = int(os.environ.get('DEBUGPY_PORT', '5678'))
+
+if ENABLE_DEBUGPY:
+    try:
+        import debugpy
+        # Allow other computers to attach to debugpy at this IP address and port
+        debugpy.listen(('0.0.0.0', DEBUGPY_PORT))
+        print(f"Waiting for debugger to attach on port {DEBUGPY_PORT}...", file=sys.stderr)
+        debugpy.wait_for_client()
+        print("Debugger attached!", file=sys.stderr)
+    except ImportError:
+        print("debugpy not installed. Install with: pip install debugpy", file=sys.stderr)
+    except Exception as e:
+        print(f"Error setting up debugpy: {e}", file=sys.stderr)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -93,20 +110,25 @@ except ImportError:
 
 def create_features(data, feature_type='balanced', use_feature_engineering=True):
     """Create technical indicators as features for prediction.
-    
+        
     Args:
         data (dict or pd.DataFrame): Input data
         feature_type (str): Type of features to generate ('minimal', 'balanced', 'full')
         use_feature_engineering (bool): Whether to use advanced feature engineering pipeline
-        
+            
     Returns:
         pd.DataFrame: DataFrame with features
     """
-    # Convert to DataFrame if needed
-    if isinstance(data, dict):
-        df = pd.DataFrame(data)
-    else:
-        df = data.copy()
+# BREAKPOINT: Start of feature creation
+if ENABLE_DEBUGPY:
+    import debugpy
+    debugpy.breakpoint()
+    
+# Convert to DataFrame if needed
+if isinstance(data, dict):
+    df = pd.DataFrame(data)
+else:
+    df = data.copy()
     
     # Check if we can use the advanced feature engineering pipeline
     if FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering:
@@ -136,39 +158,48 @@ def create_features(data, feature_type='balanced', use_feature_engineering=True)
     df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
     
     # Basic features
-    df['returns'] = df['close'].pct_change()
-    df['volatility'] = df['returns'].rolling(window=20).std()
+    df['returns'] = pd.to_numeric(df['close'].pct_change(), errors='coerce')
+    df['volatility'] = pd.to_numeric(df['returns'].rolling(window=20).std(), errors='coerce')
     
     # Moving averages
-    df['sma_5'] = df['close'].rolling(window=5).mean()
-    df['sma_20'] = df['close'].rolling(window=20).mean()
+    df['sma_5'] = pd.to_numeric(df['close'].rolling(window=5).mean(), errors='coerce')
+    df['sma_20'] = pd.to_numeric(df['close'].rolling(window=20).mean(), errors='coerce')
     
     # Price momentum - handle NaN from shift
-    df['momentum'] = df['close'] - df['close'].shift(5)
-    df['roc'] = df['close'].pct_change(periods=5)
+    df['momentum'] = pd.to_numeric(df['close'] - df['close'].shift(5), errors='coerce')
+    df['roc'] = pd.to_numeric(df['close'].pct_change(periods=5), errors='coerce')
     
     # Volatility features
-    df['atr'] = df['high'] - df['low']
-    df['bb_upper'] = df['sma_20'] + (df['close'].rolling(window=20).std() * 2)
-    df['bb_lower'] = df['sma_20'] - (df['close'].rolling(window=20).std() * 2)
+    df['atr'] = pd.to_numeric(df['high'] - df['low'], errors='coerce')
+    bb_std = pd.to_numeric(df['close'].rolling(window=20).std(), errors='coerce').fillna(0)
+    df['bb_upper'] = pd.to_numeric(df['sma_20'] + (bb_std * 2), errors='coerce')
+    df['bb_lower'] = pd.to_numeric(df['sma_20'] - (bb_std * 2), errors='coerce')
     # Avoid division by zero or None in bb_width calculation
-    df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['sma_20'].replace(0, 1e-10).fillna(1e-10)
+    sma_20_safe = pd.to_numeric(df['sma_20'], errors='coerce').replace(0, 1e-10).fillna(1e-10)
+    df['bb_width'] = pd.to_numeric((df['bb_upper'] - df['bb_lower']) / sma_20_safe, errors='coerce')
     
     # Volume features
     if 'volume' in df.columns:
-        df['volume_ma5'] = df['volume'].rolling(window=5).mean()
-        df['volume_ma20'] = df['volume'].rolling(window=20).mean()
+        df['volume_ma5'] = pd.to_numeric(df['volume'].rolling(window=5).mean(), errors='coerce')
+        df['volume_ma20'] = pd.to_numeric(df['volume'].rolling(window=20).mean(), errors='coerce')
         # Avoid division by zero or None
-        df['volume_ratio'] = df['volume'] / df['volume_ma5'].replace(0, 1e-10).fillna(1e-10)
+        volume_ma5_safe = pd.to_numeric(df['volume_ma5'], errors='coerce').replace(0, 1e-10).fillna(1e-10)
+        df['volume_ratio'] = pd.to_numeric(df['volume'] / volume_ma5_safe, errors='coerce')
     
     # RSI - with proper None/NaN handling
+    # BREAKPOINT: RSI calculation - common source of NoneType errors
+    if ENABLE_DEBUGPY:
+        import debugpy
+        debugpy.breakpoint()
+    
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     
     # Fill NaN values before division to avoid NoneType errors
-    gain = gain.fillna(0)
-    loss = loss.fillna(1e-10)  # Use small value to avoid division by zero
+    # Convert to float to ensure we don't have None values
+    gain = pd.to_numeric(gain, errors='coerce').fillna(0)
+    loss = pd.to_numeric(loss, errors='coerce').fillna(1e-10)  # Use small value to avoid division by zero
     loss = loss.replace(0, 1e-10)  # Also replace any zeros
     
     rs = gain / loss
@@ -1543,18 +1574,23 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
 def predict_stock(features, model_type='auto', architecture_type='lstm', use_feature_engineering=True, optimize_hyperparams=False):
     """
     Make stock predictions using the provided features and the specified ML model.
-                    
+                        
     Args:
         features (dict): Dictionary of feature names and values
         model_type (str): Model type to use ('pytorch', 'tensorflow', 'random_forest', or 'auto')
         architecture_type (str): Neural network architecture type ('lstm', 'gru', 'transformer')
         use_feature_engineering (bool): Whether to use advanced feature engineering
         optimize_hyperparams (bool): Whether to optimize hyperparameters if training a new model
-                        
+                            
     Returns:
         dict: Prediction results with action, confidence, target price, etc.
     """
-    try:
+# BREAKPOINT: Start of prediction function
+if ENABLE_DEBUGPY:
+    import debugpy
+    debugpy.breakpoint()
+    
+try:
         # Create a simple feature set if none exists
         if not features:
             features = {'dummy': 0.0}
@@ -1688,6 +1724,11 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
                              [float(imp) for imp in model.feature_importances_]))
         
         # CRITICAL FIX: Convert predicted percentage change to actual target price
+        # BREAKPOINT: Price calculation - verify predicted_change is not None
+        if ENABLE_DEBUGPY:
+            import debugpy
+            debugpy.breakpoint()
+        
         current_price = features.get('current_price', 100.0)  # Default to 100 if not provided
         
         # predicted_change is a percentage change (e.g., 0.05 = 5% increase, -0.1 = 10% decrease)
@@ -1834,19 +1875,24 @@ def predict_stock(features, model_type='auto', architecture_type='lstm', use_fea
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: script.py input_file output_file", file=sys.stderr)
-        sys.exit(1)
-        
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+# BREAKPOINT: Main entry point
+if ENABLE_DEBUGPY:
+    import debugpy
+    debugpy.breakpoint()
     
-    try:
-        # Read input JSON
-        with open(input_file, 'r') as f:
-            data = json.load(f)
+if len(sys.argv) != 3:
+    print("Usage: script.py input_file output_file", file=sys.stderr)
+    sys.exit(1)
         
-        # Get features, model type and feature engineering settings from input
+input_file = sys.argv[1]
+output_file = sys.argv[2]
+    
+try:
+    # Read input JSON
+    with open(input_file, 'r') as f:
+        data = json.load(f)
+        
+    # Get features, model type and feature engineering settings from input
         features = data.get('Features', {})
         model_type = data.get('ModelType', 'auto')
         architecture_type = data.get('ArchitectureType', 'lstm')
