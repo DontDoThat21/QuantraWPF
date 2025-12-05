@@ -12,24 +12,13 @@ import os
 from datetime import datetime, timedelta
 import warnings
 import logging
-import time
 
-# Configure debugpy for remote debugging
-ENABLE_DEBUGPY = os.environ.get('ENABLE_PYTHON_DEBUG', 'false').lower() == 'true'
-DEBUGPY_PORT = int(os.environ.get('DEBUGPY_PORT', '5678'))
-
-if ENABLE_DEBUGPY:
-    try:
-        import debugpy
-        # Allow other computers to attach to debugpy at this IP address and port
-        debugpy.listen(('0.0.0.0', DEBUGPY_PORT))
-        print(f"Waiting for debugger to attach on port {DEBUGPY_PORT}...", file=sys.stderr)
-        debugpy.wait_for_client()
-        print("Debugger attached!", file=sys.stderr)
-    except ImportError:
-        print("debugpy not installed. Install with: pip install debugpy", file=sys.stderr)
-    except Exception as e:
-        print(f"Error setting up debugpy: {e}", file=sys.stderr)
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
@@ -42,10 +31,6 @@ logger = logging.getLogger('stock_predictor')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
 os.makedirs(MODEL_DIR, exist_ok=True)
-
-# Add BASE_DIR to sys.path to ensure module imports work
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
 
 # Model paths
 MODEL_PATH = os.path.join(MODEL_DIR, 'stock_rf_model.pkl')
@@ -63,9 +48,9 @@ try:
     )
     FEATURE_ENGINEERING_AVAILABLE = True
     logger.info("Feature Engineering module is available")
-except ImportError as e:
+except ImportError:
     FEATURE_ENGINEERING_AVAILABLE = False
-    logger.warning(f"Feature Engineering module is not available: {str(e)}. Using basic feature creation.")
+    logger.warning("Feature Engineering module is not available. Using basic feature creation.")
 
 # Try to import hyperparameter optimization module
 try:
@@ -78,10 +63,9 @@ try:
     )
     HYPERPARAMETER_OPTIMIZATION_AVAILABLE = True
     logger.info("Hyperparameter Optimization module is available")
-except ImportError as e:
+except ImportError:
     HYPERPARAMETER_OPTIMIZATION_AVAILABLE = False
-    logger.warning(f"Hyperparameter Optimization module is not available: {str(e)}. Using default parameters.")
-    logger.info("To enable hyperparameter optimization, install required packages: pip install optuna scikit-learn")
+    logger.warning("Hyperparameter Optimization module is not available. Using default parameters.")
 
 # Try to import machine learning libraries
 # These imports are optional - we'll fall back to RandomForest if they're not available
@@ -107,28 +91,37 @@ try:
 except ImportError:
     logger.warning("TensorFlow is not available. Install with: pip install tensorflow")
 
+# Try to import Temporal Fusion Transformer integration
+TFT_AVAILABLE = False
+TFT_MODEL_PATH = os.path.join(MODEL_DIR, 'tft_model.pt')
+
+try:
+    from tft_integration import TFTStockPredictor, create_static_features, prepare_temporal_features
+    if PYTORCH_AVAILABLE:
+        TFT_AVAILABLE = True
+        logger.info("Temporal Fusion Transformer is available")
+    else:
+        logger.warning("TFT requires PyTorch. Install with: pip install torch")
+except ImportError as e:
+    logger.warning(f"TFT not available: {e}")
+
 
 def create_features(data, feature_type='balanced', use_feature_engineering=True):
     """Create technical indicators as features for prediction.
-        
+    
     Args:
         data (dict or pd.DataFrame): Input data
         feature_type (str): Type of features to generate ('minimal', 'balanced', 'full')
         use_feature_engineering (bool): Whether to use advanced feature engineering pipeline
-            
+        
     Returns:
         pd.DataFrame: DataFrame with features
     """
-# BREAKPOINT: Start of feature creation
-if ENABLE_DEBUGPY:
-    import debugpy
-    debugpy.breakpoint()
-    
-# Convert to DataFrame if needed
-if isinstance(data, dict):
-    df = pd.DataFrame(data)
-else:
-    df = data.copy()
+    # Convert to DataFrame if needed
+    if isinstance(data, dict):
+        df = pd.DataFrame(data)
+    else:
+        df = data.copy()
     
     # Check if we can use the advanced feature engineering pipeline
     if FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering:
@@ -153,66 +146,38 @@ else:
     # Fallback: Basic feature creation
     logger.info("Using basic feature creation")
     
-    # Ensure we have numeric data and handle any None/NaN values
-    df = df.apply(pd.to_numeric, errors='coerce')
-    df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
-    
     # Basic features
-    df['returns'] = pd.to_numeric(df['close'].pct_change(), errors='coerce')
-    df['volatility'] = pd.to_numeric(df['returns'].rolling(window=20).std(), errors='coerce')
+    df['returns'] = df['close'].pct_change()
+    df['volatility'] = df['returns'].rolling(window=20).std()
     
     # Moving averages
-    df['sma_5'] = pd.to_numeric(df['close'].rolling(window=5).mean(), errors='coerce')
-    df['sma_20'] = pd.to_numeric(df['close'].rolling(window=20).mean(), errors='coerce')
+    df['sma_5'] = df['close'].rolling(window=5).mean()
+    df['sma_20'] = df['close'].rolling(window=20).mean()
     
-    # Price momentum - handle NaN from shift
-    df['momentum'] = pd.to_numeric(df['close'] - df['close'].shift(5), errors='coerce')
-    df['roc'] = pd.to_numeric(df['close'].pct_change(periods=5), errors='coerce')
+    # Price momentum
+    df['momentum'] = df['close'] - df['close'].shift(5)
+    df['roc'] = df['close'].pct_change(periods=5)
     
     # Volatility features
-    df['atr'] = pd.to_numeric(df['high'] - df['low'], errors='coerce')
-    bb_std = pd.to_numeric(df['close'].rolling(window=20).std(), errors='coerce').fillna(0)
-    df['bb_upper'] = pd.to_numeric(df['sma_20'] + (bb_std * 2), errors='coerce')
-    df['bb_lower'] = pd.to_numeric(df['sma_20'] - (bb_std * 2), errors='coerce')
-    # Avoid division by zero or None in bb_width calculation
-    sma_20_safe = pd.to_numeric(df['sma_20'], errors='coerce').replace(0, 1e-10).fillna(1e-10)
-    df['bb_width'] = pd.to_numeric((df['bb_upper'] - df['bb_lower']) / sma_20_safe, errors='coerce')
+    df['atr'] = df['high'] - df['low']
+    df['bb_upper'] = df['sma_20'] + (df['close'].rolling(window=20).std() * 2)
+    df['bb_lower'] = df['sma_20'] - (df['close'].rolling(window=20).std() * 2)
+    df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['sma_20']
     
     # Volume features
     if 'volume' in df.columns:
-        df['volume_ma5'] = pd.to_numeric(df['volume'].rolling(window=5).mean(), errors='coerce')
-        df['volume_ma20'] = pd.to_numeric(df['volume'].rolling(window=20).mean(), errors='coerce')
-        # Avoid division by zero or None
-        volume_ma5_safe = pd.to_numeric(df['volume_ma5'], errors='coerce').replace(0, 1e-10).fillna(1e-10)
-        df['volume_ratio'] = pd.to_numeric(df['volume'] / volume_ma5_safe, errors='coerce')
+        df['volume_ma5'] = df['volume'].rolling(window=5).mean()
+        df['volume_ma20'] = df['volume'].rolling(window=20).mean()
+        df['volume_ratio'] = df['volume'] / df['volume_ma5']
     
-    # RSI - with proper None/NaN handling
-    # BREAKPOINT: RSI calculation - common source of NoneType errors
-    if ENABLE_DEBUGPY:
-        import debugpy
-        debugpy.breakpoint()
-    
+    # RSI
     delta = df['close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    
-    # Fill NaN values before division to avoid NoneType errors
-    # Convert to float to ensure we don't have None values
-    gain = pd.to_numeric(gain, errors='coerce').fillna(0)
-    loss = pd.to_numeric(loss, errors='coerce').fillna(1e-10)  # Use small value to avoid division by zero
-    loss = loss.replace(0, 1e-10)  # Also replace any zeros
-    
-    rs = gain / loss
+    rs = gain / loss.replace(0, 1e-10)  # Avoid division by zero
     df['rsi'] = 100 - (100 / (1 + rs))
     
-    # Fill any remaining NaN values before dropping rows
-    # First forward fill, then backward fill, then fill any remaining with 0
-    df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
-    
-    # Replace any infinity values that might have been created
-    df = df.replace([np.inf, -np.inf], 0)
-    
-    # Drop rows with NaN values if any still remain (shouldn't be any after fillna)
+    # Drop NaN values created by rolling windows
     df = df.dropna()
     
     return df
@@ -256,7 +221,9 @@ class PyTorchStockPredictor:
         elif self.architecture_type == 'transformer':
             self._build_transformer_model()
         elif self.architecture_type == 'tft':
-            self._build_tft_model()
+            # TFT should use TFTStockPredictor, but if we get here, use transformer as fallback
+            logger.warning("TFT architecture should use TFTStockPredictor. Using transformer architecture instead.")
+            self._build_transformer_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
             self._build_lstm_model()
@@ -371,165 +338,24 @@ class PyTorchStockPredictor:
             dropout=self.dropout,
             nhead=nhead
         ).to(self.device)
-        
-    def _build_tft_model(self):
-        """Build a Temporal Fusion Transformer model architecture."""
-        class TemporalFusionTransformer(nn.Module):
-            def __init__(self, input_dim, hidden_dim, num_layers, dropout, nhead=4):
-                super().__init__()
-                self.input_dim = input_dim
-                self.hidden_dim = hidden_dim
-                
-                # Variable Selection Networks (VSN)
-                self.static_vsn = nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    nn.ReLU(),
-                    nn.Linear(hidden_dim, input_dim),
-                    nn.Softmax(dim=-1)
-                )
-                
-                # LSTM Encoder-Decoder
-                self.encoder_lstm = nn.LSTM(
-                    input_size=input_dim,
-                    hidden_size=hidden_dim,
-                    num_layers=num_layers,
-                    batch_first=True,
-                    dropout=dropout if num_layers > 1 else 0
-                )
-                
-                self.decoder_lstm = nn.LSTM(
-                    input_size=hidden_dim,
-                    hidden_size=hidden_dim,
-                    num_layers=num_layers,
-                    batch_first=True,
-                    dropout=dropout if num_layers > 1 else 0
-                )
-                
-                # Gated Linear Unit (GLU)
-                self.glu = nn.Sequential(
-                    nn.Linear(hidden_dim, hidden_dim * 2),
-                    nn.GLU(dim=-1)
-                )
-                
-                # Multi-head attention
-                self.attention = nn.MultiheadAttention(
-                    embed_dim=hidden_dim,
-                    num_heads=nhead,
-                    dropout=dropout,
-                    batch_first=True
-                )
-                
-                # Layer normalization
-                self.layer_norm1 = nn.LayerNorm(hidden_dim)
-                self.layer_norm2 = nn.LayerNorm(hidden_dim)
-                self.layer_norm3 = nn.LayerNorm(hidden_dim)
-                
-                # Position-wise feed-forward
-                self.ffn = nn.Sequential(
-                    nn.Linear(hidden_dim, hidden_dim * 4),
-                    nn.ReLU(),
-                    nn.Dropout(dropout),
-                    nn.Linear(hidden_dim * 4, hidden_dim)
-                )
-                
-                # Gating mechanisms
-                self.gate_norm = nn.LayerNorm(hidden_dim)
-                self.gate = nn.Sequential(
-                    nn.Linear(hidden_dim, hidden_dim),
-                    nn.Sigmoid()
-                )
-                
-                # Output layers
-                self.dropout = nn.Dropout(dropout)
-                self.output_layer = nn.Linear(hidden_dim, 1)
-            
-            def forward(self, x):
-                # x shape: (batch_size, seq_length, input_dim)
-                batch_size, seq_len, _ = x.shape
-                
-                # Variable selection
-                # Apply VSN to select important features
-                vsn_weights = self.static_vsn(x.mean(dim=1, keepdim=True))  # (batch, 1, input_dim)
-                x_selected = x * vsn_weights  # Weighted input features
-                
-                # Encoder LSTM
-                encoder_out, (h_n, c_n) = self.encoder_lstm(x_selected)
-                encoder_out = self.layer_norm1(encoder_out)
-                
-                # Decoder LSTM
-                decoder_out, _ = self.decoder_lstm(encoder_out, (h_n, c_n))
-                decoder_out = self.layer_norm2(decoder_out)
-                
-                # Apply GLU
-                glu_out = self.glu(decoder_out)
-                
-                # Multi-head attention with residual connection
-                attn_out, _ = self.attention(glu_out, glu_out, glu_out)
-                attn_out = self.dropout(attn_out)
-                attn_out = self.layer_norm3(attn_out + glu_out)  # Residual connection
-                
-                # Position-wise feed-forward with gating
-                ffn_out = self.ffn(attn_out)
-                ffn_out = self.dropout(ffn_out)
-                
-                # Gated residual connection
-                gate_values = self.gate(self.gate_norm(attn_out))
-                gated_out = gate_values * ffn_out + (1 - gate_values) * attn_out
-                
-                # Take the last time step for prediction
-                final_out = gated_out[:, -1, :]
-                
-                # Output
-                output = self.output_layer(final_out)
-                return output.squeeze(1)
-        
-        # Ensure hidden_dim is divisible by nhead
-        nhead = max(4, self.hidden_dim // 16)
-        self.hidden_dim = nhead * (self.hidden_dim // nhead)
-        
-        self.model = TemporalFusionTransformer(
-            input_dim=self.input_dim,
-            hidden_dim=self.hidden_dim,
-            num_layers=self.num_layers,
-            dropout=self.dropout,
-            nhead=nhead
-        ).to(self.device)
     
     def fit(self, X, y, epochs=50, batch_size=32, lr=0.001, verbose=False):
         """Train the PyTorch model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, window_size, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features)
             y (np.ndarray): Target array with shape (n_samples,)
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
             lr (float): Learning rate
             verbose (bool): Whether to print training progress
         """
-        # Handle both 2D and 3D input
-        if len(X.shape) == 3:
-            # Already 3D: (samples, window_size, features)
-            # Reshape to 2D for scaling: (samples * window_size, features)
-            original_shape = X.shape
-            X_reshaped = X.reshape(-1, X.shape[-1])
-            
-            # Scale the features
-            X_scaled = self.scaler.fit_transform(X_reshaped)
-            
-            # Reshape back to 3D
-            X_scaled = X_scaled.reshape(original_shape)
-            
-            # Convert to PyTorch tensor
-            X_torch = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
-        else:
-            # 2D input: (samples, features)
-            # Scale the features
-            X_scaled = self.scaler.fit_transform(X)
-            
-            # Prepare data for LSTM (we need to reshape to [batch_size, sequence_len, n_features])
-            # For this simple case, we'll use sequence_len=1
-            X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
+        # Scale the features
+        X_scaled = self.scaler.fit_transform(X)
         
+        # Prepare data for LSTM (we need to reshape to [batch_size, sequence_len, n_features])
+        # For this simple case, we'll use sequence_len=1
+        X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
         y_torch = torch.tensor(y, dtype=torch.float32).to(self.device)
         
         # Create DataLoader
@@ -563,33 +389,16 @@ class PyTorchStockPredictor:
         """Make predictions using the trained model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, window_size, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features)
             
         Returns:
             np.ndarray: Predictions with shape (n_samples,)
         """
-        # Handle both 2D and 3D input
-        if len(X.shape) == 3:
-            # Already 3D: (samples, window_size, features)
-            # Reshape to 2D for scaling: (samples * window_size, features)
-            original_shape = X.shape
-            X_reshaped = X.reshape(-1, X.shape[-1])
-            
-            # Scale the features
-            X_scaled = self.scaler.transform(X_reshaped)
-            
-            # Reshape back to 3D
-            X_scaled = X_scaled.reshape(original_shape)
-            
-            # Convert to PyTorch tensor
-            X_torch = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
-        else:
-            # 2D input: (samples, features)
-            # Scale the features
-            X_scaled = self.scaler.transform(X)
-            
-            # Convert to PyTorch tensor and reshape for LSTM
-            X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
+        # Scale the features
+        X_scaled = self.scaler.transform(X)
+        
+        # Convert to PyTorch tensor and reshape for LSTM
+        X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
         
         # Make predictions
         self.model.eval()
@@ -719,7 +528,9 @@ class TensorFlowStockPredictor:
         elif self.architecture_type == 'transformer':
             self._build_transformer_model()
         elif self.architecture_type == 'tft':
-            self._build_tft_model()
+            # TFT should use TFTStockPredictor, but if we get here, use transformer as fallback
+            logger.warning("TFT architecture should use TFTStockPredictor. Using transformer architecture instead.")
+            self._build_transformer_model()
         else:
             logger.warning(f"Unknown architecture type: {self.architecture_type}. Falling back to LSTM.")
             self._build_lstm_model()
@@ -831,122 +642,22 @@ class TensorFlowStockPredictor:
         
         # Build the model
         self.model = keras.Model(inputs=inputs, outputs=outputs)
-        
-    def _build_tft_model(self):
-        """Build a Temporal Fusion Transformer model architecture using Keras."""
-        # Ensure hidden_dim is divisible by num_heads
-        num_heads = min(8, max(4, self.hidden_dim // 16))
-        self.hidden_dim = num_heads * (self.hidden_dim // num_heads)
-        
-        # Create input layer
-        inputs = layers.Input(shape=(1, self.input_dim))
-        
-        # Variable Selection Network (VSN)
-        # Global context vector from average of inputs
-        context = layers.GlobalAveragePooling1D()(inputs)
-        context = layers.RepeatVector(1)(context)
-        
-        # VSN: Feature importance weights
-        vsn = layers.Dense(self.hidden_dim, activation='relu')(context)
-        vsn_weights = layers.Dense(self.input_dim, activation='softmax')(vsn)
-        vsn_weights = layers.Reshape((1, self.input_dim))(vsn_weights)
-        
-        # Apply variable selection
-        x = layers.Multiply()([inputs, vsn_weights])
-        
-        # Encoder LSTM
-        encoder = layers.LSTM(
-            units=self.hidden_dim,
-            return_sequences=True,
-            return_state=True
-        )
-        encoder_out, state_h, state_c = encoder(x)
-        encoder_out = layers.LayerNormalization(epsilon=1e-6)(encoder_out)
-        
-        # Decoder LSTM
-        decoder = layers.LSTM(
-            units=self.hidden_dim,
-            return_sequences=True
-        )
-        decoder_out = decoder(encoder_out, initial_state=[state_h, state_c])
-        decoder_out = layers.LayerNormalization(epsilon=1e-6)(decoder_out)
-        
-        # Gated Linear Unit (GLU)
-        glu_dense = layers.Dense(self.hidden_dim * 2)(decoder_out)
-        # Split into two parts and apply gating
-        glu_a = glu_dense[:, :, :self.hidden_dim]
-        glu_b = glu_dense[:, :, self.hidden_dim:]
-        glu_out = layers.Multiply()([glu_a, layers.Activation('sigmoid')(glu_b)])
-        
-        # Multi-head attention
-        attention_output = layers.MultiHeadAttention(
-            num_heads=num_heads,
-            key_dim=self.hidden_dim // num_heads,
-            dropout=self.dropout
-        )(glu_out, glu_out)
-        
-        # Add & Norm (residual connection)
-        attention_output = layers.Add()([glu_out, attention_output])
-        if self.dropout > 0:
-            attention_output = layers.Dropout(self.dropout)(attention_output)
-        attention_output = layers.LayerNormalization(epsilon=1e-6)(attention_output)
-        
-        # Position-wise Feed-Forward Network
-        ffn = keras.Sequential([
-            layers.Dense(self.hidden_dim * 4, activation='relu'),
-            layers.Dropout(self.dropout) if self.dropout > 0 else layers.Lambda(lambda x: x),
-            layers.Dense(self.hidden_dim)
-        ])
-        ffn_output = ffn(attention_output)
-        
-        # Gated residual connection
-        gate_layer = layers.Dense(self.hidden_dim, activation='sigmoid')(attention_output)
-        gated_output = layers.Add()([
-            layers.Multiply()([gate_layer, ffn_output]),
-            layers.Multiply()([layers.Lambda(lambda x: 1 - x)(gate_layer), attention_output])
-        ])
-        gated_output = layers.LayerNormalization(epsilon=1e-6)(gated_output)
-        
-        # Extract the last sequence element for prediction
-        final_repr = gated_output[:, -1, :]
-        
-        # Output layers
-        if self.dropout > 0:
-            final_repr = layers.Dropout(self.dropout)(final_repr)
-        outputs = layers.Dense(1)(final_repr)
-        
-        # Build the model
-        self.model = keras.Model(inputs=inputs, outputs=outputs)
     
     def fit(self, X, y, epochs=50, batch_size=32, verbose=False):
         """Train the TensorFlow model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, window_size, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features)
             y (np.ndarray): Target array with shape (n_samples,)
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
             verbose (bool): Whether to print training progress
         """
-        # Handle both 2D and 3D input
-        if len(X.shape) == 3:
-            # Already 3D: (samples, window_size, features)
-            # Reshape to 2D for scaling: (samples * window_size, features)
-            original_shape = X.shape
-            X_reshaped = X.reshape(-1, X.shape[-1])
-            
-            # Scale the features
-            X_scaled = self.scaler.fit_transform(X_reshaped)
-            
-            # Reshape back to 3D
-            X_reshaped = X_scaled.reshape(original_shape)
-        else:
-            # 2D input: (samples, features)
-            # Scale the features
-            X_scaled = self.scaler.fit_transform(X)
-            
-            # Reshape for LSTM [samples, time_steps, features]
-            X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
+        # Scale the features
+        X_scaled = self.scaler.fit_transform(X)
+        
+        # Reshape for LSTM [samples, time_steps, features]
+        X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
         
         # Train the model
         self.model.fit(
@@ -961,30 +672,16 @@ class TensorFlowStockPredictor:
         """Make predictions using the trained model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, window_size, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features)
             
         Returns:
             np.ndarray: Predictions with shape (n_samples,)
         """
-        # Handle both 2D and 3D input
-        if len(X.shape) == 3:
-            # Already 3D: (samples, window_size, features)
-            # Reshape to 2D for scaling: (samples * window_size, features)
-            original_shape = X.shape
-            X_reshaped = X.reshape(-1, X.shape[-1])
-            
-            # Scale the features
-            X_scaled = self.scaler.transform(X_reshaped)
-            
-            # Reshape back to 3D
-            X_reshaped = X_scaled.reshape(original_shape)
-        else:
-            # 2D input: (samples, features)
-            # Scale the features
-            X_scaled = self.scaler.transform(X)
-            
-            # Reshape for LSTM [samples, time_steps, features]
-            X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
+        # Scale the features
+        X_scaled = self.scaler.transform(X)
+        
+        # Reshape for LSTM [samples, time_steps, features]
+        X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
         
         # Make predictions
         predictions = self.model.predict(X_reshaped)
@@ -1376,70 +1073,86 @@ def optimize_model(
             return {'n_estimators': 100, 'max_depth': 10, 'min_samples_split': 5, 'min_samples_leaf': 2}, None
 
 
-def load_or_train_model(X_train=None, y_train=None, model_type='auto', architecture_type='lstm', force_retrain=False):
+def load_or_train_model(X_train=None, y_train=None, model_type='auto', architecture_type='lstm'):
     """Load existing model or train a new one if not found.
-            
+    
     Args:
         X_train (np.ndarray, optional): Training features. Defaults to None.
         y_train (np.ndarray, optional): Training targets. Defaults to None.
-        model_type (str, optional): Model type to use ('pytorch', 'tensorflow', 'random_forest', or 'auto').
+        model_type (str, optional): Model type to use ('pytorch', 'tensorflow', 'random_forest', 'tft', or 'auto').
                                    'auto' will use the best available model. Defaults to 'auto'.
-        architecture_type (str, optional): Neural network architecture type ('lstm', 'gru', 'transformer').
+        architecture_type (str, optional): Neural network architecture type ('lstm', 'gru', 'transformer', 'tft').
                                          Defaults to 'lstm'.
-        force_retrain (bool, optional): If True, always train a new model even if one exists. Defaults to False.
-                                               
+                                   
     Returns:
         tuple: (model, scaler, model_type)
     """
-# Determine the best available model type if 'auto' is specified
+    # Handle TFT architecture type
+    if architecture_type.lower() == 'tft':
+        if TFT_AVAILABLE:
+            model_type = 'tft'
+        else:
+            # TFT not available, fall back to transformer for PyTorch/TensorFlow models
+            logger.warning("TFT not available (PyTorch required). Falling back to transformer architecture.")
+            architecture_type = 'transformer'
+    
+    # Determine the best available model type if 'auto' is specified
     if model_type == 'auto':
-        if PYTORCH_AVAILABLE:
+        if TFT_AVAILABLE and architecture_type.lower() == 'tft':
+            model_type = 'tft'
+        elif PYTORCH_AVAILABLE:
             model_type = 'pytorch'
         elif TENSORFLOW_AVAILABLE:
             model_type = 'tensorflow'
         else:
             model_type = 'random_forest'
-                    
+            
     logger.info(f"Using {model_type} model with {architecture_type} architecture")
     
-    # Try to load existing model (skip if force_retrain is True)
-    if not force_retrain:
-        try:
-            if model_type == 'pytorch' and PYTORCH_AVAILABLE:
-                # Try to load PyTorch model
-                model = PyTorchStockPredictor(architecture_type=architecture_type)
-                if model.load(PYTORCH_MODEL_PATH, SCALER_PATH):
-                    logger.info(f"Loaded existing PyTorch model with {model.architecture_type} architecture")
-                    return model, model.scaler, 'pytorch'
-                    
-            elif model_type == 'tensorflow' and TENSORFLOW_AVAILABLE:
-                # Try to load TensorFlow model
-                model = TensorFlowStockPredictor(architecture_type=architecture_type)
-                if model.load(TENSORFLOW_MODEL_PATH, SCALER_PATH):
-                    logger.info(f"Loaded existing TensorFlow model with {model.architecture_type} architecture")
-                    return model, model.scaler, 'tensorflow'
-                    
-            elif model_type == 'random_forest' or not (PYTORCH_AVAILABLE or TENSORFLOW_AVAILABLE):
-                # Try to load RandomForest model
-                if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
-                    model = joblib.load(MODEL_PATH)
-                    scaler = joblib.load(SCALER_PATH)
-                    logger.info("Loaded existing RandomForest model")
-                    return model, scaler, 'random_forest'
-                    
-        except Exception as e:
-            logger.error(f"Error loading model: {e}")
-    else:
-        logger.info("Force retraining - skipping model loading")
+    # Try to load existing model
+    try:
+        # Handle TFT model loading
+        if model_type == 'tft' and TFT_AVAILABLE:
+            model = TFTStockPredictor(
+                input_dim=X_train.shape[-1] if X_train is not None else 50,
+                static_dim=10
+            )
+            if model.load(TFT_MODEL_PATH):
+                logger.info("Loaded existing TFT model")
+                return model, model.scaler, 'tft'
+        
+        elif model_type == 'pytorch' and PYTORCH_AVAILABLE:
+            # Try to load PyTorch model
+            model = PyTorchStockPredictor(architecture_type=architecture_type)
+            if model.load(PYTORCH_MODEL_PATH, SCALER_PATH):
+                logger.info(f"Loaded existing PyTorch model with {model.architecture_type} architecture")
+                return model, model.scaler, 'pytorch'
+                
+        elif model_type == 'tensorflow' and TENSORFLOW_AVAILABLE:
+            # Try to load TensorFlow model
+            model = TensorFlowStockPredictor(architecture_type=architecture_type)
+            if model.load(TENSORFLOW_MODEL_PATH, SCALER_PATH):
+                logger.info(f"Loaded existing TensorFlow model with {model.architecture_type} architecture")
+                return model, model.scaler, 'tensorflow'
+                
+        elif model_type == 'random_forest' or not (PYTORCH_AVAILABLE or TENSORFLOW_AVAILABLE):
+            # Try to load RandomForest model
+            if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
+                model = joblib.load(MODEL_PATH)
+                scaler = joblib.load(SCALER_PATH)
+                logger.info("Loaded existing RandomForest model")
+                return model, scaler, 'random_forest'
+                
+    except Exception as e:
+        logger.error(f"Error loading model: {e}")
         
     # If we get here, we need to train a new model
     
     # Check if training data is provided
     if X_train is None or y_train is None:
         # Create dummy data for first-time model creation
-        # Use a more reasonable default feature count
-        logger.warning("No training data provided, creating minimal fallback model with 1 feature")
-        X_train = np.random.rand(1000, 1)  # Minimal fallback
+        logger.info("No training data provided, using synthetic data")
+        X_train = np.random.rand(1000, 14)  # 14 features
         y_train = np.random.rand(1000)
     
     # Try to optimize hyperparameters if available
@@ -1474,18 +1187,81 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             best_params = None
         
     # Train the appropriate model type
-    # Get the correct input dimension (handle both 2D and 3D arrays)
-    if len(X_train.shape) == 3:
-        # 3D: (samples, window_size, features)
-        num_features = X_train.shape[-1]
-    else:
-        # 2D: (samples, features)
-        num_features = X_train.shape[1]
+    # Handle TFT training
+    if model_type == 'tft' and TFT_AVAILABLE:
+        # Create and train TFT model
+        logger.info("Training new TFT model...")
+        
+        # Determine input dimensions
+        if X_train is not None:
+            if len(X_train.shape) == 3:
+                input_dim = X_train.shape[2]
+                seq_len = X_train.shape[1]
+            else:
+                input_dim = X_train.shape[1]
+                seq_len = 60  # Default sequence length
+                # Reshape 2D data to 3D for TFT
+                X_train = X_train.reshape(-1, 1, input_dim)
+                # Repeat to create sequence
+                X_train = np.tile(X_train, (1, seq_len, 1))
+        else:
+            input_dim = 50
+            seq_len = 60
+        
+        model = TFTStockPredictor(
+            input_dim=input_dim,
+            static_dim=10,
+            hidden_dim=best_params.get('hidden_dim', 128) if best_params else 128,
+            forecast_horizons=[5, 10, 20, 30]
+        )
+        
+        # Create static features using the TFT integration utility
+        # In production, this should extract actual static features from metadata
+        n_samples = X_train.shape[0]
+        try:
+            X_static = np.zeros((n_samples, 10), dtype=np.float32)
+            # Populate with any available metadata if present in the training context
+            logger.info("Using default static features - extend with actual symbol metadata in production")
+        except Exception as e:
+            logger.warning(f"Error creating static features: {e}, using zeros")
+            X_static = np.zeros((n_samples, 10), dtype=np.float32)
+        
+        # Prepare multi-horizon targets if single target provided
+        if y_train is not None:
+            if y_train.ndim == 1:
+                # Create multi-horizon targets using proper forward-looking indexing
+                # This avoids data leakage by using correct time series alignment
+                horizons = model.forecast_horizons
+                max_horizon = max(horizons)
+                if len(y_train) > max_horizon:
+                    # Use forward indexing instead of roll to avoid data leakage
+                    y_multi_cols = []
+                    for h in horizons:
+                        # y[t+h] is the target for prediction at time t
+                        y_shifted = y_train[h:]  # Future values starting at offset h
+                        y_multi_cols.append(y_shifted)
+                    
+                    # Truncate all to same length (shortest sequence)
+                    min_len = min(len(col) for col in y_multi_cols)
+                    y_multi = np.column_stack([col[:min_len] for col in y_multi_cols])
+                    
+                    # Truncate X_train and X_static to match
+                    X_train = X_train[:min_len]
+                    X_static = X_static[:min_len]
+                    y_train = y_multi
+                else:
+                    y_train = np.column_stack([y_train] * len(horizons))
+        
+        model.feature_names = [f"feature_{i}" for i in range(input_dim)]
+        model.fit(X_train, X_static, y_train, epochs=30, verbose=True)
+        model.save(TFT_MODEL_PATH)
+        logger.info("Trained and saved new TFT model")
+        return model, model.scaler, 'tft'
     
-    if model_type == 'pytorch' and PYTORCH_AVAILABLE:
+    elif model_type == 'pytorch' and PYTORCH_AVAILABLE:
         # Create and train PyTorch model
         if best_params:
-            input_dim = best_params.get('input_dim', num_features)
+            input_dim = best_params.get('input_dim', X_train.shape[1])
             hidden_dim = best_params.get('hidden_dim', 64)
             num_layers = best_params.get('num_layers', 2)
             dropout = best_params.get('dropout', 0.2)
@@ -1498,11 +1274,11 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             )
         else:
             model = PyTorchStockPredictor(
-                input_dim=num_features,
+                input_dim=X_train.shape[1],
                 architecture_type=architecture_type
             )
             
-        model.feature_names = [f"feature_{i}" for i in range(num_features)]  # Dummy feature names
+        model.feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]  # Dummy feature names
         model.fit(X_train, y_train, epochs=30, verbose=True)
         model.save()
         logger.info(f"Trained and saved new PyTorch model with {architecture_type} architecture")
@@ -1511,7 +1287,7 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
     elif model_type == 'tensorflow' and TENSORFLOW_AVAILABLE:
         # Create and train TensorFlow model
         if best_params:
-            input_dim = best_params.get('input_dim', num_features)
+            input_dim = best_params.get('input_dim', X_train.shape[1])
             units = best_params.get('units', 64)
             num_layers = best_params.get('num_layers', 2)
             dropout = best_params.get('dropout', 0.2)
@@ -1524,11 +1300,11 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             )
         else:
             model = TensorFlowStockPredictor(
-                input_dim=num_features,
+                input_dim=X_train.shape[1],
                 architecture_type=architecture_type
             )
             
-        model.feature_names = [f"feature_{i}" for i in range(num_features)]  # Dummy feature names
+        model.feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]  # Dummy feature names
         model.fit(X_train, y_train, epochs=30, verbose=True)
         model.save()
         logger.info(f"Trained and saved new TensorFlow model with {architecture_type} architecture")
@@ -1574,27 +1350,22 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
 def predict_stock(features, model_type='auto', architecture_type='lstm', use_feature_engineering=True, optimize_hyperparams=False):
     """
     Make stock predictions using the provided features and the specified ML model.
-                        
+    
     Args:
         features (dict): Dictionary of feature names and values
         model_type (str): Model type to use ('pytorch', 'tensorflow', 'random_forest', or 'auto')
         architecture_type (str): Neural network architecture type ('lstm', 'gru', 'transformer')
         use_feature_engineering (bool): Whether to use advanced feature engineering
         optimize_hyperparams (bool): Whether to optimize hyperparameters if training a new model
-                            
+        
     Returns:
         dict: Prediction results with action, confidence, target price, etc.
     """
-# BREAKPOINT: Start of prediction function
-if ENABLE_DEBUGPY:
-    import debugpy
-    debugpy.breakpoint()
-    
-try:
+    try:
         # Create a simple feature set if none exists
         if not features:
             features = {'dummy': 0.0}
-                
+            
         # Initialize models
         if optimize_hyperparams and HYPERPARAMETER_OPTIMIZATION_AVAILABLE:
             logger.info("Hyperparameter optimization requested for prediction")
@@ -1604,30 +1375,26 @@ try:
                 'optimization_available': True,
                 'status': 'Training data required for optimization'
             }
-            
+        
         # Load or train the model
         model, scaler, used_model_type = load_or_train_model(
             model_type=model_type,
             architecture_type=architecture_type
         )
-            
+        
         used_architecture = 'n/a'
         if hasattr(model, 'architecture_type'):
             used_architecture = model.architecture_type
-            
+        
         logger.info(f"Making prediction with {used_model_type} model using {used_architecture} architecture")
-            
+        
         # Convert features to DataFrame for feature engineering
         feature_df = pd.DataFrame([features])
         
-        logger.info(f"Input features: {list(features.keys())}")
-        logger.info(f"Feature count before processing: {len(features)}")
-            
         # Check if we have OHLCV data for feature engineering
         has_ohlcv = all(col in feature_df.columns for col in ['open', 'high', 'low', 'close'])
         
-        # IMPORTANT: For model prediction, we should NOT apply feature engineering if we don't have OHLCV data
-        # Just use the features as-is from C#
+        # Apply feature engineering if we have OHLCV data and feature engineering is enabled
         if has_ohlcv and FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering:
             try:
                 # Try to load saved pipeline
@@ -1642,107 +1409,272 @@ try:
                     logger.info("No saved pipeline found, using basic feature creation")
             except Exception as e:
                 logger.warning(f"Error in feature engineering: {str(e)}. Using raw features.")
-        else:
-            logger.info(f"Using raw features (no OHLCV data or feature engineering disabled). Feature count: {feature_df.shape[1]}")
-            
+        
         # Prepare feature array for prediction
         feature_names = list(feature_df.columns)
         feature_array = feature_df.values
-        logger.info(f"Feature array shape: {feature_array.shape}")
-            
-        # CRITICAL FIX: Check feature count consistency with scaler
-        # If features don't match, we need to retrain the model with the correct number of features
+
+        # Get current price from features early - this is required for error handling
+        # The model predicts percentage change, not actual price
+        current_price = features.get('current_price', 0.0)
+        if current_price <= 0:
+            # Try alternate keys for current price
+            current_price = features.get('close', features.get('price', 0.0))
+
+        # Check for feature dimension mismatch and retrain if necessary
         expected_features = None
-        if used_model_type == 'random_forest' and scaler is not None:
-            expected_features = scaler.n_features_in_ if hasattr(scaler, 'n_features_in_') else None
-        elif used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'input_dim'):
-            expected_features = model.input_dim
-                
-        actual_features = feature_array.shape[1]
-                
-        if expected_features is not None and actual_features != expected_features:
-            error_msg = f"X has {actual_features} features, but {used_model_type} is expecting {expected_features} features as input."
-            logger.warning(f"{error_msg} Retraining model with correct number of features...")
-            
-            # Retrain the model with the correct number of features
-            # Create synthetic training data with the correct number of features
-            X_retrain = np.random.rand(1000, actual_features)
-            y_retrain = np.random.rand(1000)
-            
-            # Force retrain with correct feature count
-            model, scaler, used_model_type = load_or_train_model(
-                X_train=X_retrain,
-                y_train=y_retrain,
-                model_type=model_type,
-                architecture_type=architecture_type,
-                force_retrain=True  # Force retraining
-            )
-            
-            logger.info(f"Model retrained successfully with {actual_features} features")
-            
+        if used_model_type in ['pytorch', 'tensorflow']:
+            if hasattr(model, 'input_dim'):
+                expected_features = model.input_dim
+        elif used_model_type == 'random_forest':
+            if scaler and hasattr(scaler, 'n_features_in_'):
+                expected_features = scaler.n_features_in_
+
+        if expected_features is not None and feature_array.shape[1] != expected_features:
+            logger.warning(f"Feature dimension mismatch: model expects {expected_features} features but got {feature_array.shape[1]}")
+            logger.warning(f"Deleting old model and retraining with correct features...")
+
+            # Delete old model files
+            try:
+                if used_model_type == 'pytorch' and os.path.exists(PYTORCH_MODEL_PATH):
+                    os.remove(PYTORCH_MODEL_PATH)
+                    logger.info(f"Deleted old PyTorch model")
+                elif used_model_type == 'tensorflow' and os.path.exists(TENSORFLOW_MODEL_PATH):
+                    import shutil
+                    shutil.rmtree(TENSORFLOW_MODEL_PATH)
+                    logger.info(f"Deleted old TensorFlow model")
+                elif used_model_type == 'random_forest' and os.path.exists(MODEL_PATH):
+                    os.remove(MODEL_PATH)
+                    logger.info(f"Deleted old Random Forest model")
+
+                if os.path.exists(SCALER_PATH):
+                    os.remove(SCALER_PATH)
+                    logger.info(f"Deleted old scaler")
+            except Exception as e:
+                logger.error(f"Error deleting old model: {e}")
+
+            # Return error indicating model needs retraining
+            return {
+                'action': 'HOLD',
+                'confidence': 0.0,
+                'targetPrice': current_price,
+                'weights': {},
+                'timeSeries': {
+                    'prices': [current_price],
+                    'dates': [datetime.now().strftime('%Y-%m-%d')],
+                    'confidence': 0.0
+                },
+                'risk': {
+                    'var': 0.0,
+                    'maxDrawdown': 0.0,
+                    'sharpeRatio': 0.0,
+                    'riskScore': 0.5
+                },
+                'patterns': [],
+                'modelType': 'error',
+                'architectureType': 'n/a',
+                'error': f'Feature dimension mismatch: model expects {expected_features} features but got {feature_array.shape[1]}. Old model deleted. Please train a new model using the "Train Model" button.',
+                'hyperparameterOptimization': {
+                    'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                    'used': False,
+                    'optimizedParams': False
+                },
+                'needsRetraining': True
+            }
+
         # Align feature names with model if possible
         if used_model_type in ['pytorch', 'tensorflow'] and hasattr(model, 'feature_names'):
             model.feature_names = feature_names
-            
-        # Make predictions based on model type
-        # IMPORTANT: Model predicts percentage change, not absolute price
-        predicted_change = None
         
-        if used_model_type == 'pytorch':
+        # IMPORTANT: If we still don't have a valid price, try to estimate from feature data
+        # This is a fallback - the C# client should ALWAYS send current_price
+        if current_price <= 0:
+            logger.warning("No current_price in features. Attempting to estimate from available data.")
+            # Try to use any price-like features
+            for key in ['open', 'high', 'low', 'adj_close', 'adjclose']:
+                if key in features and features[key] > 0:
+                    current_price = features[key]
+                    logger.info(f"Using {key} as fallback current_price: {current_price}")
+                    break
+        
+        if current_price <= 0:
+            logger.error("No valid current_price provided in features. Cannot calculate target price.")
+            # Return error result with clear message
+            return {
+                'action': 'HOLD',
+                'confidence': 0.0,
+                'targetPrice': 0.0,
+                'weights': {},
+                'timeSeries': {
+                    'prices': [],
+                    'dates': [],
+                    'confidence': 0.0
+                },
+                'risk': {
+                    'var': 0.0,
+                    'maxDrawdown': 0.0,
+                    'sharpeRatio': 0.0,
+                    'riskScore': 1.0  # High risk due to missing data
+                },
+                'patterns': [],
+                'modelType': 'error',
+                'architectureType': 'n/a',
+                'error': 'No current_price provided in features. C# client must include current_price, close, or price in Features dictionary.',
+                'hyperparameterOptimization': {
+                    'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                    'used': False,
+                    'optimizedParams': False
+                }
+            }
+        
+        # Make predictions based on model type
+        # NOTE: The model predicts percentage change (e.g., 0.05 means +5% price change)
+        if used_model_type == 'tft':
+            # Use TFT model for prediction with uncertainty quantification
+            logger.info("Making prediction with TFT model")
+            
+            # TFT expects temporal features - create from current features
+            tft_result = model.predict_single(features)
+            
+            predicted_pct_change = float(tft_result.get('medianPrediction', 0.0))
+            target_price = float(tft_result.get('targetPrice', current_price))
+            confidence = float(tft_result.get('confidence', 0.7))
+            action = tft_result.get('action', 'HOLD')
+            
+            # Get uncertainty bounds
+            lower_bound = float(tft_result.get('lowerBound', predicted_pct_change - 0.05))
+            upper_bound = float(tft_result.get('upperBound', predicted_pct_change + 0.05))
+            uncertainty = float(tft_result.get('uncertainty', upper_bound - lower_bound))
+            
+            # Multi-horizon predictions
+            horizons_data = tft_result.get('horizons', {})
+            
+            # Build feature weights from TFT importance
+            weights = {}
+            importance = tft_result.get('featureImportance', [])
+            if importance and len(importance) > 0:
+                if isinstance(importance[0], list):
+                    importance = importance[0]
+                for i, imp in enumerate(importance):
+                    weights[f'feature_{i}'] = float(imp)
+            
+            # Generate time series predictions from horizons
+            future_dates = []
+            future_prices = []
+            for horizon_key, horizon_data in horizons_data.items():
+                days = int(horizon_key.replace('d', ''))
+                future_dates.append((datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d'))
+                future_prices.append(float(horizon_data.get('target_price', target_price)))
+            
+            # If no horizons data, generate default
+            if not future_dates:
+                future_dates = [(datetime.now() + timedelta(days=i)).strftime('%Y-%m-%d') for i in [5, 10, 20, 30]]
+                future_prices = [float(target_price) for _ in range(4)]
+            
+            # Calculate risk metrics from uncertainty
+            volatility = uncertainty / 2  # Approximate volatility from interval width
+            var_95 = current_price * volatility * 1.65 if current_price > 0 else 0.0
+            max_drawdown = current_price * volatility * 2.33 if current_price > 0 else 0.0
+            sharpe_ratio = abs(predicted_pct_change) / (volatility + 1e-10) if volatility > 0 else 1.0
+            
+            # Calculate potential return
+            potential_return = predicted_pct_change
+            if action == "SELL":
+                potential_return *= -1
+            
+            # Build result with TFT-specific information
+            result = {
+                'action': action,
+                'confidence': float(confidence),
+                'targetPrice': float(target_price),
+                'weights': weights,
+                'timeSeries': {
+                    'prices': future_prices,
+                    'dates': future_dates,
+                    'confidence': float(confidence)
+                },
+                'risk': {
+                    'var': float(abs(var_95)),
+                    'maxDrawdown': float(abs(max_drawdown)),
+                    'sharpeRatio': float(sharpe_ratio),
+                    'riskScore': float(min(1.0, volatility))
+                },
+                'patterns': [{
+                    'name': 'Temporal Fusion Transformer Multi-Horizon Forecast',
+                    'strength': float(confidence),
+                    'outcome': action,
+                    'detectionDate': datetime.now().strftime('%Y-%m-%d'),
+                    'historicalAccuracy': 0.85
+                }],
+                'modelType': 'tft',
+                'architectureType': 'tft',
+                'featureEngineering': FEATURE_ENGINEERING_AVAILABLE and use_feature_engineering,
+                'hyperparameterOptimization': {
+                    'available': HYPERPARAMETER_OPTIMIZATION_AVAILABLE,
+                    'used': False,
+                    'optimizedParams': False
+                },
+                'tftMetrics': {
+                    'uncertainty': float(uncertainty),
+                    'lowerBound': float(lower_bound),
+                    'upperBound': float(upper_bound),
+                    'horizons': horizons_data
+                }
+            }
+            
+            return result
+        
+        elif used_model_type == 'pytorch':
             # Scale and predict with PyTorch model
-            predicted_change = float(model.predict(feature_array)[0])
-                
+            predicted_pct_change = float(model.predict(feature_array)[0])
+            
             # Calculate confidence - approximate for PyTorch
             confidence = 0.8  # Default confidence for PyTorch models
             weights = model.feature_importance(feature_array)
-                
+            
         elif used_model_type == 'tensorflow':
             # Scale and predict with TensorFlow model
-            predicted_change = float(model.predict(feature_array)[0])
-                
+            predicted_pct_change = float(model.predict(feature_array)[0])
+            
             # Calculate confidence - approximate for TensorFlow
             confidence = 0.8  # Default confidence for TensorFlow models
             weights = model.feature_importance(feature_array)
-                
+            
         else:  # Random Forest
             # Scale the features
             if scaler:
                 feature_array = scaler.transform(feature_array)
-                    
-            # Make predictions
-            predicted_change = float(model.predict(feature_array)[0])
                 
+            # Make predictions
+            predicted_pct_change = float(model.predict(feature_array)[0])
+            
             # Calculate confidence based on feature importance for RF
             predictions = []
             for estimator in model.estimators_:
                 predictions.append(float(estimator.predict(feature_array)[0]))
-                
-            confidence = 1.0 - min(1.0, np.std(predictions) / (np.mean(predictions) + 1e-10))
-                
+            
+            # Confidence is inversely related to prediction variance
+            pct_std = np.std(predictions) if len(predictions) > 0 else 0.0
+            confidence = 1.0 - min(1.0, pct_std / (abs(np.mean(predictions)) + 1e-10))
+            
             # Get feature importances for Random Forest
             weights = dict(zip(feature_names, 
                              [float(imp) for imp in model.feature_importances_]))
         
-        # CRITICAL FIX: Convert predicted percentage change to actual target price
-        # BREAKPOINT: Price calculation - verify predicted_change is not None
-        if ENABLE_DEBUGPY:
-            import debugpy
-            debugpy.breakpoint()
+        # Clamp the predicted percentage change to reasonable bounds (-50% to +100%)
+        # This prevents extreme predictions from outliers in training data
+        predicted_pct_change = max(-0.5, min(1.0, predicted_pct_change))
         
-        current_price = features.get('current_price', 100.0)  # Default to 100 if not provided
+        # Convert percentage change prediction to actual target price
+        # target_price = current_price * (1 + predicted_percentage_change)
+        target_price = current_price * (1.0 + predicted_pct_change)
         
-        # predicted_change is a percentage change (e.g., 0.05 = 5% increase, -0.1 = 10% decrease)
-        # Convert to actual target price
-        target_price = current_price * (1 + predicted_change)
-        
-        logger.info(f"Current price: ${current_price:.2f}, Predicted change: {predicted_change:.4f} ({predicted_change*100:.2f}%), Target price: ${target_price:.2f}")
+        logger.info(f"Prediction: current_price={current_price:.2f}, predicted_pct_change={predicted_pct_change:.4f}, target_price={target_price:.2f}")
                              
-        # Determine action based on predictions
-        price_diff = target_price - current_price
-        
-        if abs(price_diff) / current_price < 0.01:  # Less than 1% change
+        # Determine action based on predicted percentage change
+        if abs(predicted_pct_change) < 0.01:  # Less than 1% change
             action = "HOLD"
-        elif price_diff > 0:
+        elif predicted_pct_change > 0:
             action = "BUY"
         else:
             action = "SELL"
@@ -1771,18 +1703,36 @@ try:
                            for _ in range(5)]
         
         # Calculate risk metrics - adjust based on model type
+        # Note: predicted_pct_change is the predicted percentage change
+        price_diff = target_price - current_price  # Actual dollar difference
+        
         if used_model_type in ['pytorch', 'tensorflow']:
             # For deep learning models, estimate volatility from features
             volatility = features.get('volatility', 0.02)
-            var_95 = target_price * volatility * 1.65  # 95% VaR approximation
-            max_drawdown = target_price * volatility * 2.33  # 99% worst case
-            sharpe_ratio = abs(price_diff / current_price) / volatility if volatility > 0 else 1.0
+            # VaR (Value at Risk) at 95%: max expected loss in worst 5% of cases
+            var_95 = current_price * volatility * 1.65  # 95% VaR approximation (in dollars)
+            # Max drawdown: worst case scenario
+            max_drawdown = current_price * volatility * 2.33  # 99% worst case (in dollars)
+            sharpe_ratio = abs(predicted_pct_change) / volatility if volatility > 0 else 1.0
         else:
-            # For random forest, use bootstrap predictions
-            volatility = np.std(predictions) / np.mean(predictions) if 'predictions' in locals() else 0.02
-            var_95 = np.percentile(predictions, 5) - np.mean(predictions) if 'predictions' in locals() else target_price * 0.05
-            max_drawdown = min(predictions) - np.mean(predictions) if 'predictions' in locals() else target_price * 0.1
-            sharpe_ratio = 1.0 / (volatility + 1e-10)
+            # For random forest, use bootstrap predictions (which are percentage changes)
+            if 'predictions' in locals() and len(predictions) > 0:
+                # Predictions are percentage changes, compute volatility
+                volatility = np.std(predictions) if len(predictions) > 1 else 0.02
+                
+                # VaR: the loss at the 5th percentile (negative values represent losses)
+                # If 5th percentile is negative, that's the expected loss in worst cases
+                pct_5th = np.percentile(predictions, 5)
+                var_95 = current_price * max(0, -pct_5th)  # Convert negative pct to positive loss
+                
+                # Max drawdown: the most negative prediction (worst case loss)
+                min_pct = min(predictions)
+                max_drawdown = current_price * max(0, -min_pct)  # Convert to positive loss
+            else:
+                volatility = 0.02
+                var_95 = current_price * 0.05  # Default 5% VaR
+                max_drawdown = current_price * 0.1  # Default 10% max drawdown
+            sharpe_ratio = abs(predicted_pct_change) / (volatility + 1e-10)
         
         # Create a pattern with model-specific name
         base_pattern_name = {
@@ -1875,24 +1825,23 @@ try:
 
 
 def main():
-# BREAKPOINT: Main entry point
-if ENABLE_DEBUGPY:
-    import debugpy
-    debugpy.breakpoint()
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
     
-if len(sys.argv) != 3:
-    print("Usage: script.py input_file output_file", file=sys.stderr)
-    sys.exit(1)
+    if len(sys.argv) != 3:
+        print("Usage: script.py input_file output_file", file=sys.stderr)
+        sys.exit(1)
         
-input_file = sys.argv[1]
-output_file = sys.argv[2]
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
     
-try:
-    # Read input JSON
-    with open(input_file, 'r') as f:
-        data = json.load(f)
+    try:
+        # Read input JSON
+        with open(input_file, 'r') as f:
+            data = json.load(f)
         
-    # Get features, model type and feature engineering settings from input
+        # Get features, model type and feature engineering settings from input
         features = data.get('Features', {})
         model_type = data.get('ModelType', 'auto')
         architecture_type = data.get('ArchitectureType', 'lstm')
@@ -1920,13 +1869,14 @@ try:
         result['availableModels'] = {
             'pytorch': PYTORCH_AVAILABLE,
             'tensorflow': TENSORFLOW_AVAILABLE,
-            'randomForest': True
+            'randomForest': True,
+            'tft': TFT_AVAILABLE
         }
         result['availableArchitectures'] = {
             'lstm': True,
             'gru': True,
             'transformer': True,
-            'tft': True
+            'tft': TFT_AVAILABLE
         }
         result['availableFeatureEngineering'] = FEATURE_ENGINEERING_AVAILABLE
         result['availableHyperparameterOptimization'] = HYPERPARAMETER_OPTIMIZATION_AVAILABLE
