@@ -1,4 +1,3 @@
-using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.Controls;
 using Quantra.DAL.Data;

@@ -17,7 +17,6 @@ using System.Windows.Shapes;
 using Quantra.DAL.Services.Interfaces;
 using Quantra.Models;
 using Quantra.Enums;
-using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;

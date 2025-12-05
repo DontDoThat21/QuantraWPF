@@ -14,7 +14,6 @@
   <ItemGroup>
     <PackageReference Include="CefSharp.Common.NETCore" Version="135.0.220" />
     <PackageReference Include="CefSharp.OffScreen.NETCore" Version="135.0.220" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Dragablz" Version="0.0.3.234" />
     <PackageReference Include="LiveCharts.Core" Version="0.9.8" />
     <PackageReference Include="LiveCharts.Wpf.Core" Version="0.9.8" />

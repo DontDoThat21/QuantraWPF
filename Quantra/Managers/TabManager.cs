@@ -1,4 +1,3 @@
-using Dapper;
 using Quantra.Controls;
 using Quantra.DAL.Data;
 using Quantra.DAL.Services;
