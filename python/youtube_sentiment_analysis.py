@@ -14,6 +14,13 @@ import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -250,6 +257,10 @@ Text: {text[:4000]}
 
 def main():
     """Main function to process YouTube URLs from stdin."""
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     try:
         # Read input from stdin
         input_data = sys.stdin.read().strip()

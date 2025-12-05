@@ -29,6 +29,13 @@ import queue
 import numpy as np
 import pandas as pd
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 # Import existing ML modules
 try:
     from stock_predictor import predict_stock, load_or_train_model
@@ -550,6 +557,10 @@ def create_inference_pipeline(config: Dict[str, Any] = None) -> RealTimeInferenc
 
 def main():
     """Main function for testing the real-time inference pipeline."""
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     import argparse
     
     parser = argparse.ArgumentParser(description='Real-Time ML Inference Pipeline')

@@ -6,7 +6,18 @@ import json
 import torch
 from transformers import pipeline
 
+# Import debugpy utilities for remote debugging support
+try:
+    from debugpy_utils import init_debugpy_if_enabled
+    DEBUGPY_UTILS_AVAILABLE = True
+except ImportError:
+    DEBUGPY_UTILS_AVAILABLE = False
+
 def main():
+    # Initialize debugpy remote debugging if DEBUGPY environment variable is set
+    if DEBUGPY_UTILS_AVAILABLE:
+        init_debugpy_if_enabled()
+    
     # Read JSON list of tweets from stdin
     input_json = sys.stdin.readline()
     try:
