@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Collections.Concurrent;
 using Quantra.Models;
 using Quantra.Utilities;
+using Quantra.DAL.Models;
 
 namespace Quantra.DAL.Services
 {
@@ -1295,43 +1296,6 @@ namespace Quantra.DAL.Services
         public double HistoricalAccuracy { get; set; }
     }
 
-    /// <summary>
-    /// TFT prediction result with multi-horizon forecasts and uncertainty quantification.
-    /// </summary>
-    public class TFTPredictionResult
-    {
-        public string Symbol { get; set; }
-        public string Action { get; set; }
-        public double Confidence { get; set; }
-        public double CurrentPrice { get; set; }
-        public double TargetPrice { get; set; }
-        public double LowerBound { get; set; }
-        public double UpperBound { get; set; }
-        public double Uncertainty { get; set; }
-        public Dictionary<string, HorizonPredictionData> Horizons { get; set; }
-        public string Error { get; set; }
-    }
-
-    /// <summary>
-    /// Prediction data for a specific time horizon.
-    /// </summary>
-    public class HorizonPredictionData
-    {
-        public double MedianPrice { get; set; }
-        public double LowerBound { get; set; }
-        public double UpperBound { get; set; }
-        public double Confidence { get; set; }
-    }
-
-    /// <summary>
-    /// Multi-horizon prediction for display in UI.
-    /// </summary>
-    public class HorizonPrediction
-    {
-        public string Horizon { get; set; }
-        public double MedianPrice { get; set; }
-        public double LowerBound { get; set; }
-        public double UpperBound { get; set; }
-        public double Confidence { get; set; }
-    }
+    // TFTPredictionResult, HorizonPredictionData, and HorizonPrediction classes 
+    // are now defined in Quantra.DAL/Models/TFTPredictionResult.cs
 }
