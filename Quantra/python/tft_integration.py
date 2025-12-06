@@ -201,21 +201,24 @@ class TFTStockPredictor:
                 - 'feature_importance': (n_samples, input_dim)
                 - 'attention_weights': List of attention weight arrays
         """
+        # CRITICAL: Set model to evaluation mode and disable gradient computation
+        # This prevents the "cudnn RNN backward can only be called in training mode" error
         self.model.eval()
         
-        # Scale features
-        n_samples, seq_len, n_features = X_past.shape
-        X_past_reshaped = X_past.reshape(-1, n_features)
-        X_past_scaled = self.scaler.transform(X_past_reshaped)
-        X_past_scaled = X_past_scaled.reshape(n_samples, seq_len, n_features)
-        
-        X_static_scaled = self.static_scaler.transform(X_static)
-        
-        # Convert to tensors
-        past_tensor = torch.FloatTensor(X_past_scaled).to(self.device)
-        static_tensor = torch.FloatTensor(X_static_scaled).to(self.device)
-        
-        with torch.no_grad():
+        # CRITICAL: Use inference_mode for complete gradient disabling
+        with torch.inference_mode():
+            # Scale features
+            n_samples, seq_len, n_features = X_past.shape
+            X_past_reshaped = X_past.reshape(-1, n_features)
+            X_past_scaled = self.scaler.transform(X_past_reshaped)
+            X_past_scaled = X_past_scaled.reshape(n_samples, seq_len, n_features)
+            
+            X_static_scaled = self.static_scaler.transform(X_static)
+            
+            # Convert to tensors
+            past_tensor = torch.FloatTensor(X_past_scaled).to(self.device)
+            static_tensor = torch.FloatTensor(X_static_scaled).to(self.device)
+            
             outputs = self.model(past_tensor, static_tensor)
         
         # Extract predictions for each horizon
