@@ -142,19 +142,21 @@ def add_known_future_features(df):
     return df
 
 
-def prepare_training_data_from_historicals(symbols_data, min_samples=50):
+def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_feature_engineering=True, feature_type='balanced'):
     """
     Prepare training data from multiple symbols with TFT-compatible features.
     Includes known-future covariates (calendar features) required by Temporal Fusion Transformer.
     
     Args:
         symbols_data: List of (symbol, historical_data) tuples
-        min_samples: Minimum number of data points required per symbol
+        min_samples (int): Minimum number of data points required per symbol (default: 50)
+        use_feature_engineering (bool): Whether to use advanced feature engineering (default: True)
+        feature_type (str): Type of features to generate ('minimal', 'balanced', 'full') (default: 'balanced')
         
     Returns:
         Tuple of (X_train, y_train, feature_names, X_future_known)
     """
-    logger.info("Preparing TFT training data from historical data...")
+    logger.info(f"Preparing TFT training data with feature_type={feature_type}, use_feature_engineering={use_feature_engineering}...")
     
     all_X = []
     all_y = []
@@ -203,8 +205,8 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50):
                 df,  # Original OHLCV data
                 window_size=60,  # Increased to 60 days for TFT (recommended minimum)
                 target_days=5,   # Predict 5 days ahead
-                use_feature_engineering=False,  # Use basic features for batch training
-                feature_type='balanced'
+                use_feature_engineering=use_feature_engineering,  # Use config value
+                feature_type=feature_type  # Use config value
             )
             
             # Extract calendar features for the same time windows
@@ -291,9 +293,18 @@ def train_model_from_database(
     num_layers = hyperparameters.get('num_layers', 2)
     num_heads = hyperparameters.get('num_heads', 4)
     num_attention_layers = hyperparameters.get('num_attention_layers', 2)
+    
+    # Extract feature engineering parameters (FIX: these were missing)
+    feature_type = hyperparameters.get('feature_type', 'balanced')
+    use_feature_engineering = hyperparameters.get('use_feature_engineering', True)
+    
+    # Map 'comprehensive' to 'full' for Python compatibility
+    if feature_type == 'comprehensive':
+        feature_type = 'full'
 
     logger.info(f"Using hyperparameters: epochs={epochs}, batch_size={batch_size}, lr={learning_rate}")
     logger.info(f"  hidden_dim={hidden_dim}, num_layers={num_layers}, dropout={dropout}")
+    logger.info(f"  feature_type={feature_type}, use_feature_engineering={use_feature_engineering}")
 
     # Fetch all historical data
     symbols_data = fetch_all_historical_data(connection_string, limit=max_symbols)
@@ -302,7 +313,11 @@ def train_model_from_database(
         raise ValueError("No historical data found in database")
     
     # Prepare training data with TFT-compatible features
-    X, y, feature_names, X_future, future_feature_names = prepare_training_data_from_historicals(symbols_data)
+    X, y, feature_names, X_future, future_feature_names = prepare_training_data_from_historicals(
+        symbols_data,
+        use_feature_engineering=use_feature_engineering,
+        feature_type=feature_type
+    )
     
     # Split into train/test (maintain temporal order)
     split_idx = int(len(X) * (1 - test_split))
@@ -518,6 +533,10 @@ def main():
         # Random Forest
         number_of_trees = config.get('numberOfTrees', 100)
         max_depth = config.get('maxDepth', 10)
+        
+        # Feature Engineering (FIX: extract from config)
+        feature_type = config.get('featureType', 'balanced')
+        use_feature_engineering = config.get('useFeatureEngineering', True)
 
         logger.info(f"Training configuration:")
         logger.info(f"  Model: {model_type}, Architecture: {architecture_type}")
@@ -545,6 +564,8 @@ def main():
         use_lr_scheduler = True
         number_of_trees = 100
         max_depth = 10
+        feature_type = 'balanced'
+        use_feature_engineering = True
 
     try:
         logger.info("=" * 60)
@@ -565,7 +586,9 @@ def main():
             'early_stopping_patience': early_stopping_patience,
             'use_lr_scheduler': use_lr_scheduler,
             'number_of_trees': number_of_trees,
-            'max_depth': max_depth
+            'max_depth': max_depth,
+            'feature_type': feature_type,  # FIX: Add to hyperparameters
+            'use_feature_engineering': use_feature_engineering  # FIX: Add to hyperparameters
         }
 
         # Train the model with hyperparameters
