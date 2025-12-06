@@ -14,6 +14,12 @@ namespace Quantra.Controls
 {
     public partial class PredictionAnalysis : UserControl
     {
+        // TFT Prediction Constants
+        private const string TFT_ARCHITECTURE_TYPE = "tft";
+        private const int TFT_DEFAULT_LOOKBACK_DAYS = 60;
+        private const int TFT_DEFAULT_FUTURE_HORIZON = 30;
+        private const int TFT_HISTORICAL_VISUALIZATION_DAYS = 30;
+        
         // NOTE: These service fields are initialized via DI in the main constructor (xaml.cs)
         // They are declared here for clarity but assigned in the main partial class constructor
         private TwitterSentimentService _twitterSentimentService;

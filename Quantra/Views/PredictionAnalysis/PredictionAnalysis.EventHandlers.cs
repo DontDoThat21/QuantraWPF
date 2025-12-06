@@ -354,7 +354,7 @@ namespace Quantra.Controls
                 
                 Quantra.Models.PredictionModel prediction = null;
                 
-                if (selectedArchitecture == "tft" && _realTimeInferenceService != null)
+                if (selectedArchitecture == TFT_ARCHITECTURE_TYPE && _realTimeInferenceService != null)
                 {
                     // Use TFT-specific prediction path
                     if (StatusText != null)
@@ -362,8 +362,8 @@ namespace Quantra.Controls
                     
                     var tftResult = await _realTimeInferenceService.GetTFTPredictionAsync(
                         symbol,
-                        lookbackDays: 60,
-                        futureHorizon: 30,
+                        lookbackDays: TFT_DEFAULT_LOOKBACK_DAYS,
+                        futureHorizon: TFT_DEFAULT_FUTURE_HORIZON,
                         progressCallback: (msg) => Dispatcher.InvokeAsync(() => 
                         {
                             if (StatusText != null)
@@ -382,15 +382,15 @@ namespace Quantra.Controls
                             TargetPrice = tftResult.Prediction.TargetPrice,
                             CurrentPrice = tftResult.Prediction.CurrentPrice,
                             PredictionDate = tftResult.Prediction.PredictionDate,
-                            ModelType = "tft",
-                            ArchitectureType = "tft"
+                            ModelType = TFT_ARCHITECTURE_TYPE,
+                            ArchitectureType = TFT_ARCHITECTURE_TYPE
                         };
                         
                         // Update TFT visualization in ViewModel if available
                         if (tftResult.TFTResult != null && _viewModel != null)
                         {
-                            // Get historical prices for context (last 30 days)
-                            var historicalPrices = await _stockDataCacheService?.GetRecentHistoricalSequenceAsync(symbol, 30);
+                            // Get historical prices for context visualization
+                            var historicalPrices = await _stockDataCacheService?.GetRecentHistoricalSequenceAsync(symbol, TFT_HISTORICAL_VISUALIZATION_DAYS);
                             var priceList = historicalPrices?.Select(p => p.Close).ToList();
                             
                             await Dispatcher.InvokeAsync(() =>
