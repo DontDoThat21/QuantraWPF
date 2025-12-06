@@ -138,10 +138,11 @@ namespace Quantra.DAL.Services
             var predictionEntity = new StockPredictionEntity
             {
                 Symbol = prediction.Symbol,
-                PredictedAction = tftResult.Action ?? prediction.PredictedAction ?? "HOLD",
+                PredictedAction = !string.IsNullOrEmpty(tftResult.Action) ? tftResult.Action : 
+                                  (!string.IsNullOrEmpty(prediction.PredictedAction) ? prediction.PredictedAction : "HOLD"),
                 Confidence = tftResult.Confidence,
-                CurrentPrice = tftResult.CurrentPrice > 0 ? tftResult.CurrentPrice : prediction.CurrentPrice,
-                TargetPrice = tftResult.TargetPrice > 0 ? tftResult.TargetPrice : prediction.TargetPrice,
+                CurrentPrice = tftResult.CurrentPrice != 0 ? tftResult.CurrentPrice : prediction.CurrentPrice,
+                TargetPrice = tftResult.TargetPrice != 0 ? tftResult.TargetPrice : prediction.TargetPrice,
                 PotentialReturn = tftResult.PotentialReturn,
                 CreatedDate = DateTime.Now,
                 ModelType = "tft",
@@ -167,14 +168,18 @@ namespace Quantra.DAL.Services
                     int horizon = ParseHorizonFromKey(kvp.Key);
                     var horizonData = kvp.Value;
 
+                    // Use TargetPrice if available, otherwise fall back to MedianPrice
+                    double targetPrice = horizonData.TargetPrice != 0 ? horizonData.TargetPrice : horizonData.MedianPrice;
+
                     var horizonEntity = new StockPredictionHorizonEntity
                     {
                         PredictionId = predictionId,
                         Horizon = horizon,
-                        TargetPrice = horizonData.TargetPrice > 0 ? horizonData.TargetPrice : horizonData.MedianPrice,
+                        TargetPrice = targetPrice,
                         LowerBound = horizonData.LowerBound,
                         UpperBound = horizonData.UpperBound,
-                        Confidence = horizonData.Confidence > 0 ? horizonData.Confidence : tftResult.Confidence,
+                        // Allow zero confidence - TFT may return very low confidence for uncertain predictions
+                        Confidence = horizonData.Confidence,
                         ExpectedFruitionDate = DateTime.Now.AddDays(horizon)
                     };
 
@@ -285,24 +290,40 @@ namespace Quantra.DAL.Services
                 throw new InvalidOperationException("Database context is not available. Use the constructor that accepts QuantraDbContext.");
             }
 
+            if (actualPrices == null || actualPrices.Count == 0)
+            {
+                return;
+            }
+
+            // Collect unique prediction IDs to fetch them efficiently in one query
+            var predictionIds = actualPrices.Keys.Select(k => k.PredictionId).Distinct().ToList();
+
+            // Load all required predictions upfront to avoid N+1 queries
+            var predictions = await _dbContext.StockPredictions
+                .Where(p => predictionIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+            // Load all required horizon entities upfront
+            var horizonEntities = await _dbContext.StockPredictionHorizons
+                .Where(h => predictionIds.Contains(h.PredictionId))
+                .ToListAsync(cancellationToken);
+
             foreach (var kvp in actualPrices)
             {
-                var horizonEntity = await _dbContext.StockPredictionHorizons
-                    .FirstOrDefaultAsync(h => h.PredictionId == kvp.Key.PredictionId && h.Horizon == kvp.Key.Horizon, cancellationToken);
+                var horizonEntity = horizonEntities
+                    .FirstOrDefault(h => h.PredictionId == kvp.Key.PredictionId && h.Horizon == kvp.Key.Horizon);
 
                 if (horizonEntity != null)
                 {
-                    var prediction = await _dbContext.StockPredictions
-                        .FirstOrDefaultAsync(p => p.Id == kvp.Key.PredictionId, cancellationToken);
-
                     horizonEntity.ActualPrice = kvp.Value;
 
-                    if (prediction != null && prediction.CurrentPrice > 0)
+                    // Use != 0 to avoid division by zero while allowing negative prices
+                    if (predictions.TryGetValue(kvp.Key.PredictionId, out var prediction) && prediction.CurrentPrice != 0)
                     {
                         horizonEntity.ActualReturn = (kvp.Value - prediction.CurrentPrice) / prediction.CurrentPrice;
                     }
 
-                    if (horizonEntity.TargetPrice > 0)
+                    if (horizonEntity.TargetPrice != 0)
                     {
                         horizonEntity.ErrorPct = (kvp.Value - horizonEntity.TargetPrice) / horizonEntity.TargetPrice;
                     }

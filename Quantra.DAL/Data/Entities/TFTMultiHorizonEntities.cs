@@ -21,9 +21,10 @@ namespace Quantra.DAL.Data.Entities
         public int PredictionId { get; set; }
 
         /// <summary>
-        /// Prediction horizon in days (e.g., 1, 3, 5, 10).
+        /// Prediction horizon in days (e.g., 1, 3, 5, 10). Must be a positive value.
         /// </summary>
         [Required]
+        [Range(1, 365, ErrorMessage = "Horizon must be between 1 and 365 days")]
         public int Horizon { get; set; }
 
         /// <summary>
