@@ -55,4 +55,44 @@ public interface IAlphaVantageService
         string interval = "DAILY",
         string calculations = "MEAN_VALUE,STDDEV,CORRELATION",
         string ohlcType = "close");
+
+    // Company Overview and Static Metadata Methods for TFT Model
+    /// <summary>
+    /// Gets company overview data from Alpha Vantage OVERVIEW endpoint with 7-day caching
+    /// Used for TFT static metadata features (Sector, MarketCap, Exchange)
+    /// </summary>
+    /// <param name="symbol">Stock ticker symbol</param>
+    /// <returns>CompanyOverview object with fundamental data</returns>
+    Task<CompanyOverview> GetCompanyOverviewAsync(string symbol);
+
+    /// <summary>
+    /// Gets sector code as numerical value for ML/TFT model
+    /// Maps sector names to numeric codes for static metadata features
+    /// </summary>
+    /// <param name="sector">Sector name from company overview</param>
+    /// <returns>Numeric code for sector</returns>
+    int GetSectorCode(string sector);
+
+    /// <summary>
+    /// Gets market cap category as numerical value for ML/TFT model
+    /// Categories: Small-cap=0, Mid-cap=1, Large-cap=2, Mega-cap=3
+    /// </summary>
+    /// <param name="marketCap">Market capitalization in dollars</param>
+    /// <returns>Numeric code for market cap category</returns>
+    int GetMarketCapCategory(decimal? marketCap);
+
+    /// <summary>
+    /// Gets market cap category as numerical value for ML/TFT model (long overload)
+    /// </summary>
+    /// <param name="marketCap">Market capitalization in dollars as long</param>
+    /// <returns>Numeric code for market cap category</returns>
+    int GetMarketCapCategory(long marketCap);
+
+    /// <summary>
+    /// Gets exchange code as numerical value for ML/TFT model
+    /// Maps exchange names to numeric codes: NYSE=0, NASDAQ=1, AMEX=2, Other=3
+    /// </summary>
+    /// <param name="exchange">Exchange name from company overview</param>
+    /// <returns>Numeric code for exchange</returns>
+    int GetExchangeCode(string exchange);
 }

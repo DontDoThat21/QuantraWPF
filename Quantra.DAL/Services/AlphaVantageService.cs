@@ -41,6 +41,11 @@ namespace Quantra.DAL.Services
         private readonly Dictionary<string, (double Value, DateTime Timestamp)> _fundamentalDataCache = new Dictionary<string, (double, DateTime)>();
         private readonly object _cacheLock = new object();
 
+        // Cache for company overview data with 7-day expiry for TFT static metadata features
+        private readonly Dictionary<string, (CompanyOverview Overview, DateTime Timestamp)> _companyOverviewCache = new Dictionary<string, (CompanyOverview, DateTime)>();
+        private readonly object _companyOverviewCacheLock = new object();
+        private const int CompanyOverviewCacheDays = 7;
+
         public AlphaVantageService(IUserSettingsService userSettingsService, LoggingService loggingService)
         {
             _userSettingsService = userSettingsService;
@@ -2302,7 +2307,8 @@ namespace Quantra.DAL.Services
         #region Fundamental Data API Methods
 
         /// <summary>
-        /// Gets company overview data from Alpha Vantage OVERVIEW endpoint
+        /// Gets company overview data from Alpha Vantage OVERVIEW endpoint with 7-day caching
+        /// Used for TFT static metadata features (Sector, MarketCap, Exchange)
         /// </summary>
         /// <param name="symbol">Stock ticker symbol</param>
         /// <returns>CompanyOverview object with fundamental data</returns>
@@ -2310,6 +2316,26 @@ namespace Quantra.DAL.Services
         {
             if (string.IsNullOrWhiteSpace(symbol))
                 return null;
+
+            // Check cache first (7-day expiry for static metadata)
+            lock (_companyOverviewCacheLock)
+            {
+                if (_companyOverviewCache.TryGetValue(symbol.ToUpperInvariant(), out var cached))
+                {
+                    var cacheAge = DateTime.Now - cached.Timestamp;
+                    if (cacheAge.TotalDays <= CompanyOverviewCacheDays)
+                    {
+                        _loggingService.Log("Info", $"Using cached company overview for {symbol} (age: {cacheAge.TotalHours:F1} hours)");
+                        return cached.Overview;
+                    }
+                    else
+                    {
+                        // Cache expired, remove it
+                        _companyOverviewCache.Remove(symbol.ToUpperInvariant());
+                        _loggingService.Log("Info", $"Cache expired for company overview {symbol} (age: {cacheAge.TotalDays:F1} days)");
+                    }
+                }
+            }
 
             try
             {
@@ -2377,7 +2403,13 @@ namespace Quantra.DAL.Services
                         LastUpdated = DateTime.Now
                     };
 
-                    _loggingService.Log("Info", $"Retrieved company overview for {symbol}");
+                    // Cache the overview for 7 days
+                    lock (_companyOverviewCacheLock)
+                    {
+                        _companyOverviewCache[symbol.ToUpperInvariant()] = (overview, DateTime.Now);
+                    }
+
+                    _loggingService.Log("Info", $"Retrieved and cached company overview for {symbol}");
                     return overview;
                 }
 
@@ -2387,6 +2419,128 @@ namespace Quantra.DAL.Services
             {
                 _loggingService.LogErrorWithContext(ex, $"Error getting company overview for '{symbol}'");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets sector code as numerical value for ML/TFT model
+        /// Maps sector names to numeric codes for static metadata features
+        /// </summary>
+        /// <param name="sector">Sector name from company overview</param>
+        /// <returns>Numeric code: Technology=0, Healthcare=1, Financial=2, Consumer Cyclical=3, 
+        /// Consumer Defensive=4, Industrial=5, Energy=6, Basic Materials=7, Real Estate=8, 
+        /// Utilities=9, Communication Services=10, Unknown=-1</returns>
+        public int GetSectorCode(string sector)
+        {
+            if (string.IsNullOrWhiteSpace(sector))
+                return -1;
+
+            // Normalize sector name for matching
+            var normalizedSector = sector.ToUpperInvariant().Trim();
+
+            return normalizedSector switch
+            {
+                "TECHNOLOGY" or "INFORMATION TECHNOLOGY" or "TECH" => 0,
+                "HEALTHCARE" or "HEALTH CARE" => 1,
+                "FINANCIAL SERVICES" or "FINANCIALS" or "FINANCIAL" => 2,
+                "CONSUMER CYCLICAL" or "CONSUMER DISCRETIONARY" => 3,
+                "CONSUMER DEFENSIVE" or "CONSUMER STAPLES" => 4,
+                "INDUSTRIALS" or "INDUSTRIAL" => 5,
+                "ENERGY" => 6,
+                "BASIC MATERIALS" or "MATERIALS" => 7,
+                "REAL ESTATE" => 8,
+                "UTILITIES" => 9,
+                "COMMUNICATION SERVICES" or "TELECOMMUNICATIONS" or "TELECOM" => 10,
+                _ => -1 // Unknown sector
+            };
+        }
+
+        /// <summary>
+        /// Gets market cap category as numerical value for ML/TFT model
+        /// Categories based on standard market cap classifications
+        /// </summary>
+        /// <param name="marketCap">Market capitalization in dollars</param>
+        /// <returns>Numeric code: Small-cap (less than 2B)=0, Mid-cap (2B-10B)=1, 
+        /// Large-cap (10B-200B)=2, Mega-cap (greater than 200B)=3, Unknown=-1</returns>
+        public int GetMarketCapCategory(decimal? marketCap)
+        {
+            if (!marketCap.HasValue || marketCap.Value <= 0)
+                return -1;
+
+            var value = marketCap.Value;
+
+            // Market cap thresholds in dollars
+            const decimal SmallCapMax = 2_000_000_000m;        // $2 billion
+            const decimal MidCapMax = 10_000_000_000m;         // $10 billion
+            const decimal LargeCapMax = 200_000_000_000m;      // $200 billion
+
+            if (value < SmallCapMax)
+                return 0; // Small-cap
+            if (value < MidCapMax)
+                return 1; // Mid-cap
+            if (value < LargeCapMax)
+                return 2; // Large-cap
+
+            return 3; // Mega-cap
+        }
+
+        /// <summary>
+        /// Gets market cap category as numerical value for ML/TFT model (long overload)
+        /// </summary>
+        /// <param name="marketCap">Market capitalization in dollars as long</param>
+        /// <returns>Numeric code for market cap category</returns>
+        public int GetMarketCapCategory(long marketCap)
+        {
+            return GetMarketCapCategory((decimal)marketCap);
+        }
+
+        /// <summary>
+        /// Gets exchange code as numerical value for ML/TFT model
+        /// Maps exchange names to numeric codes for static metadata features
+        /// </summary>
+        /// <param name="exchange">Exchange name from company overview</param>
+        /// <returns>Numeric code: NYSE=0, NASDAQ=1, AMEX=2, Other=3, Unknown=-1</returns>
+        public int GetExchangeCode(string exchange)
+        {
+            if (string.IsNullOrWhiteSpace(exchange))
+                return -1;
+
+            // Normalize exchange name for matching
+            var normalizedExchange = exchange.ToUpperInvariant().Trim();
+
+            return normalizedExchange switch
+            {
+                "NYSE" or "NEW YORK STOCK EXCHANGE" => 0,
+                "NASDAQ" or "NASDAQ GLOBAL SELECT" or "NASDAQ GLOBAL MARKET" or "NASDAQ CAPITAL MARKET" => 1,
+                "AMEX" or "NYSE AMERICAN" or "NYSE MKT" or "AMERICAN STOCK EXCHANGE" => 2,
+                "BATS" or "IEX" or "CBOE" or "ARCA" or "NYSE ARCA" => 3, // Other US exchanges
+                _ => normalizedExchange.Contains("NYSE") ? 0 : 
+                     normalizedExchange.Contains("NASDAQ") ? 1 : 
+                     normalizedExchange.Contains("AMEX") ? 2 : 3 // Other
+            };
+        }
+
+        /// <summary>
+        /// Clears expired company overview cache entries
+        /// </summary>
+        public void ClearExpiredCompanyOverviewCache()
+        {
+            lock (_companyOverviewCacheLock)
+            {
+                var expiredKeys = _companyOverviewCache
+                    .Where(kvp => (DateTime.Now - kvp.Value.Timestamp).TotalDays > CompanyOverviewCacheDays)
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+
+                foreach (var key in expiredKeys)
+                {
+                    _companyOverviewCache.Remove(key);
+                }
+
+                if (expiredKeys.Count > 0)
+                {
+                    _loggingService.Log("Info", $"Cleared {expiredKeys.Count} expired company overview cache entries");
+                }
             }
         }
 

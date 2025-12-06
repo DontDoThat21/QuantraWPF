@@ -333,6 +333,53 @@ namespace Quantra.Controls
                     _loggingService?.Log("Warning", $"Error fetching technical indicators for {symbol}: {ex.Message}");
                 }
 
+                // Static metadata features for TFT model (Sector, MarketCap, Exchange)
+                // These are unchanging characteristics of stocks critical for TFT model
+                try
+                {
+                    var overview = await _alphaVantageService.GetCompanyOverviewAsync(symbol);
+                    if (overview != null)
+                    {
+                        // Convert categorical data to numerical codes for ML model
+                        indicators["Sector"] = _alphaVantageService.GetSectorCode(overview.Sector);
+                        indicators["MarketCapCategory"] = _alphaVantageService.GetMarketCapCategory(overview.MarketCapitalization);
+                        indicators["Exchange"] = _alphaVantageService.GetExchangeCode(overview.Exchange);
+                        
+                        // Also store the raw market cap value if available (useful for normalization)
+                        if (overview.MarketCapitalization.HasValue && overview.MarketCapitalization.Value > 0)
+                        {
+                            // Store as billions for reasonable scale
+                            indicators["MarketCapBillions"] = (double)(overview.MarketCapitalization.Value / 1_000_000_000m);
+                        }
+                        
+                        // Store Beta as additional static metadata (risk measure)
+                        if (overview.Beta.HasValue)
+                        {
+                            indicators["Beta"] = (double)overview.Beta.Value;
+                        }
+
+                        _loggingService?.Log("Info", $"Static metadata for {symbol}: Sector={overview.Sector} ({indicators["Sector"]}), " +
+                            $"MarketCap={overview.FormattedMarketCap} (Category={indicators["MarketCapCategory"]}), " +
+                            $"Exchange={overview.Exchange} ({indicators["Exchange"]})");
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"Could not retrieve company overview for {symbol}, using default static metadata values");
+                        // Set default values for missing metadata (-1 indicates unknown)
+                        indicators["Sector"] = -1;
+                        indicators["MarketCapCategory"] = -1;
+                        indicators["Exchange"] = -1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Failed to get company overview for {symbol}: {ex.Message}");
+                    // Set default values on error
+                    indicators["Sector"] = -1;
+                    indicators["MarketCapCategory"] = -1;
+                    indicators["Exchange"] = -1;
+                }
+
                 // Sentiment analysis integration
                 try
                 {
