@@ -13,10 +13,9 @@ using LiveCharts.Wpf;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data.Entities;
 using Quantra.Models;
-using Quantra.Views.StockExplorer;
 using Newtonsoft.Json;
 
-namespace Quantra.Controls
+namespace Quantra.Views.StockExplorer
 {
     /// <summary>
     /// Stock Explorer V2 - Continuously updating grid and chart visualization for multiple stocks
@@ -32,7 +31,6 @@ namespace Quantra.Controls
         private readonly AlphaVantageService _alphaVantageService;
         private readonly StockConfigurationService _stockConfigurationService;
         private readonly LoggingService _loggingService;
-        private readonly PythonStockPredictionService _pythonPredictionService;
 
         // State management
         private DispatcherTimer _updateTimer;
@@ -87,7 +85,6 @@ namespace Quantra.Controls
             _alphaVantageService = App.ServiceProvider?.GetService(typeof(AlphaVantageService)) as AlphaVantageService;
             _stockConfigurationService = App.ServiceProvider?.GetService(typeof(StockConfigurationService)) as StockConfigurationService;
             _loggingService = App.ServiceProvider?.GetService(typeof(LoggingService)) as LoggingService;
-            _pythonPredictionService = App.ServiceProvider?.GetService(typeof(PythonStockPredictionService)) as PythonStockPredictionService;
 
             // Initialize collections
             StockAnalysisData = new ObservableCollection<StockAnalysisItem>();
@@ -340,7 +337,7 @@ namespace Quantra.Controls
                         catch { }
 
                         // Run ML prediction if enabled
-                        if (AutoAnalyzeCheckBox.IsChecked == true && indicators.Count > 0 && _pythonPredictionService != null)
+                        if (AutoAnalyzeCheckBox.IsChecked == true && indicators.Count > 0)
                         {
                             try
                             {
@@ -348,6 +345,7 @@ namespace Quantra.Controls
                                 indicators["Close"] = item.CurrentPrice;
                                 indicators["Volume"] = item.Volume;
 
+                                // Use PythonStockPredictor directly for ML predictions
                                 var prediction = await PythonStockPredictor.PredictAsync(indicators);
                                 
                                 if (prediction != null && string.IsNullOrEmpty(prediction.Error))

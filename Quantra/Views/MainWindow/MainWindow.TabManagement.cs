@@ -2690,7 +2690,7 @@ namespace Quantra
         {
             try
             {
-                var stockExplorerV2Control = new Controls.StockExplorerV2Control();
+                var stockExplorerV2Control = new Views.StockExplorer.StockExplorerV2Control();
 
                 // Ensure the control has proper sizing and stretching behavior
                 stockExplorerV2Control.Width = double.NaN; // Auto width
