@@ -24,6 +24,11 @@ namespace Quantra.DAL.Services
         public double ExecutionTimeMs { get; set; }
         public string ModelType { get; set; }
         public bool WasCached { get; set; }
+        
+        /// <summary>
+        /// Full TFT prediction result with multi-horizon forecasts and attention weights (only populated for TFT model).
+        /// </summary>
+        public TFTPredictionResult TFTResult { get; set; }
     }
 
     /// <summary>
@@ -1075,6 +1080,9 @@ namespace Quantra.DAL.Services
                             }).ToList() ?? new List<HorizonPrediction>()
                         };
 
+                        // Store the full TFT result for visualization
+                        result.TFTResult = tftResult;
+                        
                         result.Success = true;
                         result.ModelType = "tft";
 
