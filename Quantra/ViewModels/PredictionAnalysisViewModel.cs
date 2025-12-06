@@ -39,6 +39,51 @@ namespace Quantra.ViewModels
         public ChartValues<ObservablePoint> VwapValues { get; set; } = new();
         public ChartValues<ObservablePoint> PredictionValues { get; set; } = new();
 
+        // Multi-horizon prediction data for TFT visualization
+        public ChartValues<ObservablePoint> HistoricalPrices { get; set; } = new();
+        public ChartValues<ObservablePoint> PredictedPrices { get; set; } = new();
+        public ChartValues<ObservablePoint> UpperBandPrices { get; set; } = new();
+        public ChartValues<ObservablePoint> LowerBandPrices { get; set; } = new();
+        public List<string> DateLabels { get; set; } = new();
+        public Func<double, string> PriceFormatter { get; set; } = value => value.ToString("C2");
+
+        // Temporal attention weights for heatmap
+        public ChartValues<double> AttentionWeights { get; set; } = new();
+        public List<string> AttentionLabels { get; set; } = new();
+
+        // Feature importance data
+        public ChartValues<double> FeatureImportances { get; set; } = new();
+        public List<string> FeatureNames { get; set; } = new();
+
+        // Prediction horizon selections
+        private bool _horizon1DayChecked = true;
+        public bool Horizon1DayChecked
+        {
+            get => _horizon1DayChecked;
+            set { _horizon1DayChecked = value; OnPropertyChanged(nameof(Horizon1DayChecked)); }
+        }
+
+        private bool _horizon3DayChecked = true;
+        public bool Horizon3DayChecked
+        {
+            get => _horizon3DayChecked;
+            set { _horizon3DayChecked = value; OnPropertyChanged(nameof(Horizon3DayChecked)); }
+        }
+
+        private bool _horizon5DayChecked = true;
+        public bool Horizon5DayChecked
+        {
+            get => _horizon5DayChecked;
+            set { _horizon5DayChecked = value; OnPropertyChanged(nameof(Horizon5DayChecked)); }
+        }
+
+        private bool _horizon10DayChecked = false;
+        public bool Horizon10DayChecked
+        {
+            get => _horizon10DayChecked;
+            set { _horizon10DayChecked = value; OnPropertyChanged(nameof(Horizon10DayChecked)); }
+        }
+
         // Prediction data
         public ObservableCollection<PredictionModel> Predictions { get; set; } = new();
         private ObservableCollection<PredictionModel> _models = new();
@@ -598,6 +643,117 @@ namespace Quantra.ViewModels
                 //DatabaseMonolith.Log("Error", $"Error in PredictForMultipleSymbolsAsync: {ex.Message}", ex.ToString());
                 return new List<PredictionModel>();
             }
+        }
+
+        /// <summary>
+        /// Populates the multi-horizon visualization charts from a TFT prediction result.
+        /// </summary>
+        /// <param name="tftResult">The TFT prediction result containing multi-horizon data.</param>
+        /// <param name="historicalPrices">Optional list of historical prices for context (past 30 days).</param>
+        public void UpdateTFTVisualization(Quantra.DAL.Models.TFTPredictionResult tftResult, List<double> historicalPrices = null)
+        {
+            if (tftResult == null) return;
+
+            // Multi-horizon predictions
+            PredictedPrices.Clear();
+            UpperBandPrices.Clear();
+            LowerBandPrices.Clear();
+            DateLabels.Clear();
+
+            // Add historical prices if provided
+            HistoricalPrices.Clear();
+            if (historicalPrices != null && historicalPrices.Count > 0)
+            {
+                for (int i = 0; i < historicalPrices.Count; i++)
+                {
+                    // Historical days are negative (past)
+                    int dayOffset = i - historicalPrices.Count;
+                    HistoricalPrices.Add(new ObservablePoint(dayOffset, historicalPrices[i]));
+                    DateLabels.Add($"{dayOffset}d");
+                }
+            }
+
+            // Add current price at day 0
+            if (tftResult.CurrentPrice > 0)
+            {
+                HistoricalPrices.Add(new ObservablePoint(0, tftResult.CurrentPrice));
+                PredictedPrices.Add(new ObservablePoint(0, tftResult.CurrentPrice));
+                UpperBandPrices.Add(new ObservablePoint(0, tftResult.CurrentPrice));
+                LowerBandPrices.Add(new ObservablePoint(0, tftResult.CurrentPrice));
+                DateLabels.Add("Today");
+            }
+
+            // Add multi-horizon predictions
+            if (tftResult.Horizons != null && tftResult.Horizons.Count > 0)
+            {
+                // Parse horizon keys and sort by days
+                var sortedHorizons = tftResult.Horizons
+                    .Select(h => new { 
+                        Key = h.Key, 
+                        Days = int.TryParse(h.Key.Replace("d", "").Replace("D", ""), out int d) ? d : 0,
+                        Data = h.Value 
+                    })
+                    .Where(h => h.Days > 0)
+                    .OrderBy(h => h.Days);
+
+                foreach (var horizon in sortedHorizons)
+                {
+                    PredictedPrices.Add(new ObservablePoint(horizon.Days, horizon.Data.MedianPrice));
+                    UpperBandPrices.Add(new ObservablePoint(horizon.Days, horizon.Data.UpperBound));
+                    LowerBandPrices.Add(new ObservablePoint(horizon.Days, horizon.Data.LowerBound));
+                    DateLabels.Add($"+{horizon.Days}d");
+                }
+            }
+
+            // Attention weights
+            AttentionWeights.Clear();
+            AttentionLabels.Clear();
+
+            if (tftResult.TemporalAttention != null && tftResult.TemporalAttention.Count > 0)
+            {
+                foreach (var kvp in tftResult.TemporalAttention.OrderBy(k => k.Key))
+                {
+                    AttentionWeights.Add(kvp.Value);
+                    AttentionLabels.Add($"{Math.Abs(kvp.Key)}d ago");
+                }
+            }
+
+            // Feature importance
+            FeatureImportances.Clear();
+            FeatureNames.Clear();
+
+            if (tftResult.FeatureWeights != null && tftResult.FeatureWeights.Count > 0)
+            {
+                foreach (var kvp in tftResult.FeatureWeights.OrderByDescending(k => k.Value).Take(10))
+                {
+                    FeatureImportances.Add(kvp.Value);
+                    FeatureNames.Add(kvp.Key);
+                }
+            }
+
+            // Notify UI of changes
+            OnPropertyChanged(nameof(HistoricalPrices));
+            OnPropertyChanged(nameof(PredictedPrices));
+            OnPropertyChanged(nameof(UpperBandPrices));
+            OnPropertyChanged(nameof(LowerBandPrices));
+            OnPropertyChanged(nameof(DateLabels));
+            OnPropertyChanged(nameof(AttentionWeights));
+            OnPropertyChanged(nameof(AttentionLabels));
+            OnPropertyChanged(nameof(FeatureImportances));
+            OnPropertyChanged(nameof(FeatureNames));
+        }
+
+        /// <summary>
+        /// Gets the list of selected prediction horizons based on checkbox states.
+        /// </summary>
+        public List<int> GetSelectedHorizons()
+        {
+            var horizons = new List<int>();
+            if (Horizon1DayChecked) horizons.Add(1);
+            if (Horizon3DayChecked) horizons.Add(3);
+            if (Horizon5DayChecked) horizons.Add(5);
+            if (Horizon10DayChecked) horizons.Add(10);
+            return horizons;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

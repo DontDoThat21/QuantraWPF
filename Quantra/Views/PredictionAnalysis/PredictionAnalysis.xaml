@@ -38,8 +38,12 @@ MinWidth="400" MinHeight="300">
             <!-- Title and Controls -->
             <RowDefinition Height="Auto"/>
             <!-- Analysis Parameters -->
-            <RowDefinition Height="*" MinHeight="150"/>
-            <!-- Top Predictions Grid (fills available space) -->
+            <RowDefinition Height="Auto" MinHeight="150"/>
+            <!-- Top Predictions Grid -->
+            <RowDefinition Height="Auto"/>
+            <!-- Multi-Horizon Forecast Panel -->
+            <RowDefinition Height="Auto"/>
+            <!-- Temporal Attention and Feature Importance -->
             <RowDefinition Height="Auto"/>
             <!-- Status Bar -->
         </Grid.RowDefinitions>
@@ -397,6 +401,29 @@ MinWidth="400" MinHeight="300">
                 </WrapPanel>
             </StackPanel>
 
+            <!-- Prediction Horizons Section -->
+            <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Vertical" Margin="10,5">
+                <TextBlock Text="Prediction Horizons:" Foreground="White" Margin="0,5"/>
+                <WrapPanel>
+                    <CheckBox x:Name="Horizon1DayCheckBox" Content="1 Day" 
+                              IsChecked="{Binding Horizon1DayChecked, Mode=TwoWay}"
+                              Foreground="White" Margin="5,0" 
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="Horizon3DayCheckBox" Content="3 Days" 
+                              IsChecked="{Binding Horizon3DayChecked, Mode=TwoWay}"
+                              Foreground="White" Margin="5,0" 
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="Horizon5DayCheckBox" Content="5 Days" 
+                              IsChecked="{Binding Horizon5DayChecked, Mode=TwoWay}"
+                              Foreground="White" Margin="5,0" 
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <CheckBox x:Name="Horizon10DayCheckBox" Content="10 Days" 
+                              IsChecked="{Binding Horizon10DayChecked, Mode=TwoWay}"
+                              Foreground="White" Margin="5,0" 
+                              Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                </WrapPanel>
+            </StackPanel>
+
             <!-- Model Training Section -->
             <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
                     Background="#3E3E56" BorderBrush="Cyan" BorderThickness="1" 
@@ -628,8 +655,169 @@ MinWidth="400" MinHeight="300">
             </Grid>
         </Border>
 
+        <!-- Multi-Horizon Forecast Panel -->
+        <Border Grid.Row="3" Background="#23233A" BorderBrush="Cyan" BorderThickness="1"
+                CornerRadius="5" Margin="0,10,0,0" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="300"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="🔮 Multi-Horizon Forecast" FontSize="16" FontWeight="Bold"
+                               Foreground="Cyan" VerticalAlignment="Center"/>
+                    <TextBlock Text="(with uncertainty bands)" Foreground="#AAAAAA" FontSize="12"
+                               Margin="10,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Chart with Confidence Bands -->
+                <lvc:CartesianChart Grid.Row="1" x:Name="MultiHorizonChart"
+                                    Background="#1E1E30" Foreground="White"
+                                    DisableAnimations="True">
+                    <lvc:CartesianChart.Series>
+                        <!-- Historical prices (past 30 days) -->
+                        <lvc:LineSeries Title="Historical"
+                                        Values="{Binding HistoricalPrices}"
+                                        Stroke="White"
+                                        StrokeThickness="2"
+                                        PointGeometry="{x:Null}"/>
+
+                        <!-- Predicted prices (median) -->
+                        <lvc:LineSeries Title="Prediction (Median)"
+                                        Values="{Binding PredictedPrices}"
+                                        Stroke="Cyan"
+                                        StrokeThickness="3"
+                                        LineSmoothness="0"/>
+
+                        <!-- Upper confidence band (90th percentile) -->
+                        <lvc:LineSeries Title="Upper Bound (90%)"
+                                        Values="{Binding UpperBandPrices}"
+                                        Stroke="LightGreen"
+                                        StrokeThickness="1"
+                                        StrokeDashArray="2,2"
+                                        PointGeometry="{x:Null}"/>
+
+                        <!-- Lower confidence band (10th percentile) -->
+                        <lvc:LineSeries Title="Lower Bound (10%)"
+                                        Values="{Binding LowerBandPrices}"
+                                        Stroke="OrangeRed"
+                                        StrokeThickness="1"
+                                        StrokeDashArray="2,2"
+                                        PointGeometry="{x:Null}"/>
+                    </lvc:CartesianChart.Series>
+
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis Title="Days from Now"
+                                  Labels="{Binding DateLabels}"
+                                  Foreground="White"/>
+                    </lvc:CartesianChart.AxisX>
+
+                    <lvc:CartesianChart.AxisY>
+                        <lvc:Axis Title="Price ($)"
+                                  Foreground="White"
+                                  LabelFormatter="{Binding PriceFormatter}"/>
+                    </lvc:CartesianChart.AxisY>
+                </lvc:CartesianChart>
+            </Grid>
+        </Border>
+
+        <!-- Temporal Attention and Feature Importance Row -->
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Temporal Attention Heatmap -->
+            <Border Grid.Column="0" Background="#23233A" BorderBrush="Cyan" BorderThickness="1"
+                    CornerRadius="5" Margin="0,0,5,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="200"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="🔍 Temporal Attention" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" VerticalAlignment="Center"/>
+                        <TextBlock Text="(which past days matter most)" Foreground="#AAAAAA"
+                                   FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Attention Weights Bar Chart -->
+                    <lvc:CartesianChart Grid.Row="1" x:Name="AttentionChart"
+                                        Background="#1E1E30" Foreground="White"
+                                        DisableAnimations="True">
+                        <lvc:CartesianChart.Series>
+                            <lvc:RowSeries Title="Attention Weight"
+                                           Values="{Binding AttentionWeights}"
+                                           Fill="Cyan"
+                                           Stroke="DarkCyan"
+                                           StrokeThickness="1"/>
+                        </lvc:CartesianChart.Series>
+
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="Attention Weight"
+                                      Foreground="White"
+                                      MinValue="0"
+                                      MaxValue="1"/>
+                        </lvc:CartesianChart.AxisX>
+
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="Days Ago"
+                                      Labels="{Binding AttentionLabels}"
+                                      Foreground="White"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </Grid>
+            </Border>
+
+            <!-- Feature Importance Panel -->
+            <Border Grid.Column="1" Background="#23233A" BorderBrush="Cyan" BorderThickness="1"
+                    CornerRadius="5" Margin="5,0,0,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="200"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="📊 Feature Importance" FontSize="16"
+                               FontWeight="Bold" Foreground="Cyan" Margin="0,0,0,10"/>
+
+                    <!-- Feature Importance Bar Chart -->
+                    <lvc:CartesianChart Grid.Row="1" x:Name="FeatureImportanceChart"
+                                        Background="#1E1E30" Foreground="White"
+                                        DisableAnimations="True">
+                        <lvc:CartesianChart.Series>
+                            <lvc:RowSeries Title="Importance"
+                                           Values="{Binding FeatureImportances}"
+                                           Fill="#FFD700"
+                                           Stroke="#FFA500"
+                                           StrokeThickness="1"/>
+                        </lvc:CartesianChart.Series>
+
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="Importance Score"
+                                      Foreground="White"
+                                      MinValue="0"/>
+                        </lvc:CartesianChart.AxisX>
+
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="Feature"
+                                      Labels="{Binding FeatureNames}"
+                                      Foreground="White"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- Status Bar -->
-        <Grid Grid.Row="3" Margin="0,5,0,0">
+        <Grid Grid.Row="5" Margin="0,5,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
