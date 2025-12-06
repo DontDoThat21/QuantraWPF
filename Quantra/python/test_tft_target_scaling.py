@@ -1,8 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Test script to verify TFT target scaling and inverse transformation.
-This ensures that predictions are correctly scaled and unscaled.
+Test script to verify TFT target scaling and inverse transformation fix.
+
+This test validates the fix for the critical TFT scaling bug where model predictions
+were wildly inaccurate due to missing inverse transformation. The TFT model trains on
+scaled percentage changes (using StandardScaler), but predictions were being used 
+directly without inverse transformation, causing:
+- High-value stocks (e.g., AAPL $278) to predict too low ($181, -32%)
+- Low-value stocks (e.g., ACHR $8.60) to predict too high ($51, +497%)
+
+The fix adds target_scaler to properly:
+1. Scale percentage change targets during training
+2. Inverse transform scaled predictions back to actual percentage changes
+3. Convert percentage changes to realistic target prices
+
+Tests validate that scaling/unscaling works correctly and produces realistic predictions.
 """
 
 import numpy as np

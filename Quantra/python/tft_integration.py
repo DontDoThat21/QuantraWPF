@@ -144,7 +144,9 @@ class TFTStockPredictor:
         # Create tensors
         past_tensor = torch.FloatTensor(X_past_scaled)
         static_tensor = torch.FloatTensor(X_static_scaled)
-        targets_tensor = torch.FloatTensor(y_scaled)  # Use scaled targets
+        # Use scaled targets: y_scaled contains percentage changes (e.g., 0.05 for 5%)
+        # transformed by StandardScaler for improved training stability and convergence
+        targets_tensor = torch.FloatTensor(y_scaled)
         
         # Create DataLoader
         dataset = TensorDataset(past_tensor, static_tensor, targets_tensor)
@@ -500,7 +502,18 @@ class TFTStockPredictor:
             scalers = joblib.load(scaler_path)
             self.scaler = scalers['scaler']
             self.static_scaler = scalers['static_scaler']
-            self.target_scaler = scalers.get('target_scaler', StandardScaler())  # NEW: Load target scaler with fallback
+            # NEW: Load target scaler with fallback to identity transformation for old models
+            if 'target_scaler' in scalers:
+                self.target_scaler = scalers['target_scaler']
+            else:
+                # For backward compatibility: use identity scaler (no transformation)
+                # This means old models will still have issues, but won't crash
+                logger.warning("Loading old model without target_scaler. Predictions may be inaccurate. Please retrain the model.")
+                identity_scaler = StandardScaler()
+                identity_scaler.mean_ = np.array([0.0])
+                identity_scaler.scale_ = np.array([1.0])
+                identity_scaler.n_features_in_ = 1
+                self.target_scaler = identity_scaler
             
             logger.info(f"TFT model loaded from {model_path}")
             return True
