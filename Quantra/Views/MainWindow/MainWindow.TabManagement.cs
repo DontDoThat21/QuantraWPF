@@ -799,6 +799,15 @@ namespace Quantra
                         tradingRuleService);
                 }
                 
+                // Get RealTimeInferenceService from DI container
+                var realTimeInferenceService = App.ServiceProvider?.GetService<RealTimeInferenceService>();
+                if (realTimeInferenceService == null)
+                {
+                    // Log warning and create fallback instance (DI should always provide this)
+                    _loggingService?.Log("Warning", "RealTimeInferenceService not found in DI container, creating fallback instance");
+                    realTimeInferenceService = new RealTimeInferenceService(_stockDataCacheService);
+                }
+                
                 // Create a new instance of our custom PredictionAnalysisControl with all required dependencies
                 var predictionAnalysisControl = new PredictionAnalysis(
                     _predictionAnalysisViewModel,
@@ -820,7 +829,8 @@ namespace Quantra
                     _financialNewsSentimentService,
                     _earningsTranscriptService,
                     _analystRatingService,
-                    _insiderTradingService);
+                    _insiderTradingService,
+                    realTimeInferenceService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 predictionAnalysisControl.Width = double.NaN; // Auto width

@@ -40,6 +40,7 @@ namespace Quantra.Controls
         private readonly UserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
         private readonly OrderHistoryService _orderHistoryService;
+        private readonly RealTimeInferenceService _realTimeInferenceService;
         private string _pacId; // Unique identifier for this PAC instance
         private Dictionary<string, DateTime> _lastAnalysisTime = new(); // Track last analysis time per symbol
         
@@ -79,7 +80,8 @@ namespace Quantra.Controls
         FinancialNewsSentimentService financialNewsSentimentService,
         IEarningsTranscriptService earningsTranscriptService,
         IAnalystRatingService analystRatingService,
-        IInsiderTradingService insiderTradingService)
+        IInsiderTradingService insiderTradingService,
+        RealTimeInferenceService realTimeInferenceService)
      {
   InitializeComponent();
 
@@ -98,6 +100,7 @@ namespace Quantra.Controls
     _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
     _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
     _orderHistoryService = orderHistoryService ?? throw new ArgumentNullException(nameof(orderHistoryService));
+    _realTimeInferenceService = realTimeInferenceService ?? throw new ArgumentNullException(nameof(realTimeInferenceService));
 
     // Initialize sentiment analysis services via DI (MVVM pattern)
     _twitterSentimentService = twitterSentimentService ?? throw new ArgumentNullException(nameof(twitterSentimentService));
