@@ -98,11 +98,11 @@ namespace Quantra.Controls
                     {
                         var (macd, macdSignal, macdHist) = await _alphaVantageService.GetMACD(symbol, "daily");
                         if (!double.IsNaN(macd))
-                        {
                             indicators["MACD"] = macd;
+                        if (!double.IsNaN(macdSignal))
                             indicators["MACD_Signal"] = macdSignal;
+                        if (!double.IsNaN(macdHist))
                             indicators["MACD_Hist"] = macdHist;
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -121,10 +121,10 @@ namespace Quantra.Controls
                         _loggingService?.Log("Warning", $"Failed to get ATR for {symbol}: {ex.Message}");
                     }
 
-                    // VWAP (Volume-Weighted Average Price) - intraday indicator
+                    // VWAP (Volume-Weighted Average Price) - typically intraday, but calculated from daily data for consistency
                     try
                     {
-                        double vwap = await _alphaVantageService.GetVWAP(symbol, "15min");
+                        double vwap = await _alphaVantageService.GetVWAP(symbol, "daily");
                         if (!double.IsNaN(vwap) && vwap > 0)
                             indicators["VWAP"] = vwap;
                     }
@@ -295,7 +295,8 @@ namespace Quantra.Controls
                                     double ret = (closePrices[i] - closePrices[i + 1]) / closePrices[i + 1];
                                     returns.Add(ret);
                                 }
-                                double volatility = Math.Sqrt(returns.Sum(r => Math.Pow(r - returns.Average(), 2)) / returns.Count) * Math.Sqrt(252);
+                                double returnsAvg = returns.Average();
+                                double volatility = Math.Sqrt(returns.Sum(r => Math.Pow(r - returnsAvg, 2)) / returns.Count) * Math.Sqrt(252);
                                 indicators["Volatility_20"] = volatility;
                             }
 
