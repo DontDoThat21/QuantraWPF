@@ -3710,5 +3710,151 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
+
+        #region Economic Indicators (Market Context for TFT)
+
+        /// <summary>
+        /// Gets Treasury Yield data from Alpha Vantage TREASURY_YIELD endpoint.
+        /// Used for TFT model market context features.
+        /// </summary>
+        /// <param name="maturity">Treasury maturity: "3month", "2year", "5year", "7year", "10year", "30year"</param>
+        /// <param name="interval">Data interval: "daily", "weekly", "monthly"</param>
+        /// <returns>Latest treasury yield percentage</returns>
+        public async Task<double> GetTreasuryYieldAsync(string maturity = "10year", string interval = "daily")
+        {
+            // Validate maturity parameter
+            var validMaturities = new[] { "3month", "2year", "5year", "7year", "10year", "30year" };
+            if (!validMaturities.Contains(maturity.ToLowerInvariant()))
+            {
+                _loggingService?.Log("Warning", $"Invalid treasury maturity '{maturity}', defaulting to 10year");
+                maturity = "10year";
+            }
+
+            // Validate interval parameter
+            var validIntervals = new[] { "daily", "weekly", "monthly" };
+            if (!validIntervals.Contains(interval.ToLowerInvariant()))
+            {
+                _loggingService?.Log("Warning", $"Invalid treasury interval '{interval}', defaulting to daily");
+                interval = "daily";
+            }
+
+            // Check cache first
+            var cacheKey = $"TreasuryYield_{maturity}";
+            var cached = GetCachedFundamentalData(cacheKey, maturity, 4); // 4 hour cache
+            if (cached.HasValue)
+            {
+                return cached.Value;
+            }
+
+            try
+            {
+                await WaitForApiLimit();
+                
+                var endpoint = $"query?function=TREASURY_YIELD&interval={interval}&maturity={maturity}&apikey={_apiKey}";
+                await LogApiCall("TREASURY_YIELD", $"{maturity},{interval}");
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    // Parse the data array to get the latest yield
+                    if (data["data"] is JArray dataArray && dataArray.Count > 0)
+                    {
+                        var latestEntry = dataArray[0];
+                        if (latestEntry["value"] != null && 
+                            double.TryParse(latestEntry["value"].ToString(), 
+                                System.Globalization.NumberStyles.Any, 
+                                System.Globalization.CultureInfo.InvariantCulture, 
+                                out double yieldValue))
+                        {
+                            // Cache the result
+                            CacheFundamentalData(cacheKey, maturity, yieldValue);
+                            
+                            _loggingService?.Log("Info", $"Retrieved {maturity} Treasury Yield: {yieldValue:F2}%");
+                            return yieldValue;
+                        }
+                    }
+                    
+                    _loggingService?.Log("Warning", $"No treasury yield data found for {maturity}");
+                }
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, $"Failed to fetch treasury yield for {maturity}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets Federal Funds Rate from Alpha Vantage FEDERAL_FUNDS_RATE endpoint.
+        /// Used for TFT model market context features.
+        /// </summary>
+        /// <param name="interval">Data interval: "daily", "weekly", "monthly"</param>
+        /// <returns>Latest federal funds rate percentage</returns>
+        public async Task<double> GetFederalFundsRateAsync(string interval = "daily")
+        {
+            // Validate interval parameter
+            var validIntervals = new[] { "daily", "weekly", "monthly" };
+            if (!validIntervals.Contains(interval.ToLowerInvariant()))
+            {
+                _loggingService?.Log("Warning", $"Invalid fed funds interval '{interval}', defaulting to daily");
+                interval = "daily";
+            }
+
+            // Check cache first
+            var cached = GetCachedFundamentalData("FedFundsRate", "rate", 4); // 4 hour cache
+            if (cached.HasValue)
+            {
+                return cached.Value;
+            }
+
+            try
+            {
+                await WaitForApiLimit();
+                
+                var endpoint = $"query?function=FEDERAL_FUNDS_RATE&interval={interval}&apikey={_apiKey}";
+                await LogApiCall("FEDERAL_FUNDS_RATE", interval);
+
+                var response = await _client.GetAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var data = JObject.Parse(content);
+
+                    // Parse the data array to get the latest rate
+                    if (data["data"] is JArray dataArray && dataArray.Count > 0)
+                    {
+                        var latestEntry = dataArray[0];
+                        if (latestEntry["value"] != null && 
+                            double.TryParse(latestEntry["value"].ToString(), 
+                                System.Globalization.NumberStyles.Any, 
+                                System.Globalization.CultureInfo.InvariantCulture, 
+                                out double rateValue))
+                        {
+                            // Cache the result
+                            CacheFundamentalData("FedFundsRate", "rate", rateValue);
+                            
+                            _loggingService?.Log("Info", $"Retrieved Federal Funds Rate: {rateValue:F2}%");
+                            return rateValue;
+                        }
+                    }
+                    
+                    _loggingService?.Log("Warning", "No federal funds rate data found");
+                }
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to fetch federal funds rate");
+                return 0;
+            }
+        }
+
+        #endregion
     }
 }
