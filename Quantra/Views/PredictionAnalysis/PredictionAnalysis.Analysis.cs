@@ -380,6 +380,108 @@ namespace Quantra.Controls
                     indicators["Exchange"] = -1;
                 }
 
+                // Calendar features (known future inputs for TFT model)
+                // These are features we know ahead of time like calendar dates
+                try
+                {
+                    DateTime now = DateTime.UtcNow;
+                    
+                    // Basic calendar features
+                    indicators["DayOfWeek"] = (double)now.DayOfWeek; // 0=Sunday, 6=Saturday
+                    indicators["Month"] = now.Month; // 1-12
+                    indicators["Quarter"] = ((now.Month - 1) / 3) + 1; // 1-4
+                    indicators["DayOfYear"] = now.DayOfYear; // 1-365/366
+                    
+                    // Month-end and quarter-end indicators (important for financial reporting)
+                    int daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+                    indicators["IsMonthEnd"] = (now.Day >= daysInMonth - 2) ? 1.0 : 0.0;
+                    indicators["IsQuarterEnd"] = (now.Month % 3 == 0 && now.Day >= daysInMonth - 2) ? 1.0 : 0.0;
+
+                    // Market hours indicators (9:30 AM - 4:00 PM ET)
+                    // Use "America/New_York" for cross-platform compatibility (Linux/Windows)
+                    TimeZoneInfo easternZone;
+                    try
+                    {
+                        easternZone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+                    }
+                    catch
+                    {
+                        // Fallback for Windows
+                        easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                    }
+                    
+                    DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(now, easternZone);
+                    int hour = easternTime.Hour;
+                    int minute = easternTime.Minute;
+                    double minuteOfDay = hour * 60 + minute;
+                    
+                    // Pre-market: before 9:30 AM ET
+                    indicators["IsPreMarket"] = (hour < 9 || (hour == 9 && minute < 30)) ? 1.0 : 0.0;
+                    // Regular hours: 9:30 AM - 4:00 PM ET
+                    indicators["IsRegularHours"] = (minuteOfDay >= 570 && minuteOfDay < 960) ? 1.0 : 0.0; // 9:30=570min, 16:00=960min
+                    // After hours: 4:00 PM ET and later
+                    indicators["IsAfterHours"] = (hour >= 16) ? 1.0 : 0.0;
+                    
+                    _loggingService?.Log("Debug", $"Calendar features for {symbol}: DayOfWeek={indicators["DayOfWeek"]}, " +
+                        $"Month={indicators["Month"]}, Quarter={indicators["Quarter"]}, " +
+                        $"IsRegularHours={indicators["IsRegularHours"]}");
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Failed to calculate calendar features: {ex.Message}");
+                    // Set default values on error
+                    indicators["DayOfWeek"] = (double)DateTime.UtcNow.DayOfWeek;
+                    indicators["Month"] = DateTime.UtcNow.Month;
+                    indicators["Quarter"] = ((DateTime.UtcNow.Month - 1) / 3) + 1;
+                    indicators["DayOfYear"] = DateTime.UtcNow.DayOfYear;
+                    indicators["IsMonthEnd"] = 0.0;
+                    indicators["IsQuarterEnd"] = 0.0;
+                    indicators["IsPreMarket"] = 0.0;
+                    indicators["IsRegularHours"] = 0.0;
+                    indicators["IsAfterHours"] = 0.0;
+                }
+
+                // Earnings calendar features (known future inputs for TFT model)
+                try
+                {
+                    var earningsService = new EarningsCalendarService(_alphaVantageService, _loggingService);
+
+                    var nextEarningsDate = await earningsService.GetNextEarningsDateAsync(symbol);
+                    var lastEarningsDate = await earningsService.GetLastEarningsDateAsync(symbol);
+
+                    if (nextEarningsDate.HasValue)
+                    {
+                        int daysToEarnings = earningsService.GetTradingDaysToEarnings(nextEarningsDate.Value);
+                        indicators["DaysToEarnings"] = daysToEarnings;
+                        indicators["IsEarningsWeek"] = (daysToEarnings <= 5 && daysToEarnings >= 0) ? 1.0 : 0.0;
+                        
+                        _loggingService?.Log("Debug", $"Earnings for {symbol}: Next={nextEarningsDate.Value:yyyy-MM-dd}, " +
+                            $"DaysTo={daysToEarnings}, IsEarningsWeek={indicators["IsEarningsWeek"]}");
+                    }
+                    else
+                    {
+                        indicators["DaysToEarnings"] = 999; // Unknown/far future
+                        indicators["IsEarningsWeek"] = 0.0;
+                    }
+
+                    if (lastEarningsDate.HasValue)
+                    {
+                        int daysSinceEarnings = earningsService.GetTradingDaysSinceEarnings(lastEarningsDate.Value);
+                        indicators["DaysSinceEarnings"] = daysSinceEarnings;
+                    }
+                    else
+                    {
+                        indicators["DaysSinceEarnings"] = 999; // Unknown
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Failed to get earnings calendar for {symbol}: {ex.Message}");
+                    indicators["DaysToEarnings"] = 999;
+                    indicators["DaysSinceEarnings"] = 999;
+                    indicators["IsEarningsWeek"] = 0.0;
+                }
+
                 // Sentiment analysis integration
                 try
                 {

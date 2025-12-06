@@ -78,6 +78,9 @@ namespace Quantra.DAL.Data
         public DbSet<PaperTradingOrderEntity> PaperTradingOrders { get; set; }
         public DbSet<PaperTradingFillEntity> PaperTradingFills { get; set; }
 
+        // Earnings Calendar (TFT known future inputs)
+        public DbSet<EarningsCalendarEntity> EarningsCalendar { get; set; }
+
         public QuantraDbContext(DbContextOptions<QuantraDbContext> options) : base(options)
         {
         }
