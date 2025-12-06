@@ -84,6 +84,22 @@ namespace Quantra.DAL.Data.Entities
         /// </summary>
         [ForeignKey("ChatHistoryId")]
         public virtual ChatHistoryEntity ChatHistory { get; set; }
+
+        /// <summary>
+        /// Navigation property to multi-horizon predictions for TFT models.
+        /// Contains predictions for different time horizons (1, 3, 5, 10 days).
+        /// </summary>
+        public virtual ICollection<StockPredictionHorizonEntity> PredictionHorizons { get; set; }
+
+        /// <summary>
+        /// Navigation property to feature importance data from TFT variable selection networks.
+        /// </summary>
+        public virtual ICollection<PredictionFeatureImportanceEntity> FeatureImportances { get; set; }
+
+        /// <summary>
+        /// Navigation property to temporal attention weights from TFT.
+        /// </summary>
+        public virtual ICollection<PredictionTemporalAttentionEntity> TemporalAttentions { get; set; }
     }
 
     /// <summary>
