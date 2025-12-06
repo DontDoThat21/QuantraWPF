@@ -482,6 +482,60 @@ namespace Quantra.Controls
                     indicators["IsEarningsWeek"] = 0.0;
                 }
 
+                // Market context features for TFT model
+                // These provide broader market conditions (bull/bear market, volatility regime, interest rate environment)
+                try
+                {
+                    var marketContextService = new MarketContextService(_alphaVantageService, _loggingService);
+
+                    // S&P 500 context
+                    var (sp500Price, sp500Return) = await marketContextService.GetSP500DataAsync();
+                    indicators["SP500_Price"] = sp500Price;
+                    indicators["SP500_Return"] = sp500Return;
+                    indicators["SP500_Direction"] = sp500Return > 0 ? 1.0 : -1.0;
+
+                    // VIX (volatility regime)
+                    double vix = await marketContextService.GetVIXAsync();
+                    indicators["VIX"] = vix;
+                    indicators["VolatilityRegime"] = vix switch
+                    {
+                        < 15 => 0.0,  // Low volatility
+                        < 20 => 1.0,  // Normal
+                        < 30 => 2.0,  // Elevated
+                        _ => 3.0      // High volatility
+                    };
+
+                    // Treasury yield (interest rate environment)
+                    double treasuryYield = await marketContextService.GetTreasuryYield10YAsync();
+                    indicators["TreasuryYield_10Y"] = treasuryYield;
+
+                    // Sector ETF context (if sector is known)
+                    if (indicators.ContainsKey("Sector") && indicators["Sector"] >= 0)
+                    {
+                        string sector = marketContextService.GetSectorName((int)indicators["Sector"]);
+                        var (sectorETFPrice, sectorETFReturn) = await marketContextService.GetSectorETFDataAsync(sector);
+                        indicators["SectorETF_Price"] = sectorETFPrice;
+                        indicators["SectorETF_Return"] = sectorETFReturn;
+
+                        // Relative strength vs sector
+                        if (currentPrice > 0 && sectorETFPrice > 0)
+                        {
+                            indicators["RelativeStrengthVsSector"] = currentPrice / sectorETFPrice;
+                        }
+                    }
+
+                    // Market breadth
+                    double marketBreadth = await marketContextService.GetMarketBreadthAsync();
+                    indicators["MarketBreadth"] = marketBreadth;
+                    indicators["IsBullishBreadth"] = marketBreadth > 1.0 ? 1.0 : 0.0;
+
+                    _loggingService?.Log("Info", $"Market context: SPY={sp500Price:F2} ({sp500Return:P2}), VIX={vix:F2}, 10Y={treasuryYield:F2}%");
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Failed to get market context: {ex.Message}");
+                }
+
                 // Sentiment analysis integration
                 try
                 {
