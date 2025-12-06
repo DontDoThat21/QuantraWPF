@@ -37,7 +37,6 @@ namespace Quantra.Views.StockExplorer
         private CancellationTokenSource _cancellationTokenSource;
         private bool _isUpdating = false;
         private List<string> _symbols = new List<string>();
-        private StockConfigurationEntity _currentConfiguration;
 
         // Data collections
         private ObservableCollection<StockAnalysisItem> _stockAnalysisData;
@@ -120,31 +119,31 @@ namespace Quantra.Views.StockExplorer
         {
             try
             {
-                var configWindow = new StockConfigurationManagerWindow();
-                configWindow.Owner = Window.GetWindow(this);
-                
-                if (configWindow.ShowDialog() == true)
+                if (_stockConfigurationService == null)
                 {
-                    _currentConfiguration = configWindow.SelectedConfiguration;
+                    StatusText.Text = "Error: StockConfigurationService not available";
+                    StatusText.Foreground = System.Windows.Media.Brushes.Red;
+                    return;
+                }
+
+                var symbols = StockConfigurationManagerWindow.ShowAndGetSymbols(_stockConfigurationService, Window.GetWindow(this));
+                
+                if (symbols != null && symbols.Count > 0)
+                {
+                    _symbols = symbols;
                     
-                    if (_currentConfiguration != null)
-                    {
-                        // Parse symbols from JSON
-                        _symbols = JsonConvert.DeserializeObject<List<string>>(_currentConfiguration.Symbols) ?? new List<string>();
-                        
-                        ConfigurationNameText.Text = $"{_currentConfiguration.Name} ({_symbols.Count} symbols)";
-                        ConfigurationNameText.Foreground = System.Windows.Media.Brushes.LimeGreen;
-                        ConfigurationNameText.FontStyle = FontStyles.Normal;
-                        
-                        SymbolCountText.Text = $"Symbols: {_symbols.Count}";
-                        
-                        StatusText.Text = $"Loaded configuration: {_currentConfiguration.Name}";
-                        StatusText.Foreground = System.Windows.Media.Brushes.Cyan;
-                        
-                        StartButton.IsEnabled = true;
-                        
-                        _loggingService?.Log("Info", $"Loaded stock configuration: {_currentConfiguration.Name} with {_symbols.Count} symbols");
-                    }
+                    ConfigurationNameText.Text = $"Configuration loaded ({_symbols.Count} symbols)";
+                    ConfigurationNameText.Foreground = System.Windows.Media.Brushes.LimeGreen;
+                    ConfigurationNameText.FontStyle = FontStyles.Normal;
+                    
+                    SymbolCountText.Text = $"Symbols: {_symbols.Count}";
+                    
+                    StatusText.Text = $"Loaded {_symbols.Count} symbols from configuration";
+                    StatusText.Foreground = System.Windows.Media.Brushes.Cyan;
+                    
+                    StartButton.IsEnabled = true;
+                    
+                    _loggingService?.Log("Info", $"Loaded stock configuration with {_symbols.Count} symbols");
                 }
             }
             catch (Exception ex)
@@ -310,7 +309,10 @@ namespace Quantra.Views.StockExplorer
                                 indicators["RSI"] = rsi;
                             }
                         }
-                        catch { }
+                        catch (Exception rsiEx)
+                        {
+                            _loggingService?.Log("Warning", $"Failed to get RSI for {symbol}: {rsiEx.Message}");
+                        }
 
                         try
                         {
@@ -323,7 +325,10 @@ namespace Quantra.Views.StockExplorer
                                 indicators["MACD_Hist"] = macdHist;
                             }
                         }
-                        catch { }
+                        catch (Exception macdEx)
+                        {
+                            _loggingService?.Log("Warning", $"Failed to get MACD for {symbol}: {macdEx.Message}");
+                        }
 
                         try
                         {
@@ -334,7 +339,10 @@ namespace Quantra.Views.StockExplorer
                                 indicators["VWAP"] = vwap;
                             }
                         }
-                        catch { }
+                        catch (Exception vwapEx)
+                        {
+                            _loggingService?.Log("Warning", $"Failed to get VWAP for {symbol}: {vwapEx.Message}");
+                        }
 
                         // Run ML prediction if enabled
                         if (AutoAnalyzeCheckBox.IsChecked == true && indicators.Count > 0)
@@ -346,7 +354,7 @@ namespace Quantra.Views.StockExplorer
                                 indicators["Volume"] = item.Volume;
 
                                 // Use PythonStockPredictor directly for ML predictions
-                                var prediction = await PythonStockPredictor.PredictAsync(indicators);
+                                var prediction = await Models.PythonStockPredictor.PredictAsync(indicators);
                                 
                                 if (prediction != null && string.IsNullOrEmpty(prediction.Error))
                                 {
