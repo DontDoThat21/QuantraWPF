@@ -32,6 +32,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+# Add the script directory to Python path for imports
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 # Model paths
 MODEL_PATH = os.path.join(MODEL_DIR, 'stock_rf_model.pkl')
 SCALER_PATH = os.path.join(MODEL_DIR, 'stock_scaler.pkl')
@@ -343,19 +347,37 @@ class PyTorchStockPredictor:
         """Train the PyTorch model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, seq_len, n_features)
             y (np.ndarray): Target array with shape (n_samples,)
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
             lr (float): Learning rate
             verbose (bool): Whether to print training progress
         """
-        # Scale the features
-        X_scaled = self.scaler.fit_transform(X)
+        # Handle 3D input for sequence models
+        original_shape = X.shape
+        is_3d = len(X.shape) == 3
         
-        # Prepare data for LSTM (we need to reshape to [batch_size, sequence_len, n_features])
-        # For this simple case, we'll use sequence_len=1
-        X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
+        if is_3d:
+            # Reshape from (n_samples, seq_len, n_features) to (n_samples, seq_len * n_features)
+            n_samples, seq_len, n_features = X.shape
+            X_2d = X.reshape(n_samples, seq_len * n_features)
+            X_scaled = self.scaler.fit_transform(X_2d)
+            # Reshape back to 3D
+            X_scaled = X_scaled.reshape(n_samples, seq_len, n_features)
+        else:
+            # Standard 2D scaling
+            X_scaled = self.scaler.fit_transform(X)
+        
+        
+        # Prepare data for LSTM/Transformer
+        if is_3d:
+            # Data is already in correct 3D shape (batch_size, seq_len, n_features)
+            X_torch = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
+        else:
+            # Reshape 2D to 3D: [batch_size, 1, n_features]
+            X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
+        
         y_torch = torch.tensor(y, dtype=torch.float32).to(self.device)
         
         # Create DataLoader
@@ -389,16 +411,32 @@ class PyTorchStockPredictor:
         """Make predictions using the trained model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, seq_len, n_features)
             
         Returns:
             np.ndarray: Predictions with shape (n_samples,)
         """
-        # Scale the features
-        X_scaled = self.scaler.transform(X)
+        # Handle 3D input for sequence models
+        is_3d = len(X.shape) == 3
         
-        # Convert to PyTorch tensor and reshape for LSTM
-        X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
+        if is_3d:
+            # Reshape from (n_samples, seq_len, n_features) to (n_samples, seq_len * n_features)
+            n_samples, seq_len, n_features = X.shape
+            X_2d = X.reshape(n_samples, seq_len * n_features)
+            X_scaled = self.scaler.transform(X_2d)
+            # Reshape back to 3D
+            X_scaled = X_scaled.reshape(n_samples, seq_len, n_features)
+        else:
+            # Standard 2D scaling
+            X_scaled = self.scaler.transform(X)
+        
+        # Convert to PyTorch tensor
+        if is_3d:
+            # Data is already in correct 3D shape
+            X_torch = torch.tensor(X_scaled, dtype=torch.float32).to(self.device)
+        else:
+            # Reshape 2D to 3D: [batch_size, 1, n_features]
+            X_torch = torch.tensor(X_scaled, dtype=torch.float32).unsqueeze(1).to(self.device)
         
         # Make predictions
         self.model.eval()
@@ -647,17 +685,27 @@ class TensorFlowStockPredictor:
         """Train the TensorFlow model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, seq_len, n_features)
             y (np.ndarray): Target array with shape (n_samples,)
             epochs (int): Number of training epochs
             batch_size (int): Training batch size
             verbose (bool): Whether to print training progress
         """
-        # Scale the features
-        X_scaled = self.scaler.fit_transform(X)
+        # Handle 3D input for sequence models
+        is_3d = len(X.shape) == 3
         
-        # Reshape for LSTM [samples, time_steps, features]
-        X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
+        if is_3d:
+            # Reshape from (n_samples, seq_len, n_features) to (n_samples, seq_len * n_features)
+            n_samples, seq_len, n_features = X.shape
+            X_2d = X.reshape(n_samples, seq_len * n_features)
+            X_scaled = self.scaler.fit_transform(X_2d)
+            # Reshape back to 3D
+            X_reshaped = X_scaled.reshape(n_samples, seq_len, n_features)
+        else:
+            # Standard 2D scaling and reshape to 3D
+            X_scaled = self.scaler.fit_transform(X)
+            # Reshape for LSTM [samples, time_steps, features]
+            X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
         
         # Train the model
         self.model.fit(
@@ -672,16 +720,26 @@ class TensorFlowStockPredictor:
         """Make predictions using the trained model.
         
         Args:
-            X (np.ndarray): Feature array with shape (n_samples, n_features)
+            X (np.ndarray): Feature array with shape (n_samples, n_features) or (n_samples, seq_len, n_features)
             
         Returns:
             np.ndarray: Predictions with shape (n_samples,)
         """
-        # Scale the features
-        X_scaled = self.scaler.transform(X)
+        # Handle 3D input for sequence models
+        is_3d = len(X.shape) == 3
         
-        # Reshape for LSTM [samples, time_steps, features]
-        X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
+        if is_3d:
+            # Reshape from (n_samples, seq_len, n_features) to (n_samples, seq_len * n_features)
+            n_samples, seq_len, n_features = X.shape
+            X_2d = X.reshape(n_samples, seq_len * n_features)
+            X_scaled = self.scaler.transform(X_2d)
+            # Reshape back to 3D
+            X_reshaped = X_scaled.reshape(n_samples, seq_len, n_features)
+        else:
+            # Standard 2D scaling and reshape to 3D
+            X_scaled = self.scaler.transform(X)
+            # Reshape for LSTM [samples, time_steps, features]
+            X_reshaped = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
         
         # Make predictions
         predictions = self.model.predict(X_reshaped)
@@ -1260,8 +1318,16 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
     
     elif model_type == 'pytorch' and PYTORCH_AVAILABLE:
         # Create and train PyTorch model
+        # Correctly extract input_dim from 3D or 2D input
+        if len(X_train.shape) == 3:
+            # For 3D input (n_samples, seq_len, n_features), use n_features as input_dim
+            input_dim = X_train.shape[2]
+        else:
+            # For 2D input (n_samples, n_features), use n_features as input_dim
+            input_dim = X_train.shape[1]
+        
         if best_params:
-            input_dim = best_params.get('input_dim', X_train.shape[1])
+            input_dim = best_params.get('input_dim', input_dim)
             hidden_dim = best_params.get('hidden_dim', 64)
             num_layers = best_params.get('num_layers', 2)
             dropout = best_params.get('dropout', 0.2)
@@ -1274,11 +1340,11 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             )
         else:
             model = PyTorchStockPredictor(
-                input_dim=X_train.shape[1],
+                input_dim=input_dim,
                 architecture_type=architecture_type
             )
             
-        model.feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]  # Dummy feature names
+        model.feature_names = [f"feature_{i}" for i in range(input_dim)]  # Dummy feature names
         model.fit(X_train, y_train, epochs=30, verbose=True)
         model.save()
         logger.info(f"Trained and saved new PyTorch model with {architecture_type} architecture")
@@ -1286,8 +1352,16 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
         
     elif model_type == 'tensorflow' and TENSORFLOW_AVAILABLE:
         # Create and train TensorFlow model
+        # Correctly extract input_dim from 3D or 2D input
+        if len(X_train.shape) == 3:
+            # For 3D input (n_samples, seq_len, n_features), use n_features as input_dim
+            input_dim = X_train.shape[2]
+        else:
+            # For 2D input (n_samples, n_features), use n_features as input_dim
+            input_dim = X_train.shape[1]
+        
         if best_params:
-            input_dim = best_params.get('input_dim', X_train.shape[1])
+            input_dim = best_params.get('input_dim', input_dim)
             units = best_params.get('units', 64)
             num_layers = best_params.get('num_layers', 2)
             dropout = best_params.get('dropout', 0.2)
@@ -1300,11 +1374,11 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             )
         else:
             model = TensorFlowStockPredictor(
-                input_dim=X_train.shape[1],
+                input_dim=input_dim,
                 architecture_type=architecture_type
             )
             
-        model.feature_names = [f"feature_{i}" for i in range(X_train.shape[1])]  # Dummy feature names
+        model.feature_names = [f"feature_{i}" for i in range(input_dim)]  # Dummy feature names
         model.fit(X_train, y_train, epochs=30, verbose=True)
         model.save()
         logger.info(f"Trained and saved new TensorFlow model with {architecture_type} architecture")
@@ -1313,6 +1387,15 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
     else:
         # Fallback to RandomForest model
         logger.info("Using RandomForest model as fallback")
+        
+        # Random Forest doesn't handle 3D input - flatten if necessary
+        if len(X_train.shape) == 3:
+            n_samples, seq_len, n_features = X_train.shape
+            X_train_2d = X_train.reshape(n_samples, seq_len * n_features)
+            logger.info(f"Flattened 3D input ({n_samples}, {seq_len}, {n_features}) to 2D ({n_samples}, {seq_len * n_features}) for RandomForest")
+        else:
+            X_train_2d = X_train
+        
         if best_params:
             model = RandomForestRegressor(
                 n_estimators=best_params.get('n_estimators', 100),
@@ -1333,7 +1416,7 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
         
         # Scale the features
         scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
+        X_train_scaled = scaler.fit_transform(X_train_2d)
         
         # Train the model
         model.fit(X_train_scaled, y_train)
