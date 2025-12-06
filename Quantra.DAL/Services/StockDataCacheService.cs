@@ -1080,5 +1080,137 @@ namespace Quantra.DAL.Services
 
             return symbols;
         }
+
+        /// <summary>
+        /// Gets recent historical sequence for TFT model inference.
+        /// Returns the most recent N days of OHLCV data for a symbol.
+        /// CRITICAL for TFT: This provides real temporal sequences instead of synthetic repeated values.
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="days">Number of days to retrieve (default 60 for TFT lookback)</param>
+        /// <param name="range">Time range to search (default "1y" to ensure enough history)</param>
+        /// <param name="interval">Data interval (default "1d" for daily data)</param>
+        /// <returns>List of historical prices ordered from oldest to newest (ready for TFT)</returns>
+        public async Task<List<HistoricalPrice>> GetRecentHistoricalSequenceAsync(
+            string symbol, 
+            int days = 60, 
+            string range = "1y", 
+            string interval = "1d")
+        {
+            try
+            {
+                // Get cached data or fetch if needed
+                var allData = await GetStockData(symbol, range, interval, forceRefresh: false);
+
+                if (allData == null || allData.Count == 0)
+                {
+                    _loggingService.Log("Warning", $"No historical data available for {symbol}");
+                    return new List<HistoricalPrice>();
+                }
+
+                // Sort by date ascending (oldest first) and take the last N days
+                var recentData = allData
+                    .OrderBy(p => p.Date)
+                    .TakeLast(days)
+                    .ToList();
+
+                if (recentData.Count < days)
+                {
+                    _loggingService.Log("Warning", 
+                        $"Requested {days} days for {symbol} but only {recentData.Count} available. " +
+                        $"TFT performance may be degraded with insufficient lookback window.");
+                }
+
+                _loggingService.Log("Info", 
+                    $"Retrieved {recentData.Count} days of historical sequence for {symbol} " +
+                    $"(from {recentData.First().Date:yyyy-MM-dd} to {recentData.Last().Date:yyyy-MM-dd})");
+
+                return recentData;
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", 
+                    $"Error retrieving historical sequence for {symbol}: {ex.Message}", 
+                    ex.ToString());
+                return new List<HistoricalPrice>();
+            }
+        }
+
+        /// <summary>
+        /// Gets recent historical sequence with calendar features for TFT model.
+        /// Returns OHLCV data plus known-future covariates (day of week, month, etc.).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="days">Number of days to retrieve (default 60 for TFT lookback)</param>
+        /// <param name="futureHorizon">Additional days to project calendar features into future (default 30)</param>
+        /// <returns>Dictionary with "prices" and "calendar_features" arrays</returns>
+        public async Task<Dictionary<string, object>> GetHistoricalSequenceWithFeaturesAsync(
+            string symbol,
+            int days = 60,
+            int futureHorizon = 30)
+        {
+            var result = new Dictionary<string, object>();
+
+            try
+            {
+                // Get historical prices
+                var prices = await GetRecentHistoricalSequenceAsync(symbol, days);
+
+                if (prices == null || prices.Count == 0)
+                {
+                    result["prices"] = new List<HistoricalPrice>();
+                    result["calendar_features"] = new List<Dictionary<string, object>>();
+                    return result;
+                }
+
+                // Generate calendar features for historical period + future horizon
+                var calendarFeatures = new List<Dictionary<string, object>>();
+                var startDate = prices.First().Date;
+                var endDate = prices.Last().Date.AddDays(futureHorizon);
+
+                for (var date = startDate; date <= endDate; date = date.AddDays(1))
+                {
+                    // Skip weekends for stock market data
+                    if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                        continue;
+
+                    calendarFeatures.Add(new Dictionary<string, object>
+                    {
+                        ["date"] = date.ToString("yyyy-MM-dd"),
+                        ["dayofweek"] = (int)date.DayOfWeek,
+                        ["day"] = date.Day,
+                        ["month"] = date.Month,
+                        ["quarter"] = (date.Month - 1) / 3 + 1,
+                        ["year"] = date.Year,
+                        ["is_month_end"] = date.Day >= DateTime.DaysInMonth(date.Year, date.Month) - 2 ? 1 : 0,
+                        ["is_quarter_end"] = (date.Month % 3 == 0 && date.Day >= 28) ? 1 : 0,
+                        ["is_year_end"] = (date.Month == 12 && date.Day >= 29) ? 1 : 0,
+                        ["is_month_start"] = date.Day <= 5 ? 1 : 0,
+                        ["is_friday"] = date.DayOfWeek == DayOfWeek.Friday ? 1 : 0,
+                        ["is_monday"] = date.DayOfWeek == DayOfWeek.Monday ? 1 : 0,
+                        ["is_potential_holiday_week"] = new[] { 1, 5, 7, 9, 11, 12 }.Contains(date.Month) ? 1 : 0
+                    });
+                }
+
+                result["prices"] = prices;
+                result["calendar_features"] = calendarFeatures;
+                result["lookback_days"] = prices.Count;
+                result["future_horizon_days"] = futureHorizon;
+                result["total_calendar_days"] = calendarFeatures.Count;
+
+                _loggingService.Log("Info", 
+                    $"Generated historical sequence with features for {symbol}: " +
+                    $"{prices.Count} historical days + {futureHorizon} future calendar days");
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Error", 
+                    $"Error generating historical sequence with features for {symbol}: {ex.Message}",
+                    ex.ToString());
+                result["error"] = ex.Message;
+            }
+
+            return result;
+        }
     }
 }

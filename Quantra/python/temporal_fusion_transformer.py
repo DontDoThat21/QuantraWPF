@@ -323,46 +323,81 @@ class TemporalFusionTransformer(nn.Module):
     def forward(self,
                 past_features: torch.Tensor,        # (batch, past_seq_len, input_dim)
                 static_features: torch.Tensor,      # (batch, static_dim)
-                future_features: Optional[torch.Tensor] = None  # (batch, future_seq_len, input_dim)
+                future_features: Optional[torch.Tensor] = None  # (batch, future_seq_len, calendar_dim)
                ) -> Dict[str, torch.Tensor]:
         """
         Forward pass of TFT.
         
+        STEP 6 ENHANCEMENT: Now properly processes future calendar features as known-future-inputs.
+        
         Args:
-            past_features: Historical temporal features
-            static_features: Static/time-invariant features
-            future_features: Optional known future features (e.g., holidays, day of week)
+            past_features: Historical temporal features (batch, past_seq_len, input_dim)
+            static_features: Static/time-invariant features (batch, static_dim)
+            future_features: Optional known future calendar features (batch, future_seq_len, calendar_dim)
+                           Examples: day_of_week, month, quarter, is_holiday, is_month_end, etc.
+                           These are deterministic and known in advance for the forecast horizon.
             
         Returns:
             dict with keys:
                 - 'predictions': dict of horizon predictions, each (batch, num_quantiles)
                 - 'attention_weights': List of attention weight tensors
                 - 'variable_importance': (batch, input_dim)
+                - 'static_context': (batch, hidden_dim)
         """
         batch_size = past_features.size(0)
-        seq_len = past_features.size(1)
+        past_seq_len = past_features.size(1)
         
         # 1. Static covariate processing
         static_embedded = self.static_embedding(static_features)  # (batch, hidden_dim)
         static_context = self.static_context_grn(static_embedded)  # (batch, hidden_dim)
         
-        # 2. Temporal embedding and variable selection
-        past_embedded = self.temporal_embedding(past_features)  # (batch, seq_len, hidden_dim)
+        # 2. Temporal embedding and variable selection for past
+        past_embedded = self.temporal_embedding(past_features)  # (batch, past_seq_len, hidden_dim)
         
         # Apply variable selection with static context
-        static_context_expanded = static_context.unsqueeze(1).expand(-1, seq_len, -1)
-        selected_past = self.past_vsn(past_embedded, static_context_expanded)  # (batch, seq_len, hidden_dim)
+        static_context_expanded = static_context.unsqueeze(1).expand(-1, past_seq_len, -1)
+        selected_past = self.past_vsn(past_embedded, static_context_expanded)  # (batch, past_seq_len, hidden_dim)
         
-        # 3. LSTM encoding of past
-        past_lstm_out, (h_past, c_past) = self.past_lstm(selected_past)  # (batch, seq_len, hidden_dim)
+        # 3. LSTM encoding of past observations
+        past_lstm_out, (h_past, c_past) = self.past_lstm(selected_past)  # (batch, past_seq_len, hidden_dim)
         
-        # 4. Gated skip connection from temporal selection
-        lstm_out = self.gated_skip(past_lstm_out)  # (batch, seq_len, hidden_dim)
+        # 4. Process future calendar features if provided (STEP 6 ENHANCEMENT)
+        if future_features is not None and future_features.size(1) > 0:
+            future_seq_len = future_features.size(1)
+            
+            # Project future calendar features to hidden_dim
+            # Note: calendar features are typically low-dimensional (e.g., 12 dims)
+            if not hasattr(self, 'future_embedding'):
+                # Dynamically create future embedding layer if it doesn't exist
+                calendar_dim = future_features.size(-1)
+                self.future_embedding = nn.Linear(calendar_dim, self.hidden_dim).to(future_features.device)
+                logger.info(f"Created future_embedding layer: {calendar_dim} -> {self.hidden_dim}")
+            
+            future_embedded = self.future_embedding(future_features)  # (batch, future_seq_len, hidden_dim)
+            
+            # Process future features through LSTM decoder (continuing from past state)
+            future_lstm_out, _ = self.past_lstm(future_embedded, (h_past, c_past))
+            
+            # Concatenate past and future sequences
+            combined_sequence = torch.cat([past_lstm_out, future_lstm_out], dim=1)  # (batch, past+future, hidden_dim)
+            combined_seq_len = past_seq_len + future_seq_len
+            
+            # Expand static context for combined sequence
+            static_context_combined = static_context.unsqueeze(1).expand(-1, combined_seq_len, -1)
+            
+            # Apply gated skip connection to combined sequence
+            lstm_out = self.gated_skip(combined_sequence)
+        else:
+            # No future features - use only past (backward compatible)
+            lstm_out = self.gated_skip(past_lstm_out)
+            static_context_combined = static_context_expanded
+            combined_seq_len = past_seq_len
         
         # 5. Static enrichment
-        enriched = self.static_enrichment(lstm_out, static_context_expanded)  # (batch, seq_len, hidden_dim)
+        enriched = self.static_enrichment(lstm_out, static_context_combined)  # (batch, combined_seq_len, hidden_dim)
         
         # 6. Multi-head attention with residual connections
+        # Attention now has access to both past and future calendar information
         attention_out = enriched
         attention_weights_list = []
         
@@ -375,9 +410,10 @@ class TemporalFusionTransformer(nn.Module):
             attention_out = self.layer_norm(attention_out + attn_out)
         
         # 7. Position-wise feed-forward
-        output = self.position_wise_grn(attention_out)  # (batch, seq_len, hidden_dim)
+        output = self.position_wise_grn(attention_out)  # (batch, combined_seq_len, hidden_dim)
         
         # 8. Take the last time step for prediction
+        # This now includes information from future calendar features if provided
         final_output = output[:, -1, :]  # (batch, hidden_dim)
         
         # 9. Generate predictions for each horizon and quantile

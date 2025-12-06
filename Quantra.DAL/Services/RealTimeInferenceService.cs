@@ -34,11 +34,13 @@ namespace Quantra.DAL.Services
     {
         private readonly string _pythonScript;
         private readonly string _stockPredictorScript;
+        private readonly string _tftPredictScript;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<PredictionResult>> _pendingRequests;
         private readonly SemaphoreSlim _requestSemaphore;
         private readonly SemaphoreSlim _streamAccessSemaphore;
         private readonly Timer _metricsTimer;
         private readonly ConcurrentTaskThrottler _batchThrottler;
+        private readonly Interfaces.IStockDataCacheService _stockDataCacheService;
         private Process _pythonProcess;
         private bool _isInitialized;
         private bool _disposed;
@@ -49,10 +51,14 @@ namespace Quantra.DAL.Services
         private readonly List<double> _recentInferenceTimes;
         private readonly object _metricsLock = new object();
 
-        public RealTimeInferenceService(int maxConcurrentRequests = 10)
+        public RealTimeInferenceService(
+            Interfaces.IStockDataCacheService stockDataCacheService = null,
+            int maxConcurrentRequests = 10)
         {
+            _stockDataCacheService = stockDataCacheService;
             _pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "real_time_inference.py");
             _stockPredictorScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "stock_predictor.py");
+            _tftPredictScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "tft_predict.py");
             _pendingRequests = new ConcurrentDictionary<string, TaskCompletionSource<PredictionResult>>();
             _requestSemaphore = new SemaphoreSlim(maxConcurrentRequests, maxConcurrentRequests);
             _streamAccessSemaphore = new SemaphoreSlim(1, 1); // Only one stream operation at a time
@@ -841,6 +847,274 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
+        /// Gets TFT (Temporal Fusion Transformer) prediction with real historical sequences and calendar features.
+        /// CRITICAL FIX: Uses actual historical data instead of synthetic repeated values for proper TFT inference.
+        /// </summary>
+        /// <param name="symbol">Stock symbol to predict</param>
+        /// <param name="lookbackDays">Number of historical days to use (default 60 for TFT)</param>
+        /// <param name="futureHorizon">Days ahead for calendar feature projection (default 30)</param>
+        /// <param name="progressCallback">Optional callback for progress updates</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>TFT prediction result with multi-horizon forecasts and uncertainty quantification</returns>
+        public async Task<PythonPredictionExecutionResult> GetTFTPredictionAsync(
+            string symbol,
+            int lookbackDays = 60,
+            int futureHorizon = 30,
+            PredictionProgressCallback progressCallback = null,
+            CancellationToken cancellationToken = default)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var result = new PythonPredictionExecutionResult { ModelType = "tft" };
+
+            try
+            {
+                // Validate inputs
+                if (string.IsNullOrWhiteSpace(symbol))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Stock symbol is required.";
+                    return result;
+                }
+
+                symbol = symbol.ToUpperInvariant().Trim();
+
+                // Check if stock data cache service is available
+                if (_stockDataCacheService == null)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "StockDataCacheService not available. Cannot fetch historical sequences for TFT.";
+                    return result;
+                }
+
+                // Check if TFT script exists
+                if (!File.Exists(_tftPredictScript))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"TFT prediction script not found at: {_tftPredictScript}";
+                    return result;
+                }
+
+                progressCallback?.Invoke($"Fetching {lookbackDays} days of historical data for {symbol}...");
+
+                // Step 1: Get real historical sequence with calendar features
+                var historicalData = await _stockDataCacheService
+                    .GetHistoricalSequenceWithFeaturesAsync(symbol, lookbackDays, futureHorizon)
+                    .ConfigureAwait(false);
+
+                if (historicalData == null || !historicalData.ContainsKey("prices"))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Insufficient historical data for {symbol}. Need at least {lookbackDays} days.";
+                    return result;
+                }
+
+                var prices = historicalData["prices"] as List<HistoricalPrice>;
+                var calendarFeatures = historicalData["calendar_features"] as List<Dictionary<string, object>>;
+
+                if (prices == null || prices.Count < lookbackDays)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Only {prices?.Count ?? 0} days of data available. TFT requires {lookbackDays} days.";
+                    return result;
+                }
+
+                progressCallback?.Invoke($"Preparing TFT input with {prices.Count} historical days + {futureHorizon} future calendar days...");
+
+                // Step 2: Convert to format expected by Python TFT script
+                var requestData = new
+                {
+                    symbol = symbol,
+                    model_type = "tft",
+                    architecture_type = "tft",
+                    historical_sequence = prices.Select(p => new
+                    {
+                        date = p.Date.ToString("yyyy-MM-dd"),
+                        open = p.Open,
+                        high = p.High,
+                        low = p.Low,
+                        close = p.Close,
+                        volume = (double)p.Volume
+                    }).ToList(),
+                    calendar_features = calendarFeatures,
+                    lookback_days = lookbackDays,
+                    future_horizon = futureHorizon,
+                    forecast_horizons = new[] { 5, 10, 20, 30 } // TFT multi-horizon targets
+                };
+
+                // Step 3: Create temp files for Python communication
+                string tempInputPath = Path.GetTempFileName();
+                string tempOutputPath = Path.GetTempFileName();
+
+                try
+                {
+                    // Step 4: Write request to temp file
+                    var jsonRequest = JsonSerializer.Serialize(requestData);
+                    await File.WriteAllTextAsync(tempInputPath, jsonRequest, cancellationToken).ConfigureAwait(false);
+
+                    progressCallback?.Invoke("Running TFT model with real temporal sequences...");
+
+                    // Step 5: Execute Python TFT script
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "python",
+                        Arguments = $"\"{_tftPredictScript}\" \"{tempInputPath}\" \"{tempOutputPath}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(_tftPredictScript)
+                    };
+
+                    // Try python3 first
+                    try
+                    {
+                        using var testProcess = Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "python3",
+                            Arguments = "--version",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            CreateNoWindow = true
+                        });
+                        testProcess?.WaitForExit(1000);
+                        psi.FileName = "python3";
+                    }
+                    catch { /* Use python */ }
+
+                    using (var process = Process.Start(psi))
+                    {
+                        if (process == null)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Failed to start Python process for TFT prediction.";
+                            return result;
+                        }
+
+                        // Read output streams asynchronously
+                        var outputTask = process.StandardOutput.ReadToEndAsync();
+                        var errorTask = process.StandardError.ReadToEndAsync();
+
+                        // Wait for process with timeout
+                        var processTask = process.WaitForExitAsync(cancellationToken);
+                        var timeoutTask = Task.Delay(TimeSpan.FromMinutes(3), cancellationToken);
+
+                        var completedTask = await Task.WhenAny(processTask, timeoutTask).ConfigureAwait(false);
+                        if (completedTask == timeoutTask)
+                        {
+                            try { process.Kill(); } catch { }
+                            result.Success = false;
+                            result.ErrorMessage = "TFT prediction timed out after 3 minutes.";
+                            return result;
+                        }
+
+                        var stdOutput = await outputTask.ConfigureAwait(false);
+                        var stdError = await errorTask.ConfigureAwait(false);
+
+                        if (process.ExitCode != 0)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = FormatPythonError(stdError, stdOutput);
+                            return result;
+                        }
+
+                        progressCallback?.Invoke("Parsing TFT multi-horizon predictions...");
+
+                        // Step 6: Read and parse results
+                        if (!File.Exists(tempOutputPath))
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "TFT script did not produce output file.";
+                            return result;
+                        }
+
+                        var outputJson = await File.ReadAllTextAsync(tempOutputPath, cancellationToken).ConfigureAwait(false);
+                        if (string.IsNullOrWhiteSpace(outputJson))
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "TFT script produced empty output.";
+                            return result;
+                        }
+
+                        // Parse TFT result
+                        var tftResult = JsonSerializer.Deserialize<TFTPredictionResult>(outputJson, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (tftResult == null || tftResult.Error != null)
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = tftResult?.Error ?? "Failed to parse TFT result.";
+                            return result;
+                        }
+
+                        // Step 7: Convert to PredictionResult
+                        var currentPrice = prices.Last().Close;
+                        result.Prediction = new PredictionResult
+                        {
+                            Symbol = symbol,
+                            Action = tftResult.Action,
+                            Confidence = tftResult.Confidence,
+                            CurrentPrice = currentPrice,
+                            TargetPrice = tftResult.TargetPrice,
+                            PredictionDate = DateTime.Now,
+                            ModelType = "tft",
+                            
+                            // TFT-specific uncertainty quantification
+                            PredictionUncertainty = tftResult.Uncertainty,
+                            
+                            // Multi-horizon predictions
+                            TimeSeriesPredictions = tftResult.Horizons?.Select(h => new HorizonPrediction
+                            {
+                                Horizon = h.Key,
+                                MedianPrice = h.Value.MedianPrice,
+                                LowerBound = h.Value.LowerBound,
+                                UpperBound = h.Value.UpperBound,
+                                Confidence = h.Value.Confidence
+                            }).ToList() ?? new List<HorizonPrediction>()
+                        };
+
+                        result.Success = true;
+                        result.ModelType = "tft";
+
+                        var horizonText = tftResult.Horizons != null 
+                            ? string.Join(", ", tftResult.Horizons.Keys) 
+                            : "5d, 10d, 20d, 30d";
+                        progressCallback?.Invoke($"TFT prediction complete! {result.Prediction.Action} with {result.Prediction.Confidence:P0} confidence. Horizons: {horizonText}");
+                    }
+                }
+                finally
+                {
+                    // Cleanup temp files
+                    try
+                    {
+                        if (File.Exists(tempInputPath)) File.Delete(tempInputPath);
+                        if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                result.Success = false;
+                result.ErrorMessage = "TFT prediction was cancelled.";
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = FormatExceptionMessage(ex);
+                Console.WriteLine($"Error in GetTFTPredictionAsync: {ex}");
+            }
+            finally
+            {
+                stopwatch.Stop();
+                result.ExecutionTimeMs = stopwatch.Elapsed.TotalMilliseconds;
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Gets a user-friendly display name for the model type.
         /// </summary>
         private static string GetModelDisplayName(string modelType)
@@ -850,6 +1124,7 @@ namespace Quantra.DAL.Services
                 "lstm" => "LSTM",
                 "gru" => "GRU",
                 "transformer" => "Transformer",
+                "tft" => "Temporal Fusion Transformer",
                 "random_forest" => "Random Forest",
                 "auto" => "Auto-selected ML",
                 _ => modelType ?? "ML"
@@ -1018,5 +1293,45 @@ namespace Quantra.DAL.Services
         public string Outcome { get; set; }
         public string DetectionDate { get; set; }
         public double HistoricalAccuracy { get; set; }
+    }
+
+    /// <summary>
+    /// TFT prediction result with multi-horizon forecasts and uncertainty quantification.
+    /// </summary>
+    public class TFTPredictionResult
+    {
+        public string Symbol { get; set; }
+        public string Action { get; set; }
+        public double Confidence { get; set; }
+        public double CurrentPrice { get; set; }
+        public double TargetPrice { get; set; }
+        public double LowerBound { get; set; }
+        public double UpperBound { get; set; }
+        public double Uncertainty { get; set; }
+        public Dictionary<string, HorizonPredictionData> Horizons { get; set; }
+        public string Error { get; set; }
+    }
+
+    /// <summary>
+    /// Prediction data for a specific time horizon.
+    /// </summary>
+    public class HorizonPredictionData
+    {
+        public double MedianPrice { get; set; }
+        public double LowerBound { get; set; }
+        public double UpperBound { get; set; }
+        public double Confidence { get; set; }
+    }
+
+    /// <summary>
+    /// Multi-horizon prediction for display in UI.
+    /// </summary>
+    public class HorizonPrediction
+    {
+        public string Horizon { get; set; }
+        public double MedianPrice { get; set; }
+        public double LowerBound { get; set; }
+        public double UpperBound { get; set; }
+        public double Confidence { get; set; }
     }
 }

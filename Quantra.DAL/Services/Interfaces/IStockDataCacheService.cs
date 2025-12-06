@@ -55,5 +55,34 @@ namespace Quantra.DAL.Services.Interfaces
         /// </summary>
         /// <returns>True if successful</returns>
         Task<bool> ClearAllCacheAsync();
+
+        /// <summary>
+        /// Gets recent historical sequence for TFT model inference.
+        /// Returns the most recent N days of OHLCV data ordered from oldest to newest.
+        /// CRITICAL for TFT: Provides real temporal sequences instead of synthetic repeated values.
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="days">Number of days to retrieve (default 60 for TFT lookback)</param>
+        /// <param name="range">Time range to search (default "1y")</param>
+        /// <param name="interval">Data interval (default "1d")</param>
+        /// <returns>List of historical prices ordered from oldest to newest</returns>
+        Task<List<HistoricalPrice>> GetRecentHistoricalSequenceAsync(
+            string symbol,
+            int days = 60,
+            string range = "1y",
+            string interval = "1d");
+
+        /// <summary>
+        /// Gets recent historical sequence with calendar features for TFT model.
+        /// Returns OHLCV data plus known-future covariates (day of week, month, etc.).
+        /// </summary>
+        /// <param name="symbol">Stock symbol</param>
+        /// <param name="days">Number of days to retrieve (default 60)</param>
+        /// <param name="futureHorizon">Additional days to project calendar features (default 30)</param>
+        /// <returns>Dictionary with "prices" and "calendar_features" arrays</returns>
+        Task<Dictionary<string, object>> GetHistoricalSequenceWithFeaturesAsync(
+            string symbol,
+            int days = 60,
+            int futureHorizon = 30);
     }
 }

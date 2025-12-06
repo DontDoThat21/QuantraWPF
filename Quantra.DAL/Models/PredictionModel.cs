@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using Quantra.DAL.Models;
+using Quantra.DAL.Services;
 
 namespace Quantra.Models
 {
@@ -669,6 +670,24 @@ namespace Quantra.Models
         /// Captured when Python returns the prediction result.
         /// </summary>
         public PredictionTimestamp Timestamp { get; set; }
+
+        // TFT-specific properties for multi-horizon predictions and uncertainty quantification
+        /// <summary>
+        /// Multi-horizon predictions from TFT model (5, 10, 20, 30 days ahead).
+        /// Each horizon includes median, lower, and upper bounds.
+        /// </summary>
+        public List<HorizonPrediction> TimeSeriesPredictions { get; set; } = new();
+
+        /// <summary>
+        /// Uncertainty measure from TFT model (difference between upper and lower bounds).
+        /// Higher values indicate less certain predictions.
+        /// </summary>
+        public double PredictionUncertainty { get; set; }
+
+        /// <summary>
+        /// Confidence interval for the prediction [lower, upper].
+        /// </summary>
+        public double[] ConfidenceInterval { get; set; }
 
         // Helper properties
         public double PotentialReturn => CurrentPrice != 0 ? (TargetPrice - CurrentPrice) / CurrentPrice : 0;
