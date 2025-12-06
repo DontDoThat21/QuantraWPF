@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Avoid copying problematic WinMD artifacts which may resolve to invalid paths like \\.\
+ul\ -->
+    <SkipCopyWinMDArtifact>true</SkipCopyWinMDArtifact>
+  </PropertyGroup>
+</Project>

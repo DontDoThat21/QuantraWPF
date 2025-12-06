@@ -62,10 +62,10 @@ def test_target_scaler_basic():
     print(f"\nMax difference: {max_diff}")
     
     if max_diff < 1e-10:
-        print("✓ Test PASSED: Scaling and unscaling works correctly")
+        print("[PASS] Test PASSED: Scaling and unscaling works correctly")
         return True
     else:
-        print("✗ Test FAILED: Scaling and unscaling produced different values")
+        print("[FAIL] Test FAILED: Scaling and unscaling produced different values")
         return False
 
 
@@ -117,9 +117,9 @@ def test_realistic_predictions():
         for horizon_idx in range(2):
             pct_change = actual_predictions[i, horizon_idx]
             target_price = current_price * (1 + pct_change)
-            print(f"  {symbol} horizon {horizon_idx+1}: {current_price:.2f} → {target_price:.2f} ({pct_change*100:.2f}%)")
-    
-    print("\n✓ Test PASSED: Realistic predictions converted successfully")
+            print(f"  {symbol} horizon {horizon_idx+1}: {current_price:.2f} -> {target_price:.2f} ({pct_change*100:.2f}%)")
+
+    print("\n[PASS] Test PASSED: Realistic predictions converted successfully")
     return True
 
 
@@ -147,10 +147,10 @@ def test_edge_cases():
     max_diff = np.max(diff)
     
     if max_diff < 1e-10:
-        print(f"\n✓ Test PASSED: Edge cases handled correctly (max diff: {max_diff})")
+        print(f"\n[PASS] Test PASSED: Edge cases handled correctly (max diff: {max_diff})")
         return True
     else:
-        print(f"\n✗ Test FAILED: Edge cases produced errors (max diff: {max_diff})")
+        print(f"[FAIL] Test FAILED: Edge cases produced errors (max diff: {max_diff})")
         return False
 
 
@@ -166,10 +166,10 @@ def test_issue_example():
     ])
     
     print("BEFORE FIX:")
-    print("  AAPL: Scaled output = -0.3474 → incorrectly treated as -34.74% change")
-    print("    Target: 278.78 * (1 - 0.3474) = 181.93 ❌")
-    print("  ACHR: Scaled output = 4.9742 → incorrectly treated as +497.42% change")
-    print("    Target: 8.60 * (1 + 4.9742) = 51.38 ❌")
+    print("  AAPL: Scaled output = -0.3474 -> incorrectly treated as -34.74% change")
+    print("    Target: 278.78 * (1 - 0.3474) = 181.93 [WRONG]")
+    print("  ACHR: Scaled output = 4.9742 -> incorrectly treated as +497.42% change")
+    print("    Target: 8.60 * (1 + 4.9742) = 51.38 [WRONG]")
     
     # Now with proper inverse transform
     # We need to fit a scaler first on realistic training data
@@ -189,20 +189,20 @@ def test_issue_example():
     actual_changes = target_scaler.inverse_transform(scaled_outputs)
     
     print("\nAFTER FIX:")
-    print(f"  AAPL: Scaled output = -0.3474 → Actual change = {actual_changes[0][0]:.4f} ({actual_changes[0][0]*100:.2f}%)")
+    print(f"  AAPL: Scaled output = -0.3474 -> Actual change = {actual_changes[0][0]:.4f} ({actual_changes[0][0]*100:.2f}%)")
     aapl_target = 278.78 * (1 + actual_changes[0][0])
-    print(f"    Target: 278.78 * (1 + {actual_changes[0][0]:.4f}) = {aapl_target:.2f} ✓")
-    
-    print(f"  ACHR: Scaled output = 4.9742 → Actual change = {actual_changes[1][0]:.4f} ({actual_changes[1][0]*100:.2f}%)")
+    print(f"    Target: 278.78 * (1 + {actual_changes[0][0]:.4f}) = {aapl_target:.2f} [OK]")
+
+    print(f"  ACHR: Scaled output = 4.9742 -> Actual change = {actual_changes[1][0]:.4f} ({actual_changes[1][0]*100:.2f}%)")
     achr_target = 8.60 * (1 + actual_changes[1][0])
-    print(f"    Target: 8.60 * (1 + {actual_changes[1][0]:.4f}) = {achr_target:.2f} ✓")
+    print(f"    Target: 8.60 * (1 + {actual_changes[1][0]:.4f}) = {achr_target:.2f} [OK]")
     
     # Verify the predictions are reasonable (within -20% to +50%)
     if -0.20 <= actual_changes[0][0] <= 0.50 and -0.20 <= actual_changes[1][0] <= 0.50:
-        print("\n✓ Test PASSED: Predictions are now in realistic range!")
+        print("\n[PASS] Test PASSED: Predictions are now in realistic range!")
         return True
     else:
-        print("\n✗ Test FAILED: Predictions still unrealistic")
+        print("\n[FAIL] Test FAILED: Predictions still unrealistic")
         return False
 
 
@@ -224,25 +224,25 @@ if __name__ == "__main__":
         print("=" * 70)
         
         for test_name, passed in results:
-            status = "✓ PASSED" if passed else "✗ FAILED"
+            status = "[PASS] PASSED" if passed else "[FAIL] FAILED"
             print(f"{test_name:30s} {status}")
-        
+
         all_passed = all(result[1] for result in results)
-        
+
         print("=" * 70)
         if all_passed:
-            print("ALL TESTS PASSED! ✓")
+            print("ALL TESTS PASSED!")
             print("\nThe fix correctly:")
             print("  1. Scales targets during training")
             print("  2. Inverse transforms predictions")
             print("  3. Produces realistic percentage changes")
             print("  4. Resolves the issue with AAPL and ACHR predictions")
         else:
-            print("SOME TESTS FAILED ✗")
+            print("SOME TESTS FAILED")
             sys.exit(1)
             
     except Exception as e:
-        print(f"\n✗ ERROR during testing: {e}")
+        print(f"\n[ERROR] ERROR during testing: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

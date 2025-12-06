@@ -1,0 +1,385 @@
+<Window x:Class="Quantra.Views.PredictionAnalysis.TrainingConfigurationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Training Configuration"
+        Height="700" Width="900"
+        Background="#1E1E30"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/EnhancedStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Preset selector -->
+            <RowDefinition Height="*"/>      <!-- Scrollable content -->
+            <RowDefinition Height="Auto"/>  <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="⚙ Training Configuration"
+                   FontSize="22" FontWeight="Bold" Foreground="Cyan" Margin="0,0,0,15"/>
+
+        <!-- Preset Selector -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Configuration Preset:" Foreground="White"
+                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+            <ComboBox Grid.Column="1" x:Name="PresetComboBox"
+                      SelectionChanged="PresetComboBox_SelectionChanged"
+                      Style="{StaticResource EnhancedComboBoxStyle}"
+                      DisplayMemberPath="ConfigurationName"/>
+
+            <Button Grid.Column="2" x:Name="SaveAsNewButton" Content="💾 Save As..."
+                    Click="SaveAsNewButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Background="#2D6A4C" Margin="10,0,5,0" Padding="10,5"/>
+
+            <Button Grid.Column="3" x:Name="DeleteButton" Content="🗑 Delete"
+                    Click="DeleteButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Background="#8B0000" Margin="5,0" Padding="10,5"/>
+
+            <Button Grid.Column="4" x:Name="ResetButton" Content="↻ Reset"
+                    Click="ResetButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Background="#3A6EA5" Margin="5,0,0,0" Padding="10,5"/>
+        </Grid>
+
+        <!-- Scrollable Configuration Panel -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Model Selection Section -->
+                <Border Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="📦 Model Selection" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Model Type:" Foreground="White" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="ModelTypeBox" Style="{StaticResource EnhancedComboBoxStyle}">
+                                    <ComboBoxItem Content="Auto (Best Available)" Tag="auto"/>
+                                    <ComboBoxItem Content="PyTorch" Tag="pytorch"/>
+                                    <ComboBoxItem Content="TensorFlow" Tag="tensorflow"/>
+                                    <ComboBoxItem Content="Random Forest" Tag="random_forest"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
+                                <TextBlock Text="Architecture:" Foreground="White" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="ArchitectureBox" Style="{StaticResource EnhancedComboBoxStyle}">
+                                    <ComboBoxItem Content="LSTM" Tag="lstm"/>
+                                    <ComboBoxItem Content="GRU" Tag="gru"/>
+                                    <ComboBoxItem Content="Transformer" Tag="transformer"/>
+                                    <ComboBoxItem Content="TFT (Temporal Fusion)" Tag="tft"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Feature Type:" Foreground="White" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="FeatureTypeBox" Style="{StaticResource EnhancedComboBoxStyle}">
+                                    <ComboBoxItem Content="Minimal" Tag="minimal"/>
+                                    <ComboBoxItem Content="Balanced" Tag="balanced"/>
+                                    <ComboBoxItem Content="Comprehensive" Tag="comprehensive"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="Lookback Period (days):" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="LookbackPeriodBox" Text="60"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Neural Network Hyperparameters -->
+                <Border Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="🧠 Neural Network Hyperparameters" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Row 1 -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Epochs:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="EpochsBox" Text="50"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,10,10">
+                                <TextBlock Text="Batch Size:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="BatchSizeBox" Text="32"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,0,0,10">
+                                <TextBlock Text="Learning Rate:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="LearningRateBox" Text="0.001"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <!-- Row 2 -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Dropout:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="DropoutBox" Text="0.1"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,10,10">
+                                <TextBlock Text="Hidden Dimension:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="HiddenDimBox" Text="128"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="10,0,0,10">
+                                <TextBlock Text="Number of Layers:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="NumLayersBox" Text="2"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <!-- Row 3 -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Optimizer:" Foreground="White" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="OptimizerBox" Style="{StaticResource EnhancedComboBoxStyle}">
+                                    <ComboBoxItem Content="Adam" Tag="adam"/>
+                                    <ComboBoxItem Content="SGD" Tag="sgd"/>
+                                    <ComboBoxItem Content="AdamW" Tag="adamw"/>
+                                    <ComboBoxItem Content="RMSprop" Tag="rmsprop"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,10,0">
+                                <TextBlock Text="Weight Decay:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="WeightDecayBox" Text="0.0001"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- TFT-Specific Parameters -->
+                <Border x:Name="TFTParametersPanel" Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="🔮 TFT-Specific Parameters" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Number of Attention Heads:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="NumHeadsBox" Text="4"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="Number of Attention Layers:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="NumAttentionLayersBox" Text="2"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Random Forest Parameters -->
+                <Border x:Name="RandomForestParametersPanel" Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,10" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="🌳 Random Forest Parameters" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="Number of Trees:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="NumberOfTreesBox" Text="100"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="10,0,10,0">
+                                <TextBlock Text="Max Depth:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="MaxDepthBox" Text="10"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                                <TextBlock Text="Min Samples Split:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="MinSamplesSplitBox" Text="2"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Training Optimization -->
+                <Border Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="⚡ Training Optimization" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Row 1: Checkboxes -->
+                            <CheckBox Grid.Row="0" Grid.Column="0" x:Name="UseEarlyStoppingBox"
+                                      Content="Use Early Stopping" Foreground="White" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+
+                            <CheckBox Grid.Row="0" Grid.Column="1" x:Name="UseLRSchedulerBox"
+                                      Content="Use Learning Rate Scheduler" Foreground="White" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+
+                            <!-- Row 2: Early Stopping Parameters -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Early Stopping Patience:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="EarlyStoppingPatienceBox" Text="10"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                                <TextBlock Text="LR Scheduler Patience:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="LRSchedulerPatienceBox" Text="5"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <!-- Row 3: Additional Parameters -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="LR Scheduler Factor:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="LRSchedulerFactorBox" Text="0.5"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="Train/Test Split:" Foreground="White" Margin="0,0,0,5"/>
+                                <TextBox x:Name="TrainTestSplitBox" Text="0.8"
+                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Advanced Options -->
+                <Border Background="#2D2D42" BorderBrush="Cyan" BorderThickness="1"
+                        CornerRadius="5" Padding="15" Margin="0,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="🔧 Advanced Options" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" Margin="0,0,0,10"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Row 1: Checkboxes -->
+                            <CheckBox Grid.Row="0" Grid.Column="0" x:Name="UseGPUBox"
+                                      Content="Use GPU (if available)" Foreground="White" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+
+                            <CheckBox Grid.Row="0" Grid.Column="1" x:Name="VerboseLoggingBox"
+                                      Content="Verbose Logging" Foreground="White" Margin="0,0,0,10"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+
+                            <!-- Row 2: Additional Options -->
+                            <CheckBox Grid.Row="1" Grid.Column="0" x:Name="SaveCheckpointsBox"
+                                      Content="Save Model Checkpoints" Foreground="White"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+
+                            <CheckBox Grid.Row="1" Grid.Column="1" x:Name="UseFeatureEngineeringBox"
+                                      Content="Use Feature Engineering" Foreground="White"
+                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="3" Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" x:Name="ValidationText"
+                       Foreground="Red" VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1" x:Name="OKButton" Content="✓ OK"
+                    Click="OKButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Background="#2D6A4C" Foreground="White"
+                    Width="120" Height="35" Margin="0,0,10,0"/>
+
+            <Button Grid.Column="2" x:Name="CancelButton" Content="✗ Cancel"
+                    Click="CancelButton_Click"
+                    Style="{StaticResource EnhancedButtonStyle}"
+                    Background="#8B0000" Foreground="White"
+                    Width="120" Height="35"/>
+        </Grid>
+    </Grid>
+</Window>
