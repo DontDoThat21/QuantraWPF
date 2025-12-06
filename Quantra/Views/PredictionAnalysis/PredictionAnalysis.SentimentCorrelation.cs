@@ -115,11 +115,14 @@ namespace Quantra.Controls
         /// </summary>
         public void ToggleSentimentVisualizationMode(bool useDashboard = true)
         {
-            if (_sentimentVisualizationControl != null && _sentimentDashboardControl != null)
+            Dispatcher.Invoke(() =>
             {
-                _sentimentVisualizationControl.Visibility = useDashboard ? Visibility.Collapsed : Visibility.Visible;
-                _sentimentDashboardControl.Visibility = useDashboard ? Visibility.Visible : Visibility.Collapsed;
-            }
+                if (_sentimentVisualizationControl != null && _sentimentDashboardControl != null)
+                {
+                    _sentimentVisualizationControl.Visibility = useDashboard ? Visibility.Collapsed : Visibility.Visible;
+                    _sentimentDashboardControl.Visibility = useDashboard ? Visibility.Visible : Visibility.Collapsed;
+                }
+            });
         }
         
         /// <summary>
@@ -167,17 +170,20 @@ namespace Quantra.Controls
                 }
                 
                 // Show the sentiment visualization by making the container visible
-                var sentimentTab = this.FindName("SentimentTabItem") as TabItem;
-                if (sentimentTab != null)
+                await Dispatcher.InvokeAsync(() =>
                 {
-                    sentimentTab.Visibility = Visibility.Visible;
-                }
-                
-                var sentimentPanel = this.FindName("sentimentVisualizationContainer") as Panel;
-                if (sentimentPanel != null)
-                {
-                    sentimentPanel.Visibility = Visibility.Visible;
-                }
+                    var sentimentTab = this.FindName("SentimentTabItem") as TabItem;
+                    if (sentimentTab != null)
+                    {
+                        sentimentTab.Visibility = Visibility.Visible;
+                    }
+                    
+                    var sentimentPanel = this.FindName("sentimentVisualizationContainer") as Panel;
+                    if (sentimentPanel != null)
+                    {
+                        sentimentPanel.Visibility = Visibility.Visible;
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -231,12 +237,16 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateStatus(string message, bool isError = false)
         {
-            // Update status text if available
-            var statusText = this.FindName("StatusText") as TextBlock;
-            if (statusText != null)
-                statusText.Text = message;
+            // Marshal UI updates to the UI thread
+            Dispatcher.Invoke(() =>
+            {
+                // Update status text if available
+                var statusText = this.FindName("StatusText") as TextBlock;
+                if (statusText != null)
+                    statusText.Text = message;
+            });
                 
-            // Log the message
+            // Log the message (can be done on any thread)
             if (isError)
             {
                 //DatabaseMonolith.Log("Error", message);

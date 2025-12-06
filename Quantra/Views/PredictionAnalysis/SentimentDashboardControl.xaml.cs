@@ -88,19 +88,22 @@ namespace Quantra.Controls
 
         private void OnDashboardUpdated(object sender, string symbol)
         {
-            // Update UI elements based on ViewModel data
-            SymbolTextBlock.Text = _viewModel.Symbol;
-            
-            // Get data from ViewModel
-            var sentimentData = _viewModel.GetCurrentSentimentData();
-            var analystData = _viewModel.GetCurrentAnalystData();
-            var insiderData = _viewModel.GetCurrentInsiderData();
-            
-            // Update tabs with ViewModel data
-            UpdateHistoricalTrendsTab();
-            UpdateAnalystRatingsTab();
-            UpdateInsiderTradingTab();
-            UpdateNewsAndShiftsTab();
+            Dispatcher.Invoke(() =>
+            {
+                // Update UI elements based on ViewModel data
+                SymbolTextBlock.Text = _viewModel.Symbol;
+                
+                // Get data from ViewModel
+                var sentimentData = _viewModel.GetCurrentSentimentData();
+                var analystData = _viewModel.GetCurrentAnalystData();
+                var insiderData = _viewModel.GetCurrentInsiderData();
+                
+                // Update tabs with ViewModel data
+                UpdateHistoricalTrendsTab();
+                UpdateAnalystRatingsTab();
+                UpdateInsiderTradingTab();
+                UpdateNewsAndShiftsTab();
+            });
         }
 
         private void OnErrorOccurred(object sender, string errorMessage)
@@ -142,27 +145,30 @@ namespace Quantra.Controls
             if (_viewModel == null)
                 return;
 
-            // Clear sentiment trends
-            _viewModel.SentimentSeries.Clear();
-            
-            // Clear analyst ratings
-            _viewModel.RatingDistributionSeries.Clear();
-            _viewModel.PriceTargetSeries.Clear();
-            AnalystRatingListView.Items.Clear();
-            
-            // Clear insider trading
-            _viewModel.InsiderActivitySeries.Clear();
-            InsiderTransactionListView.Items.Clear();
-            
-            // Clear sentiment shifts
-            _viewModel.SentimentShiftSeries.Clear();
-            SentimentShiftListView.Items.Clear();
-            
-            // Reset metrics
-            ResetMetrics();
-            
-            // Reset symbol
-            _viewModel.Symbol = "--";
+            Dispatcher.Invoke(() =>
+            {
+                // Clear sentiment trends
+                _viewModel.SentimentSeries.Clear();
+                
+                // Clear analyst ratings
+                _viewModel.RatingDistributionSeries.Clear();
+                _viewModel.PriceTargetSeries.Clear();
+                AnalystRatingListView.Items.Clear();
+                
+                // Clear insider trading
+                _viewModel.InsiderActivitySeries.Clear();
+                InsiderTransactionListView.Items.Clear();
+                
+                // Clear sentiment shifts
+                _viewModel.SentimentShiftSeries.Clear();
+                SentimentShiftListView.Items.Clear();
+                
+                // Reset metrics
+                ResetMetrics();
+                
+                // Reset symbol
+                _viewModel.Symbol = "--";
+            });
         }
         #endregion
 
@@ -180,11 +186,14 @@ namespace Quantra.Controls
         /// </summary>
         private void TrendTimeframeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_viewModel == null || string.IsNullOrEmpty(_viewModel.Symbol) || _viewModel.Symbol == "--")
-                return;
-                
-            UpdateTimeframeFromUI();
-            UpdateDashboard(_viewModel.Symbol);
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel == null || string.IsNullOrEmpty(_viewModel.Symbol) || _viewModel.Symbol == "--")
+                    return;
+                    
+                UpdateTimeframeFromUI();
+                UpdateDashboard(_viewModel.Symbol);
+            });
         }
         
         /// <summary>
@@ -192,10 +201,13 @@ namespace Quantra.Controls
         /// </summary>
         private void SourceCheckBox_Changed(object sender, RoutedEventArgs e)
         {
-            if (_viewModel?.GetCurrentSentimentData() == null)
-                return;
-                
-            UpdateSentimentSeriesVisibility();
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel?.GetCurrentSentimentData() == null)
+                    return;
+                    
+                UpdateSentimentSeriesVisibility();
+            });
         }
         
         /// <summary>
@@ -203,10 +215,13 @@ namespace Quantra.Controls
         /// </summary>
         private void InsiderViewComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_viewModel?.GetCurrentInsiderData() == null)
-                return;
-                
-            UpdateInsiderActivityChart();
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel?.GetCurrentInsiderData() == null)
+                    return;
+                    
+                UpdateInsiderActivityChart();
+            });
         }
         
         /// <summary>
@@ -214,10 +229,13 @@ namespace Quantra.Controls
         /// </summary>
         private void ShiftFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_viewModel?.GetCurrentSentimentData() == null)
-                return;
-                
-            UpdateSentimentShiftList();
+            Dispatcher.Invoke(() =>
+            {
+                if (_viewModel?.GetCurrentSentimentData() == null)
+                    return;
+                    
+                UpdateSentimentShiftList();
+            });
         }
         #endregion
 
@@ -1248,28 +1266,34 @@ namespace Quantra.Controls
         /// </summary>
         private void UpdateTimeframeFromUI()
         {
-            if (_viewModel == null || TrendTimeframeComboBox.SelectedItem == null)
+            if (_viewModel == null)
                 return;
-                
-            string selectedItem = (TrendTimeframeComboBox.SelectedItem as ComboBoxItem).Content.ToString();
-            switch (selectedItem)
+
+            Dispatcher.Invoke(() =>
             {
-                case "7 Days":
-                    _viewModel.CurrentLookbackDays = 7;
-                    break;
-                case "30 Days":
-                    _viewModel.CurrentLookbackDays = 30;
-                    break;
-                case "90 Days":
-                    _viewModel.CurrentLookbackDays = 90;
-                    break;
-                case "1 Year":
-                    _viewModel.CurrentLookbackDays = 365;
-                    break;
-                default:
-                    _viewModel.CurrentLookbackDays = 30;
-                    break;
-            }
+                if (TrendTimeframeComboBox.SelectedItem == null)
+                    return;
+                    
+                string selectedItem = (TrendTimeframeComboBox.SelectedItem as ComboBoxItem).Content.ToString();
+                switch (selectedItem)
+                {
+                    case "7 Days":
+                        _viewModel.CurrentLookbackDays = 7;
+                        break;
+                    case "30 Days":
+                        _viewModel.CurrentLookbackDays = 30;
+                        break;
+                    case "90 Days":
+                        _viewModel.CurrentLookbackDays = 90;
+                        break;
+                    case "1 Year":
+                        _viewModel.CurrentLookbackDays = 365;
+                        break;
+                    default:
+                        _viewModel.CurrentLookbackDays = 30;
+                        break;
+                }
+            });
         }
         
         /// <summary>

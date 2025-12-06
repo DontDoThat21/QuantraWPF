@@ -25,11 +25,11 @@ namespace Quantra.DAL.Data.Entities
         public int Quantity { get; set; }
 
         [Required]
-        public double Price { get; set; }
+        public float Price { get; set; }
 
-        public double? StopLoss { get; set; }
+        public float? StopLoss { get; set; }
 
-        public double? TakeProfit { get; set; }
+        public float? TakeProfit { get; set; }
 
         public bool IsPaperTrade { get; set; }
 

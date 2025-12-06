@@ -45,16 +45,19 @@ namespace Quantra.Controls
             if (data == null)
                 return;
 
-            try
+            // Marshal all UI updates to the UI thread
+            Dispatcher.Invoke(() =>
             {
-                // Clear existing chart data
-                SentimentSeries.Clear();
-                CorrelationSeries.Clear();
-                SourceLabels.Clear();
+                try
+                {
+                    // Clear existing chart data
+                    SentimentSeries.Clear();
+                    CorrelationSeries.Clear();
+                    SourceLabels.Clear();
 
-                // Update metrics displays
-                PredictiveAccuracyTextBlock.Text = $"{data.PredictiveAccuracy:P0}";
-                LeadLagTextBlock.Text = $"{data.LeadLagRelationship:F1} days";
+                    // Update metrics displays
+                    PredictiveAccuracyTextBlock.Text = $"{data.PredictiveAccuracy:P0}";
+                    LeadLagTextBlock.Text = $"{data.LeadLagRelationship:F1} days";
                 
                 // Format LeadLag text with descriptive text
                 if (data.LeadLagRelationship > 0)
@@ -162,13 +165,14 @@ namespace Quantra.Controls
                     });
                 }
                 
-                // Update sentiment shift events
-                UpdateSentimentShiftEvents(data.SentimentShiftEvents);
-            }
-            catch (Exception ex)
-            {
-                //DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
-            }
+                    // Update sentiment shift events
+                    UpdateSentimentShiftEvents(data.SentimentShiftEvents);
+                }
+                catch (Exception ex)
+                {
+                    //DatabaseMonolith.Log("Error", "Failed to update sentiment visualization", ex.ToString());
+                }
+            });
         }
         
         /// <summary>
@@ -205,13 +209,16 @@ namespace Quantra.Controls
         /// </summary>
         public void ClearVisualization()
         {
-            SentimentSeries.Clear();
-            CorrelationSeries.Clear();
-            SourceLabels.Clear();
-            SentimentShiftEventsListView.Items.Clear();
-            
-            PredictiveAccuracyTextBlock.Text = "0.00%";
-            LeadLagTextBlock.Text = "0.0 days";
+            Dispatcher.Invoke(() =>
+            {
+                SentimentSeries.Clear();
+                CorrelationSeries.Clear();
+                SourceLabels.Clear();
+                SentimentShiftEventsListView.Items.Clear();
+                
+                PredictiveAccuracyTextBlock.Text = "0.00%";
+                LeadLagTextBlock.Text = "0.0 days";
+            });
         }
     }
 }

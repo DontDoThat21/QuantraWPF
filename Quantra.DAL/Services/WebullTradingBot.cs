@@ -4653,12 +4653,13 @@ namespace Quantra.DAL.Services
                     // Add authentication headers if required by Webull API
                     // client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-                    var response = await client.PostAsync(webullPaperEndpoint, content);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var resp = await response.Content.ReadAsStringAsync();
-                        //DatabaseMonolith.Log("Error", $"Webull paper trade failed: {response.StatusCode} {resp}");
-                    }
+                    //todo: add to paper trading module
+                    //var response = await client.PostAsync(webullPaperEndpoint, content);
+                    //if (!response.IsSuccessStatusCode)
+                    //{
+                    //    var resp = await response.Content.ReadAsStringAsync();
+                    //    //DatabaseMonolith.Log("Error", $"Webull paper trade failed: {response.StatusCode} {resp}");
+                    //}
                 }
                 catch (Exception ex)
                 {
