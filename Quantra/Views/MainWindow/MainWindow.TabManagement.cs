@@ -621,6 +621,7 @@ namespace Quantra
                             "Insider Transactions" => CreateInsiderTransactionsCard(),
                             "Paper Trading" => CreatePaperTradingCard(),
                             "Signal Creation" => CreateSignalCreationCard(),
+                            "Stock Explorer V2" => CreateStockExplorerV2Card(),
                             _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                         };
                     }
@@ -2127,6 +2128,7 @@ namespace Quantra
                     "Insider Transactions" => CreateInsiderTransactionsCard(),
                     "Paper Trading" => CreatePaperTradingCard(),
                     "Signal Creation" => CreateSignalCreationCard(),
+                    "Stock Explorer V2" => CreateStockExplorerV2Card(),
                     _ => throw new NotSupportedException($"Control type '{controlType}' is not supported.")
                 };
                 
@@ -2665,6 +2667,53 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Signal Creation",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateStockExplorerV2Card()
+        {
+            try
+            {
+                var stockExplorerV2Control = new Controls.StockExplorerV2Control();
+
+                // Ensure the control has proper sizing and stretching behavior
+                stockExplorerV2Control.Width = double.NaN; // Auto width
+                stockExplorerV2Control.Height = double.NaN; // Auto height
+                stockExplorerV2Control.HorizontalAlignment = HorizontalAlignment.Stretch;
+                stockExplorerV2Control.VerticalAlignment = VerticalAlignment.Stretch;
+                stockExplorerV2Control.MinWidth = 900;
+                stockExplorerV2Control.MinHeight = 700;
+
+                // Force layout calculation to ensure control is properly sized
+                stockExplorerV2Control.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                stockExplorerV2Control.Arrange(new Rect(0, 0, stockExplorerV2Control.DesiredSize.Width, stockExplorerV2Control.DesiredSize.Height));
+                stockExplorerV2Control.UpdateLayout();
+
+                return stockExplorerV2Control;
+            }
+            catch (Exception ex)
+            {
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Stock Explorer V2",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,

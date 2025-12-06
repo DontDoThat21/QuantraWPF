@@ -198,6 +198,13 @@
                                                 <TextBlock Text="Signal Creation"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add Stock Explorer V2 control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ChartTimelineVariant" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Stock Explorer V2"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>
