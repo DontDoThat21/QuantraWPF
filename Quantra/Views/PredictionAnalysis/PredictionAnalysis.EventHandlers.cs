@@ -349,8 +349,68 @@ namespace Quantra.Controls
                 // Clear previous predictions
                 Predictions.Clear();
 
-                // Run prediction analysis for the individual symbol
-                var prediction = await AnalyzeStockWithAllAlgorithms(symbol);
+                // Check if TFT architecture is selected
+                string selectedArchitecture = GetSelectedArchitectureType();
+                
+                Quantra.Models.PredictionModel prediction = null;
+                
+                if (selectedArchitecture == "tft" && _realTimeInferenceService != null)
+                {
+                    // Use TFT-specific prediction path
+                    if (StatusText != null)
+                        StatusText.Text = $"Running TFT prediction for {symbol}...";
+                    
+                    var tftResult = await _realTimeInferenceService.GetTFTPredictionAsync(
+                        symbol,
+                        lookbackDays: 60,
+                        futureHorizon: 30,
+                        progressCallback: (msg) => Dispatcher.InvokeAsync(() => 
+                        {
+                            if (StatusText != null)
+                                StatusText.Text = msg;
+                        })
+                    );
+                    
+                    if (tftResult.Success && tftResult.Prediction != null)
+                    {
+                        // Convert PredictionResult to PredictionModel
+                        prediction = new Quantra.Models.PredictionModel
+                        {
+                            Symbol = tftResult.Prediction.Symbol,
+                            PredictedAction = tftResult.Prediction.Action,
+                            Confidence = tftResult.Prediction.Confidence,
+                            TargetPrice = tftResult.Prediction.TargetPrice,
+                            CurrentPrice = tftResult.Prediction.CurrentPrice,
+                            PredictionDate = tftResult.Prediction.PredictionDate,
+                            ModelType = "tft",
+                            ArchitectureType = "tft"
+                        };
+                        
+                        // Update TFT visualization in ViewModel if available
+                        if (tftResult.TFTResult != null && _viewModel != null)
+                        {
+                            // Get historical prices for context (last 30 days)
+                            var historicalPrices = await _stockDataCacheService?.GetRecentHistoricalSequenceAsync(symbol, 30);
+                            var priceList = historicalPrices?.Select(p => p.Close).ToList();
+                            
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                _viewModel.UpdateTFTVisualization(tftResult.TFTResult, priceList);
+                            });
+                        }
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"TFT prediction failed for {symbol}: {tftResult.ErrorMessage}");
+                        if (StatusText != null)
+                            StatusText.Text = $"TFT prediction failed: {tftResult.ErrorMessage}";
+                    }
+                }
+                else
+                {
+                    // Use traditional prediction path (LSTM, Random Forest, etc.)
+                    prediction = await AnalyzeStockWithAllAlgorithms(symbol);
+                }
 
                 if (prediction != null && prediction.PredictedAction != "ERROR")
                 {
