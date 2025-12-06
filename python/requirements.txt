@@ -23,7 +23,7 @@ yt-dlp>=2023.1.6
 openai-whisper>=20230314
 openai>=1.0.0
 
-# GPU Acceleration (preferred, optional)
+# GPU Acceleration (NVIDIA CUDA only - optional, not required)
 cudf>=22.10.0
 cuml>=22.10.0
 cupy>=10.0.0
