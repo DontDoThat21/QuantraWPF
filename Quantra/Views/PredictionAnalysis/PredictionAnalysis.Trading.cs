@@ -342,13 +342,17 @@ trailingStopOrderType
         {
             try
             {
-                // Update status text
-                if (StatusText != null)
-                    StatusText.Text = $"Auto trade executed: {prediction.PredictedAction} {prediction.Symbol}";
-                
-                // Update last updated text
-                if (LastUpdatedText != null)
-                    LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm:ss}";
+                // Marshal UI updates to the UI thread using Dispatcher
+                Dispatcher.Invoke(() =>
+                {
+                    // Update status text
+                    if (StatusText != null)
+                        StatusText.Text = $"Auto trade executed: {prediction.PredictedAction} {prediction.Symbol}";
+                    
+                    // Update last updated text
+                    if (LastUpdatedText != null)
+                        LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm:ss}";
+                });
             }
             catch (Exception ex)
             {
