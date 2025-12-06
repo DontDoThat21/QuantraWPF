@@ -26,9 +26,6 @@ def test_feature_parameters():
     print("\n[Test 1] Default parameters (no hyperparameters dict):")
     hyperparams_default = {}
     
-    # Mock connection string (won't actually connect in test)
-    connection_string = "mock_connection"
-    
     # Test extracting from empty hyperparameters dict
     feature_type = hyperparams_default.get('feature_type', 'balanced')
     use_feature_engineering = hyperparams_default.get('use_feature_engineering', True)

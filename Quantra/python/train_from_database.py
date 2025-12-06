@@ -149,9 +149,9 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
     
     Args:
         symbols_data: List of (symbol, historical_data) tuples
-        min_samples: Minimum number of data points required per symbol
-        use_feature_engineering: Whether to use advanced feature engineering
-        feature_type: Type of features to generate ('minimal', 'balanced', 'full')
+        min_samples (int): Minimum number of data points required per symbol (default: 50)
+        use_feature_engineering (bool): Whether to use advanced feature engineering (default: True)
+        feature_type (str): Type of features to generate ('minimal', 'balanced', 'full') (default: 'balanced')
         
     Returns:
         Tuple of (X_train, y_train, feature_names, X_future_known)
