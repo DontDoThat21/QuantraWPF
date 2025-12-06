@@ -26,6 +26,11 @@ namespace Quantra.DAL.Services
         private const int PremiumApiCallsPerMinute = 600; // Premium tier rate limit (can be adjusted based on plan)
         private const string StockCacheKey = "stock_symbols_cache";
 
+        // Market cap thresholds for categorization (in dollars)
+        private const decimal SmallCapMaxThreshold = 2_000_000_000m;        // $2 billion
+        private const decimal MidCapMaxThreshold = 10_000_000_000m;         // $10 billion
+        private const decimal LargeCapMaxThreshold = 200_000_000_000m;      // $200 billion
+
         // Current rate limit - will be determined based on API key type one day
         private int _maxApiCallsPerMinute;
 
@@ -2469,16 +2474,12 @@ namespace Quantra.DAL.Services
 
             var value = marketCap.Value;
 
-            // Market cap thresholds in dollars
-            const decimal SmallCapMax = 2_000_000_000m;        // $2 billion
-            const decimal MidCapMax = 10_000_000_000m;         // $10 billion
-            const decimal LargeCapMax = 200_000_000_000m;      // $200 billion
-
-            if (value < SmallCapMax)
+            // Use class-level constants for thresholds
+            if (value < SmallCapMaxThreshold)
                 return 0; // Small-cap
-            if (value < MidCapMax)
+            if (value < MidCapMaxThreshold)
                 return 1; // Mid-cap
-            if (value < LargeCapMax)
+            if (value < LargeCapMaxThreshold)
                 return 2; // Large-cap
 
             return 3; // Mega-cap
@@ -2508,16 +2509,31 @@ namespace Quantra.DAL.Services
             // Normalize exchange name for matching
             var normalizedExchange = exchange.ToUpperInvariant().Trim();
 
+            // Check exact matches first
             return normalizedExchange switch
             {
                 "NYSE" or "NEW YORK STOCK EXCHANGE" => 0,
                 "NASDAQ" or "NASDAQ GLOBAL SELECT" or "NASDAQ GLOBAL MARKET" or "NASDAQ CAPITAL MARKET" => 1,
                 "AMEX" or "NYSE AMERICAN" or "NYSE MKT" or "AMERICAN STOCK EXCHANGE" => 2,
                 "BATS" or "IEX" or "CBOE" or "ARCA" or "NYSE ARCA" => 3, // Other US exchanges
-                _ => normalizedExchange.Contains("NYSE") ? 0 : 
-                     normalizedExchange.Contains("NASDAQ") ? 1 : 
-                     normalizedExchange.Contains("AMEX") ? 2 : 3 // Other
+                _ => GetExchangeCodeByPartialMatch(normalizedExchange)
             };
+        }
+
+        /// <summary>
+        /// Helper method to determine exchange code by partial string matching
+        /// Used as fallback when exact match is not found
+        /// </summary>
+        private static int GetExchangeCodeByPartialMatch(string normalizedExchange)
+        {
+            if (normalizedExchange.Contains("NYSE"))
+                return 0;
+            if (normalizedExchange.Contains("NASDAQ"))
+                return 1;
+            if (normalizedExchange.Contains("AMEX"))
+                return 2;
+            
+            return 3; // Other/Unknown exchange
         }
 
         /// <summary>
