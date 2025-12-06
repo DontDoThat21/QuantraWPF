@@ -75,7 +75,175 @@ namespace Quantra.DAL.Services
         /// <param name="maxSymbols">Optional limit on number of symbols to use</param>
         /// <param name="progressCallback">Optional callback for progress updates</param>
         /// <returns>Training results</returns>
+        /// <summary>
+        /// Train model with full configuration object
+        /// </summary>
         public async Task<ModelTrainingResult> TrainModelFromDatabaseAsync(
+            Quantra.DAL.Models.TrainingConfiguration config,
+            Action<string> progressCallback = null)
+        {
+            try
+            {
+                if (!File.Exists(_pythonScriptPath))
+                {
+                    throw new FileNotFoundException($"Training script not found: {_pythonScriptPath}");
+                }
+
+                // Validate configuration
+                var errors = config.Validate();
+                if (errors.Any())
+                {
+                    throw new ArgumentException($"Invalid configuration: {string.Join(", ", errors)}");
+                }
+
+                progressCallback?.Invoke($"Preparing to train model with configuration: {config.ConfigurationName}...");
+                _loggingService.Log("Info", $"Starting model training with config: {config.ConfigurationName}");
+
+                // Create temporary output file
+                string tempDir = Path.Combine(Path.GetTempPath(), "Quantra_Training");
+                Directory.CreateDirectory(tempDir);
+                string outputFile = Path.Combine(tempDir, $"training_results_{Guid.NewGuid()}.json");
+                string configFile = Path.Combine(tempDir, $"training_config_{Guid.NewGuid()}.json");
+
+                try
+                {
+                    // Write configuration to JSON file
+                    var configJson = config.ToJson();
+                    await File.WriteAllTextAsync(configFile, configJson);
+
+                    // Build arguments - pass config file to Python
+                    var arguments = $"\"{_pythonScriptPath}\" " +
+                                  $"\"{_connectionString}\" " +
+                                  $"\"{outputFile}\" " +
+                                  $"--config \"{configFile}\"";
+
+                    // Start Python process
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "python",
+                        Arguments = arguments,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(_pythonScriptPath)
+                    };
+
+                    progressCallback?.Invoke($"Training model: {config.Epochs} epochs, batch size {config.BatchSize}, LR {config.LearningRate}...");
+
+                    using (var process = Process.Start(psi))
+                    {
+                        if (process == null)
+                            throw new Exception("Failed to start Python process");
+
+                        var errorOutput = new System.Text.StringBuilder();
+                        var standardOutput = new System.Text.StringBuilder();
+
+                        // Capture output for progress updates
+                        process.OutputDataReceived += (sender, e) =>
+                        {
+                            if (!string.IsNullOrEmpty(e.Data))
+                            {
+                                standardOutput.AppendLine(e.Data);
+                                progressCallback?.Invoke(e.Data);
+                                Debug.WriteLine($"Python: {e.Data}");
+                            }
+                        };
+
+                        process.ErrorDataReceived += (sender, e) =>
+                        {
+                            if (!string.IsNullOrEmpty(e.Data))
+                            {
+                                errorOutput.AppendLine(e.Data);
+                                progressCallback?.Invoke($"Warning: {e.Data}");
+                                Debug.WriteLine($"Python Error: {e.Data}");
+                            }
+                        };
+
+                        process.BeginOutputReadLine();
+                        process.BeginErrorReadLine();
+
+                        await process.WaitForExitAsync();
+                        process.WaitForExit();
+
+                        if (process.ExitCode != 0 || standardOutput.Length == 0)
+                        {
+                            var errorMessage = $"Python training failed with exit code {process.ExitCode}\n" +
+                                             $"Standard output:\n{standardOutput}\n" +
+                                             $"Error output:\n{errorOutput}";
+                            throw new Exception(errorMessage);
+                        }
+
+                        // Read results
+                        if (!File.Exists(outputFile))
+                        {
+                            throw new Exception($"Training script did not create output file\nOutput:\n{standardOutput}\nErrors:\n{errorOutput}");
+                        }
+
+                        var jsonResult = await File.ReadAllTextAsync(outputFile);
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        };
+                        var result = JsonSerializer.Deserialize<ModelTrainingResult>(jsonResult, options);
+
+                        if (result == null || !result.Success)
+                        {
+                            throw new Exception(result?.Error ?? "Training failed with unknown error");
+                        }
+
+                        progressCallback?.Invoke("Model training completed successfully!");
+                        _loggingService.Log("Info", $"Model training completed: {result.ModelType} - {result.TrainingSamples} samples");
+
+                        return result;
+                    }
+                }
+                finally
+                {
+                    // Cleanup temp files
+                    try
+                    {
+                        if (File.Exists(outputFile)) File.Delete(outputFile);
+                        if (File.Exists(configFile)) File.Delete(configFile);
+                    }
+                    catch { /* Ignore cleanup errors */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, "Model training failed");
+                return new ModelTrainingResult
+                {
+                    Success = false,
+                    Error = ex.Message
+                };
+            }
+        }
+
+        /// <summary>
+        /// Train model with legacy parameters (for backward compatibility)
+        /// </summary>
+        public async Task<ModelTrainingResult> TrainModelFromDatabaseAsync(
+            string modelType = "auto",
+            string architectureType = "lstm",
+            int? maxSymbols = null,
+            Action<string> progressCallback = null)
+        {
+            // Create a configuration from legacy parameters
+            var config = Quantra.DAL.Models.TrainingConfiguration.CreateDefault();
+            config.ModelType = modelType;
+            config.ArchitectureType = architectureType;
+            config.MaxSymbols = maxSymbols;
+
+            // Call the new overload
+            return await TrainModelFromDatabaseAsync(config, progressCallback);
+        }
+
+        /// <summary>
+        /// Original implementation (moved below, kept for compatibility)
+        /// </summary>
+        private async Task<ModelTrainingResult> TrainModelFromDatabaseAsyncLegacy(
             string modelType = "auto",
             string architectureType = "lstm",
             int? maxSymbols = null,

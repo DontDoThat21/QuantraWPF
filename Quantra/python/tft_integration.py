@@ -95,6 +95,7 @@ class TFTStockPredictor:
         
         self.scaler = None
         self.static_scaler = None
+        self.target_scaler = None  # NEW: Scaler for target values (percentage changes)
         self.feature_names = []
         self.is_trained = False
         
@@ -121,6 +122,7 @@ class TFTStockPredictor:
         # Initialize scalers
         self.scaler = StandardScaler()
         self.static_scaler = StandardScaler()
+        self.target_scaler = StandardScaler()  # NEW: Scaler for target values
         
         # Scale temporal features
         n_samples, seq_len, n_features = X_past.shape
@@ -135,10 +137,16 @@ class TFTStockPredictor:
         if y.ndim == 1:
             y = np.column_stack([y] * len(self.forecast_horizons))
         
+        # NEW: Fit and transform targets (percentage changes)
+        # Targets are percentage changes (e.g., 0.05 for 5%), need to be scaled
+        y_scaled = self.target_scaler.fit_transform(y)
+        
         # Create tensors
         past_tensor = torch.FloatTensor(X_past_scaled)
         static_tensor = torch.FloatTensor(X_static_scaled)
-        targets_tensor = torch.FloatTensor(y)
+        # Use scaled targets: y_scaled contains percentage changes (e.g., 0.05 for 5%)
+        # transformed by StandardScaler for improved training stability and convergence
+        targets_tensor = torch.FloatTensor(y_scaled)
         
         # Create DataLoader
         dataset = TensorDataset(past_tensor, static_tensor, targets_tensor)
@@ -232,18 +240,34 @@ class TFTStockPredictor:
             horizon_key = f"horizon_{horizon}"
             quantiles = outputs['predictions'][horizon_key].cpu().numpy()
             
+            # NEW: Inverse transform scaled predictions back to percentage changes
+            # The model outputs scaled values, we need to convert back to actual percentage changes
             median_predictions.append(quantiles[:, 2])  # 50th percentile
             lower_bounds.append(quantiles[:, 0])        # 10th percentile
             upper_bounds.append(quantiles[:, 4])        # 90th percentile
             q25_list.append(quantiles[:, 1])            # 25th percentile
             q75_list.append(quantiles[:, 3])            # 75th percentile
         
+        # Stack predictions and inverse transform all at once
+        median_stacked = np.column_stack(median_predictions)
+        lower_stacked = np.column_stack(lower_bounds)
+        upper_stacked = np.column_stack(upper_bounds)
+        q25_stacked = np.column_stack(q25_list)
+        q75_stacked = np.column_stack(q75_list)
+        
+        # NEW: Inverse transform to get actual percentage changes
+        median_unscaled = self.target_scaler.inverse_transform(median_stacked)
+        lower_unscaled = self.target_scaler.inverse_transform(lower_stacked)
+        upper_unscaled = self.target_scaler.inverse_transform(upper_stacked)
+        q25_unscaled = self.target_scaler.inverse_transform(q25_stacked)
+        q75_unscaled = self.target_scaler.inverse_transform(q75_stacked)
+        
         return {
-            'median_predictions': np.column_stack(median_predictions),
-            'lower_bound': np.column_stack(lower_bounds),
-            'upper_bound': np.column_stack(upper_bounds),
-            'q25': np.column_stack(q25_list),
-            'q75': np.column_stack(q75_list),
+            'median_predictions': median_unscaled,
+            'lower_bound': lower_unscaled,
+            'upper_bound': upper_unscaled,
+            'q25': q25_unscaled,
+            'q75': q75_unscaled,
             'feature_importance': outputs['variable_importance'].cpu().numpy(),
             'attention_weights': [w.cpu().numpy() for w in outputs['attention_weights']]
         }
@@ -339,6 +363,8 @@ class TFTStockPredictor:
             outputs = self.predict(X_past, X_static)
             
             # 6. Process and return results
+            # NOTE: median_predictions are now properly inverse-transformed percentage changes
+            # (e.g., 0.05 for 5% increase, -0.02 for 2% decrease)
             median_predictions = outputs['median_predictions'][0]
             lower_bounds = outputs['lower_bound'][0]
             upper_bounds = outputs['upper_bound'][0]
@@ -346,6 +372,7 @@ class TFTStockPredictor:
             # Build multi-horizon response
             horizons_data = {}
             for i, horizon in enumerate(self.forecast_horizons):
+                # median_change is a percentage change (e.g., 0.05 = 5%)
                 median_change = median_predictions[i]
                 target_price = current_price * (1 + median_change) if current_price > 0 else 0.0
                 
@@ -424,7 +451,8 @@ class TFTStockPredictor:
             
             joblib.dump({
                 'scaler': self.scaler,
-                'static_scaler': self.static_scaler
+                'static_scaler': self.static_scaler,
+                'target_scaler': self.target_scaler  # NEW: Save target scaler
             }, scaler_path)
             
             logger.info(f"TFT model saved to {model_path}")
@@ -474,6 +502,18 @@ class TFTStockPredictor:
             scalers = joblib.load(scaler_path)
             self.scaler = scalers['scaler']
             self.static_scaler = scalers['static_scaler']
+            # NEW: Load target scaler with fallback to identity transformation for old models
+            if 'target_scaler' in scalers:
+                self.target_scaler = scalers['target_scaler']
+            else:
+                # For backward compatibility: use identity scaler (no transformation)
+                # This means old models will still have issues, but won't crash
+                logger.warning("Loading old model without target_scaler. Predictions may be inaccurate. Please retrain the model.")
+                identity_scaler = StandardScaler()
+                identity_scaler.mean_ = np.array([0.0])
+                identity_scaler.scale_ = np.array([1.0])
+                identity_scaler.n_features_in_ = 1
+                self.target_scaler = identity_scaler
             
             logger.info(f"TFT model loaded from {model_path}")
             return True

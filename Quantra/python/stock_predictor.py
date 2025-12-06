@@ -1295,12 +1295,19 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             input_dim = 50
             seq_len = 60
         
-        model = TFTStockPredictor(
-            input_dim=input_dim,
-            static_dim=10,
-            hidden_dim=best_params.get('hidden_dim', 128) if best_params else 128,
-            forecast_horizons=[5, 10, 20, 30]
-        )
+        # Use optimized hyperparameters if available
+        tft_params = {
+            'input_dim': input_dim,
+            'static_dim': 10,
+            'hidden_dim': best_params.get('hidden_dim', 128) if best_params else 128,
+            'forecast_horizons': [5, 10, 20, 30],
+            'num_heads': best_params.get('num_heads', 4) if best_params else 4,
+            'num_lstm_layers': best_params.get('num_lstm_layers', 2) if best_params else 2,
+            'dropout': best_params.get('dropout', 0.1) if best_params else 0.1,
+            'num_attention_layers': best_params.get('num_attention_layers', 2) if best_params else 2
+        }
+
+        model = TFTStockPredictor(**tft_params)
         
         # Create static features using the TFT integration utility
         # In production, this should extract actual static features from metadata
@@ -1340,7 +1347,17 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
                     y_train = np.column_stack([y_train] * len(horizons))
         
         model.feature_names = [f"feature_{i}" for i in range(input_dim)]
-        model.fit(X_train, X_static, y_train, epochs=30, verbose=True)
+
+        # Use optimized training hyperparameters if available
+        fit_params = {
+            'epochs': best_params.get('epochs', 50) if best_params else 50,
+            'batch_size': best_params.get('batch_size', 32) if best_params else 32,
+            'lr': best_params.get('learning_rate', 0.001) if best_params else 0.001,
+            'verbose': True
+        }
+
+        logger.info(f"Training TFT with params: {fit_params}")
+        model.fit(X_train, X_static, y_train, **fit_params)
         model.save(TFT_MODEL_PATH)
         logger.info("Trained and saved new TFT model")
         return model, model.scaler, 'tft'

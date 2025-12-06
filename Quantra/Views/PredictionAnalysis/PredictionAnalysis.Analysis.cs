@@ -1242,6 +1242,8 @@ namespace Quantra.Controls
         // Model Training Service
         private ModelTrainingService _modelTrainingService;
         private ModelTrainingHistoryService _modelTrainingHistoryService;
+        private TrainingConfigurationService _trainingConfigService;
+        private Quantra.DAL.Models.TrainingConfiguration _currentTrainingConfig;
         private List<string> _selectedTrainingSymbols;
         private int? _maxTrainingSymbols;
 
@@ -1249,12 +1251,18 @@ namespace Quantra.Controls
         private void InitializeTrainingService()
         {
             _modelTrainingService = new ModelTrainingService(_loggingService);
-            
+
             // Initialize training history service
             var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
             optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
             var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
             _modelTrainingHistoryService = new Quantra.DAL.Services.ModelTrainingHistoryService(dbContext, _loggingService);
+
+            // Initialize training configuration service and load last used configuration
+            _trainingConfigService = new TrainingConfigurationService(_loggingService);
+            _currentTrainingConfig = _trainingConfigService.GetLastUsedOrDefault();
+
+            _loggingService?.Log("Info", $"Training configuration loaded: {_currentTrainingConfig.ConfigurationName}");
         }
 
         /// <summary>
@@ -1276,31 +1284,31 @@ namespace Quantra.Controls
 
             try
             {
-                // Get selected model type and architecture from UI
-                string modelType = GetSelectedModelType();
-                string architectureType = GetSelectedArchitectureType();
-                
-                // Get max symbols from UI or selected symbols
-                int? maxSymbols = _maxTrainingSymbols;
-                
-                // If specific symbols are selected, use those instead
+                // Update configuration with UI selections (model type, architecture, max symbols)
+                _currentTrainingConfig.ModelType = GetSelectedModelType();
+                _currentTrainingConfig.ArchitectureType = GetSelectedArchitectureType();
+
+                // Set max symbols from UI or selected symbols
                 if (_selectedTrainingSymbols != null && _selectedTrainingSymbols.Count > 0)
                 {
-                    maxSymbols = _selectedTrainingSymbols.Count;
+                    _currentTrainingConfig.MaxSymbols = _selectedTrainingSymbols.Count;
+                    _currentTrainingConfig.SelectedSymbols = _selectedTrainingSymbols;
                     if (StatusText != null)
                         StatusText.Text = $"Preparing to train on {_selectedTrainingSymbols.Count} selected symbols...";
                 }
-                else if (maxSymbols.HasValue)
+                else if (_maxTrainingSymbols.HasValue)
                 {
+                    _currentTrainingConfig.MaxSymbols = _maxTrainingSymbols;
                     if (StatusText != null)
-                        StatusText.Text = $"Preparing to train on up to {maxSymbols.Value} symbols...";
+                        StatusText.Text = $"Preparing to train on up to {_maxTrainingSymbols.Value} symbols...";
                 }
                 else
                 {
+                    _currentTrainingConfig.MaxSymbols = null;
                     if (StatusText != null)
                         StatusText.Text = "Preparing to train on all available symbols...";
                 }
-                
+
                 // Progress callback to update UI
                 Action<string> progressCallback = (message) =>
                 {
@@ -1308,16 +1316,18 @@ namespace Quantra.Controls
                     {
                         if (StatusText != null)
                             StatusText.Text = message;
-                        
+
                         _loggingService?.Log("Info", $"Training: {message}");
                     });
                 };
 
-                // Start training
+                // Log the configuration being used
+                _loggingService?.Log("Info", $"Starting training with configuration: {_currentTrainingConfig.ConfigurationName}");
+                _loggingService?.Log("Info", $"  Epochs: {_currentTrainingConfig.Epochs}, Batch: {_currentTrainingConfig.BatchSize}, LR: {_currentTrainingConfig.LearningRate}");
+
+                // Start training with full configuration
                 var result = await _modelTrainingService.TrainModelFromDatabaseAsync(
-                    modelType: modelType,
-                    architectureType: architectureType,
-                    maxSymbols: maxSymbols,
+                    config: _currentTrainingConfig,
                     progressCallback: progressCallback
                 );
 
@@ -1425,6 +1435,38 @@ namespace Quantra.Controls
                 return archItem.Tag?.ToString() ?? "lstm";
             }
             return "lstm";
+        }
+
+        // Event handler for Configure Training button
+        private void ConfigureTrainingButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var window = new Quantra.Views.PredictionAnalysis.TrainingConfigurationWindow(
+                    _currentTrainingConfig,
+                    _loggingService);
+
+                window.Owner = Window.GetWindow(this);
+
+                if (window.ShowDialog() == true)
+                {
+                    _currentTrainingConfig = window.Configuration;
+
+                    if (StatusText != null)
+                        StatusText.Text = $"Training configuration: {_currentTrainingConfig.ConfigurationName} " +
+                                         $"(Epochs: {_currentTrainingConfig.Epochs}, " +
+                                         $"Batch: {_currentTrainingConfig.BatchSize}, " +
+                                         $"LR: {_currentTrainingConfig.LearningRate})";
+
+                    _loggingService?.Log("Info", $"Training configuration updated: {_currentTrainingConfig.ConfigurationName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error opening training configuration window");
+                MessageBox.Show($"Error opening configuration window: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // Event handler for Train Model button
