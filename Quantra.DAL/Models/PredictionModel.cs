@@ -583,6 +583,280 @@ namespace Quantra.Models
             }
         }
 
+        /// <summary>
+        /// Calls the Temporal Fusion Transformer Python script for multi-horizon stock price prediction.
+        /// TFT provides superior forecasting with attention mechanisms, variable selection, and uncertainty quantification.
+        /// </summary>
+        /// <param name="indicators">Dictionary of technical indicators and features</param>
+        /// <param name="symbol">Stock symbol for the prediction</param>
+        /// <param name="historicalSequence">Optional historical price sequence for TFT temporal analysis</param>
+        /// <param name="horizons">Prediction horizons in days (default: 1, 3, 5, 10)</param>
+        /// <returns>TFT prediction result with multi-horizon forecasts and uncertainty intervals</returns>
+        public static async Task<TFTPredictionResult> PredictWithTFTAsync(
+            Dictionary<string, double> indicators,
+            string symbol = null,
+            List<Dictionary<string, double>> historicalSequence = null,
+            List<int> horizons = null)
+        {
+            string pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "temporal_fusion_transformer.py");
+            string tftPredictScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "tft_predict.py");
+            
+            // Use tft_predict.py if it exists (preferred for production use)
+            string scriptToUse = File.Exists(tftPredictScript) ? tftPredictScript : pythonScript;
+            
+            var result = new TFTPredictionResult
+            {
+                Symbol = symbol ?? "UNKNOWN",
+                PredictionTimestamp = DateTime.Now
+            };
+            
+            try
+            {
+                if (!File.Exists(scriptToUse))
+                {
+                    result.Error = $"TFT Python script not found at: {scriptToUse}";
+                    result.Action = "HOLD";
+                    result.Confidence = 0.0;
+                    return result;
+                }
+
+                // Default horizons for multi-horizon TFT prediction
+                if (horizons == null)
+                {
+                    horizons = new List<int> { 1, 3, 5, 10 };
+                }
+
+                // Prepare TFT request data
+                var requestData = new TFTRequest
+                {
+                    Symbol = symbol ?? "UNKNOWN",
+                    Indicators = indicators,
+                    HistoricalSequence = historicalSequence,
+                    Horizons = horizons,
+                    LookbackDays = 60,
+                    FutureHorizon = 30,
+                    ForecastHorizons = new int[] { 5, 10, 20, 30 }
+                };
+
+                var json = System.Text.Json.JsonSerializer.Serialize(requestData);
+
+                // Create temporary files for input/output
+                string tempDir = Path.Combine(Path.GetTempPath(), "Quantra_TFT_Predictions");
+                Directory.CreateDirectory(tempDir);
+                
+                string inputFile = Path.Combine(tempDir, $"tft_input_{Guid.NewGuid()}.json");
+                string outputFile = Path.Combine(tempDir, $"tft_output_{Guid.NewGuid()}.json");
+
+                var stopwatch = Stopwatch.StartNew();
+
+                try
+                {
+                    // Write input JSON to temp file
+                    await File.WriteAllTextAsync(inputFile, json);
+
+                    string pythonExe = "python";
+
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = pythonExe,
+                        Arguments = $"\"{scriptToUse}\" \"{inputFile}\" \"{outputFile}\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Path.GetDirectoryName(scriptToUse)
+                    };
+
+                    using (var process = Process.Start(psi))
+                    {
+                        if (process == null)
+                        {
+                            result.Error = "Failed to start Python process for TFT prediction";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        var outputTask = process.StandardOutput.ReadToEndAsync();
+                        var errorTask = process.StandardError.ReadToEndAsync();
+
+                        // Wait up to 3 minutes for TFT prediction
+                        if (!process.WaitForExit(180000))
+                        {
+                            try { process.Kill(); } catch { }
+                            result.Error = "TFT prediction timed out after 3 minutes";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        string stdOut = await outputTask;
+                        string stdErr = await errorTask;
+
+                        stopwatch.Stop();
+                        result.InferenceTimeMs = stopwatch.ElapsedMilliseconds;
+
+                        if (process.ExitCode != 0)
+                        {
+                            result.Error = $"TFT prediction failed with exit code {process.ExitCode}: {stdErr}";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        // Read the output file
+                        if (!File.Exists(outputFile))
+                        {
+                            result.Error = $"TFT script did not create output file. StdErr: {stdErr}";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        string outputJson = await File.ReadAllTextAsync(outputFile);
+
+                        if (string.IsNullOrWhiteSpace(outputJson))
+                        {
+                            result.Error = "TFT script returned empty output";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        Debug.WriteLine($"TFT output: {outputJson}");
+
+                        // Parse TFT result
+                        var options = new System.Text.Json.JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        };
+                        
+                        var tftResponse = System.Text.Json.JsonSerializer.Deserialize<TFTResponse>(outputJson, options);
+
+                        if (tftResponse == null)
+                        {
+                            result.Error = $"Failed to deserialize TFT result. Output: {outputJson}";
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        // Check for Python-side errors
+                        if (!string.IsNullOrEmpty(tftResponse.Error))
+                        {
+                            result.Error = tftResponse.Error;
+                            result.Action = "HOLD";
+                            result.Confidence = 0.0;
+                            return result;
+                        }
+
+                        // Map response to result
+                        result.Action = tftResponse.Action ?? "HOLD";
+                        result.Confidence = tftResponse.Confidence;
+                        result.TargetPrice = tftResponse.TargetPrice;
+                        result.CurrentPrice = tftResponse.CurrentPrice;
+                        result.LowerBound = tftResponse.LowerBound;
+                        result.UpperBound = tftResponse.UpperBound;
+                        result.Uncertainty = tftResponse.Uncertainty;
+
+                        // Map horizon predictions
+                        if (tftResponse.Horizons != null)
+                        {
+                            result.Horizons = new Dictionary<string, HorizonPredictionData>();
+                            foreach (var kvp in tftResponse.Horizons)
+                            {
+                                result.Horizons[kvp.Key] = new HorizonPredictionData
+                                {
+                                    MedianPrice = kvp.Value.Median,
+                                    LowerBound = kvp.Value.Lower,
+                                    UpperBound = kvp.Value.Upper,
+                                    TargetPrice = kvp.Value.TargetPrice
+                                };
+                            }
+                        }
+
+                        // Map feature weights
+                        if (tftResponse.FeatureWeights != null)
+                        {
+                            result.FeatureWeights = tftResponse.FeatureWeights;
+                        }
+
+                        // Map temporal attention
+                        if (tftResponse.TemporalAttention != null)
+                        {
+                            result.TemporalAttention = new Dictionary<int, double>();
+                            foreach (var kvp in tftResponse.TemporalAttention)
+                            {
+                                if (int.TryParse(kvp.Key, out int timeOffset))
+                                {
+                                    result.TemporalAttention[timeOffset] = kvp.Value;
+                                }
+                            }
+                        }
+
+                        return result;
+                    }
+                }
+                finally
+                {
+                    // Clean up temporary files
+                    try
+                    {
+                        if (File.Exists(inputFile))
+                            File.Delete(inputFile);
+                        if (File.Exists(outputFile))
+                            File.Delete(outputFile);
+                    }
+                    catch (Exception cleanupEx)
+                    {
+                        Debug.WriteLine($"Error cleaning up TFT temp files: {cleanupEx.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in PredictWithTFTAsync: {ex}");
+                result.Error = ex.Message;
+                result.Action = "HOLD";
+                result.Confidence = 0.0;
+                return result;
+            }
+        }
+
+        private class TFTRequest
+        {
+            public string Symbol { get; set; }
+            public Dictionary<string, double> Indicators { get; set; }
+            public List<Dictionary<string, double>> HistoricalSequence { get; set; }
+            public List<int> Horizons { get; set; }
+            public int LookbackDays { get; set; }
+            public int FutureHorizon { get; set; }
+            public int[] ForecastHorizons { get; set; }
+        }
+
+        private class TFTResponse
+        {
+            public string Action { get; set; }
+            public double Confidence { get; set; }
+            public double TargetPrice { get; set; }
+            public double CurrentPrice { get; set; }
+            public double LowerBound { get; set; }
+            public double UpperBound { get; set; }
+            public double Uncertainty { get; set; }
+            public Dictionary<string, TFTHorizonData> Horizons { get; set; }
+            public Dictionary<string, double> FeatureWeights { get; set; }
+            public Dictionary<string, double> TemporalAttention { get; set; }
+            public string Error { get; set; }
+        }
+
+        private class TFTHorizonData
+        {
+            public double Lower { get; set; }
+            public double Median { get; set; }
+            public double Upper { get; set; }
+            public double TargetPrice { get; set; }
+        }
+
         private class PredictionRequest
         {
             public Dictionary<string, double> Features { get; set; }
