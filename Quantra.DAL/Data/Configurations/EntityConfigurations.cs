@@ -352,4 +352,67 @@ namespace Quantra.DAL.Data.Configurations
             builder.HasIndex(f => f.FillTime);
         }
     }
+
+    public class StockPredictionHorizonConfiguration : IEntityTypeConfiguration<StockPredictionHorizonEntity>
+    {
+        public void Configure(EntityTypeBuilder<StockPredictionHorizonEntity> builder)
+        {
+            // Indexes for efficient querying
+            builder.HasIndex(h => h.PredictionId);
+            builder.HasIndex(h => h.Horizon);
+            builder.HasIndex(h => h.ExpectedFruitionDate);
+
+            // Relationship with StockPrediction (cascade delete)
+            builder.HasOne(h => h.Prediction)
+                   .WithMany(p => p.PredictionHorizons)
+                   .HasForeignKey(h => h.PredictionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure double properties to use FLOAT type for SQL Server compatibility
+            builder.Property(h => h.TargetPrice).HasColumnType("float");
+            builder.Property(h => h.LowerBound).HasColumnType("float");
+            builder.Property(h => h.UpperBound).HasColumnType("float");
+            builder.Property(h => h.Confidence).HasColumnType("float");
+            builder.Property(h => h.ActualPrice).HasColumnType("float");
+            builder.Property(h => h.ActualReturn).HasColumnType("float");
+            builder.Property(h => h.ErrorPct).HasColumnType("float");
+        }
+    }
+
+    public class PredictionFeatureImportanceConfiguration : IEntityTypeConfiguration<PredictionFeatureImportanceEntity>
+    {
+        public void Configure(EntityTypeBuilder<PredictionFeatureImportanceEntity> builder)
+        {
+            // Indexes for efficient querying
+            builder.HasIndex(f => f.PredictionId);
+            builder.HasIndex(f => f.FeatureName);
+
+            // Relationship with StockPrediction (cascade delete)
+            builder.HasOne(f => f.Prediction)
+                   .WithMany(p => p.FeatureImportances)
+                   .HasForeignKey(f => f.PredictionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure double property to use FLOAT type
+            builder.Property(f => f.ImportanceScore).HasColumnType("float");
+        }
+    }
+
+    public class PredictionTemporalAttentionConfiguration : IEntityTypeConfiguration<PredictionTemporalAttentionEntity>
+    {
+        public void Configure(EntityTypeBuilder<PredictionTemporalAttentionEntity> builder)
+        {
+            // Index for efficient querying
+            builder.HasIndex(t => t.PredictionId);
+
+            // Relationship with StockPrediction (cascade delete)
+            builder.HasOne(t => t.Prediction)
+                   .WithMany(p => p.TemporalAttentions)
+                   .HasForeignKey(t => t.PredictionId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure double property to use FLOAT type
+            builder.Property(t => t.AttentionWeight).HasColumnType("float");
+        }
+    }
 }

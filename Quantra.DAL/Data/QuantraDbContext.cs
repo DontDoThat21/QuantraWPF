@@ -52,6 +52,11 @@ namespace Quantra.DAL.Data
         public DbSet<PredictionIndicatorEntity> PredictionIndicators { get; set; }
         public DbSet<PredictionCacheEntity> PredictionCache { get; set; }
 
+        // Multi-Horizon TFT Predictions
+        public DbSet<StockPredictionHorizonEntity> StockPredictionHorizons { get; set; }
+        public DbSet<PredictionFeatureImportanceEntity> PredictionFeatureImportances { get; set; }
+        public DbSet<PredictionTemporalAttentionEntity> PredictionTemporalAttentions { get; set; }
+
         // Chat History
         public DbSet<ChatHistoryEntity> ChatHistory { get; set; }
 
