@@ -3595,5 +3595,120 @@ namespace Quantra.DAL.Services
         }
 
         #endregion
+
+        #region Earnings Calendar (TFT Known Future Inputs)
+
+        /// <summary>
+        /// Gets earnings calendar data from Alpha Vantage EARNINGS endpoint.
+        /// Returns historical and future earnings dates for a symbol.
+        /// Used for TFT model known future inputs.
+        /// </summary>
+        /// <param name="symbol">Stock ticker symbol</param>
+        /// <returns>List of earnings calendar data including report dates and EPS estimates</returns>
+        public async Task<List<EarningsCalendarData>> GetEarningsCalendarAsync(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return new List<EarningsCalendarData>();
+            }
+
+            symbol = symbol.ToUpperInvariant();
+
+            try
+            {
+                _loggingService.Log("Info", $"Fetching earnings calendar for {symbol} from Alpha Vantage");
+
+                // Use EARNINGS function which returns both historical and future earnings
+                // API: https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={key}
+                string url = $"query?function=EARNINGS&symbol={symbol}&apikey={_apiKey}";
+
+                await _apiSemaphore.WaitAsync();
+                try
+                {
+                    var response = await _client.GetStringAsync(url);
+                    LogApiUsage("EARNINGS", symbol);
+
+                    if (string.IsNullOrEmpty(response))
+                    {
+                        _loggingService.Log("Warning", $"Empty response for earnings calendar for {symbol}");
+                        return new List<EarningsCalendarData>();
+                    }
+
+                    var json = JObject.Parse(response);
+                    var earningsList = new List<EarningsCalendarData>();
+
+                    // Parse quarterly earnings from the response
+                    var quarterlyEarnings = json["quarterlyEarnings"] as JArray;
+                    if (quarterlyEarnings != null)
+                    {
+                        foreach (var earning in quarterlyEarnings)
+                        {
+                            DateTime reportDate;
+                            string reportedDateStr = earning["reportedDate"]?.ToString();
+                            string fiscalDateEnding = earning["fiscalDateEnding"]?.ToString();
+                            
+                            // Try to parse report date, fallback to fiscal date ending
+                            if (!DateTime.TryParse(reportedDateStr, out reportDate))
+                            {
+                                if (!DateTime.TryParse(fiscalDateEnding, out reportDate))
+                                {
+                                    continue; // Skip if we can't determine the date
+                                }
+                            }
+
+                            decimal? estimatedEps = null;
+                            decimal? reportedEps = null;
+                            decimal? surprisePercentage = null;
+
+                            if (decimal.TryParse(earning["estimatedEPS"]?.ToString(), out decimal estEps))
+                            {
+                                estimatedEps = estEps;
+                            }
+                            if (decimal.TryParse(earning["reportedEPS"]?.ToString(), out decimal repEps))
+                            {
+                                reportedEps = repEps;
+                            }
+                            if (decimal.TryParse(earning["surprisePercentage"]?.ToString(), out decimal surprise))
+                            {
+                                surprisePercentage = surprise;
+                            }
+
+                            // Construct fiscal quarter string (e.g., "Q1 2024")
+                            string fiscalQuarter = null;
+                            if (!string.IsNullOrEmpty(fiscalDateEnding) && DateTime.TryParse(fiscalDateEnding, out DateTime fiscalDate))
+                            {
+                                int quarter = ((fiscalDate.Month - 1) / 3) + 1;
+                                fiscalQuarter = $"Q{quarter} {fiscalDate.Year}";
+                            }
+
+                            earningsList.Add(new EarningsCalendarData
+                            {
+                                Symbol = symbol,
+                                FiscalDateEnding = fiscalDateEnding,
+                                ReportDate = reportDate,
+                                FiscalQuarter = fiscalQuarter,
+                                EstimatedEPS = estimatedEps,
+                                ReportedEPS = reportedEps,
+                                SurprisePercentage = surprisePercentage
+                            });
+                        }
+                    }
+
+                    _loggingService.Log("Info", $"Parsed {earningsList.Count} earnings records for {symbol}");
+                    return earningsList;
+                }
+                finally
+                {
+                    _apiSemaphore.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.LogErrorWithContext(ex, $"Failed to fetch earnings calendar for {symbol}");
+                return new List<EarningsCalendarData>();
+            }
+        }
+
+        #endregion
     }
 }

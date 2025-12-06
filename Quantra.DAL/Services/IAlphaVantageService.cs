@@ -95,4 +95,13 @@ public interface IAlphaVantageService
     /// <param name="exchange">Exchange name from company overview</param>
     /// <returns>Numeric code for exchange</returns>
     int GetExchangeCode(string exchange);
+
+    /// <summary>
+    /// Gets earnings calendar data from Alpha Vantage EARNINGS endpoint.
+    /// Returns historical and future earnings dates for a symbol.
+    /// Used for TFT model known future inputs.
+    /// </summary>
+    /// <param name="symbol">Stock ticker symbol</param>
+    /// <returns>List of earnings calendar data including report dates and EPS estimates</returns>
+    Task<List<EarningsCalendarData>> GetEarningsCalendarAsync(string symbol);
 }

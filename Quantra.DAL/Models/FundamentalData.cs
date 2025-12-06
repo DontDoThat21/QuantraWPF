@@ -341,4 +341,46 @@ namespace Quantra.Models
             }
         }
     }
+
+    /// <summary>
+    /// Earnings calendar data for TFT model known future inputs.
+    /// Represents a single earnings report date with related data.
+    /// </summary>
+    public class EarningsCalendarData
+    {
+        /// <summary>
+        /// Stock ticker symbol
+        /// </summary>
+        public string Symbol { get; set; }
+
+        /// <summary>
+        /// Fiscal quarter ending date
+        /// </summary>
+        public string FiscalDateEnding { get; set; }
+
+        /// <summary>
+        /// Report date (when earnings will be/were announced)
+        /// </summary>
+        public DateTime ReportDate { get; set; }
+
+        /// <summary>
+        /// Fiscal quarter (e.g., "Q1 2024", "Q2 2024")
+        /// </summary>
+        public string FiscalQuarter { get; set; }
+
+        /// <summary>
+        /// Estimated EPS for the quarter
+        /// </summary>
+        public decimal? EstimatedEPS { get; set; }
+
+        /// <summary>
+        /// Actual reported EPS (available after earnings release)
+        /// </summary>
+        public decimal? ReportedEPS { get; set; }
+
+        /// <summary>
+        /// Earnings surprise percentage (actual vs estimated)
+        /// </summary>
+        public decimal? SurprisePercentage { get; set; }
+    }
 }
