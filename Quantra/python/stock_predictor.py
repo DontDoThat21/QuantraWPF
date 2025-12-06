@@ -534,15 +534,20 @@ class PyTorchStockPredictor:
                 # Calculate gradients
                 output.sum().backward()
             
-            # Get gradients with respect to inputs
-            gradients = X_tensor.grad.abs().mean(dim=(0, 1)).cpu().numpy()
-            
-            # Normalize gradients to avoid division by zero
-            grad_sum = gradients.sum()
-            if grad_sum > 0:
-                importance = gradients / grad_sum
+            # Get gradients with respect to inputs - check if gradients exist
+            if X_tensor.grad is None:
+                # No gradients computed - return uniform importance
+                logger.warning("No gradients computed for feature importance. Returning uniform importance.")
+                importance = np.ones(X_scaled.shape[1]) / X_scaled.shape[1]
             else:
-                importance = np.ones_like(gradients) / len(gradients)
+                gradients = X_tensor.grad.abs().mean(dim=(0, 1)).cpu().numpy()
+                
+                # Normalize gradients to avoid division by zero
+                grad_sum = gradients.sum()
+                if grad_sum > 0:
+                    importance = gradients / grad_sum
+                else:
+                    importance = np.ones_like(gradients) / len(gradients)
             
             # Map to feature names
             return {name: float(imp) for name, imp in zip(self.feature_names, importance)}
