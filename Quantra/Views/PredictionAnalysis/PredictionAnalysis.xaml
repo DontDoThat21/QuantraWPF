@@ -31,22 +31,24 @@ MinWidth="400" MinHeight="300">
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <!-- Main grid needs explicit sizing to ensure proper rendering -->
-    <Grid Margin="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Title and Controls -->
-            <RowDefinition Height="Auto"/>
-            <!-- Analysis Parameters -->
-            <RowDefinition Height="Auto" MinHeight="150"/>
-            <!-- Top Predictions Grid -->
-            <RowDefinition Height="Auto"/>
-            <!-- Multi-Horizon Forecast Panel -->
-            <RowDefinition Height="Auto"/>
-            <!-- Temporal Attention and Feature Importance -->
-            <RowDefinition Height="Auto"/>
-            <!-- Status Bar -->
-        </Grid.RowDefinitions>
+    <!-- ScrollViewer to make entire view scrollable -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <!-- Main grid needs explicit sizing to ensure proper rendering -->
+        <Grid Margin="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <!-- Title and Controls -->
+                <RowDefinition Height="Auto"/>
+                <!-- Analysis Parameters -->
+                <RowDefinition Height="Auto"/>
+                <!-- Top Predictions Grid -->
+                <RowDefinition Height="Auto"/>
+                <!-- Multi-Horizon Forecast Panel -->
+                <RowDefinition Height="Auto"/>
+                <!-- Temporal Attention and Feature Importance -->
+                <RowDefinition Height="Auto"/>
+                <!-- Status Bar -->
+            </Grid.RowDefinitions>
 
         <!-- Title and Controls - Add Auto Mode Toggle -->
         <Grid Grid.Row="0" Margin="0,5">
@@ -611,10 +613,13 @@ MinWidth="400" MinHeight="300">
                 </StackPanel>
 
                 <!-- DataGrid -->
-                <DataGrid Grid.Row="1" x:Name="TopPredictionsGrid" 
+                <DataGrid Grid.Row="1" x:Name="TopPredictionsGrid"
                           ItemsSource="{Binding TopPredictions}"
-                          AutoGenerateColumns="False" 
+                          AutoGenerateColumns="False"
                           IsReadOnly="True"
+                          MaxHeight="400"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
                           Foreground="White"
                           Background="#23233A"
                           RowBackground="#23233A"
@@ -823,11 +828,12 @@ MinWidth="400" MinHeight="300">
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" x:Name="StatusText" 
+            <TextBlock Grid.Column="0" x:Name="StatusText"
                        Text="Ready" Foreground="White" Margin="5,0"/>
 
-            <TextBlock Grid.Column="1" x:Name="LastUpdatedText" 
+            <TextBlock Grid.Column="1" x:Name="LastUpdatedText"
                        Text="Last updated: Never" Foreground="White" Margin="0,0,5,0"/>
         </Grid>
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

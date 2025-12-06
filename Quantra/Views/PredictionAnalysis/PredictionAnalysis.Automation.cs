@@ -98,9 +98,13 @@ namespace Quantra.Controls
             
             autoRefreshTimer.Start();
             
-            // Update status
+            // Update status with model information
             if (StatusText != null)
-                StatusText.Text = "Auto Mode enabled. Analysis will refresh every 10 minutes.";
+            {
+                string currentModelType = GetSelectedModelType();
+                string currentArchitecture = GetSelectedArchitectureType();
+                StatusText.Text = $"Auto Mode enabled using {currentModelType} ({currentArchitecture}). Analysis will refresh every 10 minutes.";
+            }
 
             //DatabaseMonolith.Log("Info", "Auto Mode enabled for PredictionAnalysisControl");
         }
@@ -381,9 +385,14 @@ if (LastUpdatedText != null)
                 }
                 token = analysisTokenSource.Token;
                 
+                // Get the current model configuration
+                string currentModelType = GetSelectedModelType();
+                string currentArchitecture = GetSelectedArchitectureType();
+                string modelDescription = $"{currentModelType} ({currentArchitecture})";
+
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    if (StatusText != null) StatusText.Text = "Running automated stock analysis...";
+                    if (StatusText != null) StatusText.Text = $"Running automated stock analysis using {modelDescription}...";
                     // The Predictions collection is Quantra.Models.PredictionModel
                     this.Predictions.Clear();
                 });
@@ -472,7 +481,7 @@ if (LastUpdatedText != null)
                     
                     // Update status and timestamp
                     if (StatusText != null)
-                        StatusText.Text = $"Automated analysis complete. Found {this.Predictions.Count} predictions";
+                        StatusText.Text = $"Automated analysis complete using {modelDescription}. Found {this.Predictions.Count} predictions";
                     if (LastUpdatedText != null)
                         LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm}";
                 }, System.Windows.Threading.DispatcherPriority.Background);

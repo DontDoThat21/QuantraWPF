@@ -38,6 +38,11 @@ namespace Quantra.Controls
         // Changed return type to Quantra.Models.PredictionModel
         private async Task<Quantra.Models.PredictionModel> AnalyzeStockWithAllAlgorithms(string symbol)
         {
+            // Cache UI values on the UI thread before any await calls
+            // This prevents cross-thread UI access exceptions
+            string cachedModelType = GetSelectedModelType();
+            string cachedArchitectureType = GetSelectedArchitectureType();
+            
             try
             {
                 // Ensure trading bot is initialized
@@ -904,6 +909,7 @@ namespace Quantra.Controls
                     //DatabaseMonolith.Log("Warning", "Error performing sentiment-price correlation analysis", ex.ToString());
                 }
 
+                // Use cached model type and architecture values (already retrieved at method start)
                 // Create the prediction model with all available data
                 var predictionModel = new Quantra.Models.PredictionModel
                 {
@@ -915,7 +921,9 @@ namespace Quantra.Controls
                     Indicators = indicators,
                     PotentialReturn = potentialReturn,
                     PredictionDate = DateTime.Now,
-                    Notes = !string.IsNullOrEmpty(earningsKeyTopics) ? 
+                    ModelType = cachedModelType,
+                    ArchitectureType = cachedArchitectureType,
+                    Notes = !string.IsNullOrEmpty(earningsKeyTopics) ?
                            $"Earnings Topics: {earningsKeyTopics}" : string.Empty
                 };
                 
@@ -1385,8 +1393,16 @@ namespace Quantra.Controls
         }
 
         // Helper methods to get UI selections
+        // NOTE: These methods MUST be called from the UI thread
+        // For async methods, cache the values before any await calls
         private string GetSelectedModelType()
         {
+            // Ensure we're on the UI thread
+            if (!Dispatcher.CheckAccess())
+            {
+                return Dispatcher.Invoke(() => GetSelectedModelType());
+            }
+            
             var comboBox = this.FindName("ModelTypeComboBox") as ComboBox;
             if (comboBox?.SelectedItem is ComboBoxItem modelItem)
             {
@@ -1397,6 +1413,12 @@ namespace Quantra.Controls
 
         private string GetSelectedArchitectureType()
         {
+            // Ensure we're on the UI thread
+            if (!Dispatcher.CheckAccess())
+            {
+                return Dispatcher.Invoke(() => GetSelectedArchitectureType());
+            }
+            
             var comboBox = this.FindName("ArchitectureComboBox") as ComboBox;
             if (comboBox?.SelectedItem is ComboBoxItem archItem)
             {
