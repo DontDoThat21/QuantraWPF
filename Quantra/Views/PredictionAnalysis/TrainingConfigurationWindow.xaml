@@ -46,22 +46,58 @@
             <ComboBox Grid.Column="1" x:Name="PresetComboBox"
                       SelectionChanged="PresetComboBox_SelectionChanged"
                       Style="{StaticResource EnhancedComboBoxStyle}"
-                      DisplayMemberPath="ConfigurationName"/>
+                      DisplayMemberPath="ConfigurationName">
+                <ComboBox.ToolTip>
+                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                        <StackPanel>
+                            <TextBlock Text="Configuration Preset" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Text="Select a saved training configuration preset to quickly load hyperparameters and options. Use 'Save As...' to store a new preset."/>
+                        </StackPanel>
+                    </ToolTip>
+                </ComboBox.ToolTip>
+            </ComboBox>
 
             <Button Grid.Column="2" x:Name="SaveAsNewButton" Content="💾 Save As..."
                     Click="SaveAsNewButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
-                    Background="#2D6A4C" Margin="10,0,5,0" Padding="10,5"/>
+                    Background="#2D6A4C" Margin="10,0,5,0" Padding="10,5">
+                <Button.ToolTip>
+                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                        <StackPanel>
+                            <TextBlock Text="Save Configuration" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Text="Save the current training settings as a new preset for later reuse."/>
+                        </StackPanel>
+                    </ToolTip>
+                </Button.ToolTip>
+            </Button>
 
             <Button Grid.Column="3" x:Name="DeleteButton" Content="🗑 Delete"
                     Click="DeleteButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
-                    Background="#8B0000" Margin="5,0" Padding="10,5"/>
+                    Background="#8B0000" Margin="5,0" Padding="10,5">
+                <Button.ToolTip>
+                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                        <StackPanel>
+                            <TextBlock Text="Delete Preset" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Text="Delete the selected configuration preset. This cannot be undone."/>
+                        </StackPanel>
+                    </ToolTip>
+                </Button.ToolTip>
+            </Button>
 
             <Button Grid.Column="4" x:Name="ResetButton" Content="↻ Reset"
                     Click="ResetButton_Click"
                     Style="{StaticResource EnhancedButtonStyle}"
-                    Background="#3A6EA5" Margin="5,0,0,0" Padding="10,5"/>
+                    Background="#3A6EA5" Margin="5,0,0,0" Padding="10,5">
+                <Button.ToolTip>
+                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                        <StackPanel>
+                            <TextBlock Text="Reset Settings" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                            <TextBlock TextWrapping="Wrap" Text="Reset all fields to default values for a fresh configuration."/>
+                        </StackPanel>
+                    </ToolTip>
+                </Button.ToolTip>
+            </Button>
         </Grid>
 
         <!-- Scrollable Configuration Panel -->
@@ -87,36 +123,144 @@
                             <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                                 <TextBlock Text="Model Type:" Foreground="White" Margin="0,0,0,5"/>
                                 <ComboBox x:Name="ModelTypeBox" Style="{StaticResource EnhancedComboBoxStyle}">
-                                    <ComboBoxItem Content="Auto (Best Available)" Tag="auto"/>
-                                    <ComboBoxItem Content="PyTorch" Tag="pytorch"/>
-                                    <ComboBoxItem Content="TensorFlow" Tag="tensorflow"/>
-                                    <ComboBoxItem Content="Random Forest" Tag="random_forest"/>
+                                    <ComboBoxItem Content="Auto (Best Available)" Tag="auto">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Auto Model Selection" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Automatically choose the best available model based on installed libraries (PyTorch/TF) or fall back to Random Forest."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="PyTorch" Tag="pytorch">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="PyTorch" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Use a PyTorch-based deep learning model. Requires PyTorch to be installed. Best for sequence models (LSTM/GRU/Transformer)."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="TensorFlow" Tag="tensorflow">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="TensorFlow" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Use a TensorFlow/Keras-based deep learning model. Requires TensorFlow to be installed. Good for Keras-style workflows."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="Random Forest" Tag="random_forest">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Random Forest" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Use a Random Forest regressor as a fast, interpretable fallback model. Not suitable for sequence inputs without flattening."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
                                 <TextBlock Text="Architecture:" Foreground="White" Margin="0,0,0,5"/>
                                 <ComboBox x:Name="ArchitectureBox" Style="{StaticResource EnhancedComboBoxStyle}">
-                                    <ComboBoxItem Content="LSTM" Tag="lstm"/>
-                                    <ComboBoxItem Content="GRU" Tag="gru"/>
-                                    <ComboBoxItem Content="Transformer" Tag="transformer"/>
-                                    <ComboBoxItem Content="TFT (Temporal Fusion)" Tag="tft"/>
+                                    <ComboBoxItem Content="LSTM" Tag="lstm">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="LSTM" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Long Short-Term Memory recurrent network for sequence modeling. Good for time-series with moderate temporal dependencies."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="GRU" Tag="gru">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="GRU" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Gated Recurrent Unit - a simpler recurrent cell than LSTM with comparable performance on some tasks."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="Transformer" Tag="transformer">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Transformer" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Self-attention based architecture suitable for capturing long-range dependencies in time series."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="TFT (Temporal Fusion)" Tag="tft">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="TFT (Temporal Fusion Transformer)" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Advanced multi-horizon forecasting model combining static and temporal features. Requires TFT integration and PyTorch."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="Feature Type:" Foreground="White" Margin="0,0,0,5"/>
                                 <ComboBox x:Name="FeatureTypeBox" Style="{StaticResource EnhancedComboBoxStyle}">
-                                    <ComboBoxItem Content="Minimal" Tag="minimal"/>
-                                    <ComboBoxItem Content="Balanced" Tag="balanced"/>
-                                    <ComboBoxItem Content="Comprehensive" Tag="comprehensive"/>
+                                    <ComboBoxItem Content="Minimal" Tag="minimal">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Minimal Features" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Use only basic technical indicators for fastest training and lowest feature dimensionality."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="Balanced" Tag="balanced">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Balanced Features" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="A balanced set of technical indicators offering good predictive power without excessive dimensionality."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="Comprehensive" Tag="comprehensive">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Comprehensive Features" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Use full feature engineering pipeline with many indicators and derived features for maximum model input."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,0">
                                 <TextBlock Text="Lookback Period (days):" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="LookbackPeriodBox" Text="60"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Lookback Period" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of past days the model will use as input (sequence length) for temporal models. Increase for longer historical context."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -145,55 +289,154 @@
                             <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
                                 <TextBlock Text="Epochs:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="EpochsBox" Text="50"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Epochs" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of training epochs. More epochs can improve learning but risk overfitting if too large."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,10,10">
                                 <TextBlock Text="Batch Size:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="BatchSizeBox" Text="32"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Batch Size" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of samples processed before updating model weights. Larger batches are faster but require more memory."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,0,0,10">
                                 <TextBlock Text="Learning Rate:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="LearningRateBox" Text="0.001"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Learning Rate" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Step size for optimizer updates. Smaller values improve stability but slow training."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <!-- Row 2 -->
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
                                 <TextBlock Text="Dropout:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="DropoutBox" Text="0.1"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Dropout" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Dropout rate for regularization to prevent overfitting. Value between 0 and 1."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,10,10">
                                 <TextBlock Text="Hidden Dimension:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="HiddenDimBox" Text="128"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Hidden Dimension" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of units in hidden layers. Larger values increase model capacity but risk overfitting and require more computation."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="2" Margin="10,0,0,10">
                                 <TextBlock Text="Number of Layers:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="NumLayersBox" Text="2"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Number of Layers" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of recurrent/transformer layers in the model. More layers can capture complex patterns but increase training time."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <!-- Row 3 -->
                             <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="Optimizer:" Foreground="White" Margin="0,0,0,5"/>
                                 <ComboBox x:Name="OptimizerBox" Style="{StaticResource EnhancedComboBoxStyle}">
-                                    <ComboBoxItem Content="Adam" Tag="adam"/>
-                                    <ComboBoxItem Content="SGD" Tag="sgd"/>
-                                    <ComboBoxItem Content="AdamW" Tag="adamw"/>
-                                    <ComboBoxItem Content="RMSprop" Tag="rmsprop"/>
+                                    <ComboBoxItem Content="Adam" Tag="adam">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="Adam Optimizer" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Adaptive optimizer that generally works well out of the box for deep learning."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="SGD" Tag="sgd">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="SGD" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Stochastic Gradient Descent. Simpler optimizer; may require momentum and careful learning rate tuning."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="AdamW" Tag="adamw">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="AdamW" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Adam with decoupled weight decay. Useful for better generalization in some cases."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Content="RMSprop" Tag="rmsprop">
+                                        <ComboBoxItem.ToolTip>
+                                            <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                                <StackPanel>
+                                                    <TextBlock Text="RMSprop" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                    <TextBlock TextWrapping="Wrap" Text="Adaptive learning rate optimizer often used for recurrent networks."/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ComboBoxItem.ToolTip>
+                                    </ComboBoxItem>
                                 </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,10,0">
                                 <TextBlock Text="Weight Decay:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="WeightDecayBox" Text="0.0001"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Weight Decay" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="L2 regularization strength to penalize large weights and improve generalization."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -215,13 +458,31 @@
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="Number of Attention Heads:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="NumHeadsBox" Text="4"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Number of Attention Heads" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of parallel attention heads in Transformer/TFT models. More heads can capture diverse patterns but increase compute."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                 <TextBlock Text="Number of Attention Layers:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="NumAttentionLayersBox" Text="2"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Number of Attention Layers" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of stacked attention/transformer blocks. More layers increase model depth and representational power."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -244,19 +505,46 @@
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="Number of Trees:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="NumberOfTreesBox" Text="100"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Number of Trees" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of decision trees in the Random Forest. More trees can improve performance but increase prediction time."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="10,0,10,0">
                                 <TextBlock Text="Max Depth:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="MaxDepthBox" Text="10"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Max Depth" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Maximum depth of each decision tree. None means nodes are expanded until all leaves are pure or contain less than min_samples_split."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Margin="10,0,0,0">
                                 <TextBlock Text="Min Samples Split:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="MinSamplesSplitBox" Text="2"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Min Samples Split" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Minimum number of samples required to split an internal node."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -283,36 +571,90 @@
                             <!-- Row 1: Checkboxes -->
                             <CheckBox Grid.Row="0" Grid.Column="0" x:Name="UseEarlyStoppingBox"
                                       Content="Use Early Stopping" Foreground="White" Margin="0,0,0,10"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Use Early Stopping" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Stop training early when validation performance stops improving to prevent overfitting."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
 
                             <CheckBox Grid.Row="0" Grid.Column="1" x:Name="UseLRSchedulerBox"
                                       Content="Use Learning Rate Scheduler" Foreground="White" Margin="0,0,0,10"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Use Learning Rate Scheduler" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Reduce the learning rate automatically when validation metrics plateau to improve convergence."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
 
                             <!-- Row 2: Early Stopping Parameters -->
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
                                 <TextBlock Text="Early Stopping Patience:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="EarlyStoppingPatienceBox" Text="10"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Early Stopping Patience" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of validation checks to wait before stopping when no improvement is seen."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
                                 <TextBlock Text="LR Scheduler Patience:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="LRSchedulerPatienceBox" Text="5"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="LR Scheduler Patience" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Number of validation checks to wait before reducing the learning rate."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <!-- Row 3: Additional Parameters -->
                             <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,0">
                                 <TextBlock Text="LR Scheduler Factor:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="LRSchedulerFactorBox" Text="0.5"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="LR Scheduler Factor" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Multiplicative factor to reduce learning rate when scheduler triggers (e.g., 0.5 halves the LR)."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,0">
                                 <TextBlock Text="Train/Test Split:" Foreground="White" Margin="0,0,0,5"/>
                                 <TextBox x:Name="TrainTestSplitBox" Text="0.8"
-                                         Style="{StaticResource EnhancedTextBoxStyle}"/>
+                                         Style="{StaticResource EnhancedTextBoxStyle}">
+                                    <TextBox.ToolTip>
+                                        <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                            <StackPanel>
+                                                <TextBlock Text="Train/Test Split" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                                <TextBlock TextWrapping="Wrap" Text="Fraction of data used for training. e.g., 0.8 means 80% train / 20% test."/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -338,20 +680,56 @@
                             <!-- Row 1: Checkboxes -->
                             <CheckBox Grid.Row="0" Grid.Column="0" x:Name="UseGPUBox"
                                       Content="Use GPU (if available)" Foreground="White" Margin="0,0,0,10"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Use GPU" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Enable GPU acceleration when available for faster training. Requires proper GPU drivers and libraries."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
 
                             <CheckBox Grid.Row="0" Grid.Column="1" x:Name="VerboseLoggingBox"
                                       Content="Verbose Logging" Foreground="White" Margin="0,0,0,10"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Verbose Logging" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Enable detailed logs during training for debugging and monitoring. Can be verbose on long runs."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
 
                             <!-- Row 2: Additional Options -->
                             <CheckBox Grid.Row="1" Grid.Column="0" x:Name="SaveCheckpointsBox"
                                       Content="Save Model Checkpoints" Foreground="White"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Save Model Checkpoints" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Save intermediate model checkpoints during training so you can resume or use the best performing epoch."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
 
                             <CheckBox Grid.Row="1" Grid.Column="1" x:Name="UseFeatureEngineeringBox"
                                       Content="Use Feature Engineering" Foreground="White"
-                                      Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                                      Style="{StaticResource EnhancedCheckBoxStyle}">
+                                <CheckBox.ToolTip>
+                                    <ToolTip Style="{StaticResource EnhancedToolTipStyle}" MaxWidth="350">
+                                        <StackPanel>
+                                            <TextBlock Text="Use Feature Engineering" FontWeight="Bold" Foreground="#1E90FF" Margin="0,0,0,5"/>
+                                            <TextBlock TextWrapping="Wrap" Text="Enable advanced feature engineering pipeline for generating technical indicators and derived features before training."/>
+                                        </StackPanel>
+                                    </ToolTip>
+                                </CheckBox.ToolTip>
+                            </CheckBox>
                         </Grid>
                     </StackPanel>
                 </Border>
