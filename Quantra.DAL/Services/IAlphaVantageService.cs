@@ -104,4 +104,39 @@ public interface IAlphaVantageService
     /// <param name="symbol">Stock ticker symbol</param>
     /// <returns>List of earnings calendar data including report dates and EPS estimates</returns>
     Task<List<EarningsCalendarData>> GetEarningsCalendarAsync(string symbol);
+
+    // Market Context Methods for TFT Model
+    /// <summary>
+    /// Gets Treasury Yield data from Alpha Vantage TREASURY_YIELD endpoint.
+    /// Used for market context features in TFT model (interest rate environment).
+    /// </summary>
+    /// <param name="maturity">Maturity period: 3month, 2year, 5year, 7year, 10year, 30year</param>
+    /// <param name="interval">Data interval: daily, weekly, monthly</param>
+    /// <returns>Treasury yield percentage value</returns>
+    Task<double> GetTreasuryYieldAsync(string maturity = "10year", string interval = "daily");
+
+    /// <summary>
+    /// Gets Federal Funds Rate from Alpha Vantage FEDERAL_FUNDS_RATE endpoint.
+    /// Used for market context features in TFT model (monetary policy environment).
+    /// </summary>
+    /// <param name="interval">Data interval: daily, weekly, monthly</param>
+    /// <returns>Federal funds rate percentage value</returns>
+    Task<double> GetFederalFundsRateAsync(string interval = "daily");
+
+    /// <summary>
+    /// Gets top gainers, losers, and most actively traded stocks.
+    /// Used for market breadth calculation in MarketContextService.
+    /// </summary>
+    /// <returns>TopMoversResponse containing lists of top gainers, losers, and most active</returns>
+    Task<TopMoversResponse> GetTopMoversAsync();
+
+    /// <summary>
+    /// Gets daily historical price data for a symbol.
+    /// Used for S&P 500 and sector ETF return calculations.
+    /// </summary>
+    /// <param name="symbol">Stock ticker symbol</param>
+    /// <param name="outputSize">Output size: compact (last 100 data points) or full (full history)</param>
+    /// <param name="dataType">Data type: json or csv</param>
+    /// <returns>List of historical price data</returns>
+    Task<List<HistoricalPrice>> GetDailyData(string symbol, string outputSize = "full", string dataType = "json");
 }
