@@ -61,8 +61,277 @@ namespace Quantra.Controls
 
                 Dictionary<string, double> indicators = new Dictionary<string, double>();
 
-                // API Calls for technical indicators removed.
-                //DatabaseMonolith.Log("Warning", $"API calls for technical indicators for {symbol} have been removed. Indicators will be empty.");
+                // Fetch technical indicators from Alpha Vantage API
+                // These indicators are critical for ML model prediction accuracy
+                try
+                {
+                    _loggingService?.Log("Info", $"Fetching technical indicators for {symbol}...");
+                    
+                    // RSI (Relative Strength Index) - standard 14-period
+                    try
+                    {
+                        double rsi = await _alphaVantageService.GetRSI(symbol, "daily");
+                        if (!double.IsNaN(rsi) && rsi > 0)
+                            indicators["RSI"] = rsi;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get RSI for {symbol}: {ex.Message}");
+                    }
+
+                    // Stochastic Oscillator (%K and %D)
+                    try
+                    {
+                        var (stochK, stochD) = await _alphaVantageService.GetSTOCH(symbol, "daily");
+                        if (!double.IsNaN(stochK))
+                            indicators["STOCH_K"] = stochK;
+                        if (!double.IsNaN(stochD))
+                            indicators["STOCH_D"] = stochD;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get Stochastic for {symbol}: {ex.Message}");
+                    }
+
+                    // MACD (Moving Average Convergence Divergence) with Histogram
+                    try
+                    {
+                        var (macd, macdSignal, macdHist) = await _alphaVantageService.GetMACD(symbol, "daily");
+                        if (!double.IsNaN(macd))
+                            indicators["MACD"] = macd;
+                        if (!double.IsNaN(macdSignal))
+                            indicators["MACD_Signal"] = macdSignal;
+                        if (!double.IsNaN(macdHist))
+                            indicators["MACD_Hist"] = macdHist;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get MACD for {symbol}: {ex.Message}");
+                    }
+
+                    // ATR (Average True Range) - volatility indicator
+                    try
+                    {
+                        double atr = await _alphaVantageService.GetATR(symbol, "daily");
+                        if (!double.IsNaN(atr) && atr > 0)
+                            indicators["ATR"] = atr;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get ATR for {symbol}: {ex.Message}");
+                    }
+
+                    // VWAP (Volume-Weighted Average Price) - typically intraday, but calculated from daily data for consistency
+                    try
+                    {
+                        double vwap = await _alphaVantageService.GetVWAP(symbol, "daily");
+                        if (!double.IsNaN(vwap) && vwap > 0)
+                            indicators["VWAP"] = vwap;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get VWAP for {symbol}: {ex.Message}");
+                    }
+
+                    // ADX (Average Directional Index) - trend strength
+                    try
+                    {
+                        double adx = await _alphaVantageService.GetLatestADX(symbol, "daily");
+                        if (!double.IsNaN(adx) && adx > 0)
+                            indicators["ADX"] = adx;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get ADX for {symbol}: {ex.Message}");
+                    }
+
+                    // CCI (Commodity Channel Index)
+                    try
+                    {
+                        double cci = await _alphaVantageService.GetCCI(symbol, "daily");
+                        if (!double.IsNaN(cci))
+                            indicators["CCI"] = cci;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get CCI for {symbol}: {ex.Message}");
+                    }
+
+                    // MFI (Money Flow Index)
+                    try
+                    {
+                        double mfi = await _alphaVantageService.GetMFI(symbol, "daily");
+                        if (!double.IsNaN(mfi) && mfi > 0)
+                            indicators["MFI"] = mfi;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get MFI for {symbol}: {ex.Message}");
+                    }
+
+                    // OBV (On-Balance Volume)
+                    try
+                    {
+                        double obv = await _alphaVantageService.GetOBV(symbol, "daily");
+                        if (!double.IsNaN(obv))
+                            indicators["OBV"] = obv;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get OBV for {symbol}: {ex.Message}");
+                    }
+
+                    // Ultimate Oscillator
+                    try
+                    {
+                        double ultimateOsc = await _alphaVantageService.GetUltimateOscillator(symbol, "daily");
+                        if (!double.IsNaN(ultimateOsc))
+                            indicators["UltimateOscillator"] = ultimateOsc;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get Ultimate Oscillator for {symbol}: {ex.Message}");
+                    }
+
+                    // Momentum Score
+                    try
+                    {
+                        double momentum = await _alphaVantageService.GetMomentumScore(symbol, "daily");
+                        if (!double.IsNaN(momentum))
+                            indicators["Momentum"] = momentum;
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get Momentum for {symbol}: {ex.Message}");
+                    }
+
+                    // Fetch historical data for calculating lagged features, SMA, ROC, and Bollinger Bands
+                    try
+                    {
+                        var historicalData = await _alphaVantageService.GetDailyData(symbol, "compact");
+                        if (historicalData != null && historicalData.Count > 0)
+                        {
+                            // Sort by date descending (most recent first)
+                            historicalData = historicalData.OrderByDescending(h => h.Date).ToList();
+
+                            // Lagged Features: Close(t-1), Close(t-2), Volume(t-1), Volume(t-2)
+                            if (historicalData.Count >= 3)
+                            {
+                                indicators["Close_t0"] = historicalData[0].Close;  // Current close
+                                indicators["Close_t1"] = historicalData[1].Close;  // Previous close (lag 1)
+                                indicators["Close_t2"] = historicalData[2].Close;  // Two days ago (lag 2)
+                                indicators["Volume_t0"] = historicalData[0].Volume;
+                                indicators["Volume_t1"] = historicalData[1].Volume;
+                                indicators["Volume_t2"] = historicalData[2].Volume;
+                                
+                                // Open, High, Low for current day
+                                indicators["Open"] = historicalData[0].Open;
+                                indicators["High"] = historicalData[0].High;
+                                indicators["Low"] = historicalData[0].Low;
+                                indicators["Close"] = historicalData[0].Close;
+                                indicators["Volume"] = historicalData[0].Volume;
+                            }
+
+                            // Calculate SMA (Simple Moving Averages) for 7, 14, 30 days
+                            var closePrices = historicalData.Select(h => h.Close).ToList();
+                            
+                            if (closePrices.Count >= 7)
+                            {
+                                double sma7 = closePrices.Take(7).Average();
+                                indicators["SMA_7"] = sma7;
+                            }
+                            if (closePrices.Count >= 14)
+                            {
+                                double sma14 = closePrices.Take(14).Average();
+                                indicators["SMA_14"] = sma14;
+                            }
+                            if (closePrices.Count >= 30)
+                            {
+                                double sma30 = closePrices.Take(30).Average();
+                                indicators["SMA_30"] = sma30;
+                            }
+                            if (closePrices.Count >= 50)
+                            {
+                                double sma50 = closePrices.Take(50).Average();
+                                indicators["SMA_50"] = sma50;
+                            }
+
+                            // Rate of Change (ROC) - 10-day and 20-day
+                            if (closePrices.Count >= 11)
+                            {
+                                double roc10 = ((closePrices[0] - closePrices[10]) / closePrices[10]) * 100;
+                                indicators["ROC_10"] = roc10;
+                            }
+                            if (closePrices.Count >= 21)
+                            {
+                                double roc20 = ((closePrices[0] - closePrices[20]) / closePrices[20]) * 100;
+                                indicators["ROC_20"] = roc20;
+                            }
+
+                            // Bollinger Bands (20-day with 2 std dev)
+                            if (closePrices.Count >= 20)
+                            {
+                                var last20Prices = closePrices.Take(20).ToList();
+                                double bbMiddle = last20Prices.Average();
+                                double bbStdDev = Math.Sqrt(last20Prices.Sum(p => Math.Pow(p - bbMiddle, 2)) / last20Prices.Count);
+                                double bbUpper = bbMiddle + (2 * bbStdDev);
+                                double bbLower = bbMiddle - (2 * bbStdDev);
+                                double bbWidth = (bbUpper - bbLower) / bbMiddle;
+                                double bbPct = (closePrices[0] - bbLower) / (bbUpper - bbLower);
+
+                                indicators["BB_Middle"] = bbMiddle;
+                                indicators["BB_Upper"] = bbUpper;
+                                indicators["BB_Lower"] = bbLower;
+                                indicators["BB_Width"] = bbWidth;
+                                indicators["BB_Pct"] = bbPct;  // Where price is within the bands (0-1)
+                            }
+
+                            // Rolling Volatility (standard deviation of returns)
+                            if (closePrices.Count >= 21)
+                            {
+                                var returns = new List<double>();
+                                for (int i = 0; i < 20; i++)
+                                {
+                                    double ret = (closePrices[i] - closePrices[i + 1]) / closePrices[i + 1];
+                                    returns.Add(ret);
+                                }
+                                double returnsAvg = returns.Average();
+                                double volatility = Math.Sqrt(returns.Sum(r => Math.Pow(r - returnsAvg, 2)) / returns.Count) * Math.Sqrt(252);
+                                indicators["Volatility_20"] = volatility;
+                            }
+
+                            // Log returns (most recent)
+                            if (closePrices.Count >= 2)
+                            {
+                                double logReturn = Math.Log(closePrices[0] / closePrices[1]);
+                                indicators["LogReturn_1"] = logReturn;
+                            }
+                            if (closePrices.Count >= 6)
+                            {
+                                double logReturn5 = Math.Log(closePrices[0] / closePrices[5]);
+                                indicators["LogReturn_5"] = logReturn5;
+                            }
+
+                            // Rolling Min/Max (20-day)
+                            if (closePrices.Count >= 20)
+                            {
+                                var last20 = closePrices.Take(20).ToList();
+                                indicators["Min_20"] = last20.Min();
+                                indicators["Max_20"] = last20.Max();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Warning", $"Failed to get historical data for lagged features for {symbol}: {ex.Message}");
+                    }
+
+                    _loggingService?.Log("Info", $"Fetched {indicators.Count} technical indicators for {symbol}");
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", $"Error fetching technical indicators for {symbol}: {ex.Message}");
+                }
 
                 // Sentiment analysis integration
                 try
