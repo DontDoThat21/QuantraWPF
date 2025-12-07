@@ -490,6 +490,8 @@ class PyTorchStockPredictor:
             return True
             
         except Exception as e:
+            # Catch all exceptions to ensure training doesn't crash on save failure
+            # This includes OSError for file operations, torch errors, etc.
             logger.error(f"Error saving PyTorch model: {e}")
             return False
         
@@ -909,6 +911,8 @@ class TensorFlowStockPredictor:
             return True
             
         except Exception as e:
+            # Catch all exceptions to ensure training doesn't crash on save failure
+            # This includes OSError for file operations, TensorFlow errors, etc.
             logger.error(f"Error saving TensorFlow model: {e}")
             return False
         
