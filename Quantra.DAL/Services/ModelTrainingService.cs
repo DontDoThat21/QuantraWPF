@@ -166,18 +166,22 @@ namespace Quantra.DAL.Services
                         await process.WaitForExitAsync();
                         process.WaitForExit();
 
-                        if (process.ExitCode != 0 || standardOutput.Length == 0)
+                        // Check if the output file was created (indicates success)
+                        if (!File.Exists(outputFile))
                         {
-                            var errorMessage = $"Python training failed with exit code {process.ExitCode}\n" +
+                            var errorMessage = $"Python training failed - output file not created (exit code {process.ExitCode})\n" +
                                              $"Standard output:\n{standardOutput}\n" +
                                              $"Error output:\n{errorOutput}";
                             throw new Exception(errorMessage);
                         }
 
-                        // Read results
-                        if (!File.Exists(outputFile))
+                        // Check for non-zero exit code
+                        if (process.ExitCode != 0)
                         {
-                            throw new Exception($"Training script did not create output file\nOutput:\n{standardOutput}\nErrors:\n{errorOutput}");
+                            var errorMessage = $"Python training failed with exit code {process.ExitCode}\n" +
+                                             $"Standard output:\n{standardOutput}\n" +
+                                             $"Error output:\n{errorOutput}";
+                            throw new Exception(errorMessage);
                         }
 
                         var jsonResult = await File.ReadAllTextAsync(outputFile);

@@ -319,11 +319,36 @@ def train_model_from_database(
         feature_type=feature_type
     )
     
-    # Split into train/test (maintain temporal order)
+    # CRITICAL FIX: Normalize targets (percentage changes) for better training stability
+    # Targets are percentage changes (e.g., 0.05 for 5%), need to be scaled
+    # Use StandardScaler to normalize distribution
+    from sklearn.preprocessing import StandardScaler, RobustScaler
+    
+    # Use RobustScaler instead of StandardScaler for better handling of outliers
+    target_scaler = RobustScaler()
+    
+    # Fit scaler on training data only (to prevent data leakage)
+    # But we need to split first
     split_idx = int(len(X) * (1 - test_split))
+    
+    # Split data
     X_train, X_test = X[:split_idx], X[split_idx:]
     y_train, y_test = y[:split_idx], y[split_idx:]
     X_future_train, X_future_test = X_future[:split_idx], X_future[split_idx:]
+    
+    # Fit target scaler on training targets only
+    target_scaler.fit(y_train)
+    
+    # Transform targets
+    y_train_scaled = target_scaler.transform(y_train)
+    y_test_scaled = target_scaler.transform(y_test)
+    
+    logger.info(f"Target statistics before scaling:")
+    logger.info(f"  Train mean: {np.mean(y_train, axis=0)}")
+    logger.info(f"  Train std: {np.std(y_train, axis=0)}")
+    logger.info(f"Target statistics after scaling:")
+    logger.info(f"  Train mean: {np.mean(y_train_scaled, axis=0)}")
+    logger.info(f"  Train std: {np.std(y_train_scaled, axis=0)}")
     
     logger.info(f"Training set: {len(X_train)} samples")
     logger.info(f"Test set: {len(X_test)} samples")
@@ -378,12 +403,17 @@ def train_model_from_database(
         )
     else:
         # Standard training for LSTM/GRU/Transformer/RandomForest
+        # CRITICAL FIX: Use scaled targets for training
         model, scaler, used_model_type = load_or_train_model(
             X_train=X_train,
-            y_train=y_train,
+            y_train=y_train_scaled,  # Use scaled targets
             model_type=model_type,
             architecture_type=architecture_type
         )
+        
+        # Store target scaler in model for inverse transform during prediction
+        if hasattr(model, '__dict__'):
+            model.target_scaler = target_scaler
     
     # Set feature names
     if hasattr(model, 'feature_names'):
@@ -405,10 +435,13 @@ def train_model_from_database(
                 X_test_flat = X_test.reshape(X_test.shape[0], -1)
                 logger.info(f"Flattened test data shape for RF: {X_test_flat.shape}")
                 logger.info(f"Scaler expects: {scaler.n_features_in_} features")
-                y_pred = model.predict(scaler.transform(X_test_flat))
+                y_pred_scaled = model.predict(scaler.transform(X_test_flat))
             else:
                 # For PyTorch/TensorFlow, the predict method will handle the 3D data
-                y_pred = model.predict(X_test)
+                y_pred_scaled = model.predict(X_test)
+            
+            # CRITICAL FIX: Inverse transform predictions back to original scale
+            y_pred = target_scaler.inverse_transform(y_pred_scaled)
         except ValueError as e:
             if "features" in str(e).lower():
                 logger.error(f"Feature dimension mismatch during evaluation: {e}")
@@ -438,6 +471,7 @@ def train_model_from_database(
             else:
                 raise
         
+        # Calculate metrics on original scale (not scaled targets)
         mse = np.mean((y_pred - y_test) ** 2)
         mae = np.mean(np.abs(y_pred - y_test))
         rmse = np.sqrt(mse)
@@ -446,6 +480,12 @@ def train_model_from_database(
         ss_res = np.sum((y_test - y_pred) ** 2)
         ss_tot = np.sum((y_test - np.mean(y_test)) ** 2)
         r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+        
+        logger.info(f"Evaluation metrics (on original percentage change scale):")
+        logger.info(f"  MSE: {mse:.6f}")
+        logger.info(f"  MAE: {mae:.6f}")
+        logger.info(f"  RMSE: {rmse:.6f}")
+        logger.info(f"  R2: {r2:.6f}")
         
         logger.info(f"Test Set Performance:")
         logger.info(f"  MSE: {mse:.6f}")

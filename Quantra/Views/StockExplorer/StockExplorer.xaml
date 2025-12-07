@@ -405,14 +405,7 @@ MinWidth="900" MinHeight="700">
                     <DataGridTextColumn Header="% Change" Binding="{Binding ChangePercent, StringFormat={}{0:P2}}" Width="80">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}">
-                                <Setter Property="Foreground">
-                                    <Setter.Value>
-                                        <MultiBinding Converter="{StaticResource PercentChangeColorConverter}">
-                                            <Binding Path="ChangePercent"/>
-                                            <Binding Path="DataContext.StockGridItems" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                        </MultiBinding>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter Property="Foreground" Value="{Binding ChangePercent, Converter={StaticResource PercentChangeColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>

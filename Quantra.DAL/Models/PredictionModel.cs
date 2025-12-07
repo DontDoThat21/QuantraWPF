@@ -417,6 +417,88 @@ namespace Quantra.Models
                     throw new FileNotFoundException($"Python script not found at: {pythonScript}");
                 }
 
+                // CRITICAL FIX: Validate feature data quality BEFORE calling Python
+                // Check if features dictionary contains at least some valid data
+                int validFeatureCount = features.Count(kvp => kvp.Value != 0 && !double.IsNaN(kvp.Value) && !double.IsInfinity(kvp.Value));
+                
+                if (validFeatureCount < 2)
+                {
+                    // Insufficient valid data - most features are zero or invalid
+                    string errorMsg = $"Insufficient valid market data for prediction. " +
+                                    $"Only {validFeatureCount} out of {features.Count} features have valid non-zero values. " +
+                                    $"This indicates API failure, rate limiting, or invalid symbol. " +
+                                    $"Features: [{string.Join(", ", features.Select(kvp => $"{kvp.Key}={kvp.Value:F4}"))}]";
+                    
+                    return new PredictionResult
+                    {
+                        Action = "ERROR",
+                        Confidence = 0.0,
+                        TargetPrice = 0.0,
+                        CurrentPrice = 0.0,
+                        Error = errorMsg
+                    };
+                }
+
+                // CRITICAL FIX: Ensure current_price is in the features dictionary and has a valid value
+                // The Python script requires 'current_price', 'close', or 'price' to be present and non-zero
+                if (!features.ContainsKey("current_price") && !features.ContainsKey("close") && !features.ContainsKey("price"))
+                {
+                    // Try to find a price-related key in the features dictionary
+                    var priceKey = features.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("price") || k.ToLowerInvariant() == "close");
+                    
+                    if (priceKey != null && features[priceKey] > 0)
+                    {
+                        // Add current_price using the found price key (only if it has a valid value)
+                        features["current_price"] = features[priceKey];
+                    }
+                    else
+                    {
+                        // No valid price found - return error immediately to avoid Python script failure
+                        string errorMsg = $"Features dictionary must include a valid 'current_price', 'close', or 'price' value. " +
+                                        $"Please ensure the Features dictionary passed from C# includes the current stock price. " +
+                                        $"Current features: [{string.Join(", ", features.Select(kvp => $"{kvp.Key}={kvp.Value:F4}"))}]";
+                        
+                        return new PredictionResult
+                        {
+                            Action = "ERROR",
+                            Confidence = 0.0,
+                            TargetPrice = 0.0,
+                            CurrentPrice = 0.0,
+                            Error = errorMsg
+                        };
+                    }
+                }
+                else
+                {
+                    // Ensure the current_price value is valid (not zero, not NaN, not infinity)
+                    var currentPriceKey = features.ContainsKey("current_price") ? "current_price" : 
+                                        features.ContainsKey("close") ? "close" : "price";
+                    var currentPriceValue = features[currentPriceKey];
+                    
+                    if (currentPriceValue <= 0 || double.IsNaN(currentPriceValue) || double.IsInfinity(currentPriceValue))
+                    {
+                        string errorMsg = $"Invalid current_price value: {currentPriceValue}. " +
+                                        $"The price must be a positive number. " +
+                                        $"This indicates API failure or invalid market data. " +
+                                        $"Features: [{string.Join(", ", features.Select(kvp => $"{kvp.Key}={kvp.Value:F4}"))}]";
+                        
+                        return new PredictionResult
+                        {
+                            Action = "ERROR",
+                            Confidence = 0.0,
+                            TargetPrice = 0.0,
+                            CurrentPrice = currentPriceValue,
+                            Error = errorMsg
+                        };
+                    }
+                    
+                    // Ensure current_price key exists with the valid value
+                    if (!features.ContainsKey("current_price"))
+                    {
+                        features["current_price"] = currentPriceValue;
+                    }
+                }
+
                 var requestData = new PredictionRequest
                 {
                     Features = features,

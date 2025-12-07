@@ -109,6 +109,13 @@ namespace Quantra.Extensions
             // Logging service
             services.AddSingleton<LoggingService>();
 
+            // Register StockConfigurationService for managing predefined stock symbol configurations
+            services.AddSingleton<StockConfigurationService>(sp =>
+            {
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new StockConfigurationService(loggingService);
+            });
+
             // Register custom ILogger from CrossCutting for services that need it
             services.AddSingleton<Quantra.CrossCutting.Logging.ILogger>(sp => 
                 Quantra.CrossCutting.Logging.Log.ForContext("DependencyInjection"));
