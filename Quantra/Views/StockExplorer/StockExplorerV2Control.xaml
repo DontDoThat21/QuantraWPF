@@ -129,55 +129,156 @@
         </Border>
 
         <!-- Chart Area -->
-        <Border Grid.Row="2" 
-                Background="#2D2D42" 
-                BorderBrush="#3E3E56" 
-                BorderThickness="1" 
-                CornerRadius="5" 
-                Padding="15" 
+        <Border Grid.Row="2"
+                Background="#2D2D42"
+                BorderBrush="#3E3E56"
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="15"
                 Margin="0,0,0,15"
                 Visibility="{Binding IsChartVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="3*"/>   <!-- Main candlestick chart -->
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1*"/>   <!-- Volume chart -->
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="1*"/>   <!-- Feature attention grid -->
                 </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0"
-                           Text="Price Overview"
-                           FontSize="16"
-                           FontWeight="Bold"
-                           Foreground="#1E90FF"
-                           Margin="0,0,0,10"/>
-                
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock x:Name="ChartTitleText"
+                               Text="Price Chart with TFT Predictions"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#1E90FF"/>
+                    <TextBlock x:Name="SelectedSymbolText"
+                               Text=""
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="Cyan"
+                               Margin="10,0,0,0"/>
+                </StackPanel>
+
+                <!-- Candlestick Chart with TFT Predictions -->
                 <lvc:CartesianChart Grid.Row="1"
-                                    x:Name="PriceChart"
-                                    Series="{Binding ChartSeries}"
-                                    LegendLocation="Right"
+                                    x:Name="CandlestickChart"
+                                    Series="{Binding CandlestickSeries}"
+                                    LegendLocation="Top"
                                     Hoverable="True"
-                                    DataTooltip="{x:Null}">
+                                    DataTooltip="{x:Null}"
+                                    Margin="0,0,0,10">
                     <lvc:CartesianChart.AxisX>
-                        <lvc:Axis Title="Symbol" 
-                                  Labels="{Binding ChartLabels}"
+                        <lvc:Axis Title="Time"
+                                  Labels="{Binding TimeLabels}"
                                   Foreground="White"
-                                  FontSize="12">
+                                  FontSize="11">
+                            <lvc:Axis.Separator>
+                                <lvc:Separator StrokeThickness="1"
+                                             Stroke="#2A2A3A"/>
+                            </lvc:Axis.Separator>
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisX>
+                    <lvc:CartesianChart.AxisY>
+                        <lvc:Axis Title="Price ($)"
+                                  LabelFormatter="{Binding PriceFormatter}"
+                                  Foreground="White"
+                                  FontSize="11">
+                            <lvc:Axis.Separator>
+                                <lvc:Separator StrokeThickness="1"
+                                             Stroke="#3E3E56"/>
+                            </lvc:Axis.Separator>
+                        </lvc:Axis>
+                    </lvc:CartesianChart.AxisY>
+                </lvc:CartesianChart>
+
+                <TextBlock Grid.Row="2"
+                           Text="Volume"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           Foreground="#888888"
+                           Margin="0,5,0,5"/>
+
+                <!-- Volume Chart -->
+                <lvc:CartesianChart Grid.Row="3"
+                                    x:Name="VolumeChart"
+                                    Series="{Binding VolumeSeries}"
+                                    LegendLocation="None"
+                                    Hoverable="True"
+                                    DataTooltip="{x:Null}"
+                                    Margin="0,0,0,10">
+                    <lvc:CartesianChart.AxisX>
+                        <lvc:Axis Labels="{Binding TimeLabels}"
+                                  Foreground="White"
+                                  FontSize="10"
+                                  ShowLabels="False">
                             <lvc:Axis.Separator>
                                 <lvc:Separator StrokeThickness="0"/>
                             </lvc:Axis.Separator>
                         </lvc:Axis>
                     </lvc:CartesianChart.AxisX>
                     <lvc:CartesianChart.AxisY>
-                        <lvc:Axis Title="Price ($)" 
-                                  LabelFormatter="{Binding YFormatter}"
+                        <lvc:Axis LabelFormatter="{Binding VolumeFormatter}"
                                   Foreground="White"
-                                  FontSize="12">
+                                  FontSize="10">
                             <lvc:Axis.Separator>
-                                <lvc:Separator StrokeThickness="1" 
+                                <lvc:Separator StrokeThickness="1"
                                              Stroke="#3E3E56"/>
                             </lvc:Axis.Separator>
                         </lvc:Axis>
                     </lvc:CartesianChart.AxisY>
                 </lvc:CartesianChart>
+
+                <TextBlock Grid.Row="4"
+                           Text="TFT Feature Attention"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           Foreground="#888888"
+                           Margin="0,5,0,5"/>
+
+                <!-- Feature Attention Grid -->
+                <DataGrid Grid.Row="5"
+                          x:Name="FeatureAttentionGrid"
+                          ItemsSource="{Binding FeatureAttentionData}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True"
+                          Background="#23233A"
+                          Foreground="White"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#3E3E56"
+                          HeadersVisibility="Column"
+                          RowBackground="#2D2D42"
+                          AlternatingRowBackground="#262638"
+                          BorderThickness="0"
+                          MaxHeight="150">
+
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#3E3E56"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="FontSize" Value="11"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="5"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="FontSize" Value="10"/>
+                        </Style>
+                    </DataGrid.CellStyle>
+
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Feature" Binding="{Binding FeatureName}" Width="*"/>
+                        <DataGridTextColumn Header="Attention Weight" Binding="{Binding AttentionWeight, StringFormat={}{0:F4}}" Width="120"/>
+                        <DataGridTextColumn Header="Importance %" Binding="{Binding ImportancePercent, StringFormat={}{0:F2}%}" Width="100"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </Border>
 

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(find:*)",
+      "Bash(dir \"C:\\Users\\tylor\\source\\repos\\DontDoThat21\\QuantraWPF\\Quantra\\Models\" /b)"
     ],
     "deny": [],
     "ask": []
