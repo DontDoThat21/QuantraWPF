@@ -17,6 +17,7 @@
     <PackageReference Include="Dragablz" Version="0.0.3.234" />
     <PackageReference Include="LiveCharts.Core" Version="0.9.8" />
     <PackageReference Include="LiveCharts.Wpf.Core" Version="0.9.8" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc6.1" />
     <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />

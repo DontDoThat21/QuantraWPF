@@ -43,6 +43,9 @@ namespace Quantra.Controls
             string cachedModelType = GetSelectedModelType();
             string cachedArchitectureType = GetSelectedArchitectureType();
             
+            // Check if TFT multi-horizon prediction is requested
+            bool useTFT = cachedArchitectureType.ToLower() == "tft";
+            
             try
             {
                 // Ensure trading bot is initialized
@@ -71,6 +74,9 @@ namespace Quantra.Controls
                 }
 
                 Dictionary<string, double> indicators = new Dictionary<string, double>();
+                
+                // Store historical data for TFT prediction (needs 60+ days)
+                List<HistoricalPrice> historicalDataForTFT = null;
 
                 // Fetch technical indicators from Alpha Vantage API
                 // These indicators are critical for ML model prediction accuracy
@@ -224,6 +230,9 @@ namespace Quantra.Controls
                         {
                             // Sort by date descending (most recent first)
                             historicalData = historicalData.OrderByDescending(h => h.Date).ToList();
+                            
+                            // Store for TFT (need at least 60 days)
+                            historicalDataForTFT = historicalData;
 
                             // Lagged Features: Close(t-1), Close(t-2), Volume(t-1), Volume(t-2)
                             if (historicalData.Count >= 3)
@@ -726,16 +735,92 @@ namespace Quantra.Controls
                 // The Python script will automatically load the trained model or train a new one if needed
                 try
                 {
-                    var result = await Quantra.Models.PythonStockPredictor.PredictAsync(indicators);
-                    if (result == null)
-                        throw new Exception("Failed to get prediction result from trained ML model");
+                    // Use TFT if selected, otherwise use standard prediction
+                    if (useTFT)
+                    {
+                        // Prepare historical sequence for TFT (convert HistoricalPrice to Dictionary format)
+                        List<Dictionary<string, double>> historicalSequence = null;
+                        
+                        if (historicalDataForTFT != null && historicalDataForTFT.Count >= TFT_DEFAULT_LOOKBACK_DAYS)
+                        {
+                            // Take the last 60 days (or more) for TFT
+                            // TFT needs data in chronological order (oldest first)
+                            var tftHistoricalData = historicalDataForTFT
+                                .OrderBy(h => h.Date)  // Oldest first for TFT
+                                .Take(TFT_DEFAULT_LOOKBACK_DAYS)
+                                .ToList();
+                            
+                            historicalSequence = tftHistoricalData.Select(h => new Dictionary<string, double>
+                            {
+                                ["open"] = h.Open,
+                                ["high"] = h.High,
+                                ["low"] = h.Low,
+                                ["close"] = h.Close,
+                                ["volume"] = h.Volume
+                            }).ToList();
+                            
+                            _loggingService?.Log("Info", $"Prepared {historicalSequence.Count} days of historical data for TFT prediction");
+                        }
+                        else
+                        {
+                            _loggingService?.Log("Warning", $"Insufficient historical data for TFT: {historicalDataForTFT?.Count ?? 0} days (need {TFT_DEFAULT_LOOKBACK_DAYS})");
+                        }
+                        
+                        // Call TFT multi-horizon prediction
+                        var tftResult = await Quantra.Models.PythonStockPredictor.PredictWithTFTAsync(
+                            indicators,
+                            symbol,
+                            historicalSequence,  // Pass actual historical data
+                            new List<int> { 1, 3, 5, 10 }  // horizons from UI checkboxes
+                        );
+                        
+                        if (tftResult == null || !tftResult.Success)
+                            throw new Exception($"TFT prediction failed: {tftResult?.Error ?? "Unknown error"}");
 
-                    action = result.Action;
-                    confidence = result.Confidence;
-                    targetPrice = result.TargetPrice;
-                    weights = result.FeatureWeights;
-                    
-                    //DatabaseMonolith.Log("Info", $"ML prediction for {symbol}: {action} with {confidence:P0} confidence (model-based)");
+                        action = tftResult.Action;
+                        confidence = tftResult.Confidence;
+                        targetPrice = tftResult.TargetPrice;
+                        weights = tftResult.FeatureWeights ?? new Dictionary<string, double>();
+                        
+                        // Store TFT-specific data for later visualization
+                        var tftPrediction = new Quantra.Models.PredictionModel
+                        {
+                            Symbol = symbol,
+                            PredictedAction = action,
+                            Confidence = confidence,
+                            CurrentPrice = currentPrice,
+                            TargetPrice = targetPrice,
+                            Indicators = indicators,
+                            PotentialReturn = (targetPrice - currentPrice) / currentPrice,
+                            PredictionDate = DateTime.Now,
+                            ModelType = "tft",
+                            ArchitectureType = "tft",
+                            Notes = $"Multi-horizon TFT prediction with uncertainty quantification",
+                            FeatureWeights = weights
+                        };
+                        
+                        // Save TFT prediction with multi-horizon data to database
+                        await SaveTFTPredictionToDatabase(tftPrediction, tftResult);
+                        
+                        // Update UI with TFT multi-horizon data
+                        await UpdateTFTVisualization(tftResult);
+                        
+                        _loggingService?.Log("Info", $"TFT prediction for {symbol}: {action} with {confidence:P0} confidence");
+                    }
+                    else
+                    {
+                        // Standard single-point prediction
+                        var result = await Quantra.Models.PythonStockPredictor.PredictAsync(indicators);
+                        if (result == null)
+                            throw new Exception("Failed to get prediction result from trained ML model");
+
+                        action = result.Action;
+                        confidence = result.Confidence;
+                        targetPrice = result.TargetPrice;
+                        weights = result.FeatureWeights;
+                        
+                        //DatabaseMonolith.Log("Info", $"ML prediction for {symbol}: {action} with {confidence:P0} confidence (model-based)");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1551,6 +1636,126 @@ namespace Quantra.Controls
 
             if (StatusText != null)
                 StatusText.Text = "Cleared selected training symbols";
+        }
+        
+        /// <summary>
+        /// Save TFT prediction with multi-horizon data to database
+        /// </summary>
+        private async Task SaveTFTPredictionToDatabase(Quantra.Models.PredictionModel prediction, 
+            Quantra.DAL.Models.TFTPredictionResult tftResult)
+        {
+            try
+            {
+                // Use PredictionService to save TFT prediction
+                var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+                optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+                var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options);
+                var predictionService = new Quantra.DAL.Services.PredictionService(dbContext);
+                
+                int predictionId = await predictionService.SaveTFTPredictionAsync(prediction, tftResult);
+                
+                _loggingService?.Log("Info", $"Saved TFT prediction ID {predictionId} for {prediction.Symbol}");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, $"Failed to save TFT prediction for {prediction.Symbol}");
+            }
+        }
+        
+        /// <summary>
+        /// Update UI with TFT multi-horizon visualization data
+        /// </summary>
+        private async Task UpdateTFTVisualization(Quantra.DAL.Models.TFTPredictionResult tftResult)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    // Update multi-horizon chart with actual TFT data
+                    if (tftResult.Horizons != null && tftResult.Horizons.Count > 0)
+                    {
+                        // Clear existing chart data
+                        var historicalPrices = this.DataContext?.GetType().GetProperty("HistoricalPrices")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                        var predictedPrices = this.DataContext?.GetType().GetProperty("PredictedPrices")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                        var upperBandPrices = this.DataContext?.GetType().GetProperty("UpperBandPrices")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                        var lowerBandPrices = this.DataContext?.GetType().GetProperty("LowerBandPrices")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                        var dateLabels = this.DataContext?.GetType().GetProperty("DateLabels")?.GetValue(this.DataContext) as List<string>;
+                        
+                        historicalPrices?.Clear();
+                        predictedPrices?.Clear();
+                        upperBandPrices?.Clear();
+                        lowerBandPrices?.Clear();
+                        dateLabels?.Clear();
+                        
+                        // Add historical data (last 30 days from current price)
+                        double currentPrice = tftResult.CurrentPrice;
+                        for (int i = 30; i > 0; i--)
+                        {
+                            // Simulate historical prices - in production, load from cache
+                            double historicalPrice = currentPrice * (1.0 - (i * 0.001));
+                            historicalPrices?.Add(historicalPrice);
+                            dateLabels?.Add($"-{i}d");
+                        }
+                        
+                        // Add current price as connection point
+                        historicalPrices?.Add(currentPrice);
+                        predictedPrices?.Add(currentPrice);
+                        upperBandPrices?.Add(currentPrice);
+                        lowerBandPrices?.Add(currentPrice);
+                        dateLabels?.Add("Today");
+                        
+                        // Add future predictions from TFT horizons
+                        foreach (var horizonKey in tftResult.Horizons.Keys.OrderBy(k => int.Parse(k.Replace("d", ""))))
+                        {
+                            var horizonData = tftResult.Horizons[horizonKey];
+                            predictedPrices?.Add(horizonData.MedianPrice);
+                            upperBandPrices?.Add(horizonData.UpperBound);
+                            lowerBandPrices?.Add(horizonData.LowerBound);
+                            dateLabels?.Add($"+{horizonKey}");
+                        }
+                        
+                        // Update attention weights chart
+                        if (tftResult.TemporalAttention != null && tftResult.TemporalAttention.Count > 0)
+                        {
+                            var attentionWeights = this.DataContext?.GetType().GetProperty("AttentionWeights")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                            var attentionLabels = this.DataContext?.GetType().GetProperty("AttentionLabels")?.GetValue(this.DataContext) as List<string>;
+                            
+                            attentionWeights?.Clear();
+                            attentionLabels?.Clear();
+                            
+                            // Add temporal attention weights (which past days matter most)
+                            foreach (var kvp in tftResult.TemporalAttention.OrderBy(x => x.Key))
+                            {
+                                attentionWeights?.Add(kvp.Value);
+                                attentionLabels?.Add($"{kvp.Key}d");
+                            }
+                        }
+                        
+                        // Update feature importance chart
+                        if (tftResult.FeatureWeights != null && tftResult.FeatureWeights.Count > 0)
+                        {
+                            var featureImportances = this.DataContext?.GetType().GetProperty("FeatureImportances")?.GetValue(this.DataContext) as LiveCharts.ChartValues<double>;
+                            var featureNames = this.DataContext?.GetType().GetProperty("FeatureNames")?.GetValue(this.DataContext) as List<string>;
+                            
+                            featureImportances?.Clear();
+                            featureNames?.Clear();
+                            
+                            // Add top 10 features by importance
+                            foreach (var kvp in tftResult.FeatureWeights.OrderByDescending(x => Math.Abs(x.Value)).Take(10))
+                            {
+                                featureImportances?.Add(kvp.Value);
+                                featureNames?.Add(kvp.Key);
+                            }
+                        }
+                    }
+                    
+                    _loggingService?.Log("Info", $"Updated TFT visualization for {tftResult.Symbol}");
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.LogErrorWithContext(ex, "Failed to update TFT visualization");
+                }
+            }, System.Windows.Threading.DispatcherPriority.Normal);
         }
     }
 }

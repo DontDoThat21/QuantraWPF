@@ -51,6 +51,33 @@ namespace Quantra.Controls
         private Dictionary<string, double> indicators;
         // Confidence value (not duplicated in other files)
         private double confidence;
+        
+        // TFT Multi-Horizon Chart Properties
+        private LiveCharts.ChartValues<double> _historicalPrices = new LiveCharts.ChartValues<double>();
+        private LiveCharts.ChartValues<double> _predictedPrices = new LiveCharts.ChartValues<double>();
+        private LiveCharts.ChartValues<double> _upperBandPrices = new LiveCharts.ChartValues<double>();
+        private LiveCharts.ChartValues<double> _lowerBandPrices = new LiveCharts.ChartValues<double>();
+        private List<string> _dateLabels = new List<string>();
+        
+        // TFT Attention and Feature Importance Properties
+        private LiveCharts.ChartValues<double> _attentionWeights = new LiveCharts.ChartValues<double>();
+        private List<string> _attentionLabels = new List<string>();
+        private LiveCharts.ChartValues<double> _featureImportances = new LiveCharts.ChartValues<double>();
+        private List<string> _featureNames = new List<string>();
+        
+        // Public properties for data binding
+        public LiveCharts.ChartValues<double> HistoricalPrices => _historicalPrices;
+        public LiveCharts.ChartValues<double> PredictedPrices => _predictedPrices;
+        public LiveCharts.ChartValues<double> UpperBandPrices => _upperBandPrices;
+        public LiveCharts.ChartValues<double> LowerBandPrices => _lowerBandPrices;
+        public List<string> DateLabels => _dateLabels;
+        public LiveCharts.ChartValues<double> AttentionWeights => _attentionWeights;
+        public List<string> AttentionLabels => _attentionLabels;
+        public LiveCharts.ChartValues<double> FeatureImportances => _featureImportances;
+        public List<string> FeatureNames => _featureNames;
+        
+        // Price formatter for Y-axis
+        public Func<double, string> PriceFormatter => value => $"${value:F2}";
 
         // Parameterless constructor for XAML designer support
         public PredictionAnalysis()

@@ -35,13 +35,14 @@ def main():
         
         logger.info("Processing TFT prediction request")
         
-        # Extract data
-        symbol = request['symbol']
-        historical_sequence = request['historical_sequence']
-        calendar_features = request['calendar_features']
-        lookback_days = request.get('lookback_days', 60)
-        future_horizon = request.get('future_horizon', 30)
-        forecast_horizons = request.get('forecast_horizons', [5, 10, 20, 30])
+        # Extract data with case-insensitive key lookup
+        # C# serializes with camelCase but we need to handle both cases
+        symbol = request.get('symbol') or request.get('Symbol', 'UNKNOWN')
+        historical_sequence = request.get('historical_sequence') or request.get('HistoricalSequence') or request.get('historicalSequence', [])
+        calendar_features = request.get('calendar_features') or request.get('CalendarFeatures') or request.get('calendarFeatures', [])
+        lookback_days = request.get('lookback_days') or request.get('lookbackDays') or request.get('LookbackDays', 60)
+        future_horizon = request.get('future_horizon') or request.get('futureHorizon') or request.get('FutureHorizon', 30)
+        forecast_horizons = request.get('forecast_horizons') or request.get('forecastHorizons') or request.get('ForecastHorizons', [5, 10, 20, 30])
         
         logger.info(f"Symbol: {symbol}, Historical days: {len(historical_sequence)}, " +
                    f"Calendar features: {len(calendar_features)}, Lookback: {lookback_days}")

@@ -336,12 +336,27 @@ def train_model_from_database(
     y_train, y_test = y[:split_idx], y[split_idx:]
     X_future_train, X_future_test = X_future[:split_idx], X_future[split_idx:]
     
+    # Check the shape of y_train and reshape if needed
+    logger.info(f"Target shape before scaling: {y_train.shape}")
+    
+    # RobustScaler expects 2D array - reshape if 1D
+    if len(y_train.shape) == 1:
+        y_train = y_train.reshape(-1, 1)
+        y_test = y_test.reshape(-1, 1)
+        logger.info(f"Reshaped targets to 2D: {y_train.shape}")
+    
     # Fit target scaler on training targets only
     target_scaler.fit(y_train)
     
     # Transform targets
     y_train_scaled = target_scaler.transform(y_train)
     y_test_scaled = target_scaler.transform(y_test)
+    
+    # Flatten back to 1D if needed for model training (depends on model)
+    if y_train_scaled.shape[1] == 1:
+        y_train_scaled = y_train_scaled.ravel()
+        y_test_scaled = y_test_scaled.ravel()
+        logger.info(f"Flattened scaled targets back to 1D: {y_train_scaled.shape}")
     
     logger.info(f"Target statistics before scaling:")
     logger.info(f"  Train mean: {np.mean(y_train, axis=0)}")
@@ -441,7 +456,17 @@ def train_model_from_database(
                 y_pred_scaled = model.predict(X_test)
             
             # CRITICAL FIX: Inverse transform predictions back to original scale
+            # Reshape to 2D if needed for inverse transform
+            if len(y_pred_scaled.shape) == 1:
+                y_pred_scaled = y_pred_scaled.reshape(-1, 1)
             y_pred = target_scaler.inverse_transform(y_pred_scaled)
+            # Flatten back to original shape
+            if y_pred.shape[1] == 1:
+                y_pred = y_pred.ravel()
+            
+            # Also reshape y_test if needed for metrics calculation
+            if len(y_test.shape) == 2 and y_test.shape[1] == 1:
+                y_test = y_test.ravel()
         except ValueError as e:
             if "features" in str(e).lower():
                 logger.error(f"Feature dimension mismatch during evaluation: {e}")
