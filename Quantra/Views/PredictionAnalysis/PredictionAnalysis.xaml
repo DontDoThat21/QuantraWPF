@@ -402,6 +402,11 @@ MinWidth="400" MinHeight="300">
                               Style="{StaticResource EnhancedCheckBoxStyle}"/>
                     <CheckBox x:Name="StochRsiCheckBox" Content="Stoch RSI" Foreground="White" Margin="5,0" IsChecked="False"
                               Style="{StaticResource EnhancedCheckBoxStyle}"/>
+                    <!-- Feature Engineering Checkbox -->
+                    <CheckBox x:Name="FeatureEngineeringCheckBox" Content="⚡ Advanced Features" Foreground="Cyan" 
+                              Margin="20,0,5,0" IsChecked="True"
+                              Style="{StaticResource EnhancedCheckBoxStyle}"
+                              ToolTip="Enable advanced feature engineering pipeline (100+ technical features)"/>
                 </WrapPanel>
             </StackPanel>
 

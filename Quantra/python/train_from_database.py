@@ -430,10 +430,20 @@ def train_model_from_database(
         if hasattr(model, '__dict__'):
             model.target_scaler = target_scaler
     
-    # Set feature names
+    # Set feature names and save the model
     if hasattr(model, 'feature_names'):
         model.feature_names = feature_names
-        model.save()  # Re-save with feature names
+    
+    # CRITICAL: Always save the model after training, not just when feature_names exist
+    if hasattr(model, 'save'):
+        logger.info(f"Saving trained {used_model_type} model...")
+        save_success = model.save()
+        if save_success:
+            logger.info(f"Model saved successfully")
+        else:
+            logger.warning(f"Model save returned False - model may not have been saved properly")
+    else:
+        logger.warning(f"Model of type {used_model_type} does not have a save method")
     
     logger.info(f"Model training complete. Model type: {used_model_type}")
     

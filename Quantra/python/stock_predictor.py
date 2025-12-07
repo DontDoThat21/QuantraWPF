@@ -517,8 +517,60 @@ class PyTorchStockPredictor:
             logger.error(f"Error loading PyTorch model: {e}")
             return False
     
+    def _check_model_training_status(self):
+        """Check if the model appears to be trained by examining parameter values.
+        
+        Returns:
+            tuple: (is_trained, avg_param_value)
+        """
+        try:
+            total_params = sum(p.numel() for p in self.model.parameters())
+            if total_params == 0:
+                return False, 0.0
+            
+            trained_params = sum(p.abs().sum().item() for p in self.model.parameters())
+            avg_param_value = trained_params / total_params
+            
+            # If average parameter value is very close to initialization values, model is untrained
+            # Typical initialized weights have small random values around 0.01-0.1
+            is_trained = abs(avg_param_value) > 0.01
+            
+            return is_trained, avg_param_value
+        except Exception as e:
+            logger.warning(f"Error checking training status: {e}")
+            return False, 0.0
+    
+    def _validate_feature_importance(self, importance_dict):
+        """Validate that feature importance has meaningful variation.
+        
+        Args:
+            importance_dict (dict): Feature importance dictionary
+            
+        Returns:
+            tuple: (is_valid, validation_message)
+        """
+        values = list(importance_dict.values())
+        
+        if len(values) == 0:
+            return False, "No feature importance values"
+        
+        # Check if all values are identical (uniform distribution)
+        unique_values = len(set(values))
+        if unique_values == 1:
+            return False, f"All {len(values)} features have identical importance: {values[0]:.6f}. Model may be untrained or needs more training."
+        
+        # Check standard deviation
+        mean_val = np.mean(values)
+        std_val = np.std(values)
+        cv = std_val / mean_val if mean_val > 0 else 0  # Coefficient of variation
+        
+        if cv < 0.05:  # Less than 5% variation
+            return False, f"Feature importance too uniform (CV={cv:.4f}, std={std_val:.6f}). Model may need training or retraining."
+        
+        return True, f"Feature importance validated (CV={cv:.4f}, {unique_values} unique values out of {len(values)})"
+    
     def feature_importance(self, X):
-        """Calculate feature importance using permutation importance.
+        """Calculate feature importance with validation and training status check.
         
         Args:
             X (np.ndarray): Feature array with shape (n_samples, n_features)
@@ -526,8 +578,21 @@ class PyTorchStockPredictor:
         Returns:
             dict: Feature importance scores
         """
-        # This is a simple approximation as true feature importance is complex for neural networks
-        # We'll use a gradient-based approach to estimate feature sensitivity
+        # CRITICAL CHECK: Verify model has been trained
+        is_trained, avg_param = self._check_model_training_status()
+        
+        if not is_trained:
+            logger.warning(
+                f"Model appears untrained (avg param value: {avg_param:.6f}). "
+                "Feature importance will be unreliable. Please train the model first."
+            )
+            # Return uniform importance with a warning
+            n_features = X.shape[1] if len(X.shape) == 2 else X.shape[2]
+            uniform_importance = {f"feature_{i}": 1.0/n_features for i in range(n_features)}
+            return uniform_importance
+        
+        # Model is trained - proceed with gradient-based importance
+        logger.info(f"Model training status: OK (avg param: {avg_param:.6f})")
         
         # CRITICAL: Temporarily set model to training mode for gradient computation
         # This is necessary for feature importance calculation, but we'll restore eval mode after
@@ -551,7 +616,8 @@ class PyTorchStockPredictor:
             if X_tensor.grad is None:
                 # No gradients computed - return uniform importance
                 logger.warning("No gradients computed for feature importance. Returning uniform importance.")
-                importance = np.ones(X_scaled.shape[1]) / X_scaled.shape[1]
+                n_features = X_scaled.shape[1]
+                importance = np.ones(n_features) / n_features
             else:
                 gradients = X_tensor.grad.abs().mean(dim=(0, 1)).cpu().numpy()
                 
@@ -560,10 +626,27 @@ class PyTorchStockPredictor:
                 if grad_sum > 0:
                     importance = gradients / grad_sum
                 else:
+                    logger.warning("Zero gradient sum - returning uniform importance")
                     importance = np.ones_like(gradients) / len(gradients)
             
             # Map to feature names
-            return {name: float(imp) for name, imp in zip(self.feature_names, importance)}
+            importance_dict = {name: float(imp) for name, imp in zip(self.feature_names, importance)}
+            
+            # CRITICAL: Validate feature importance has variation
+            is_valid, validation_msg = self._validate_feature_importance(importance_dict)
+            
+            if not is_valid:
+                logger.warning(f"Feature importance validation failed: {validation_msg}")
+                # Still return the importance, but log the warning
+            else:
+                logger.info(f"Feature importance validation passed: {validation_msg}")
+            
+            # Log top features for debugging
+            if logger.isEnabledFor(logging.DEBUG):
+                sorted_features = sorted(importance_dict.items(), key=lambda x: x[1], reverse=True)[:5]
+                logger.debug(f"Top 5 features: {sorted_features}")
+            
+            return importance_dict
         finally:
             # CRITICAL: Restore the model's original state
             if not was_training:

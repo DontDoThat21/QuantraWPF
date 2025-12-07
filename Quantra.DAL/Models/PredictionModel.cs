@@ -406,8 +406,9 @@ namespace Quantra.Models
         /// Calls a Python script to predict stock direction using a GPU-accelerated model (e.g., random forest, PyTorch, etc.).
         /// </summary>
         /// <param name="features">Dictionary of feature names and values (e.g., technical indicators)</param>
+        /// <param name="useFeatureEngineering">Whether to use advanced feature engineering pipeline (default: true)</param>
         /// <returns>Comprehensive prediction result with time series data and risk metrics</returns>
-        public static async Task<PredictionResult> PredictAsync(Dictionary<string, double> features)
+        public static async Task<PredictionResult> PredictAsync(Dictionary<string, double> features, bool useFeatureEngineering = true)
         {
             string pythonScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "stock_predictor.py");
             try
@@ -504,7 +505,8 @@ namespace Quantra.Models
                     Features = features,
                     RequireTimeSeries = true,
                     RequirePatternDetection = true,
-                    RequireRiskMetrics = true
+                    RequireRiskMetrics = true,
+                    UseFeatureEngineering = useFeatureEngineering
                 };
 
                 var json = System.Text.Json.JsonSerializer.Serialize(requestData);
@@ -945,6 +947,7 @@ namespace Quantra.Models
             public bool RequireTimeSeries { get; set; }
             public bool RequirePatternDetection { get; set; }
             public bool RequireRiskMetrics { get; set; }
+            public bool UseFeatureEngineering { get; set; }
         }
 
         private class PythonPredictionResult

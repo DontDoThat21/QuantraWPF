@@ -401,9 +401,28 @@ namespace Quantra.Controls
                     }
                     else
                     {
-                        _loggingService?.Log("Warning", $"TFT prediction failed for {symbol}: {tftResult.ErrorMessage}");
+                        // More detailed error logging
+                        var errorMsg = tftResult.ErrorMessage ?? "Unknown error";
+                        var detailedError = $"TFT prediction failed for {symbol}. Success={tftResult.Success}, Prediction={tftResult.Prediction != null}, Error={errorMsg}";
+                        _loggingService?.Log("Warning", detailedError);
+                        
                         if (StatusText != null)
-                            StatusText.Text = $"TFT prediction failed: {tftResult.ErrorMessage}";
+                            StatusText.Text = $"TFT prediction failed: {errorMsg}";
+                        
+                        // Show MessageBox with detailed error for debugging
+                        MessageBox.Show(
+                            $"TFT Prediction Failed\n\n" +
+                            $"Symbol: {symbol}\n" +
+                            $"Success: {tftResult.Success}\n" +
+                            $"Prediction: {(tftResult.Prediction != null ? "Available" : "NULL")}\n" +
+                            $"Error: {errorMsg}\n\n" +
+                            $"Check that:\n" +
+                            $"1. TFT model file exists in python/models/ directory\n" +
+                            $"2. Python environment has required packages (torch, darts)\n" +
+                            $"3. Model was trained with correct architecture",
+                            "TFT Prediction Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
                     }
                 }
                 else
