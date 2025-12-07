@@ -292,13 +292,15 @@ namespace Quantra.Views.StockExplorer
             
             // Capture UI state on the UI thread before async operations
             bool autoAnalyzeEnabled = false;
-            await Dispatcher.InvokeAsync(() =>
+            try
             {
+                await Dispatcher.InvokeAsync(() =>
+                {
                 autoAnalyzeEnabled = AutoAnalyzeCheckBox.IsChecked == true;
-                StatusText.Text = $"Updating {_symbols.Count} symbols...";
-                StatusText.Foreground = System.Windows.Media.Brushes.Yellow;
-            });
-            
+                    StatusText.Text = $"Updating {_symbols.Count} symbols...";
+                    StatusText.Foreground = System.Windows.Media.Brushes.Yellow;
+                });
+
             try
             {
                 var newData = new List<StockAnalysisItem>();
