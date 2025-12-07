@@ -19,6 +19,8 @@
             <converters:PercentChangeColorConverter x:Key="PercentChangeColorConverter"/>
             <converters:PredictionActionColorConverter x:Key="PredictionActionColorConverter"/>
             <converters:PredictionConfidenceColorConverter x:Key="PredictionConfidenceColorConverter"/>
+            <converters:AttentionWeightToColorConverter x:Key="AttentionWeightToColorConverter"/>
+            <converters:AttentionWeightToOpacityConverter x:Key="AttentionWeightToOpacityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -230,14 +232,20 @@
                     </lvc:CartesianChart.AxisY>
                 </lvc:CartesianChart>
 
-                <TextBlock Grid.Row="4"
-                           Text="TFT Feature Attention"
-                           FontSize="12"
-                           FontWeight="Bold"
-                           Foreground="#888888"
-                           Margin="0,5,0,5"/>
+                <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,5,0,5">
+                    <TextBlock Text="TFT Feature Attention"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#888888"/>
+                    <TextBlock Text=" (darker = higher influence)"
+                               FontSize="10"
+                               FontStyle="Italic"
+                               Foreground="#666666"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"/>
+                </StackPanel>
 
-                <!-- Feature Attention Grid -->
+                <!-- Feature Attention Heatmap Grid -->
                 <DataGrid Grid.Row="5"
                           x:Name="FeatureAttentionGrid"
                           ItemsSource="{Binding FeatureAttentionData}"
@@ -253,7 +261,8 @@
                           RowBackground="#2D2D42"
                           AlternatingRowBackground="#262638"
                           BorderThickness="0"
-                          MaxHeight="150">
+                          MaxHeight="150"
+                          ToolTipService.ShowDuration="10000">
 
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
@@ -274,9 +283,60 @@
                     </DataGrid.CellStyle>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Feature" Binding="{Binding FeatureName}" Width="*"/>
-                        <DataGridTextColumn Header="Attention Weight" Binding="{Binding AttentionWeight, StringFormat={}{0:F4}}" Width="120"/>
-                        <DataGridTextColumn Header="Importance %" Binding="{Binding ImportancePercent, StringFormat={}{0:F2}%}" Width="100"/>
+                        <DataGridTextColumn Header="Feature" Binding="{Binding FeatureName}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTemplateColumn Header="Attention Weight" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding AttentionWeight, Converter={StaticResource AttentionWeightToColorConverter}}"
+                                            CornerRadius="3"
+                                            Padding="5,2"
+                                            Margin="2">
+                                        <TextBlock Text="{Binding AttentionWeight, StringFormat={}{0:F4}}"
+                                                   HorizontalAlignment="Center"
+                                                   FontWeight="Bold"
+                                                   Foreground="Black"/>
+                                        <Border.ToolTip>
+                                            <TextBlock>
+                                                <Run Text="Attention Weight: "/>
+                                                <Run Text="{Binding AttentionWeight, StringFormat={}{0:F4}}" FontWeight="Bold"/>
+                                                <LineBreak/>
+                                                <Run Text="This feature has "/>
+                                                <Run Text="{Binding ImportancePercent, StringFormat={}{0:F2}%}" FontWeight="Bold"/>
+                                                <Run Text=" importance in the prediction"/>
+                                            </TextBlock>
+                                        </Border.ToolTip>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="Importance %" Width="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <ProgressBar Value="{Binding ImportancePercent}"
+                                                     Maximum="100"
+                                                     Height="18"
+                                                     Background="#1A1A2E"
+                                                     Foreground="{Binding AttentionWeight, Converter={StaticResource AttentionWeightToColorConverter}}"
+                                                     BorderThickness="0"/>
+                                        <TextBlock Text="{Binding ImportancePercent, StringFormat={}{0:F1}%}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="Bold"
+                                                   Foreground="White"
+                                                   FontSize="10"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>

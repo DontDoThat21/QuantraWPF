@@ -592,9 +592,10 @@ namespace Quantra.Views.StockExplorer
                 }
 
                 // Add the last historical close price as the starting point for predictions
-                predictionValues.Add(historicalData.Last().Close);
-                upperBandValues.Add(historicalData.Last().Close);
-                lowerBandValues.Add(historicalData.Last().Close);
+                double lastClose = historicalData.Last().Close;
+                predictionValues.Add(lastClose);
+                upperBandValues.Add(lastClose);
+                lowerBandValues.Add(lastClose);
 
                 // Add prediction points
                 foreach (var pred in tftPredictions.Predictions)
@@ -610,42 +611,81 @@ namespace Quantra.Views.StockExplorer
                     minPrice = Math.Min(minPrice, pred.LowerConfidence);
                 }
 
-                // Add prediction line
+                // Add shaded uncertainty region (lower bound baseline)
+                CandlestickSeries.Add(new StackedAreaSeries
+                {
+                    Title = "",
+                    Values = lowerBandValues,
+                    Fill = System.Windows.Media.Brushes.Transparent,
+                    Stroke = System.Windows.Media.Brushes.Transparent,
+                    StrokeThickness = 0,
+                    PointGeometry = null,
+                    LineSmoothness = 0.3
+                });
+
+                // Calculate bandwidth for stacked area
+                var bandWidth = new ChartValues<double>();
+                for (int i = 0; i < upperBandValues.Count; i++)
+                {
+                    if (!double.IsNaN(upperBandValues[i]) && !double.IsNaN(lowerBandValues[i]))
+                    {
+                        bandWidth.Add(upperBandValues[i] - lowerBandValues[i]);
+                    }
+                    else
+                    {
+                        bandWidth.Add(double.NaN);
+                    }
+                }
+
+                // Add shaded uncertainty band (fills the gap between lower and upper)
+                CandlestickSeries.Add(new StackedAreaSeries
+                {
+                    Title = "Uncertainty Band",
+                    Values = bandWidth,
+                    Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 255, 255, 0)),
+                    Stroke = System.Windows.Media.Brushes.Transparent,
+                    StrokeThickness = 0,
+                    PointGeometry = null,
+                    LineSmoothness = 0.3
+                });
+
+                // Add TFT forecast center line
                 CandlestickSeries.Add(new LineSeries
                 {
-                    Title = "TFT Prediction",
+                    Title = "TFT Forecast",
                     Values = predictionValues,
                     Stroke = System.Windows.Media.Brushes.Yellow,
                     Fill = System.Windows.Media.Brushes.Transparent,
-                    StrokeThickness = 2,
-                    StrokeDashArray = new System.Windows.Media.DoubleCollection { 4, 2 },
+                    StrokeThickness = 3,
+                    StrokeDashArray = new System.Windows.Media.DoubleCollection { 6, 3 },
                     PointGeometry = DefaultGeometries.Circle,
-                    PointGeometrySize = 8
+                    PointGeometrySize = 10
                 });
 
-                // Add confidence bands
+                // Add upper bound line
                 CandlestickSeries.Add(new LineSeries
                 {
-                    Title = "Upper Confidence",
+                    Title = "Upper Bound",
                     Values = upperBandValues,
-                    Stroke = System.Windows.Media.Brushes.Yellow,
+                    Stroke = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 0)),
                     Fill = System.Windows.Media.Brushes.Transparent,
                     StrokeThickness = 1,
                     StrokeDashArray = new System.Windows.Media.DoubleCollection { 2, 2 },
                     PointGeometry = null,
-                    Opacity = 0.5
+                    LineSmoothness = 0.3
                 });
 
+                // Add lower bound line
                 CandlestickSeries.Add(new LineSeries
                 {
-                    Title = "Lower Confidence",
+                    Title = "Lower Bound",
                     Values = lowerBandValues,
-                    Stroke = System.Windows.Media.Brushes.Yellow,
+                    Stroke = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 0)),
                     Fill = System.Windows.Media.Brushes.Transparent,
                     StrokeThickness = 1,
                     StrokeDashArray = new System.Windows.Media.DoubleCollection { 2, 2 },
                     PointGeometry = null,
-                    Opacity = 0.5
+                    LineSmoothness = 0.3
                 });
             }
 
