@@ -976,14 +976,14 @@ namespace Quantra.DAL.Services
                     {
                         using var testProcess = Process.Start(new ProcessStartInfo
                         {
-                            FileName = "python3",
+                            FileName = "python",
                             Arguments = "--version",
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             CreateNoWindow = true
                         });
                         testProcess?.WaitForExit(1000);
-                        psi.FileName = "python3";
+                        psi.FileName = "python";
                     }
                     catch { /* Use python */ }
 

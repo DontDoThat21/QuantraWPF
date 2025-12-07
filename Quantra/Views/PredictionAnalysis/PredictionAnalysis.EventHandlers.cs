@@ -438,6 +438,9 @@ namespace Quantra.Controls
 
                 if (LastUpdatedText != null)
                     LastUpdatedText.Text = $"Last updated: {DateTime.Now:MM/dd/yyyy HH:mm}";
+                
+                // Update the candlestick chart with OHLCV data and predictions
+                await UpdateChartWithPredictionsAsync(symbol);
             }
             catch (Exception ex)
             {

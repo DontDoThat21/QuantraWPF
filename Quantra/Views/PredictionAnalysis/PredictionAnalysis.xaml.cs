@@ -210,6 +210,10 @@ namespace Quantra.Controls
                 }
 
                 await RefreshAnalysis();
+                
+                // Refresh the candlestick chart for the current symbol
+                await RefreshChartForCurrentSymbol();
+                
                 _notificationService.ShowInfo("Analysis refreshed successfully");
             }
             catch (Exception ex)
@@ -339,6 +343,10 @@ namespace Quantra.Controls
                 indicators = new Dictionary<string, double>();
                 // Set default values as needed
                 confidence = 0.7; // Default confidence value
+                
+                // Initialize candlestick chart
+                InitializeCandlestickChart();
+                
                 // Initialize other components as needed
                 // ...
             }
