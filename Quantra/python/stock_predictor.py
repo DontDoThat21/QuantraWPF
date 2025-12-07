@@ -52,9 +52,14 @@ try:
     )
     FEATURE_ENGINEERING_AVAILABLE = True
     logger.info("Feature Engineering module is available")
-except ImportError:
+except ImportError as e:
     FEATURE_ENGINEERING_AVAILABLE = False
-    logger.warning("Feature Engineering module is not available. Using basic feature creation.")
+    logger.warning(f"Feature Engineering module is not available: {e}")
+    logger.warning("Using basic feature creation. Install missing dependencies with: pip install -r requirements.txt")
+except Exception as e:
+    FEATURE_ENGINEERING_AVAILABLE = False
+    logger.error(f"Error importing feature engineering module: {e}")
+    logger.warning("Using basic feature creation.")
 
 # Try to import hyperparameter optimization module
 try:
@@ -138,14 +143,22 @@ def create_features(data, feature_type='balanced', use_feature_engineering=True)
                 return features_df
             else:
                 # Create new pipeline
+                logger.info(f"Creating new {feature_type} feature engineering pipeline...")
                 pipeline = build_default_pipeline(feature_type=feature_type)
                 features_df = pipeline.fit_transform(df)
                 # Save pipeline for future use
-                pipeline.save(FEATURE_PIPELINE_PATH)
+                try:
+                    pipeline.save(FEATURE_PIPELINE_PATH)
+                    logger.info(f"Saved feature engineering pipeline with {len(features_df.columns)} features")
+                except Exception as save_error:
+                    logger.warning(f"Could not save feature pipeline: {save_error}")
                 logger.info(f"Created new feature engineering pipeline with {len(features_df.columns)} features")
                 return features_df
         except Exception as e:
-            logger.warning(f"Error using feature engineering pipeline: {str(e)}. Falling back to basic features.")
+            logger.error(f"Error using feature engineering pipeline: {str(e)}")
+            logger.warning("Falling back to basic features.")
+            import traceback
+            logger.debug(traceback.format_exc())
     
     # Fallback: Basic feature creation
     logger.info("Using basic feature creation")
