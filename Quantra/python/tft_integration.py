@@ -413,11 +413,42 @@ class TFTStockPredictor:
                     df['rsi'] = 50.0  # Placeholder
                 
                 # 3. Prepare temporal features (past 60 days)
-                # CRITICAL FIX: Use the same feature selection as training
-                # During training, prepare_data_for_ml drops only OHLCV + date columns
-                # So we must do the same here to match the feature dimensions
-                columns_to_drop = ['date', 'open', 'high', 'low', 'close', 'volume']
-                feature_cols = [col for col in df.columns if col not in columns_to_drop]
+                # CRITICAL FIX: Use the EXACT same feature selection logic as training
+                # During training, prepare_data_for_ml uses: features_df.drop([...], axis=1, errors='ignore')
+                # We must replicate this EXACTLY to ensure consistent feature dimensions
+                
+                # First log what columns we have BEFORE dropping
+                logger.info(f"Columns BEFORE drop (total={len(df.columns)}): {list(df.columns)}")
+                
+                df = df.drop(['date', 'open', 'high', 'low', 'close', 'volume'], axis=1, errors='ignore')
+                feature_cols = list(df.columns)
+                
+                # Log what columns we have AFTER dropping
+                logger.info(f"Columns AFTER drop (total={len(feature_cols)}): {feature_cols}")
+                
+                # CRITICAL: Check if we need to match the scaler's expected number of features
+                if self.scaler is not None and hasattr(self.scaler, 'n_features_in_'):
+                    expected_features = self.scaler.n_features_in_
+                    logger.info(f"Scaler expects {expected_features} features, we have {len(feature_cols)} features")
+                    
+                    if len(feature_cols) != expected_features:
+                        logger.error(f"FEATURE MISMATCH: Model expects {expected_features} features but got {len(feature_cols)}")
+                        logger.error(f"Available features: {feature_cols}")
+                        
+                        # Try to fix by adding missing features or using saved feature names
+                        if hasattr(self, 'feature_names') and self.feature_names:
+                            logger.info(f"Attempting to align features using saved feature_names: {self.feature_names}")
+                            # Create a DataFrame with all expected features, filling missing ones with 0
+                            aligned_df = pd.DataFrame(0.0, index=df.index, columns=self.feature_names)
+                            # Fill in the features we do have
+                            for col in feature_cols:
+                                if col in aligned_df.columns:
+                                    aligned_df[col] = df[col]
+                                else:
+                                    logger.warning(f"Feature '{col}' in prediction data but not in model's expected features")
+                            df = aligned_df
+                            feature_cols = list(df.columns)
+                            logger.info(f"Aligned features (total={len(feature_cols)}): {feature_cols}")
                 
                 if not feature_cols:
                     logger.warning("No feature columns found after dropping OHLCV. Using fallback basic features.")
@@ -426,13 +457,12 @@ class TFTStockPredictor:
                                    'roc', 'atr', 'bb_width', 'rsi']
                     feature_cols = [col for col in feature_cols if col in df.columns]
                 
-                # Log feature information
-                if len(feature_cols) > 5:
-                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols[:5]}... (showing first 5)")
-                else:
-                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols}")
+                # Final logging
+                logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols}")
                 temporal_features = df[feature_cols].values  # Shape: (n_days, n_features)
+                logger.info(f"Temporal features shape: {temporal_features.shape}")
                 X_past = prepare_temporal_features(temporal_features, lookback=lookback)
+                logger.info(f"X_past shape after prepare_temporal_features: {X_past.shape}")
                 
                 # Get current price from last historical entry
                 current_price = historical_sequence[-1].get('close', 0.0)
