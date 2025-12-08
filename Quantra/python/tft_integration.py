@@ -426,7 +426,11 @@ class TFTStockPredictor:
                                    'roc', 'atr', 'bb_width', 'rsi']
                     feature_cols = [col for col in feature_cols if col in df.columns]
                 
-                logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols[:5]}... (showing first 5)")
+                # Log feature information
+                if len(feature_cols) > 5:
+                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols[:5]}... (showing first 5)")
+                else:
+                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols}")
                 temporal_features = df[feature_cols].values  # Shape: (n_days, n_features)
                 X_past = prepare_temporal_features(temporal_features, lookback=lookback)
                 
