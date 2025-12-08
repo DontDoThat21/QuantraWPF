@@ -405,17 +405,67 @@ def train_model_from_database(
     
     if is_tft:
         # For TFT, we need to pass future features
-        # This requires modifications to load_or_train_model or direct TFT initialization
-        logger.info("TFT training requires future-known covariates - using enhanced training pipeline")
-        # TODO: Implement direct TFT training with X_future_train
-        # For now, log a warning and fall back
-        logger.warning("Direct TFT training from database not yet implemented. Train via stock_predictor.py with prepared data.")
-        model, scaler, used_model_type = load_or_train_model(
-            X_train=X_train,
-            y_train=y_train,
-            model_type='pytorch',  # Fallback to PyTorch
-            architecture_type='transformer'
+        logger.info("TFT training with future-known covariates...")
+        
+        # Import TFT components
+        from tft_integration import TFTStockPredictor, create_static_features, DEFAULT_STATIC_DIM, DEFAULT_LOOKBACK
+        
+        # Determine input dimensions
+        if len(X_train.shape) == 3:
+            input_dim = X_train.shape[2]
+            seq_len = X_train.shape[1]
+        else:
+            input_dim = X_train.shape[1]
+            seq_len = hyperparameters.get('lookback_period', DEFAULT_LOOKBACK)
+            # Reshape 2D data to 3D for TFT
+            X_train = X_train.reshape(-1, 1, input_dim)
+            X_train = np.tile(X_train, (1, seq_len, 1))
+            X_test = X_test.reshape(-1, 1, input_dim)
+            X_test = np.tile(X_test, (1, seq_len, 1))
+        
+        # Create TFT model properly with hyperparameters
+        static_dim = DEFAULT_STATIC_DIM
+        model = TFTStockPredictor(
+            input_dim=input_dim,
+            static_dim=static_dim,
+            hidden_dim=hidden_dim,
+            forecast_horizons=[5, 10, 20, 30],
+            num_heads=num_heads,
+            num_lstm_layers=num_layers,
+            dropout=dropout,
+            num_attention_layers=num_attention_layers
         )
+        
+        # Create static features (use zeros for now, can be enhanced with real metadata)
+        n_samples_train = X_train.shape[0]
+        n_samples_test = X_test.shape[0]
+        static_features_train = np.zeros((n_samples_train, static_dim), dtype=np.float32)
+        static_features_test = np.zeros((n_samples_test, static_dim), dtype=np.float32)
+        
+        logger.info("Static features created - using defaults (enhance with real metadata in production)")
+        
+        # Prepare targets for multi-horizon
+        if y_train_scaled.ndim == 1:
+            y_train_scaled = np.column_stack([y_train_scaled] * len(model.forecast_horizons))
+        if y_test_scaled.ndim == 1:
+            y_test_scaled = np.column_stack([y_test_scaled] * len(model.forecast_horizons))
+        
+        # CRITICAL: Pass X_future_train to fit()
+        logger.info(f"Training TFT with future features: {X_future_train.shape}")
+        model.fit(
+            X_past=X_train,
+            X_static=static_features_train,
+            y=y_train_scaled,
+            future_features=X_future_train,  # ← THIS IS NOW PASSED!
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=learning_rate
+        )
+        
+        # Set feature names and model type
+        model.feature_names = feature_names
+        used_model_type = 'tft'
+        scaler = model.scaler
     else:
         # Standard training for LSTM/GRU/Transformer/RandomForest
         # CRITICAL FIX: Use scaled targets for training
@@ -609,9 +659,10 @@ def main():
         number_of_trees = config.get('numberOfTrees', 100)
         max_depth = config.get('maxDepth', 10)
         
-        # Feature Engineering (FIX: extract from config)
+        # Feature Engineering
         feature_type = config.get('featureType', 'balanced')
         use_feature_engineering = config.get('useFeatureEngineering', True)
+        lookback_period = config.get('lookbackPeriod', 60)
 
         logger.info(f"Training configuration:")
         logger.info(f"  Model: {model_type}, Architecture: {architecture_type}")
@@ -641,6 +692,7 @@ def main():
         max_depth = 10
         feature_type = 'balanced'
         use_feature_engineering = True
+        lookback_period = 60
 
     try:
         logger.info("=" * 60)
@@ -662,8 +714,9 @@ def main():
             'use_lr_scheduler': use_lr_scheduler,
             'number_of_trees': number_of_trees,
             'max_depth': max_depth,
-            'feature_type': feature_type,  # FIX: Add to hyperparameters
-            'use_feature_engineering': use_feature_engineering  # FIX: Add to hyperparameters
+            'feature_type': feature_type,
+            'use_feature_engineering': use_feature_engineering,
+            'lookback_period': lookback_period
         }
 
         # Train the model with hyperparameters

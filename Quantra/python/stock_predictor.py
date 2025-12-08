@@ -1436,6 +1436,11 @@ def load_or_train_model(X_train=None, y_train=None, model_type='auto', architect
             logger.warning(f"Error creating static features: {e}, using zeros")
             X_static = np.zeros((n_samples, 10), dtype=np.float32)
         
+        # NOTE: This training path doesn't include future features
+        # For full TFT training with future features, use train_from_database.py
+        # which properly prepares and passes X_future_train to the fit() method
+        logger.info("Training TFT without future features (use train_from_database.py for full TFT with future features)")
+        
         # Prepare multi-horizon targets if single target provided
         if y_train is not None:
             if y_train.ndim == 1:

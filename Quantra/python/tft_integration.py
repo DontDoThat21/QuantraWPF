@@ -21,6 +21,10 @@ import joblib
 
 logger = logging.getLogger('tft_integration')
 
+# Constants
+DEFAULT_STATIC_DIM = 10  # Default number of static features (sector, market cap, etc.)
+DEFAULT_LOOKBACK = 60  # Default lookback sequence length
+
 # Model paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, 'models')
@@ -53,7 +57,7 @@ class TFTStockPredictor:
     CRITICAL FIX: Now properly handles real historical sequences in predict_single()
     """
     
-    def __init__(self, input_dim=50, static_dim=10, hidden_dim=128, 
+    def __init__(self, input_dim=50, static_dim=DEFAULT_STATIC_DIM, hidden_dim=128, 
                  forecast_horizons=None, num_heads=4, num_lstm_layers=2,
                  dropout=0.1, num_attention_layers=2):
         """
@@ -102,6 +106,7 @@ class TFTStockPredictor:
         logger.info(f"Initialized TFTStockPredictor on {self.device}")
         
     def fit(self, X_past: np.ndarray, X_static: np.ndarray, y: np.ndarray,
+            future_features: Optional[np.ndarray] = None,
             epochs: int = 50, batch_size: int = 32, lr: float = 0.001,
             verbose: bool = True) -> Dict[str, List[float]]:
         """
@@ -111,6 +116,7 @@ class TFTStockPredictor:
             X_past: (n_samples, seq_len, features) - Historical temporal features
             X_static: (n_samples, static_features) - Static features
             y: (n_samples, num_horizons) or (n_samples,) - Target values
+            future_features: (n_samples, forecast_horizon, future_features) - Known future features (optional)
             epochs: Number of training epochs
             batch_size: Training batch size
             lr: Learning rate
@@ -133,6 +139,23 @@ class TFTStockPredictor:
         # Scale static features
         X_static_scaled = self.static_scaler.fit_transform(X_static)
         
+        # Handle future features if provided
+        has_future = future_features is not None and future_features.size > 0
+        if has_future:
+            # Initialize future scaler
+            self.future_scaler = StandardScaler()
+            
+            # Scale future features
+            n_samples_future, future_seq_len, n_future_features = future_features.shape
+            future_reshaped = future_features.reshape(-1, n_future_features)
+            future_scaled = self.future_scaler.fit_transform(future_reshaped)
+            future_scaled = future_scaled.reshape(n_samples_future, future_seq_len, n_future_features)
+            logger.info(f"Scaled future features: {future_scaled.shape}")
+        else:
+            future_scaled = None
+            self.future_scaler = None  # Ensure consistency
+            logger.info("No future features provided for training")
+        
         # Ensure targets have correct shape
         if y.ndim == 1:
             y = np.column_stack([y] * len(self.forecast_horizons))
@@ -148,8 +171,12 @@ class TFTStockPredictor:
         # transformed by StandardScaler for improved training stability and convergence
         targets_tensor = torch.FloatTensor(y_scaled)
         
-        # Create DataLoader
-        dataset = TensorDataset(past_tensor, static_tensor, targets_tensor)
+        # Create DataLoader with or without future features
+        if has_future:
+            future_tensor = torch.FloatTensor(future_scaled)
+            dataset = TensorDataset(past_tensor, static_tensor, future_tensor, targets_tensor)
+        else:
+            dataset = TensorDataset(past_tensor, static_tensor, targets_tensor)
         
         train_size = int(0.8 * len(dataset))
         val_size = len(dataset) - train_size
@@ -162,16 +189,26 @@ class TFTStockPredictor:
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
         
         # Generator function to yield dict batches
-        def dict_batch_generator(loader):
-            for past, static, targets in loader:
-                yield {
-                    'past_features': past,
-                    'static_features': static,
-                    'targets': targets
-                }
+        def dict_batch_generator(loader, include_future=False):
+            for batch_data in loader:
+                if include_future:
+                    past, static, future, targets = batch_data
+                    yield {
+                        'past_features': past,
+                        'static_features': static,
+                        'future_features': future,
+                        'targets': targets
+                    }
+                else:
+                    past, static, targets = batch_data
+                    yield {
+                        'past_features': past,
+                        'static_features': static,
+                        'targets': targets
+                    }
         
-        train_loader_dict = list(dict_batch_generator(train_loader))
-        val_loader_dict = list(dict_batch_generator(val_loader))
+        train_loader_dict = list(dict_batch_generator(train_loader, include_future=has_future))
+        val_loader_dict = list(dict_batch_generator(val_loader, include_future=has_future))
         
         # Train model
         history = train_tft_model(
@@ -449,11 +486,13 @@ class TFTStockPredictor:
                 'is_trained': self.is_trained
             }, model_path)
             
-            joblib.dump({
+            scalers_dict = {
                 'scaler': self.scaler,
                 'static_scaler': self.static_scaler,
-                'target_scaler': self.target_scaler  # NEW: Save target scaler
-            }, scaler_path)
+                'target_scaler': self.target_scaler,
+                'future_scaler': self.future_scaler if hasattr(self, 'future_scaler') else None
+            }
+            joblib.dump(scalers_dict, scaler_path)
             
             logger.info(f"TFT model saved to {model_path}")
             return True
@@ -502,7 +541,7 @@ class TFTStockPredictor:
             scalers = joblib.load(scaler_path)
             self.scaler = scalers['scaler']
             self.static_scaler = scalers['static_scaler']
-            # NEW: Load target scaler with fallback to identity transformation for old models
+            # Load target scaler with fallback to identity transformation for old models
             if 'target_scaler' in scalers:
                 self.target_scaler = scalers['target_scaler']
             else:
@@ -515,6 +554,12 @@ class TFTStockPredictor:
                 identity_scaler.n_features_in_ = 1
                 self.target_scaler = identity_scaler
             
+            # Load future scaler if exists
+            if 'future_scaler' in scalers and scalers['future_scaler'] is not None:
+                self.future_scaler = scalers['future_scaler']
+            else:
+                self.future_scaler = None
+            
             logger.info(f"TFT model loaded from {model_path}")
             return True
             
@@ -524,7 +569,7 @@ class TFTStockPredictor:
 
 
 def create_static_features(symbol_info: Optional[Dict[str, Any]] = None,
-                          static_dim: int = 10) -> np.ndarray:
+                          static_dim: int = DEFAULT_STATIC_DIM) -> np.ndarray:
     """
     Create static feature vector from symbol information.
     
@@ -574,7 +619,7 @@ def create_static_features(symbol_info: Optional[Dict[str, Any]] = None,
 
 
 def prepare_temporal_features(historical_data: np.ndarray,
-                             lookback: int = 60) -> np.ndarray:
+                             lookback: int = DEFAULT_LOOKBACK) -> np.ndarray:
     """
     Prepare temporal features from historical data.
     

@@ -556,14 +556,18 @@ def train_tft_model(model: TemporalFusionTransformer,
                 past_features = batch['past_features'].to(device)
                 static_features = batch['static_features'].to(device)
                 targets = batch['targets'].to(device)
+                future_features = batch.get('future_features', None)
+                if future_features is not None:
+                    future_features = future_features.to(device)
             else:
                 past_features, static_features, targets = batch
                 past_features = past_features.to(device)
                 static_features = static_features.to(device)
                 targets = targets.to(device)
+                future_features = None
             
             optimizer.zero_grad()
-            outputs = model(past_features, static_features)
+            outputs = model(past_features, static_features, future_features)
             
             # Calculate loss for each horizon
             total_loss = 0
@@ -598,13 +602,17 @@ def train_tft_model(model: TemporalFusionTransformer,
                     past_features = batch['past_features'].to(device)
                     static_features = batch['static_features'].to(device)
                     targets = batch['targets'].to(device)
+                    future_features = batch.get('future_features', None)
+                    if future_features is not None:
+                        future_features = future_features.to(device)
                 else:
                     past_features, static_features, targets = batch
                     past_features = past_features.to(device)
                     static_features = static_features.to(device)
                     targets = targets.to(device)
+                    future_features = None
                 
-                outputs = model(past_features, static_features)
+                outputs = model(past_features, static_features, future_features)
                 
                 total_loss = 0
                 for horizon_idx, horizon in enumerate(model.forecast_horizons):

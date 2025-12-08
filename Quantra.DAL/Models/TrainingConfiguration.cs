@@ -108,18 +108,17 @@ namespace Quantra.DAL.Models
 
         /// <summary>
         /// Create a high-accuracy configuration for production
-        /// NOTE: Changed from TFT to Transformer because TFT is not yet implemented in train_from_database.py
-        /// TFT training requires X_future_train (known future covariates) which is prepared but not yet integrated
-        /// Use this configuration to fix R² score issues first, then implement TFT properly
+        /// Uses Transformer architecture for proven high accuracy
+        /// For TFT with future features, use CreateTFTOptimized() instead
         /// </summary>
         public static TrainingConfiguration CreateHighAccuracy()
         {
             return new TrainingConfiguration
             {
                 ConfigurationName = "High Accuracy",
-                Description = "Maximum accuracy configuration for production deployment (using Transformer until TFT is implemented)",
+                Description = "Maximum accuracy configuration for production deployment using Transformer",
                 ModelType = "pytorch",
-                ArchitectureType = "transformer", // Changed from "tft" - see TODO in train_from_database.py line 715
+                ArchitectureType = "transformer",
                 Epochs = 100,
                 BatchSize = 64, // Increased from 32 for better convergence
                 LearningRate = 0.001, // Increased from 0.0005 for faster initial learning
@@ -137,18 +136,17 @@ namespace Quantra.DAL.Models
 
         /// <summary>
         /// Create a TFT-optimized configuration
-        /// WARNING: TFT is not yet fully implemented in train_from_database.py
-        /// This will fall back to Transformer until TFT integration is complete
-        /// See TODO at train_from_database.py line 715: "Implement direct TFT training with X_future_train"
+        /// TFT (Temporal Fusion Transformer) now fully implemented with future features support
+        /// Trains with known-future covariates (calendar features) for multi-horizon forecasting
         /// </summary>
         public static TrainingConfiguration CreateTFTOptimized()
         {
             return new TrainingConfiguration
             {
                 ConfigurationName = "TFT Optimized",
-                Description = "Optimized for Temporal Fusion Transformer (EXPERIMENTAL - falls back to Transformer)",
+                Description = "Optimized for Temporal Fusion Transformer with future features",
                 ModelType = "pytorch",
-                ArchitectureType = "tft", // Will fall back to transformer in train_from_database.py
+                ArchitectureType = "tft",
                 Epochs = 50,
                 BatchSize = 64,
                 LearningRate = 0.001,
@@ -164,7 +162,7 @@ namespace Quantra.DAL.Models
         }
 
         /// <summary>
-        /// Create configuration specifically to fix low R² score issues
+        /// Create configuration specifically to fix low Rï¿½ score issues
         /// Uses proven Transformer architecture with optimized hyperparameters
         /// Includes target scaling fix from train_from_database.py (RobustScaler)
         /// </summary>
@@ -172,8 +170,8 @@ namespace Quantra.DAL.Models
         {
             return new TrainingConfiguration
             {
-                ConfigurationName = "R² Score Fix",
-                Description = "Optimized configuration to fix R² score ~0 issues with target scaling and Transformer",
+                ConfigurationName = "Rï¿½ Score Fix",
+                Description = "Optimized configuration to fix Rï¿½ score ~0 issues with target scaling and Transformer",
                 ModelType = "pytorch",
                 ArchitectureType = "transformer", // Known working architecture
                 Epochs = 100, // Sufficient for convergence
