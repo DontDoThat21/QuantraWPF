@@ -30,6 +30,16 @@ namespace Quantra.DAL.Services
         {
             try
             {
+                // Serialize feature names to JSON if available
+                string featuresUsedJson = null;
+                int featureCount = 0;
+                if (trainingResult.FeatureNames != null && trainingResult.FeatureNames.Count > 0)
+                {
+                    featuresUsedJson = System.Text.Json.JsonSerializer.Serialize(trainingResult.FeatureNames);
+                    featureCount = trainingResult.FeatureNames.Count;
+                    _loggingService?.Log("Info", $"Storing {featureCount} feature names to database");
+                }
+                
                 var history = new ModelTrainingHistory
                 {
                     TrainingDate = DateTime.Now,
@@ -43,15 +53,31 @@ namespace Quantra.DAL.Services
                     RMSE = trainingResult.Performance?.Rmse ?? 0,
                     R2Score = trainingResult.Performance?.R2Score ?? 0,
                     Notes = notes,
-                    IsActive = true // Mark this model as currently active
+                    IsActive = true, // Mark this model as currently active
+                    FeaturesUsed = featuresUsedJson,
+                    FeatureCount = featureCount > 0 ? featureCount : (int?)null
                 };
 
                 // Deactivate previous models of the same type
-                var previousModels = await _context.ModelTrainingHistory
+                // Use AsNoTracking to avoid NULL value exceptions, then re-attach for update
+                var previousModelIds = await _context.ModelTrainingHistory
+                    .AsNoTracking()
                     .Where(m => m.ModelType == trainingResult.ModelType && 
                                m.ArchitectureType == trainingResult.ArchitectureType &&
                                m.IsActive)
+                    .Select(m => new { m.Id, m.ModelType, m.ArchitectureType })
                     .ToListAsync();
+                
+                // Load only the entities we need to update (by ID)
+                var previousModels = new List<ModelTrainingHistory>();
+                foreach (var modelInfo in previousModelIds)
+                {
+                    var model = await _context.ModelTrainingHistory.FindAsync(modelInfo.Id);
+                    if (model != null)
+                    {
+                        previousModels.Add(model);
+                    }
+                }
 
                 foreach (var prev in previousModels)
                 {
@@ -537,6 +563,55 @@ namespace Quantra.DAL.Services
             {
                 _loggingService?.LogErrorWithContext(ex, "Error checking if any trained model is available");
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the list of features used by a specific training session
+        /// </summary>
+        /// <param name="trainingHistoryId">Training history ID</param>
+        /// <returns>List of feature names, or empty list if not available</returns>
+        public async Task<List<string>> GetFeatureNamesAsync(int trainingHistoryId)
+        {
+            try
+            {
+                var history = await _context.ModelTrainingHistory.FindAsync(trainingHistoryId);
+                
+                if (history == null || string.IsNullOrWhiteSpace(history.FeaturesUsed))
+                    return new List<string>();
+
+                // Deserialize JSON array of feature names
+                var featureNames = System.Text.Json.JsonSerializer.Deserialize<List<string>>(history.FeaturesUsed);
+                return featureNames ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, $"Error getting feature names for training {trainingHistoryId}");
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Gets the list of features used by the currently active model
+        /// </summary>
+        /// <param name="modelType">Model type (e.g., "pytorch", "tensorflow")</param>
+        /// <param name="architectureType">Architecture type (e.g., "lstm", "transformer", "tft")</param>
+        /// <returns>List of feature names, or empty list if not available</returns>
+        public async Task<List<string>> GetActiveModelFeatureNamesAsync(string modelType, string architectureType)
+        {
+            try
+            {
+                var activeModel = await GetActiveModelAsync(modelType, architectureType);
+                
+                if (activeModel == null)
+                    return new List<string>();
+
+                return await GetFeatureNamesAsync(activeModel.Id);
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error getting active model feature names");
+                return new List<string>();
             }
         }
     }

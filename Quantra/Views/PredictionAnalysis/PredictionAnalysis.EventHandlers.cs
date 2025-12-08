@@ -401,7 +401,7 @@ namespace Quantra.Controls
                     }
                     else
                     {
-                        // More detailed error logging
+                        // ENHANCED ERROR HANDLING: Parse and analyze the error message
                         var errorMsg = tftResult.ErrorMessage ?? "Unknown error";
                         var detailedError = $"TFT prediction failed for {symbol}. Success={tftResult.Success}, Prediction={tftResult.Prediction != null}, Error={errorMsg}";
                         _loggingService?.Log("Warning", detailedError);
@@ -409,20 +409,86 @@ namespace Quantra.Controls
                         if (StatusText != null)
                             StatusText.Text = $"TFT prediction failed: {errorMsg}";
                         
-                        // Show MessageBox with detailed error for debugging
+                        // Parse feature dimension mismatch errors
+                        string diagnosticInfo = "";
+                        bool isFeatureMismatch = false;
+                        
+                        if (errorMsg.Contains("features") && errorMsg.Contains("expecting"))
+                        {
+                            isFeatureMismatch = true;
+                            
+                            // Extract feature counts from error message
+                            // Example: "X has 9 features, but StandardScaler is expecting 15 features"
+                            var match = System.Text.RegularExpressions.Regex.Match(
+                                errorMsg, 
+                                @"X has (\d+) features.*expecting (\d+) features"
+                            );
+                            
+                            if (match.Success && match.Groups.Count >= 3)
+                            {
+                                string currentFeatures = match.Groups[1].Value;
+                                string expectedFeatures = match.Groups[2].Value;
+                                
+                                diagnosticInfo = $"\n\n?? FEATURE DIMENSION MISMATCH DETECTED:\n" +
+                                               $"??????????????????????????????????????\n" +
+                                               $"Current data:     {currentFeatures} features\n" +
+                                               $"Model expects:    {expectedFeatures} features\n" +
+                                               $"Missing features: {int.Parse(expectedFeatures) - int.Parse(currentFeatures)}\n\n" +
+                                               $"?? DIAGNOSIS:\n" +
+                                               $"The TFT model was trained with {expectedFeatures} features,\n" +
+                                               $"but the prediction data only has {currentFeatures} features.\n" +
+                                               $"This usually means:\n" +
+                                               $"  • Different feature engineering during training vs prediction\n" +
+                                               $"  • Model was trained with advanced features\n" +
+                                               $"  • Prediction is using basic OHLCV + simple indicators\n\n" +
+                                               $"?? SOLUTION:\n" +
+                                               $"You need to RETRAIN the TFT model to match current features.\n" +
+                                               $"The training will use the same feature engineering as prediction.\n\n" +
+                                               $"?? HOW TO FIX:\n" +
+                                               $"1. Go to Model Training tab\n" +
+                                               $"2. Select 'PyTorch' model type\n" +
+                                               $"3. Select 'TFT' architecture\n" +
+                                               $"4. Click 'Train Model'\n" +
+                                               $"5. Wait for training to complete (~5-10 minutes)\n" +
+                                               $"6. Try prediction again\n\n" +
+                                               $"Or run from command line:\n" +
+                                               $"python Quantra/python/train_from_database.py --model_type pytorch --architecture_type tft --epochs 50";
+                            }
+                        }
+                        
+                        // Show comprehensive error dialog
+                        var errorTitle = isFeatureMismatch ? 
+                            "TFT Feature Dimension Mismatch" : 
+                            "TFT Prediction Error";
+                        
+                        var errorDetails = $"Symbol: {symbol}\n" +
+                                         $"Success: {tftResult.Success}\n" +
+                                         $"Prediction: {(tftResult.Prediction != null ? "Available" : "NULL")}\n" +
+                                         $"\nError Message:\n{errorMsg}";
+                        
+                        if (isFeatureMismatch)
+                        {
+                            errorDetails += diagnosticInfo;
+                        }
+                        else
+                        {
+                            errorDetails += $"\n\n" +
+                                          $"Common Issues:\n" +
+                                          $"1. TFT model file missing in python/models/ directory\n" +
+                                          $"2. Python environment missing packages (torch, darts)\n" +
+                                          $"3. Model was trained with incorrect architecture\n" +
+                                          $"4. Historical data insufficient (need 60+ days)\n" +
+                                          $"5. Feature engineering pipeline mismatch";
+                        }
+                        
+                        // Log detailed diagnostic info
+                        _loggingService?.Log("Error", $"TFT Prediction Diagnostic Info:\n{errorDetails}");
+                        
                         MessageBox.Show(
-                            $"TFT Prediction Failed\n\n" +
-                            $"Symbol: {symbol}\n" +
-                            $"Success: {tftResult.Success}\n" +
-                            $"Prediction: {(tftResult.Prediction != null ? "Available" : "NULL")}\n" +
-                            $"Error: {errorMsg}\n\n" +
-                            $"Check that:\n" +
-                            $"1. TFT model file exists in python/models/ directory\n" +
-                            $"2. Python environment has required packages (torch, darts)\n" +
-                            $"3. Model was trained with correct architecture",
-                            "TFT Prediction Error",
+                            errorDetails,
+                            errorTitle,
                             MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
+                            isFeatureMismatch ? MessageBoxImage.Warning : MessageBoxImage.Error);
                     }
                 }
                 else
@@ -790,7 +856,15 @@ namespace Quantra.Controls
                 // Check for model availability using the service
                 if (_modelTrainingHistoryService != null)
                 {
-                    return await _modelTrainingHistoryService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                    var availability = await _modelTrainingHistoryService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                    
+                    // ENHANCED: Add feature dimension check for TFT models
+                    if (availability.IsModelAvailable && architectureType.ToLower() == "tft")
+                    {
+                        await DiagnoseTFTModelFeaturesAsync(availability);
+                    }
+                    
+                    return availability;
                 }
 
                 // Fallback: Create the service if not available (with proper disposal)
@@ -799,7 +873,14 @@ namespace Quantra.Controls
                 using (var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options))
                 {
                     var historyService = new ModelTrainingHistoryService(dbContext, _loggingService);
-                    return await historyService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                    var availability = await historyService.CheckTrainedModelAvailabilityAsync(modelType, architectureType);
+                    
+                    if (availability.IsModelAvailable && architectureType.ToLower() == "tft")
+                    {
+                        await DiagnoseTFTModelFeaturesAsync(availability);
+                    }
+                    
+                    return availability;
                 }
             }
             catch (Exception ex)
@@ -810,6 +891,129 @@ namespace Quantra.Controls
                     IsModelAvailable = false,
                     StatusMessage = $"Error checking model availability: {ex.Message}"
                 };
+            }
+        }
+        
+        /// <summary>
+        /// Diagnose TFT model feature dimensions by checking the saved model metadata
+        /// </summary>
+        private async Task DiagnoseTFTModelFeaturesAsync(TrainedModelAvailability availability)
+        {
+            try
+            {
+                string pythonModelsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "models");
+                string modelFilePath = System.IO.Path.Combine(pythonModelsDir, "tft_model.pt");
+                
+                if (!System.IO.File.Exists(modelFilePath))
+                {
+                    _loggingService?.Log("Warning", "TFT model file not found for feature dimension check");
+                    return;
+                }
+                
+                // Create a simple Python script to check model dimensions
+                string tempScriptPath = System.IO.Path.GetTempFileName() + ".py";
+                string tempOutputPath = System.IO.Path.GetTempFileName();
+                
+                string pythonScript = @"
+import sys
+import json
+import torch
+
+try:
+    model_path = sys.argv[1]
+    output_path = sys.argv[2]
+    
+    # Load model checkpoint
+    checkpoint = torch.load(model_path, map_location='cpu')
+    
+    result = {
+        'success': True,
+        'input_dim': int(checkpoint.get('input_dim', 0)),
+        'static_dim': int(checkpoint.get('static_dim', 0)),
+        'hidden_dim': int(checkpoint.get('hidden_dim', 0)),
+        'forecast_horizons': checkpoint.get('forecast_horizons', []),
+        'is_trained': checkpoint.get('is_trained', False),
+        'architecture_type': checkpoint.get('architecture_type', 'unknown')
+    }
+    
+    # Try to get scaler info
+    try:
+        import joblib
+        scaler_path = model_path.replace('tft_model.pt', 'tft_scaler.pkl')
+        scalers = joblib.load(scaler_path)
+        if 'scaler' in scalers:
+            result['scaler_features'] = int(scalers['scaler'].n_features_in_)
+    except:
+        result['scaler_features'] = 0
+    
+    with open(output_path, 'w') as f:
+        json.dump(result, f)
+        
+except Exception as e:
+    with open(output_path, 'w') as f:
+        json.dump({'success': False, 'error': str(e)}, f)
+";
+                
+                await System.IO.File.WriteAllTextAsync(tempScriptPath, pythonScript);
+                
+                // Execute Python script
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "python",
+                    Arguments = $"\"{tempScriptPath}\" \"{modelFilePath}\" \"{tempOutputPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                
+                using (var process = System.Diagnostics.Process.Start(psi))
+                {
+                    await process.WaitForExitAsync();
+                    
+                    if (System.IO.File.Exists(tempOutputPath))
+                    {
+                        string jsonResult = await System.IO.File.ReadAllTextAsync(tempOutputPath);
+                        var result = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(jsonResult);
+                        
+                        if (result.TryGetProperty("success", out var success) && success.GetBoolean())
+                        {
+                            int inputDim = result.GetProperty("input_dim").GetInt32();
+                            int scalerFeatures = result.TryGetProperty("scaler_features", out var sf) ? sf.GetInt32() : 0;
+                            
+                            string diagnosticMsg = $"TFT Model Feature Dimensions:\n" +
+                                                 $"  Input Dim: {inputDim}\n" +
+                                                 $"  Scaler Expects: {scalerFeatures} features\n";
+                            
+                            _loggingService?.Log("Info", diagnosticMsg);
+                            
+                            // Add to availability status message
+                            availability.StatusMessage += $"\n{diagnosticMsg}";
+                            
+                            // Warn if there's a mismatch indicator
+                            if (scalerFeatures > 0 && scalerFeatures != inputDim)
+                            {
+                                string warningMsg = $"?? WARNING: Feature dimension inconsistency detected!\n" +
+                                                  $"Model input_dim ({inputDim}) != Scaler features ({scalerFeatures})\n" +
+                                                  $"This may cause prediction failures.";
+                                _loggingService?.Log("Warning", warningMsg);
+                                availability.StatusMessage += $"\n{warningMsg}";
+                            }
+                        }
+                    }
+                }
+                
+                // Cleanup
+                try
+                {
+                    if (System.IO.File.Exists(tempScriptPath)) System.IO.File.Delete(tempScriptPath);
+                    if (System.IO.File.Exists(tempOutputPath)) System.IO.File.Delete(tempOutputPath);
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Warning", $"Could not diagnose TFT model features: {ex.Message}");
             }
         }
 

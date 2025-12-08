@@ -31,7 +31,7 @@ namespace Quantra.DAL.Data.Entities
         /// Architecture type (lstm, gru, transformer)
         /// </summary>
         [MaxLength(50)]
-        public string ArchitectureType { get; set; }
+        public string? ArchitectureType { get; set; }
 
         /// <summary>
         /// Number of symbols used in training
@@ -71,11 +71,23 @@ namespace Quantra.DAL.Data.Entities
         /// <summary>
         /// Optional notes about this training session
         /// </summary>
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
 
         /// <summary>
         /// Whether this model is currently active for predictions
         /// </summary>
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// JSON list of features used to train the model
+        /// Stored as JSON array: ["feature1", "feature2", ...]
+        /// </summary>
+        public string? FeaturesUsed { get; set; }
+
+        /// <summary>
+        /// Number of features used in training (for quick filtering)
+        /// Cached from FeaturesUsed JSON array length
+        /// </summary>
+        public int? FeatureCount { get; set; }
     }
 }

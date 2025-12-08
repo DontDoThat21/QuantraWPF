@@ -456,6 +456,9 @@ namespace Quantra.DAL.Services
         
         [JsonPropertyName("symbol_results")]
         public List<SymbolTrainingMetric> SymbolResults { get; set; }
+        
+        [JsonPropertyName("feature_names")]
+        public List<string> FeatureNames { get; set; }
     }
 
     public class ModelPerformance

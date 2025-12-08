@@ -738,74 +738,67 @@ namespace Quantra.Controls
                     // Use TFT if selected, otherwise use standard prediction
                     if (useTFT)
                     {
-                        // Prepare historical sequence for TFT (convert HistoricalPrice to Dictionary format)
-                        List<Dictionary<string, double>> historicalSequence = null;
+                        // CRITICAL FIX: Use RealTimeInferenceService which has proper feature preparation
+                        // This service correctly prepares 60-day temporal sequences, static features, and
+                        // known-future covariates that TFT requires. The old code only passed single-value
+                        // features which caused R² ≈ 0 due to lack of temporal patterns.
+                        _loggingService?.Log("Info", $"Using RealTimeInferenceService for TFT prediction with proper feature preparation");
                         
-                        if (historicalDataForTFT != null && historicalDataForTFT.Count >= TFT_DEFAULT_LOOKBACK_DAYS)
+                        try
                         {
-                            // Take the last 60 days (or more) for TFT
-                            // TFT needs data in chronological order (oldest first)
-                            var tftHistoricalData = historicalDataForTFT
-                                .OrderBy(h => h.Date)  // Oldest first for TFT
-                                .Take(TFT_DEFAULT_LOOKBACK_DAYS)
-                                .ToList();
+                            var tftResult = await _realTimeInferenceService.GetTFTPredictionAsync(
+                                symbol: symbol,
+                                lookbackDays: TFT_DEFAULT_LOOKBACK_DAYS,
+                                futureHorizon: TFT_DEFAULT_FUTURE_HORIZON
+                            );
                             
-                            historicalSequence = tftHistoricalData.Select(h => new Dictionary<string, double>
+                            if (tftResult == null || !tftResult.Success)
                             {
-                                ["open"] = h.Open,
-                                ["high"] = h.High,
-                                ["low"] = h.Low,
-                                ["close"] = h.Close,
-                                ["volume"] = h.Volume
-                            }).ToList();
+                                throw new Exception($"TFT prediction failed: {tftResult?.ErrorMessage ?? "Unknown error"}");
+                            }
                             
-                            _loggingService?.Log("Info", $"Prepared {historicalSequence.Count} days of historical data for TFT prediction");
+                            // Extract prediction results
+                            action = tftResult.Prediction?.PredictedAction ?? "HOLD";
+                            confidence = tftResult.Prediction?.Confidence ?? 0.5;
+                            targetPrice = tftResult.Prediction?.TargetPrice ?? currentPrice;
+                            weights = tftResult.Prediction?.FeatureWeights ?? new Dictionary<string, double>();
+                            
+                            _loggingService?.Log("Info", 
+                                $"TFT prediction for {symbol}: {action} with {confidence:P0} confidence " +
+                                $"(using proper 60-day temporal sequences)");
+                            
+                            // Store TFT-specific data for later visualization
+                            var tftPrediction = new Quantra.Models.PredictionModel
+                            {
+                                Symbol = symbol,
+                                PredictedAction = action,
+                                Confidence = confidence,
+                                CurrentPrice = currentPrice,
+                                TargetPrice = targetPrice,
+                                Indicators = indicators,
+                                PotentialReturn = (targetPrice - currentPrice) / currentPrice,
+                                PredictionDate = DateTime.Now,
+                                ModelType = "tft",
+                                ArchitectureType = "tft",
+                                Notes = $"Multi-horizon TFT prediction with proper temporal sequences and uncertainty quantification",
+                                FeatureWeights = weights
+                            };
+                            
+                            // Save TFT prediction with multi-horizon data to database
+                            if (tftResult.TFTResult != null)
+                            {
+                                // Use the TFTResult directly from PythonPredictionExecutionResult
+                                await SaveTFTPredictionToDatabase(tftPrediction, tftResult.TFTResult);
+                                await UpdateTFTVisualization(tftResult.TFTResult);
+                            }
                         }
-                        else
+                        catch (Exception tftEx)
                         {
-                            _loggingService?.Log("Warning", $"Insufficient historical data for TFT: {historicalDataForTFT?.Count ?? 0} days (need {TFT_DEFAULT_LOOKBACK_DAYS})");
+                            _loggingService?.Log("Warning", 
+                                $"RealTimeInferenceService TFT prediction failed for {symbol}, " +
+                                $"this may indicate the model needs retraining: {tftEx.Message}");
+                            throw;
                         }
-                        
-                        // Call TFT multi-horizon prediction
-                        var tftResult = await Quantra.Models.PythonStockPredictor.PredictWithTFTAsync(
-                            indicators,
-                            symbol,
-                            historicalSequence,  // Pass actual historical data
-                            new List<int> { 1, 3, 5, 10 }  // horizons from UI checkboxes
-                        );
-                        
-                        if (tftResult == null || !tftResult.Success)
-                            throw new Exception($"TFT prediction failed: {tftResult?.Error ?? "Unknown error"}");
-
-                        action = tftResult.Action;
-                        confidence = tftResult.Confidence;
-                        targetPrice = tftResult.TargetPrice;
-                        weights = tftResult.FeatureWeights ?? new Dictionary<string, double>();
-                        
-                        // Store TFT-specific data for later visualization
-                        var tftPrediction = new Quantra.Models.PredictionModel
-                        {
-                            Symbol = symbol,
-                            PredictedAction = action,
-                            Confidence = confidence,
-                            CurrentPrice = currentPrice,
-                            TargetPrice = targetPrice,
-                            Indicators = indicators,
-                            PotentialReturn = (targetPrice - currentPrice) / currentPrice,
-                            PredictionDate = DateTime.Now,
-                            ModelType = "tft",
-                            ArchitectureType = "tft",
-                            Notes = $"Multi-horizon TFT prediction with uncertainty quantification",
-                            FeatureWeights = weights
-                        };
-                        
-                        // Save TFT prediction with multi-horizon data to database
-                        await SaveTFTPredictionToDatabase(tftPrediction, tftResult);
-                        
-                        // Update UI with TFT multi-horizon data
-                        await UpdateTFTVisualization(tftResult);
-                        
-                        _loggingService?.Log("Info", $"TFT prediction for {symbol}: {action} with {confidence:P0} confidence");
                     }
                     else
                     {
@@ -830,7 +823,8 @@ namespace Quantra.Controls
                     // rather than silently falling back to rule-based logic
                     throw new InvalidOperationException(
                         $"ML prediction failed for {symbol}. Please ensure the ML model is trained. " +
-                        $"Use the 'Train Model' button to train the model with historical data.", ex);
+                        $"Use the 'Train Model' button to train the model with historical data. " +
+                        $"For TFT models, ensure you have at least 60 days of historical data cached.", ex);
                 }
 
                 // Incorporate sentiment into confidence/decision

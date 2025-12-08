@@ -604,6 +604,7 @@ def train_model_from_database(
                     'training_time_seconds': training_time,
                     'has_future_covariates': True,
                     'future_covariate_count': len(future_feature_names),
+                    'feature_names': feature_names,  # CRITICAL FIX: Add feature names even when evaluation is skipped
                     'message': 'Model trained successfully but evaluation skipped due to feature mismatch. Model will retrain on next use.',
                     'performance': {
                         'mse': 0.0,
@@ -642,7 +643,7 @@ def train_model_from_database(
         return {
             'success': True,
             'model_type': used_model_type,
-            'architecture_type': architecture_type if used_model_type in ['pytorch', 'tensorflow'] else 'n/a',
+            'architecture_type': architecture_type if used_model_type in ['pytorch', 'tensorflow', 'tft'] else 'n/a',
             'symbols_count': len(symbols_data),
             'training_samples': len(X_train),
             'test_samples': len(X_test),
@@ -650,6 +651,7 @@ def train_model_from_database(
             'has_future_covariates': True,
             'future_covariate_count': len(future_feature_names),
             'symbol_results': symbol_metrics,  # CRITICAL: Add this for database logging
+            'feature_names': feature_names,  # CRITICAL FIX: Add feature names for database storage
             'performance': {
                 'mse': float(mse),
                 'mae': float(mae),
@@ -662,6 +664,7 @@ def train_model_from_database(
         'success': True,
         'model_type': used_model_type,
         'symbol_results': symbol_metrics,  # CRITICAL: Add this for database logging
+        'feature_names': feature_names,  # CRITICAL FIX: Add feature names even when prediction method is unavailable
         'message': 'Model trained successfully but evaluation not available'
     }
 
