@@ -146,15 +146,15 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
     """
     Prepare training data from multiple symbols with TFT-compatible features.
     Includes known-future covariates (calendar features) required by Temporal Fusion Transformer.
-    
+        
     Args:
         symbols_data: List of (symbol, historical_data) tuples
         min_samples (int): Minimum number of data points required per symbol (default: 50)
         use_feature_engineering (bool): Whether to use advanced feature engineering (default: True)
         feature_type (str): Type of features to generate ('minimal', 'balanced', 'full') (default: 'balanced')
-        
+            
     Returns:
-        Tuple of (X_train, y_train, feature_names, X_future_known)
+        Tuple of (X_train, y_train, feature_names, X_future_known, future_feature_names, symbol_metrics)
     """
     logger.info(f"Preparing TFT training data with feature_type={feature_type}, use_feature_engineering={use_feature_engineering}...")
     
@@ -164,6 +164,7 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
     feature_names = None
     future_feature_names = None
     symbols_used = []
+    symbol_metrics = []  # Track per-symbol metrics for database
     
     for symbol, historical_data in symbols_data:
         try:
@@ -189,6 +190,16 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
             # Skip symbols with insufficient data
             if len(df) < min_samples:
                 logger.debug(f"Skipping {symbol}: insufficient data ({len(df)} < {min_samples})")
+                symbol_metrics.append({
+                    'symbol': symbol,
+                    'data_points': len(df),
+                    'training_samples': 0,
+                    'test_samples': 0,
+                    'included': False,
+                    'exclusion_reason': f'Insufficient data: {len(df)} < {min_samples}',
+                    'data_start_date': df['date'].min().strftime('%Y-%m-%d') if len(df) > 0 else None,
+                    'data_end_date': df['date'].max().strftime('%Y-%m-%d') if len(df) > 0 else None
+                })
                 continue
             
             # Add known-future features (CRITICAL for TFT)
@@ -227,6 +238,18 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
                 all_X_future.append(X_future[:min_len])
                 symbols_used.append(symbol)
                 
+                # Track included symbol metrics
+                symbol_metrics.append({
+                    'symbol': symbol,
+                    'data_points': len(df),
+                    'training_samples': len(X[:min_len]),
+                    'test_samples': 0,  # Will be calculated after train/test split
+                    'included': True,
+                    'exclusion_reason': None,
+                    'data_start_date': df['date'].min().strftime('%Y-%m-%d'),
+                    'data_end_date': df['date'].max().strftime('%Y-%m-%d')
+                })
+                
                 # Store feature names from first symbol
                 if feature_names is None:
                     # Create feature names based on the number of features
@@ -237,6 +260,16 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
         
         except Exception as e:
             logger.warning(f"Error preparing data for {symbol}: {str(e)}")
+            symbol_metrics.append({
+                'symbol': symbol,
+                'data_points': 0,
+                'training_samples': 0,
+                'test_samples': 0,
+                'included': False,
+                'exclusion_reason': f'Error: {str(e)}',
+                'data_start_date': None,
+                'data_end_date': None
+            })
     
     if not all_X:
         raise ValueError("No valid training data could be prepared from any symbol")
@@ -252,8 +285,9 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
     logger.info(f"  - Past features per sample: {X_train.shape}")
     logger.info(f"  - Future-known features per sample: {X_future_train.shape}")
     logger.info(f"  - Symbols: {', '.join(symbols_used[:10])}{'...' if len(symbols_used) > 10 else ''}")
+    logger.info(f"  - Symbol metrics tracked: {len(symbol_metrics)} total, {sum(1 for m in symbol_metrics if m['included'])} included")
     
-    return X_train, y_train, feature_names, X_future_train, future_feature_names
+    return X_train, y_train, feature_names, X_future_train, future_feature_names, symbol_metrics
 
 
 def train_model_from_database(
@@ -313,7 +347,7 @@ def train_model_from_database(
         raise ValueError("No historical data found in database")
     
     # Prepare training data with TFT-compatible features
-    X, y, feature_names, X_future, future_feature_names = prepare_training_data_from_historicals(
+    X, y, feature_names, X_future, future_feature_names, symbol_metrics = prepare_training_data_from_historicals(
         symbols_data,
         use_feature_engineering=use_feature_engineering,
         feature_type=feature_type
@@ -487,11 +521,17 @@ def train_model_from_database(
     # CRITICAL: Always save the model after training, not just when feature_names exist
     if hasattr(model, 'save'):
         logger.info(f"Saving trained {used_model_type} model...")
-        save_success = model.save()
-        if save_success:
-            logger.info(f"Model saved successfully")
-        else:
-            logger.warning(f"Model save returned False - model may not have been saved properly")
+        try:
+            save_success = model.save()
+            if save_success:
+                logger.info(f"✓ Model saved successfully")
+            else:
+                logger.error(f"✗ Model save returned False - check error logs above for details")
+                logger.error(f"This means the model was trained but NOT saved to disk")
+                logger.error(f"The model will need to be retrained on next use")
+        except Exception as save_error:
+            logger.error(f"✗ Exception during model save: {save_error}", exc_info=True)
+            logger.error(f"Model training succeeded but save failed")
     else:
         logger.warning(f"Model of type {used_model_type} does not have a save method")
     
@@ -511,8 +551,18 @@ def train_model_from_database(
                 logger.info(f"Flattened test data shape for RF: {X_test_flat.shape}")
                 logger.info(f"Scaler expects: {scaler.n_features_in_} features")
                 y_pred_scaled = model.predict(scaler.transform(X_test_flat))
+            elif used_model_type == 'tft':
+                # For TFT, we need to pass both temporal and static features
+                logger.info(f"Making TFT predictions with X_test: {X_test.shape}, static_test: {static_features_test.shape}")
+                predictions_dict = model.predict(X_test, static_features_test)
+                # Extract median predictions (shape: n_samples, num_horizons)
+                y_pred_scaled = predictions_dict['median_predictions']
+                # For evaluation, use first horizon predictions
+                if y_pred_scaled.shape[1] > 1:
+                    y_pred_scaled = y_pred_scaled[:, 0]  # Use first horizon (5-day)
+                logger.info(f"TFT predictions shape: {y_pred_scaled.shape}")
             else:
-                # For PyTorch/TensorFlow, the predict method will handle the 3D data
+                # For PyTorch/TensorFlow (LSTM, GRU, Transformer), the predict method will handle the 3D data
                 y_pred_scaled = model.predict(X_test)
             
             # CRITICAL FIX: Inverse transform predictions back to original scale
@@ -590,6 +640,7 @@ def train_model_from_database(
             'training_time_seconds': training_time,
             'has_future_covariates': True,
             'future_covariate_count': len(future_feature_names),
+            'symbol_results': symbol_metrics,  # CRITICAL: Add this for database logging
             'performance': {
                 'mse': float(mse),
                 'mae': float(mae),
@@ -601,6 +652,7 @@ def train_model_from_database(
     return {
         'success': True,
         'model_type': used_model_type,
+        'symbol_results': symbol_metrics,  # CRITICAL: Add this for database logging
         'message': 'Model trained successfully but evaluation not available'
     }
 

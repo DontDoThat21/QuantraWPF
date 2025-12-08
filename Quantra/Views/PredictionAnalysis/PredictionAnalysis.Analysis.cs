@@ -1442,6 +1442,31 @@ namespace Quantra.Controls
                         _loggingService?.LogErrorWithContext(logEx, "Failed to log training session to database");
                     }
 
+                    // Determine the expected model file path
+                    string pythonModelsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "models");
+                    string modelFileName = result.ModelType switch
+                    {
+                        "tft" => "tft_model.pt",
+                        "pytorch" => "stock_pytorch_model.pt",
+                        "tensorflow" => "stock_tensorflow_model",
+                        "random_forest" => "stock_rf_model.pkl",
+                        _ => "model file"
+                    };
+
+                    string modelFilePath = System.IO.Path.Combine(pythonModelsDir, modelFileName);
+                    bool modelFileExists = false;
+                    
+                    // Check if model file exists
+                    // TensorFlow saves as directory, others as files
+                    if (result.ModelType == "tensorflow")
+                    {
+                        modelFileExists = System.IO.Directory.Exists(modelFilePath);
+                    }
+                    else
+                    {
+                        modelFileExists = System.IO.File.Exists(modelFilePath);
+                    }
+
                     var message = $"Model Training Complete!\n\n" +
                                  $"Model Type: {result.ModelType}\n" +
                                  $"Architecture: {result.ArchitectureType}\n" +
@@ -1452,12 +1477,53 @@ namespace Quantra.Controls
                                  $"Performance Metrics:\n" +
                                  $"  MAE: {result.Performance?.Mae:F6}\n" +
                                  $"  RMSE: {result.Performance?.Rmse:F6}\n" +
-                                 $"  R� Score: {result.Performance?.R2Score:F4}";
+                                 $"  R� Score: {result.Performance?.R2Score:F4}\n\n";
 
-                    MessageBox.Show(message, "Training Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // Add model save location information
+                    if (modelFileExists)
+                    {
+                        message += $"✓ Model Saved To:\n{modelFilePath}";
+                        
+                        // Show file size if available
+                        try
+                        {
+                            if (result.ModelType == "tensorflow")
+                            {
+                                // For TensorFlow, show directory exists
+                                message += "\n(SavedModel directory)";
+                            }
+                            else
+                            {
+                                long fileSize = new System.IO.FileInfo(modelFilePath).Length;
+                                string fileSizeStr = fileSize < 1024 * 1024 
+                                    ? $"{fileSize / 1024.0:F1} KB" 
+                                    : $"{fileSize / (1024.0 * 1024.0):F1} MB";
+                                message += $"\n({fileSizeStr})";
+                            }
+                        }
+                        catch
+                        {
+                            // Ignore file size errors
+                        }
+                        
+                        MessageBox.Show(message, "Training Successful", MessageBoxButton.OK, MessageBoxImage.Information);
+                        _loggingService?.Log("Info", $"Model saved successfully to {modelFilePath}");
+                    }
+                    else
+                    {
+                        message += $"⚠️ WARNING: Model file not found!\n" +
+                                  $"Expected Location:\n{modelFilePath}\n\n" +
+                                  $"Training succeeded but the model was not saved to disk.\n" +
+                                  $"Please check Python logs for save errors.";
+                        
+                        MessageBox.Show(message, "Training Successful (Model Not Saved)", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        _loggingService?.Log("Warning", $"Model training succeeded but model file not found: {modelFilePath}");
+                    }
 
                     if (StatusText != null)
-                        StatusText.Text = $"Model trained successfully with {result.SymbolsCount} symbols";
+                        StatusText.Text = modelFileExists 
+                            ? $"Model trained successfully with {result.SymbolsCount} symbols"
+                            : $"Model trained but NOT saved - check logs";
                 }
                 else
                 {

@@ -538,15 +538,46 @@ namespace Quantra.Controls
             var modelAvailability = await CheckTrainedModelAvailabilityAsync();
             if (!modelAvailability.IsModelAvailable)
             {
-                if (StatusText != null)
-                    StatusText.Text = modelAvailability.StatusMessage;
+                // If model file exists but no DB record, try to register it automatically
+                if (modelAvailability.HasLocalModelFile && !modelAvailability.HasDatabaseRecord)
+                {
+                    if (StatusText != null)
+                        StatusText.Text = "Found model file without database record. Registering...";
 
-                MessageBox.Show(
-                    $"{modelAvailability.StatusMessage}\n\nPlease use the 'Train Model' button to train a model before running analysis.",
-                    "Model Not Available",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
+                    _loggingService?.Log("Info", "Attempting automatic registration of existing TFT model...");
+
+                    bool registered = await RegisterExistingTFTModelAsync();
+                    if (registered)
+                    {
+                        // Re-check availability after registration
+                        modelAvailability = await CheckTrainedModelAvailabilityAsync();
+                        
+                        if (modelAvailability.IsModelAvailable)
+                        {
+                            _loggingService?.Log("Info", "Successfully registered and verified TFT model");
+                            if (StatusText != null)
+                                StatusText.Text = "TFT model registered successfully. Proceeding with analysis...";
+                        }
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Error", "Failed to register TFT model automatically");
+                    }
+                }
+
+                // If still not available after registration attempt, show error
+                if (!modelAvailability.IsModelAvailable)
+                {
+                    if (StatusText != null)
+                        StatusText.Text = modelAvailability.StatusMessage;
+
+                    MessageBox.Show(
+                        $"{modelAvailability.StatusMessage}\n\nPlease use the 'Train Model' button to train a model before running analysis.",
+                        "Model Not Available",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
             }
 
             // Check if individual symbol mode is selected
@@ -656,6 +687,92 @@ namespace Quantra.Controls
             {
                 if (AnalyzeButton != null)
                     AnalyzeButton.IsEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Manually registers an existing TFT model file in the database
+        /// This creates a database record for an existing model file
+        /// </summary>
+        private async Task<bool> RegisterExistingTFTModelAsync()
+        {
+            try
+            {
+                _loggingService?.Log("Info", "Attempting to register existing TFT model in database...");
+
+                // Verify the model file exists
+                string pythonModelsDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "models");
+                string modelFilePath = System.IO.Path.Combine(pythonModelsDir, "tft_model.pt");
+
+                if (!System.IO.File.Exists(modelFilePath))
+                {
+                    _loggingService?.Log("Error", $"TFT model file not found at: {modelFilePath}");
+                    return false;
+                }
+
+                // Get file info
+                var fileInfo = new System.IO.FileInfo(modelFilePath);
+                _loggingService?.Log("Info", $"Found TFT model file: {modelFilePath}, Size: {fileInfo.Length} bytes");
+
+                // Create a database record using EF Core
+                var optionsBuilder = new DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+                optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+                
+                using (var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Check if a record already exists
+                    var existingRecord = await dbContext.ModelTrainingHistory
+                        .Where(m => m.ModelType == "pytorch" && m.ArchitectureType == "tft" && m.IsActive)
+                        .FirstOrDefaultAsync();
+
+                    if (existingRecord != null)
+                    {
+                        _loggingService?.Log("Info", "TFT model record already exists in database");
+                        return true;
+                    }
+
+                    // Deactivate any existing active models for this type
+                    var activeModels = await dbContext.ModelTrainingHistory
+                        .Where(m => m.ModelType == "pytorch" && m.ArchitectureType == "tft" && m.IsActive)
+                        .ToListAsync();
+
+                    foreach (var model in activeModels)
+                    {
+                        model.IsActive = false;
+                    }
+
+                    // Create new training history record
+                    var newRecord = new Quantra.DAL.Data.Entities.ModelTrainingHistory
+                    {
+                        ModelType = "pytorch",
+                        ArchitectureType = "tft",
+                        TrainingDate = fileInfo.CreationTime,
+                        IsActive = true,
+                        SymbolsCount = 0,
+                        TrainingSamples = 0,
+                        TestSamples = 0,
+                        TrainingTimeSeconds = 0.0,
+                        MAE = 0.0,
+                        RMSE = 0.0,
+                        R2Score = 0.0,
+                        Notes = $"Manually registered existing TFT model file. Path: {modelFilePath}"
+                    };
+
+                    dbContext.ModelTrainingHistory.Add(newRecord);
+                    await dbContext.SaveChangesAsync();
+
+                    _loggingService?.Log("Info", $"Successfully registered TFT model in database with ID: {newRecord.Id}");
+                    
+                    if (StatusText != null)
+                        StatusText.Text = $"Successfully registered TFT model (ID: {newRecord.Id})";
+                    
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error registering existing TFT model");
+                return false;
             }
         }
 

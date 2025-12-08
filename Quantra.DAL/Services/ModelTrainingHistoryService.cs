@@ -430,7 +430,7 @@ namespace Quantra.DAL.Services
 
                 // Check for local model file
                 string pythonModelsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python", "models");
-                result.ModelFilePath = GetModelFilePath(resolvedModelType, pythonModelsDir);
+                result.ModelFilePath = GetModelFilePath(resolvedModelType, pythonModelsDir, result.ResolvedArchitectureType);
                 
                 // TensorFlow SavedModel format saves as a directory, not a file
                 if (resolvedModelType == "tensorflow")
@@ -476,12 +476,18 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Gets the expected model file path based on model type
+        /// Gets the expected model file path based on model type and architecture
         /// </summary>
-        private string GetModelFilePath(string modelType, string modelsDir)
+        private string GetModelFilePath(string modelType, string modelsDir, string architectureType = null)
         {
             if (string.IsNullOrEmpty(modelType) || !Directory.Exists(modelsDir))
                 return null;
+
+            // Special case: If model type is "pytorch" and architecture is "tft", use TFT model file
+            if (modelType.ToLower() == "pytorch" && architectureType?.ToLower() == "tft")
+            {
+                return Path.Combine(modelsDir, "tft_model.pt");
+            }
 
             return modelType.ToLower() switch
             {

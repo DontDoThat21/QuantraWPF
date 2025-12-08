@@ -470,9 +470,33 @@ class TFTStockPredictor:
              scaler_path: str = TFT_SCALER_PATH) -> bool:
         """Save TFT model and scalers."""
         try:
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            # CRITICAL: Ensure directory exists with proper error handling
+            model_dir = os.path.dirname(model_path)
+            if not model_dir:
+                model_dir = os.path.dirname(os.path.abspath(__file__))  # Use script directory
+                model_path = os.path.join(model_dir, 'models', 'tft_model.pt')
+                scaler_path = os.path.join(model_dir, 'models', 'tft_scaler.pkl')
+                model_dir = os.path.join(model_dir, 'models')
             
-            torch.save({
+            # Create directory with explicit error handling
+            try:
+                os.makedirs(model_dir, exist_ok=True)
+                logger.info(f"Created/verified models directory: {model_dir}")
+            except Exception as dir_error:
+                logger.error(f"Failed to create models directory {model_dir}: {dir_error}")
+                # Try alternative location in temp directory
+                import tempfile
+                model_dir = os.path.join(tempfile.gettempdir(), 'quantra_models')
+                os.makedirs(model_dir, exist_ok=True)
+                model_path = os.path.join(model_dir, 'tft_model.pt')
+                scaler_path = os.path.join(model_dir, 'tft_scaler.pkl')
+                logger.warning(f"Using alternative save location: {model_dir}")
+            
+            # Save model with detailed error reporting
+            logger.info(f"Saving TFT model to {model_path}...")
+            
+            # CRITICAL FIX: Save calendar_dim to track if model was trained with future features
+            checkpoint = {
                 'model_state_dict': self.model.state_dict(),
                 'input_dim': self.input_dim,
                 'static_dim': self.static_dim,
@@ -483,9 +507,15 @@ class TFTStockPredictor:
                 'num_lstm_layers': self.num_lstm_layers,
                 'dropout': self.dropout,
                 'num_attention_layers': self.num_attention_layers,
-                'is_trained': self.is_trained
-            }, model_path)
+                'is_trained': self.is_trained,
+                'calendar_dim': self.model.calendar_dim  # Save calendar dimension used during training
+            }
             
+            torch.save(checkpoint, model_path)
+            logger.info(f"Model state saved successfully")
+            
+            # Save scalers with detailed error reporting
+            logger.info(f"Saving scalers to {scaler_path}...")
             scalers_dict = {
                 'scaler': self.scaler,
                 'static_scaler': self.static_scaler,
@@ -493,12 +523,25 @@ class TFTStockPredictor:
                 'future_scaler': self.future_scaler if hasattr(self, 'future_scaler') else None
             }
             joblib.dump(scalers_dict, scaler_path)
+            logger.info(f"Scalers saved successfully")
             
-            logger.info(f"TFT model saved to {model_path}")
+            # Verify files exist
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Model file not found after save: {model_path}")
+            if not os.path.exists(scaler_path):
+                raise FileNotFoundError(f"Scaler file not found after save: {scaler_path}")
+            
+            logger.info(f"TFT model and scalers saved successfully to {model_dir}")
+            logger.info(f"  Model: {os.path.basename(model_path)} ({os.path.getsize(model_path)} bytes)")
+            logger.info(f"  Scalers: {os.path.basename(scaler_path)} ({os.path.getsize(scaler_path)} bytes)")
             return True
             
         except Exception as e:
-            logger.error(f"Error saving TFT model: {e}")
+            logger.error(f"CRITICAL ERROR saving TFT model: {e}", exc_info=True)
+            logger.error(f"Attempted save path: {model_path}")
+            logger.error(f"Working directory: {os.getcwd()}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     def load(self, model_path: str = TFT_MODEL_PATH,
@@ -522,6 +565,7 @@ class TFTStockPredictor:
             self.dropout = checkpoint.get('dropout', 0.1)
             self.num_attention_layers = checkpoint.get('num_attention_layers', 2)
             self.is_trained = checkpoint.get('is_trained', True)
+            calendar_dim = checkpoint.get('calendar_dim', None)  # Get saved calendar dimension
             
             # Rebuild model
             self.model = TemporalFusionTransformer(
@@ -534,6 +578,13 @@ class TFTStockPredictor:
                 forecast_horizons=self.forecast_horizons,
                 num_attention_layers=self.num_attention_layers
             ).to(self.device)
+            
+            # CRITICAL FIX: Initialize future_embedding if model was trained with calendar features
+            if calendar_dim is not None:
+                import torch.nn as nn
+                self.model.future_embedding = nn.Linear(calendar_dim, self.hidden_dim).to(self.device)
+                self.model.calendar_dim = calendar_dim
+                logger.info(f"Initialized future_embedding for loading: {calendar_dim} -> {self.hidden_dim}")
             
             self.model.load_state_dict(checkpoint['model_state_dict'])
             

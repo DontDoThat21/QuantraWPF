@@ -28,8 +28,22 @@ logging.basicConfig(
 logger = logging.getLogger('stock_predictor')
 
 # Set up constant paths
+# CRITICAL FIX: Use source directory for MODEL_DIR, not execution directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(BASE_DIR, 'models')
+
+# Check if we're running from bin/Debug, and if so, use source python directory
+# This ensures models are saved to the source directory regardless of where script runs
+if 'bin' in BASE_DIR.lower() and 'debug' in BASE_DIR.lower():
+    # Running from bin/Debug/net9.0-windows7.0/python - navigate to source directory
+    # Path: bin/Debug/net9.0-windows7.0/python -> go up to repo root then to Quantra/python
+    repo_root = os.path.abspath(os.path.join(BASE_DIR, '..', '..', '..', '..'))
+    MODEL_DIR = os.path.join(repo_root, 'Quantra', 'python', 'models')
+    logger.info(f"Running from bin/Debug, using source model directory: {MODEL_DIR}")
+else:
+    # Running from source directory
+    MODEL_DIR = os.path.join(BASE_DIR, 'models')
+    logger.info(f"Running from source, using local model directory: {MODEL_DIR}")
+
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Add the script directory to Python path for imports

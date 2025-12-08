@@ -286,6 +286,13 @@ class TemporalFusionTransformer(nn.Module):
         self.past_lstm = nn.LSTM(hidden_dim, hidden_dim, num_lstm_layers,
                                  batch_first=True, dropout=dropout if num_lstm_layers > 1 else 0)
         
+        # CRITICAL FIX: Add future_embedding as proper model component
+        # Default calendar dimension: day_of_week(7) + month(12) + quarter(4) + day_of_year(1) 
+        # + is_month_end(1) + is_quarter_end(1) + market_hours(3) = ~30 dims typical
+        # We'll use a reasonable default and allow it to be resized during training if needed
+        self.future_embedding = None  # Will be initialized when needed
+        self.calendar_dim = None  # Track the calendar dimension used during training
+        
         # 4. Gated skip connection
         self.gated_skip = GatedResidualNetwork(hidden_dim, hidden_dim, hidden_dim, dropout)
         
@@ -364,14 +371,20 @@ class TemporalFusionTransformer(nn.Module):
         # 4. Process future calendar features if provided (STEP 6 ENHANCEMENT)
         if future_features is not None and future_features.size(1) > 0:
             future_seq_len = future_features.size(1)
+            calendar_dim = future_features.size(-1)
             
-            # Project future calendar features to hidden_dim
-            # Note: calendar features are typically low-dimensional (e.g., 12 dims)
-            if not hasattr(self, 'future_embedding'):
-                # Dynamically create future embedding layer if it doesn't exist
-                calendar_dim = future_features.size(-1)
+            # CRITICAL FIX: Initialize or validate future_embedding
+            if self.future_embedding is None:
+                # First time seeing future features - create the embedding layer
                 self.future_embedding = nn.Linear(calendar_dim, self.hidden_dim).to(future_features.device)
-                logger.info(f"Created future_embedding layer: {calendar_dim} -> {self.hidden_dim}")
+                self.calendar_dim = calendar_dim
+                logger.info(f"Initialized future_embedding layer: {calendar_dim} -> {self.hidden_dim}")
+            elif self.calendar_dim != calendar_dim:
+                # Calendar dimension mismatch - this shouldn't happen in production
+                # but we'll handle it gracefully by recreating the layer
+                logger.warning(f"Calendar dim mismatch: expected {self.calendar_dim}, got {calendar_dim}. Reinitializing future_embedding.")
+                self.future_embedding = nn.Linear(calendar_dim, self.hidden_dim).to(future_features.device)
+                self.calendar_dim = calendar_dim
             
             future_embedded = self.future_embedding(future_features)  # (batch, future_seq_len, hidden_dim)
             
