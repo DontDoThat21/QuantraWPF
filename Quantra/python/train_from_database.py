@@ -543,6 +543,12 @@ def train_model_from_database(
         logger.info(f"Test data shape: {X_test.shape}")
         logger.info(f"Model type: {used_model_type}")
         
+        # Clear GPU cache before evaluation to free up memory from training
+        if used_model_type == 'tft':
+            import torch
+            torch.cuda.empty_cache()
+            logger.info("Cleared GPU cache before evaluation")
+        
         try:
             if used_model_type == 'random_forest':
                 # For Random Forest, we need to flatten the 3D data to 2D
@@ -553,8 +559,11 @@ def train_model_from_database(
                 y_pred_scaled = model.predict(scaler.transform(X_test_flat))
             elif used_model_type == 'tft':
                 # For TFT, we need to pass both temporal and static features
+                # Use smaller batch size for evaluation to avoid GPU OOM
+                eval_batch_size = min(256, len(X_test) // 4)  # Use smaller batches for large test sets
                 logger.info(f"Making TFT predictions with X_test: {X_test.shape}, static_test: {static_features_test.shape}")
-                predictions_dict = model.predict(X_test, static_features_test)
+                logger.info(f"Using batch size: {eval_batch_size} for evaluation")
+                predictions_dict = model.predict(X_test, static_features_test, batch_size=eval_batch_size)
                 # Extract median predictions (shape: n_samples, num_horizons)
                 y_pred_scaled = predictions_dict['median_predictions']
                 # For evaluation, use first horizon predictions

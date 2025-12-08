@@ -228,13 +228,15 @@ class TFTStockPredictor:
         
         return history
     
-    def predict(self, X_past: np.ndarray, X_static: np.ndarray) -> Dict[str, np.ndarray]:
+    def predict(self, X_past: np.ndarray, X_static: np.ndarray, batch_size: int = 512) -> Dict[str, np.ndarray]:
         """
         Generate predictions with uncertainty quantification.
+        Uses batched inference to avoid GPU memory issues with large datasets.
         
         Args:
             X_past: (n_samples, seq_len, features) - Historical temporal features
             X_static: (n_samples, static_features) - Static features
+            batch_size: Batch size for inference (default: 512 for memory efficiency)
             
         Returns:
             dict with keys:
@@ -250,23 +252,52 @@ class TFTStockPredictor:
         # This prevents the "cudnn RNN backward can only be called in training mode" error
         self.model.eval()
         
-        # CRITICAL: Use inference_mode for complete gradient disabling
-        with torch.inference_mode():
-            # Scale features
-            n_samples, seq_len, n_features = X_past.shape
-            X_past_reshaped = X_past.reshape(-1, n_features)
-            X_past_scaled = self.scaler.transform(X_past_reshaped)
-            X_past_scaled = X_past_scaled.reshape(n_samples, seq_len, n_features)
-            
-            X_static_scaled = self.static_scaler.transform(X_static)
-            
-            # Convert to tensors
-            past_tensor = torch.FloatTensor(X_past_scaled).to(self.device)
-            static_tensor = torch.FloatTensor(X_static_scaled).to(self.device)
-            
-            outputs = self.model(past_tensor, static_tensor)
+        n_samples, seq_len, n_features = X_past.shape
         
-        # Extract predictions for each horizon
+        # Scale features
+        X_past_reshaped = X_past.reshape(-1, n_features)
+        X_past_scaled = self.scaler.transform(X_past_reshaped)
+        X_past_scaled = X_past_scaled.reshape(n_samples, seq_len, n_features)
+        X_static_scaled = self.static_scaler.transform(X_static)
+        
+        # Initialize result containers
+        all_predictions = {horizon: [] for horizon in self.forecast_horizons}
+        all_feature_importance = []
+        all_attention_weights = []
+        
+        # Process in batches to avoid GPU OOM
+        num_batches = (n_samples + batch_size - 1) // batch_size
+        logger.info(f"Processing {n_samples} samples in {num_batches} batches of size {batch_size}")
+        
+        for i in range(0, n_samples, batch_size):
+            end_idx = min(i + batch_size, n_samples)
+            batch_past = X_past_scaled[i:end_idx]
+            batch_static = X_static_scaled[i:end_idx]
+            
+            # CRITICAL: Use inference_mode for complete gradient disabling
+            with torch.inference_mode():
+                # Convert batch to tensors
+                past_tensor = torch.FloatTensor(batch_past).to(self.device)
+                static_tensor = torch.FloatTensor(batch_static).to(self.device)
+                
+                # Get predictions for this batch
+                batch_outputs = self.model(past_tensor, static_tensor)
+                
+                # Store predictions for each horizon
+                for horizon in self.forecast_horizons:
+                    horizon_key = f"horizon_{horizon}"
+                    quantiles = batch_outputs['predictions'][horizon_key].cpu().numpy()
+                    all_predictions[horizon].append(quantiles)
+                
+                # Store feature importance and attention weights
+                all_feature_importance.append(batch_outputs['variable_importance'].cpu().numpy())
+                all_attention_weights.append([w.cpu().numpy() for w in batch_outputs['attention_weights']])
+            
+            # Clear GPU cache periodically
+            if (i // batch_size) % 10 == 0:
+                torch.cuda.empty_cache()
+        
+        # Concatenate all batches
         median_predictions = []
         lower_bounds = []
         upper_bounds = []
@@ -274,16 +305,14 @@ class TFTStockPredictor:
         q75_list = []
         
         for horizon in self.forecast_horizons:
-            horizon_key = f"horizon_{horizon}"
-            quantiles = outputs['predictions'][horizon_key].cpu().numpy()
+            # Concatenate all batch predictions for this horizon
+            quantiles_all = np.concatenate(all_predictions[horizon], axis=0)
             
-            # NEW: Inverse transform scaled predictions back to percentage changes
-            # The model outputs scaled values, we need to convert back to actual percentage changes
-            median_predictions.append(quantiles[:, 2])  # 50th percentile
-            lower_bounds.append(quantiles[:, 0])        # 10th percentile
-            upper_bounds.append(quantiles[:, 4])        # 90th percentile
-            q25_list.append(quantiles[:, 1])            # 25th percentile
-            q75_list.append(quantiles[:, 3])            # 75th percentile
+            median_predictions.append(quantiles_all[:, 2])  # 50th percentile
+            lower_bounds.append(quantiles_all[:, 0])        # 10th percentile
+            upper_bounds.append(quantiles_all[:, 4])        # 90th percentile
+            q25_list.append(quantiles_all[:, 1])            # 25th percentile
+            q75_list.append(quantiles_all[:, 3])            # 75th percentile
         
         # Stack predictions and inverse transform all at once
         median_stacked = np.column_stack(median_predictions)
@@ -299,14 +328,21 @@ class TFTStockPredictor:
         q25_unscaled = self.target_scaler.inverse_transform(q25_stacked)
         q75_unscaled = self.target_scaler.inverse_transform(q75_stacked)
         
+        # Concatenate feature importance across all batches
+        feature_importance = np.concatenate(all_feature_importance, axis=0)
+        
+        # For attention weights, take the first batch as representative
+        # (averaging across all batches would be memory-intensive and less meaningful)
+        attention_weights = all_attention_weights[0] if all_attention_weights else []
+        
         return {
             'median_predictions': median_unscaled,
             'lower_bound': lower_unscaled,
             'upper_bound': upper_unscaled,
             'q25': q25_unscaled,
             'q75': q75_unscaled,
-            'feature_importance': outputs['variable_importance'].cpu().numpy(),
-            'attention_weights': [w.cpu().numpy() for w in outputs['attention_weights']]
+            'feature_importance': feature_importance,
+            'attention_weights': attention_weights
         }
     
     def predict_single(self, 
