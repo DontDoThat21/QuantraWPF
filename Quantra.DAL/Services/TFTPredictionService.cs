@@ -167,12 +167,26 @@ namespace Quantra.DAL.Services
 
                         // Read and parse results
                         var jsonResult = await File.ReadAllTextAsync(outputFile);
+                        
+                        // Log the JSON for debugging if deserialization fails
+                        _loggingService?.Log("Debug", $"TFT JSON response length: {jsonResult.Length} chars");
+                        
                         var readOptions = new JsonSerializerOptions
                         {
                             PropertyNameCaseInsensitive = true,
                             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                         };
-                        var pythonResult = JsonSerializer.Deserialize<TFTPythonResponse>(jsonResult, readOptions);
+                        
+                        TFTPythonResponse pythonResult;
+                        try
+                        {
+                            pythonResult = JsonSerializer.Deserialize<TFTPythonResponse>(jsonResult, readOptions);
+                        }
+                        catch (JsonException jsonEx)
+                        {
+                            _loggingService?.Log("Error", $"Failed to deserialize TFT response. First 500 chars: {jsonResult.Substring(0, Math.Min(500, jsonResult.Length))}");
+                            throw new Exception($"Failed to parse TFT prediction result: {jsonEx.Message}", jsonEx);
+                        }
 
                         if (pythonResult == null)
                             throw new Exception("Failed to parse TFT prediction result");
@@ -234,19 +248,29 @@ namespace Quantra.DAL.Services
             // Convert horizons to prediction points
             if (pythonResult.Horizons != null && pythonResult.Horizons.Count > 0)
             {
+                _loggingService?.Log("Debug", $"Processing {pythonResult.Horizons.Count} horizon predictions");
+                
                 foreach (var horizon in pythonResult.Horizons)
                 {
+                    var predictedPrice = pythonResult.CurrentPrice * (1 + horizon.PredictedChange);
+                    var upperPrice = pythonResult.CurrentPrice * (1 + horizon.UpperBound);
+                    var lowerPrice = pythonResult.CurrentPrice * (1 + horizon.LowerBound);
+                    
                     result.Predictions.Add(new TFTForecast
                     {
                         Timestamp = lastDate.AddDays(horizon.DaysAhead),
-                        PredictedPrice = pythonResult.CurrentPrice * (1 + horizon.PredictedChange),
-                        UpperConfidence = pythonResult.CurrentPrice * (1 + horizon.UpperBound),
-                        LowerConfidence = pythonResult.CurrentPrice * (1 + horizon.LowerBound)
+                        PredictedPrice = predictedPrice,
+                        UpperConfidence = upperPrice,
+                        LowerConfidence = lowerPrice
                     });
+                    
+                    _loggingService?.Log("Debug", $"Horizon {horizon.DaysAhead}d: Change={horizon.PredictedChange:P2}, Price=${predictedPrice:F2}");
                 }
             }
             else
             {
+                _loggingService?.Log("Warning", "No horizon data in Python response, using fallback prediction");
+                
                 // Fallback: use main prediction values
                 result.Predictions.Add(new TFTForecast
                 {
