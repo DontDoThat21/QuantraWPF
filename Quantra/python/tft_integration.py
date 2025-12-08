@@ -413,11 +413,11 @@ class TFTStockPredictor:
                     df['rsi'] = 50.0  # Placeholder
                 
                 # 3. Prepare temporal features (past 60 days)
-                # CRITICAL FIX: Use the same feature selection as training
-                # During training, prepare_data_for_ml drops only OHLCV + date columns
-                # So we must do the same here to match the feature dimensions
-                columns_to_drop = ['date', 'open', 'high', 'low', 'close', 'volume']
-                feature_cols = [col for col in df.columns if col not in columns_to_drop]
+                # CRITICAL FIX: Use the EXACT same feature selection logic as training
+                # During training, prepare_data_for_ml uses: features_df.drop([...], axis=1, errors='ignore')
+                # We must replicate this EXACTLY to ensure consistent feature dimensions
+                df = df.drop(['date', 'open', 'high', 'low', 'close', 'volume'], axis=1, errors='ignore')
+                feature_cols = list(df.columns)
                 
                 if not feature_cols:
                     logger.warning("No feature columns found after dropping OHLCV. Using fallback basic features.")
