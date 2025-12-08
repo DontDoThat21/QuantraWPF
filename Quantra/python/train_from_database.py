@@ -405,17 +405,65 @@ def train_model_from_database(
     
     if is_tft:
         # For TFT, we need to pass future features
-        # This requires modifications to load_or_train_model or direct TFT initialization
-        logger.info("TFT training requires future-known covariates - using enhanced training pipeline")
-        # TODO: Implement direct TFT training with X_future_train
-        # For now, log a warning and fall back
-        logger.warning("Direct TFT training from database not yet implemented. Train via stock_predictor.py with prepared data.")
-        model, scaler, used_model_type = load_or_train_model(
-            X_train=X_train,
-            y_train=y_train,
-            model_type='pytorch',  # Fallback to PyTorch
-            architecture_type='transformer'
+        logger.info("TFT training with future-known covariates...")
+        
+        # Import TFT components
+        from tft_integration import TFTStockPredictor, create_static_features
+        
+        # Get hyperparameters from config if available
+        hyperparameters = {}
+        
+        # Determine input dimensions
+        if len(X_train.shape) == 3:
+            input_dim = X_train.shape[2]
+            seq_len = X_train.shape[1]
+        else:
+            input_dim = X_train.shape[1]
+            seq_len = 60
+            # Reshape 2D data to 3D for TFT
+            X_train = X_train.reshape(-1, 1, input_dim)
+            X_train = np.tile(X_train, (1, seq_len, 1))
+            X_test = X_test.reshape(-1, 1, input_dim)
+            X_test = np.tile(X_test, (1, seq_len, 1))
+        
+        # Create TFT model properly
+        model = TFTStockPredictor(
+            input_dim=input_dim,
+            static_dim=10,
+            hidden_dim=hyperparameters.get('hidden_dim', 128),
+            forecast_horizons=[5, 10, 20, 30]
         )
+        
+        # Create static features (use zeros for now, can be enhanced with real metadata)
+        n_samples_train = X_train.shape[0]
+        n_samples_test = X_test.shape[0]
+        static_features_train = np.zeros((n_samples_train, 10), dtype=np.float32)
+        static_features_test = np.zeros((n_samples_test, 10), dtype=np.float32)
+        
+        logger.info("Static features created - using defaults (enhance with real metadata in production)")
+        
+        # Prepare targets for multi-horizon
+        if y_train_scaled.ndim == 1:
+            y_train_scaled = np.column_stack([y_train_scaled] * len(model.forecast_horizons))
+        if y_test_scaled.ndim == 1:
+            y_test_scaled = np.column_stack([y_test_scaled] * len(model.forecast_horizons))
+        
+        # CRITICAL: Pass X_future_train to fit()
+        logger.info(f"Training TFT with future features: {X_future_train.shape}")
+        model.fit(
+            X_past=X_train,
+            X_static=static_features_train,
+            y=y_train_scaled,
+            future_features=X_future_train,  # ← THIS IS NOW PASSED!
+            epochs=hyperparameters.get('epochs', 50),
+            batch_size=hyperparameters.get('batch_size', 32),
+            lr=hyperparameters.get('learning_rate', 0.001)
+        )
+        
+        # Set feature names and model type
+        model.feature_names = feature_names
+        used_model_type = 'tft'
+        scaler = model.scaler
     else:
         # Standard training for LSTM/GRU/Transformer/RandomForest
         # CRITICAL FIX: Use scaled targets for training
