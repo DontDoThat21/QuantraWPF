@@ -413,16 +413,25 @@ class TFTStockPredictor:
                     df['rsi'] = 50.0  # Placeholder
                 
                 # 3. Prepare temporal features (past 60 days)
-                FEATURE_COLUMNS = ['returns', 'volatility', 'sma_5', 'sma_20', 'momentum', 
-                                   'roc', 'atr', 'bb_width', 'rsi']  # Add more as available
+                # CRITICAL FIX: Use the same feature selection as training
+                # During training, prepare_data_for_ml drops only OHLCV + date columns
+                # So we must do the same here to match the feature dimensions
+                columns_to_drop = ['date', 'open', 'high', 'low', 'close', 'volume']
+                feature_cols = [col for col in df.columns if col not in columns_to_drop]
                 
-                # Filter to only available columns
-                available_features = [col for col in FEATURE_COLUMNS if col in df.columns]
-                if not available_features:
-                    logger.warning("No feature columns found. Using OHLCV directly.")
-                    available_features = feature_names
+                if not feature_cols:
+                    logger.warning("No feature columns found after dropping OHLCV. Using fallback basic features.")
+                    # This shouldn't happen if create_features worked properly
+                    feature_cols = ['returns', 'volatility', 'sma_5', 'sma_20', 'momentum', 
+                                   'roc', 'atr', 'bb_width', 'rsi']
+                    feature_cols = [col for col in feature_cols if col in df.columns]
                 
-                temporal_features = df[available_features].values  # Shape: (n_days, n_features)
+                # Log feature information
+                if len(feature_cols) > 5:
+                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols[:5]}... (showing first 5)")
+                else:
+                    logger.info(f"Using {len(feature_cols)} features for prediction: {feature_cols}")
+                temporal_features = df[feature_cols].values  # Shape: (n_days, n_features)
                 X_past = prepare_temporal_features(temporal_features, lookback=lookback)
                 
                 # Get current price from last historical entry
