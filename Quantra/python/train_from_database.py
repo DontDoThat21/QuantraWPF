@@ -410,9 +410,6 @@ def train_model_from_database(
         # Import TFT components
         from tft_integration import TFTStockPredictor, create_static_features
         
-        # Get hyperparameters from config if available
-        hyperparameters = {}
-        
         # Determine input dimensions
         if len(X_train.shape) == 3:
             input_dim = X_train.shape[2]
@@ -426,12 +423,16 @@ def train_model_from_database(
             X_test = X_test.reshape(-1, 1, input_dim)
             X_test = np.tile(X_test, (1, seq_len, 1))
         
-        # Create TFT model properly
+        # Create TFT model properly with hyperparameters
         model = TFTStockPredictor(
             input_dim=input_dim,
             static_dim=10,
-            hidden_dim=hyperparameters.get('hidden_dim', 128),
-            forecast_horizons=[5, 10, 20, 30]
+            hidden_dim=hidden_dim,
+            forecast_horizons=[5, 10, 20, 30],
+            num_heads=num_heads,
+            num_lstm_layers=num_layers,
+            dropout=dropout,
+            num_attention_layers=num_attention_layers
         )
         
         # Create static features (use zeros for now, can be enhanced with real metadata)
@@ -455,9 +456,9 @@ def train_model_from_database(
             X_static=static_features_train,
             y=y_train_scaled,
             future_features=X_future_train,  # ← THIS IS NOW PASSED!
-            epochs=hyperparameters.get('epochs', 50),
-            batch_size=hyperparameters.get('batch_size', 32),
-            lr=hyperparameters.get('learning_rate', 0.001)
+            epochs=epochs,
+            batch_size=batch_size,
+            lr=learning_rate
         )
         
         # Set feature names and model type
