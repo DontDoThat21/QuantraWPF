@@ -409,22 +409,32 @@ class PyTorchStockPredictor:
     
     def save(self, model_path=PYTORCH_MODEL_PATH, scaler_path=SCALER_PATH):
         """Save the model and scaler."""
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        
-        # Save the PyTorch model
-        torch.save({
-            'model_state_dict': self.model.state_dict(),
-            'input_dim': self.input_dim,
-            'hidden_dim': self.hidden_dim,
-            'num_layers': self.num_layers,
-            'dropout': self.dropout,
-            'feature_names': self.feature_names,
-            'architecture_type': self.architecture_type
-        }, model_path)
-        
-        # Save the scaler
-        joblib.dump(self.scaler, scaler_path)
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            
+            # Save the PyTorch model
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                'input_dim': self.input_dim,
+                'hidden_dim': self.hidden_dim,
+                'num_layers': self.num_layers,
+                'dropout': self.dropout,
+                'feature_names': self.feature_names,
+                'architecture_type': self.architecture_type
+            }, model_path)
+            
+            # Save the scaler
+            joblib.dump(self.scaler, scaler_path)
+            
+            logger.info(f"PyTorch model saved to {model_path}")
+            return True
+            
+        except Exception as e:
+            # Catch all exceptions to ensure training doesn't crash on save failure
+            # This includes OSError for file operations, torch errors, etc.
+            logger.error(f"Error saving PyTorch model: {e}")
+            return False
         
     def load(self, model_path=PYTORCH_MODEL_PATH, scaler_path=SCALER_PATH):
         """Load the model and scaler."""
@@ -690,28 +700,38 @@ class TensorFlowStockPredictor:
     
     def save(self, model_path=TENSORFLOW_MODEL_PATH, scaler_path=SCALER_PATH):
         """Save the model and scaler."""
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        
-        # Save the Keras model
-        self.model.save(model_path)
-        
-        # Save the feature names along with the model
-        np.save(f"{model_path}/feature_names.npy", np.array(self.feature_names))
-        
-        # Save model parameters
-        params = {
-            'input_dim': self.input_dim,
-            'hidden_dim': self.hidden_dim,
-            'num_layers': self.num_layers,
-            'dropout': self.dropout,
-            'architecture_type': self.architecture_type
-        }
-        with open(f"{model_path}/params.json", 'w') as f:
-            json.dump(params, f)
-        
-        # Save the scaler
-        joblib.dump(self.scaler, scaler_path)
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            
+            # Save the Keras model
+            self.model.save(model_path)
+            
+            # Save the feature names along with the model
+            np.save(f"{model_path}/feature_names.npy", np.array(self.feature_names))
+            
+            # Save model parameters
+            params = {
+                'input_dim': self.input_dim,
+                'hidden_dim': self.hidden_dim,
+                'num_layers': self.num_layers,
+                'dropout': self.dropout,
+                'architecture_type': self.architecture_type
+            }
+            with open(f"{model_path}/params.json", 'w') as f:
+                json.dump(params, f)
+            
+            # Save the scaler
+            joblib.dump(self.scaler, scaler_path)
+            
+            logger.info(f"TensorFlow model saved to {model_path}")
+            return True
+            
+        except Exception as e:
+            # Catch all exceptions to ensure training doesn't crash on save failure
+            # This includes OSError for file operations, TensorFlow errors, etc.
+            logger.error(f"Error saving TensorFlow model: {e}")
+            return False
         
     def load(self, model_path=TENSORFLOW_MODEL_PATH, scaler_path=SCALER_PATH):
         """Load the model and scaler."""

@@ -108,39 +108,47 @@ namespace Quantra.DAL.Models
 
         /// <summary>
         /// Create a high-accuracy configuration for production
+        /// NOTE: Changed from TFT to Transformer because TFT is not yet implemented in train_from_database.py
+        /// TFT training requires X_future_train (known future covariates) which is prepared but not yet integrated
+        /// Use this configuration to fix R² score issues first, then implement TFT properly
         /// </summary>
         public static TrainingConfiguration CreateHighAccuracy()
         {
             return new TrainingConfiguration
             {
                 ConfigurationName = "High Accuracy",
-                Description = "Maximum accuracy configuration for production deployment",
+                Description = "Maximum accuracy configuration for production deployment (using Transformer until TFT is implemented)",
                 ModelType = "pytorch",
-                ArchitectureType = "tft",
+                ArchitectureType = "transformer", // Changed from "tft" - see TODO in train_from_database.py line 715
                 Epochs = 100,
-                BatchSize = 32,
-                LearningRate = 0.0005,
+                BatchSize = 64, // Increased from 32 for better convergence
+                LearningRate = 0.001, // Increased from 0.0005 for faster initial learning
                 Dropout = 0.2,
                 HiddenDim = 256,
                 NumLayers = 3,
-                NumHeads = 8,
-                NumAttentionLayers = 3,
+                NumHeads = 8, // Still used by Transformer
+                NumAttentionLayers = 3, // Still used by Transformer
                 UseEarlyStopping = true,
-                EarlyStoppingPatience = 15
+                EarlyStoppingPatience = 15,
+                FeatureType = "balanced", // Explicit feature engineering
+                UseFeatureEngineering = true
             };
         }
 
         /// <summary>
         /// Create a TFT-optimized configuration
+        /// WARNING: TFT is not yet fully implemented in train_from_database.py
+        /// This will fall back to Transformer until TFT integration is complete
+        /// See TODO at train_from_database.py line 715: "Implement direct TFT training with X_future_train"
         /// </summary>
         public static TrainingConfiguration CreateTFTOptimized()
         {
             return new TrainingConfiguration
             {
                 ConfigurationName = "TFT Optimized",
-                Description = "Optimized for Temporal Fusion Transformer",
+                Description = "Optimized for Temporal Fusion Transformer (EXPERIMENTAL - falls back to Transformer)",
                 ModelType = "pytorch",
-                ArchitectureType = "tft",
+                ArchitectureType = "tft", // Will fall back to transformer in train_from_database.py
                 Epochs = 50,
                 BatchSize = 64,
                 LearningRate = 0.001,
@@ -152,6 +160,39 @@ namespace Quantra.DAL.Models
                 ForecastHorizons = new List<int> { 5, 10, 20, 30 },
                 UseEarlyStopping = true,
                 EarlyStoppingPatience = 10
+            };
+        }
+
+        /// <summary>
+        /// Create configuration specifically to fix low R² score issues
+        /// Uses proven Transformer architecture with optimized hyperparameters
+        /// Includes target scaling fix from train_from_database.py (RobustScaler)
+        /// </summary>
+        public static TrainingConfiguration CreateR2ScoreFix()
+        {
+            return new TrainingConfiguration
+            {
+                ConfigurationName = "R² Score Fix",
+                Description = "Optimized configuration to fix R² score ~0 issues with target scaling and Transformer",
+                ModelType = "pytorch",
+                ArchitectureType = "transformer", // Known working architecture
+                Epochs = 100, // Sufficient for convergence
+                BatchSize = 64, // Good balance of speed and stability
+                LearningRate = 0.001, // Standard rate for Adam optimizer
+                Dropout = 0.2, // Prevent overfitting
+                HiddenDim = 256, // High capacity for pattern learning
+                NumLayers = 3, // Deep enough for complex patterns
+                NumHeads = 8, // Multi-head attention
+                NumAttentionLayers = 3, // Attention depth
+                UseEarlyStopping = true,
+                EarlyStoppingPatience = 15, // Allow time to converge
+                UseLearningRateScheduler = true,
+                LRSchedulerPatience = 5,
+                LRSchedulerFactor = 0.5,
+                FeatureType = "balanced", // Good feature set without overload
+                UseFeatureEngineering = true, // Enhanced features
+                LookbackPeriod = 60, // 60-day window
+                TrainTestSplit = 0.8 // 80/20 split
             };
         }
 
