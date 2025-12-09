@@ -1,0 +1,169 @@
+<Window x:Class="Quantra.Views.StockExplorer.RefreshIntervalDialog"
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+Title="Configure Refresh Interval"
+Width="400" Height="350"
+WindowStartupLocation="CenterOwner"
+Background="#1E1E2E"
+ResizeMode="NoResize">
+    
+    <Window.Resources>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Franklin Gothic Medium"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#B0B0C0"/>
+            <Setter Property="FontFamily" Value="Franklin Gothic Medium"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="20,2,0,0"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Chart Refresh Interval" 
+                       FontSize="16" 
+                       FontWeight="Bold"
+                       Foreground="White"
+                       Margin="0"/>
+            <TextBlock Text="Select how often the chart should refresh data"
+                       FontSize="12"
+                       Foreground="#B0B0C0"
+                       Margin="0,5,0,0"/>
+        </StackPanel>
+        
+        <!-- Interval Options -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="IntervalOptionsPanel">
+                <RadioButton Content="? 5 seconds (Very Fast - High API Usage)" 
+                             Tag="5" 
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: Active day trading, rapid price changes"/>
+                
+                <RadioButton Content="? 10 seconds (Fast)" 
+                             Tag="10" 
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: Intraday trading, quick monitoring"/>
+                
+                <RadioButton Content="? 15 seconds (Standard - Recommended)" 
+                             Tag="15" 
+                             IsChecked="True"
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: General monitoring, balanced API usage"/>
+                
+                <RadioButton Content="? 30 seconds (Moderate)" 
+                             Tag="30" 
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: Swing trading, longer-term analysis"/>
+                
+                <RadioButton Content="? 60 seconds (Slow)" 
+                             Tag="60" 
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: Position trading, minimal API usage"/>
+                
+                <RadioButton Content="? 120 seconds (Very Slow)" 
+                             Tag="120" 
+                             Checked="IntervalRadioButton_Checked"/>
+                <TextBlock Text="Recommended for: Long-term analysis, maximum API conservation"/>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Save as Favorite Option -->
+        <Border Grid.Row="2"
+                Background="#2D2D4D"
+                BorderBrush="#3E3E56"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="10"
+                Margin="0,10,0,0">
+            <CheckBox x:Name="SaveAsFavoriteCheckBox"
+                      Content="? Save as favorite interval"
+                      Foreground="White"
+                      FontFamily="Franklin Gothic Medium"
+                      FontSize="12"
+                      ToolTip="Add this interval to your quick-access favorites"/>
+        </Border>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Width="80" 
+                    Height="30"
+                    Click="CancelButton_Click"
+                    Background="#3E3E56"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Margin="0,0,10,0">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="4"
+                                            Padding="10,5">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#4E4E66"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            
+            <Button Content="Apply" 
+                    Width="80" 
+                    Height="30"
+                    Click="ApplyButton_Click"
+                    Background="#20C040"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="4"
+                                            Padding="10,5">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#30D050"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

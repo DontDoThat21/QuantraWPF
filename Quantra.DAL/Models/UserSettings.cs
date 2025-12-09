@@ -129,5 +129,41 @@ namespace Quantra.Models
 
         // Alpha Vantage API Plan Settings
         public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
+
+        // Chart refresh settings
+        public int ChartRefreshIntervalSeconds { get; set; } = 15; // Default 15 seconds
+
+        // CandlestickChartModal window settings
+        public double CandlestickWindowWidth { get; set; } = 1000; // Default width
+        public double CandlestickWindowHeight { get; set; } = 700; // Default height
+        public double CandlestickWindowLeft { get; set; } = double.NaN; // Default centered
+        public double CandlestickWindowTop { get; set; } = double.NaN; // Default centered
+        
+        // Candlestick Chart Auto-Refresh Settings
+        public bool CandlestickAutoRefreshDefault { get; set; } = true; // Start with auto-refresh ON by default
+        
+        // Favorite Refresh Intervals (JSON serialized list of favorite intervals in seconds)
+        public string FavoriteRefreshIntervals { get; set; } = "[15, 30, 60]"; // Default favorites: 15s, 30s, 60s
+        
+        // Symbol Watchlist (JSON serialized list of favorite symbols)
+        public string SymbolWatchlist { get; set; } = "[]"; // Empty by default
+        
+        // Last Viewed Symbols (JSON serialized list - tracks recent symbol history)
+        public string LastViewedSymbols { get; set; } = "[]"; // Empty by default
+        public int MaxLastViewedSymbols { get; set; } = 10; // Keep last 10 viewed symbols
+        
+        // Chart Layout Presets (JSON serialized dictionary of layout names to settings)
+        public string ChartLayoutPresets { get; set; } = "{}"; // Empty by default
+        public string ActiveChartLayoutPreset { get; set; } = "Default"; // Active preset name
+        
+        // Last Known Good Data Settings
+        public bool EnableLastKnownGoodFallback { get; set; } = true; // Use cached data on API failure
+        public int LastKnownGoodDataExpiryHours { get; set; } = 24; // Keep fallback data for 24 hours
+        
+        // API Error Circuit Breaker Settings
+        public bool EnableApiCircuitBreaker { get; set; } = true; // Enable circuit breaker pattern
+        public int CircuitBreakerFailureThreshold { get; set; } = 5; // Open circuit after 5 failures
+        public int CircuitBreakerTimeoutSeconds { get; set; } = 60; // Reset circuit after 60 seconds
+        public int CircuitBreakerHalfOpenRetries { get; set; } = 3; // Allow 3 retries in half-open state
     }
 }
