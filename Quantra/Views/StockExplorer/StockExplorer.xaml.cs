@@ -671,12 +671,6 @@ namespace Quantra.Controls
             SocialMediaSentimentScore = 0.0;
             AnalystSentimentScore = 0.0;
             SentimentSummary = "";
-            
-            // Initialize charts - ensure IndicatorCharts is available before use
-            InitializeCharts();
-            
-            // Initialize time range selection (default to 1 day)
-            UpdateTimeRangeButtonStyles("1day");
 
             // Initialize symbol search timer for automatic loading
             InitializeSymbolSearchTimer();

@@ -1247,10 +1247,7 @@ namespace Quantra.Controls
                 {
                     // Update the current time range in the ViewModel
                     _viewModel.CurrentTimeRange = timeRange;
-                    
-                    // Update button styles
-                    UpdateTimeRangeButtonStyles(timeRange);
-                    
+                                        
                     // If we have a selected symbol, reload its chart data with the new time range
                     if (!string.IsNullOrEmpty(_viewModel.SelectedSymbol))
                     {
@@ -1267,39 +1264,6 @@ namespace Quantra.Controls
                     // Always reset cursor back to normal on UI thread
                     Mouse.OverrideCursor = null;
                 }
-            }
-        }
-
-        // Update time range button styles to show active selection
-        private void UpdateTimeRangeButtonStyles(string activeTimeRange)
-        {
-            // Reset all buttons to default style
-            var buttons = new[] { TimeRange1D, TimeRange5D, TimeRange1M, TimeRange6M, TimeRange1Y, TimeRange5Y, TimeRangeAll };
-            
-            foreach (var button in buttons)
-            {
-                if (button != null)
-                {
-                    button.Background = new SolidColorBrush(Color.FromRgb(0x3A, 0x6E, 0xA5)); // Default blue
-                }
-            }
-            
-            // Highlight the active button
-            Button activeButton = activeTimeRange switch
-            {
-                "1day" => TimeRange1D,
-                "5day" => TimeRange5D,
-                "1mo" => TimeRange1M,
-                "6mo" => TimeRange6M,
-                "1y" => TimeRange1Y,
-                "5y" => TimeRange5Y,
-                "all" => TimeRangeAll,
-                _ => TimeRange1D // Default to 1D instead of 1M
-            };
-            
-            if (activeButton != null)
-            {
-                activeButton.Background = new SolidColorBrush(Color.FromRgb(0x6A, 0x5A, 0xCD)); // Purple for active
             }
         }
 

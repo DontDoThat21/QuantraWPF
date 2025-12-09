@@ -15,18 +15,6 @@ namespace Quantra.Controls
     public partial class StockExplorer
     {
         // Chart data collections and related methods
-        private CustomChartTooltip _chartTooltip;
-        
-        // Method to initialize the charts
-        private void InitializeCharts()
-        {
-            // Create custom tooltip
-            _chartTooltip = new CustomChartTooltip();
-            
-            // Assign the custom tooltip to the chart
-            HistoricalDataChart.DataTooltip = _chartTooltip;
-            
-            // Configure additional chart-related elements
-        }
+        //private CustomChartTooltip _chartTooltip;
     }
 }
