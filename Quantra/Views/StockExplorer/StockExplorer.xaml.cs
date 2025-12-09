@@ -1629,7 +1629,6 @@ namespace Quantra.Controls
                 // Keep the CurrentIndicators collection for backward compatibility
                 // Note: We can gradually phase out this collection in favor of the individual properties
                 // For now, keep it empty to avoid any flashing while maintaining compatibility
-                cancellationToken.ThrowIfCancellationRequested();
                 _ = Dispatcher.InvokeAsync(() =>
                 {
                     if (CurrentIndicators.Count > 0)

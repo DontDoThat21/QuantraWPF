@@ -29,14 +29,11 @@ MinWidth="900" MinHeight="700">
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="Auto" MinWidth="200"/>
-            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Symbol Selection Mode and Search -->
-        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="0,0,0,10">
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" Margin="0,0,0,10">
             <!-- Mode Selection and Individual Asset Controls Row -->
             <Grid Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
@@ -292,7 +289,7 @@ MinWidth="900" MinHeight="700">
 
 
         <!-- Main Stock Chart and DataGrid -->
-        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,10,0" Grid.ColumnSpan="3" Grid.RowSpan="2">
+        <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,10,0" Grid.RowSpan="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="3*"/>
                 <RowDefinition Height="2*"/>
@@ -500,45 +497,13 @@ MinWidth="900" MinHeight="700">
             </StackPanel>
         </Grid>
         <!-- Historical Data Chart and Indicator Panel -->
-        <Grid Grid.Row="1" Grid.Column="3" Margin="0,0,0,0" Grid.RowSpan="2">
+        <Grid Grid.Row="3" Grid.Column="0" Margin="0,0,0,0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Symbol Label and Cache Timestamp with Refresh Button -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,5,0,2" VerticalAlignment="Bottom">
-                <TextBlock Text="Symbol:" 
-                           Style="{StaticResource EnhancedTextBlockStyle}" 
-                           FontWeight="Bold"/>
-                <TextBlock x:Name="SymbolDisplayLabel" 
-                           Text="{Binding SelectedSymbolDisplay, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                           Style="{StaticResource EnhancedSmallTextBlockStyle}"
-                           FontWeight="Bold"
-                           Margin="10,0,0,0"/>
-                <TextBlock Text="Cached:" 
-                           Style="{StaticResource EnhancedTextBlockStyle}" 
-                           Margin="20,0,0,0"/>
-                <TextBlock x:Name="CacheTimestampLabel" 
-                           Text="{Binding CacheTimestampText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                           Style="{StaticResource EnhancedSmallTextBlockStyle}"
-                           Foreground="{Binding CacheTimestampColor, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                           ToolTip="Date/time when this symbol's data was last cached"
-                           Margin="5,0,0,0"/>
-                <Button x:Name="RefreshSymbolDataButton"
-                        Content="⟳ Refresh"
-                        Margin="10,0,0,0"
-                        Padding="8,2"
-                        Height="24"
-                        MinWidth="70"
-                        Click="RefreshSymbolDataButton_Click"
-                        Style="{StaticResource EnhancedButtonStyle}"
-                        ToolTip="Fetch latest data from API for this symbol"
-                        IsEnabled="{Binding CanRefreshSymbol, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-            </StackPanel>
-
             <!-- Indicator Selection Panel (horizontal) -->
-            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,5,0,0">
+            <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,5,0,0">
                 <ItemsControl x:Name="IndicatorWrapPanel">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -550,7 +515,7 @@ MinWidth="900" MinHeight="700">
         </Grid>
         
         <!-- Static Indicators List (below DataGrid) -->
-        <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="5,10,10,0">
+        <Grid Grid.Row="4" Grid.Column="0" Margin="5,10,10,0">
             <Border Background="#2D2D4D" 
                     BorderBrush="#3E3E56" 
                     BorderThickness="1" 
@@ -559,7 +524,14 @@ MinWidth="900" MinHeight="700">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto" 
                               VerticalScrollBarVisibility="Disabled" 
                               Padding="10,5">
-                    <StackPanel Orientation="Horizontal">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Indicators on the left -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <!-- RSI Indicator -->
                         <Border Background="#23233A" 
                                 BorderBrush="#3E3E56" 
@@ -935,6 +907,42 @@ MinWidth="900" MinHeight="700">
                             </StackPanel>
                         </Border>
                     </StackPanel>
+                    
+                    <!-- Symbol, Cached, and Refresh controls on the right -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="15,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Symbol:" 
+                                   Style="{StaticResource EnhancedTextBlockStyle}" 
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SymbolDisplayLabel" 
+                                   Text="{Binding SelectedSymbolDisplay, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,0,0"/>
+                        <TextBlock Text="Cached:" 
+                                   Style="{StaticResource EnhancedTextBlockStyle}" 
+                                   VerticalAlignment="Center"
+                                   Margin="20,0,0,0"/>
+                        <TextBlock x:Name="CacheTimestampLabel" 
+                                   Text="{Binding CacheTimestampText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                                   Foreground="{Binding CacheTimestampColor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   ToolTip="Date/time when this symbol's data was last cached"
+                                   VerticalAlignment="Center"
+                                   Margin="5,0,0,0"/>
+                        <Button x:Name="RefreshSymbolDataButton"
+                                Content="⟳ Refresh"
+                                Margin="10,0,0,0"
+                                Padding="8,4"
+                                Height="28"
+                                MinWidth="70"
+                                Click="RefreshSymbolDataButton_Click"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                ToolTip="Fetch latest data from API for this symbol"
+                                IsEnabled="{Binding CanRefreshSymbol, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                    </StackPanel>
+                </Grid>
                 </ScrollViewer>
             </Border>
         </Grid>
