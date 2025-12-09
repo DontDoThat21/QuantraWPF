@@ -727,37 +727,91 @@ namespace Quantra.Controls
                     LoadingProgressText = "Checking cache...";
                 });
                 
-                // Convert interval format for StockDataCacheService (1min, 5min, etc.)
-                string timeRange = ConvertIntervalToTimeRange(_currentInterval);
-                
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    LoadingProgress = 30;
-                    LoadingProgressText = "Fetching data...";
-                });
+                // Determine if this is intraday or daily data
+                bool isIntradayInterval = _currentInterval.EndsWith("min");
                 
                 // Execute with retry policy and cancellation support
                 var historicalData = await _retryPolicy.ExecuteAsync(async (ct) =>
                 {
                     ct.ThrowIfCancellationRequested();
                     
-                    // Get data from StockDataCacheService - it handles caching automatically
-                    var data = await Task.Run(async () => 
-                        await _stockDataCacheService.GetStockData(
-                            _symbol, 
-                            timeRange, 
-                            _currentInterval, 
-                            forceRefresh).ConfigureAwait(false),
-                        ct
-                    ).ConfigureAwait(false);
+                    List<HistoricalPrice> combinedData;
+                    
+                    if (isIntradayInterval)
+                    {
+                        // For intraday intervals, combine intraday + daily data
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            LoadingProgress = 20;
+                            LoadingProgressText = "Fetching intraday data...";
+                        });
+                        
+                        // Get intraday data (goes back 1-2 days only)
+                        string intradayTimeRange = ConvertIntervalToTimeRange(_currentInterval);
+                        var intradayData = await Task.Run(async () => 
+                            await _stockDataCacheService.GetStockData(
+                                _symbol, 
+                                intradayTimeRange, 
+                                _currentInterval, 
+                                forceRefresh).ConfigureAwait(false),
+                            ct
+                        ).ConfigureAwait(false);
+                        
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            LoadingProgress = 40;
+                            LoadingProgressText = "Fetching historical daily data...";
+                        });
+                        
+                        // Get daily data to fill in the gaps (goes back much further)
+                        var dailyData = await Task.Run(async () => 
+                            await _stockDataCacheService.GetStockData(
+                                _symbol, 
+                                "6mo",  // Get 6 months of daily data for broader context
+                                "1d",   // Daily interval
+                                forceRefresh).ConfigureAwait(false),
+                            ct
+                        ).ConfigureAwait(false);
+                        
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            LoadingProgress = 60;
+                            LoadingProgressText = "Combining datasets...";
+                        });
+                        
+                        // Combine the two datasets
+                        combinedData = CombineIntradayAndDailyData(intradayData, dailyData);
+                        
+                        _loggingService?.Log("Info", 
+                            $"Combined data for {_symbol}: {intradayData?.Count ?? 0} intraday + {dailyData?.Count ?? 0} daily = {combinedData?.Count ?? 0} total");
+                    }
+                    else
+                    {
+                        // For daily/weekly/monthly intervals, just get that data
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            LoadingProgress = 30;
+                            LoadingProgressText = "Fetching data...";
+                        });
+                        
+                        string timeRange = ConvertIntervalToTimeRange(_currentInterval);
+                        combinedData = await Task.Run(async () => 
+                            await _stockDataCacheService.GetStockData(
+                                _symbol, 
+                                timeRange, 
+                                _currentInterval, 
+                                forceRefresh).ConfigureAwait(false),
+                            ct
+                        ).ConfigureAwait(false);
+                    }
                     
                     // Track API call if it wasn't from cache
-                    if (forceRefresh || data == null)
+                    if (forceRefresh || combinedData == null)
                     {
                         IncrementApiCallCount();
                     }
                     
-                    return data;
+                    return combinedData;
                 }, cancellationToken).ConfigureAwait(false);
                 
                 await Dispatcher.InvokeAsync(() =>
@@ -879,6 +933,65 @@ namespace Quantra.Controls
                 "60min" => "2mo",    // 60-minute data: last 2 months
                 _ => "1mo"           // Default: 1 month
             };
+        }
+
+        /// <summary>
+        /// Combines intraday data (recent, high-resolution) with daily data (historical, lower-resolution)
+        /// to provide a complete picture for the chart
+        /// </summary>
+        /// <param name="intradayData">Recent intraday data (1-2 days)</param>
+        /// <param name="dailyData">Historical daily data (months/years)</param>
+        /// <returns>Combined dataset with daily data first, then intraday data</returns>
+        private List<HistoricalPrice> CombineIntradayAndDailyData(
+            List<HistoricalPrice> intradayData, 
+            List<HistoricalPrice> dailyData)
+        {
+            var combined = new List<HistoricalPrice>();
+
+            // If either dataset is null or empty, return the other one
+            if (intradayData == null || intradayData.Count == 0)
+            {
+                return dailyData ?? new List<HistoricalPrice>();
+            }
+
+            if (dailyData == null || dailyData.Count == 0)
+            {
+                return intradayData;
+            }
+
+            try
+            {
+                // Find the earliest date in intraday data (this is where we'll cut off daily data)
+                var intradayStartDate = intradayData.Min(p => p.Date).Date;
+
+                // Add all daily data that's BEFORE the intraday data starts
+                // This gives us historical context
+                var historicalDailyData = dailyData
+                    .Where(p => p.Date.Date < intradayStartDate)
+                    .OrderBy(p => p.Date)
+                    .ToList();
+
+                combined.AddRange(historicalDailyData);
+
+                // Add all intraday data
+                // Sort to ensure chronological order
+                var sortedIntradayData = intradayData
+                    .OrderBy(p => p.Date)
+                    .ToList();
+
+                combined.AddRange(sortedIntradayData);
+
+                _loggingService?.Log("Info", 
+                    $"Combined data: {historicalDailyData.Count} daily bars + {sortedIntradayData.Count} intraday bars = {combined.Count} total bars");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error combining intraday and daily data");
+                // Fallback: just return intraday data if combination fails
+                return intradayData;
+            }
+
+            return combined;
         }
 
         private async Task UpdateChartAsync(List<HistoricalPrice> historicalData)
@@ -1778,3 +1891,4 @@ namespace Quantra.Controls
         #endregion
     }
 }
+
