@@ -1611,5 +1611,45 @@ namespace Quantra.Controls
                 _scrollDebounceTimer.Start();
             }
         }
+
+        /// <summary>
+        /// Handles double-click event on DataGrid row to open candlestick chart modal
+        /// </summary>
+        private void StockDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                // Get the clicked row
+                if (StockDataGrid?.SelectedItem is QuoteData selectedStock && !string.IsNullOrEmpty(selectedStock.Symbol))
+                {
+                    _loggingService?.Log("Info", $"Opening candlestick chart modal for {selectedStock.Symbol}");
+                    
+                    // Get AlphaVantageService from DI container to ensure it's not null
+                    var alphaVantageService = _alphaVantageService ?? App.ServiceProvider?.GetService(typeof(AlphaVantageService)) as AlphaVantageService;
+                    
+                    if (alphaVantageService == null)
+                    {
+                        _loggingService?.Log("Error", "AlphaVantageService is not available - cannot open candlestick chart");
+                        CustomModal.ShowError("AlphaVantage service is not initialized. Cannot load candlestick data.", "Service Error", Window.GetWindow(this));
+                        return;
+                    }
+                    
+                    // Create and show the modal
+                    var modal = new CandlestickChartModal(
+                        selectedStock.Symbol,
+                        alphaVantageService,
+                        _loggingService
+                    );
+                    
+                    modal.Owner = Window.GetWindow(this);
+                    modal.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to open candlestick chart modal");
+                CustomModal.ShowError($"Failed to open candlestick chart: {ex.Message}", "Error", Window.GetWindow(this));
+            }
+        }
     }
 }

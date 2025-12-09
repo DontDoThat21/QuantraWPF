@@ -307,6 +307,7 @@ MinWidth="900" MinHeight="700">
                       SelectionChanged="StockDataGrid_SelectionChanged"
                       PreviewMouseRightButtonDown="StockDataGrid_PreviewMouseRightButtonDown"
                       MouseRightButtonUp="StockDataGrid_MouseRightButtonUp"
+                      MouseDoubleClick="StockDataGrid_MouseDoubleClick"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       Grid.Row="0"
