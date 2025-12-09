@@ -1432,17 +1432,20 @@ namespace Quantra.Controls
                 
                 var sortedData = _cachedData.OrderBy(h => h.Date).ToList();
                 var closePrices = sortedData.Select(p => p.Close).ToList();
+                int candleCount = sortedData.Count;
+                
+                _loggingService?.Log("Debug", $"Updating indicators for {candleCount} candles. Price range: {sortedData.Min(p => p.Low):F2} - {sortedData.Max(p => p.High):F2}");
                 
                 // Add SMA if enabled
                 if (ShowSMA)
                 {
                     var sma = _technicalIndicatorService.CalculateSMA(closePrices, 20);
-                    if (sma != null && sma.Count > 0)
+                    if (sma != null && sma.Count == candleCount)
                     {
                         var smaValues = new ChartValues<double>();
                         for (int i = 0; i < sma.Count; i++)
                         {
-                            smaValues.Add(double.IsNaN(sma[i]) ? 0 : sma[i]);
+                            smaValues.Add(sma[i]);
                         }
                         
                         CandlestickSeries.Add(new LineSeries
@@ -1452,8 +1455,15 @@ namespace Quantra.Controls
                             Stroke = System.Windows.Media.Brushes.Orange,
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 2,
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
+                        
+                        _loggingService?.Log("Debug", $"SMA added: {smaValues.Count} points, first valid: {smaValues.FirstOrDefault(v => !double.IsNaN(v)):F2}");
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"SMA count mismatch: expected {candleCount}, got {sma?.Count ?? 0}");
                     }
                 }
                 
@@ -1461,12 +1471,12 @@ namespace Quantra.Controls
                 if (ShowEMA)
                 {
                     var ema = _technicalIndicatorService.CalculateEMA(closePrices, 20);
-                    if (ema != null && ema.Count > 0)
+                    if (ema != null && ema.Count == candleCount)
                     {
                         var emaValues = new ChartValues<double>();
                         for (int i = 0; i < ema.Count; i++)
                         {
-                            emaValues.Add(double.IsNaN(ema[i]) ? 0 : ema[i]);
+                            emaValues.Add(ema[i]);
                         }
                         
                         CandlestickSeries.Add(new LineSeries
@@ -1476,8 +1486,15 @@ namespace Quantra.Controls
                             Stroke = System.Windows.Media.Brushes.Cyan,
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 2,
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
+                        
+                        _loggingService?.Log("Debug", $"EMA added: {emaValues.Count} points");
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"EMA count mismatch: expected {candleCount}, got {ema?.Count ?? 0}");
                     }
                 }
                 
@@ -1489,13 +1506,16 @@ namespace Quantra.Controls
                     var volumes = sortedData.Select(p => (double)p.Volume).ToList();
                     
                     var vwap = _technicalIndicatorService.CalculateVWAP(highPrices, lowPrices, closePrices, volumes);
-                    if (vwap != null && vwap.Count > 0)
+                    
+                    if (vwap != null && vwap.Count == candleCount)
                     {
                         var vwapValues = new ChartValues<double>();
                         for (int i = 0; i < vwap.Count; i++)
                         {
                             vwapValues.Add(vwap[i]);
                         }
+                        
+                        _loggingService?.Log("Debug", $"VWAP added: {vwapValues.Count} points, range: {vwap.Min():F2} - {vwap.Max():F2}");
                         
                         CandlestickSeries.Add(new LineSeries
                         {
@@ -1504,8 +1524,13 @@ namespace Quantra.Controls
                             Stroke = System.Windows.Media.Brushes.Yellow,
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 2,
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"VWAP count mismatch: expected {candleCount}, got {vwap?.Count ?? 0}");
                     }
                 }
                 
@@ -1513,7 +1538,8 @@ namespace Quantra.Controls
                 if (ShowBollingerBands)
                 {
                     var bb = _technicalIndicatorService.CalculateBollingerBands(closePrices, 20, 2.0);
-                    if (bb.Upper != null && bb.Middle != null && bb.Lower != null)
+                    if (bb.Upper != null && bb.Middle != null && bb.Lower != null && 
+                        bb.Upper.Count == candleCount)
                     {
                         var upperValues = new ChartValues<double>();
                         var middleValues = new ChartValues<double>();
@@ -1521,9 +1547,9 @@ namespace Quantra.Controls
                         
                         for (int i = 0; i < bb.Upper.Count; i++)
                         {
-                            upperValues.Add(double.IsNaN(bb.Upper[i]) ? 0 : bb.Upper[i]);
-                            middleValues.Add(double.IsNaN(bb.Middle[i]) ? 0 : bb.Middle[i]);
-                            lowerValues.Add(double.IsNaN(bb.Lower[i]) ? 0 : bb.Lower[i]);
+                            upperValues.Add(bb.Upper[i]);
+                            middleValues.Add(bb.Middle[i]);
+                            lowerValues.Add(bb.Lower[i]);
                         }
                         
                         CandlestickSeries.Add(new LineSeries
@@ -1534,7 +1560,8 @@ namespace Quantra.Controls
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 1,
                             StrokeDashArray = new System.Windows.Media.DoubleCollection(new[] { 2.0, 2.0 }),
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
                         
                         CandlestickSeries.Add(new LineSeries
@@ -1544,7 +1571,8 @@ namespace Quantra.Controls
                             Stroke = new SolidColorBrush(Color.FromArgb(128, 128, 128, 200)),
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 1,
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
                         
                         CandlestickSeries.Add(new LineSeries
@@ -1555,13 +1583,17 @@ namespace Quantra.Controls
                             Fill = System.Windows.Media.Brushes.Transparent,
                             StrokeThickness = 1,
                             StrokeDashArray = new System.Windows.Media.DoubleCollection(new[] { 2.0, 2.0 }),
-                            PointGeometry = null
+                            PointGeometry = null,
+                            ScalesYAt = 0
                         });
+                        
+                        _loggingService?.Log("Debug", $"Bollinger Bands added: {upperValues.Count} points");
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"BB count mismatch: expected {candleCount}, got {bb.Upper?.Count ?? 0}");
                     }
                 }
-                
-                // Note: RSI and MACD would typically be displayed in separate panels below the main chart
-                // This requires more complex layout changes that are beyond the scope of this basic implementation
                 
             }
             catch (Exception ex)

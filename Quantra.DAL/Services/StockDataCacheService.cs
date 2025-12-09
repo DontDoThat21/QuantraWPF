@@ -394,21 +394,22 @@ namespace Quantra.DAL.Services
         /// <returns>Merged data sorted by date</returns>
         private List<HistoricalPrice> MergeHistoricalData(List<HistoricalPrice> existingData, List<HistoricalPrice> newData)
         {
-            // Create a dictionary for efficient lookups
-            var mergedDict = existingData.ToDictionary(p => p.Date.Date, p => p);
+            // Create a dictionary for efficient lookups using full DateTime (including time component)
+            // This supports both daily data (one entry per day) and intraday data (multiple entries per day)
+            var mergedDict = existingData.ToDictionary(p => p.Date, p => p);
 
             foreach (var newPrice in newData)
             {
-                // Check if this date already exists in the dictionary
-                if (mergedDict.ContainsKey(newPrice.Date.Date))
+                // Check if this exact datetime already exists in the dictionary
+                if (mergedDict.ContainsKey(newPrice.Date))
                 {
                     // Update existing entry with newer data
-                    mergedDict[newPrice.Date.Date] = newPrice;
+                    mergedDict[newPrice.Date] = newPrice;
                 }
                 else
                 {
                     // Add new entry
-                    mergedDict[newPrice.Date.Date] = newPrice;
+                    mergedDict[newPrice.Date] = newPrice;
                 }
             }
 
