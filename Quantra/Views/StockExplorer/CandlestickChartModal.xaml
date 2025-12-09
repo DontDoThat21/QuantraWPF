@@ -86,7 +86,7 @@ WindowStartupLocation="CenterScreen">
             </Grid>
         </Border>
 
-        <!-- Interval Selector -->
+        <!-- Interval Selector and Chart Controls -->
         <Border Grid.Row="1" 
                 Background="#2D2D4D" 
                 BorderBrush="#3E3E56" 
@@ -94,29 +94,107 @@ WindowStartupLocation="CenterScreen">
                 CornerRadius="3" 
                 Padding="10"
                 Margin="0,0,0,10">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Interval: " 
-                           Foreground="White" 
-                           VerticalAlignment="Center"
-                           Margin="0,0,10,0"
-                           FontFamily="Franklin Gothic Medium"/>
-                <ComboBox x:Name="IntervalComboBox" 
-                          SelectedIndex="1"
-                          Width="100"
-                          Style="{StaticResource EnhancedComboBoxStyle}"
-                          SelectionChanged="IntervalComboBox_SelectionChanged">
-                    <ComboBoxItem Content="1 min"/>
-                    <ComboBoxItem Content="5 min"/>
-                    <ComboBoxItem Content="15 min"/>
-                    <ComboBoxItem Content="30 min"/>
-                    <ComboBoxItem Content="60 min"/>
-                </ComboBox>
-                <TextBlock Text="{Binding LastUpdateText}" 
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Interval Selector -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Interval: " 
+                               Foreground="White" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"
+                               FontFamily="Franklin Gothic Medium"/>
+                    <ComboBox x:Name="IntervalComboBox" 
+                              SelectedIndex="1"
+                              Width="100"
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              SelectionChanged="IntervalComboBox_SelectionChanged">
+                        <ComboBoxItem Content="1 min"/>
+                        <ComboBoxItem Content="5 min"/>
+                        <ComboBoxItem Content="15 min"/>
+                        <ComboBoxItem Content="30 min"/>
+                        <ComboBoxItem Content="60 min"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Candle Limit Selector -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
+                    <TextBlock Text="Candles: " 
+                               Foreground="White" 
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"
+                               FontFamily="Franklin Gothic Medium"/>
+                    <ComboBox x:Name="CandleLimitComboBox"
+                              x:FieldModifier="private"
+                              SelectedIndex="1"
+                              Width="80"
+                              Style="{StaticResource EnhancedComboBoxStyle}"
+                              SelectionChanged="CandleLimitComboBox_SelectionChanged">
+                        <ComboBoxItem Content="50" Tag="50"/>
+                        <ComboBoxItem Content="100" Tag="100"/>
+                        <ComboBoxItem Content="200" Tag="200"/>
+                        <ComboBoxItem Content="All" Tag="0"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Zoom Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,20,0">
+                    <Button x:Name="ZoomInButton" 
+                            Content="?" 
+                            Click="ZoomInButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            Width="30" Height="30"
+                            Padding="2"
+                            Margin="0,0,5,0"
+                            ToolTip="Zoom In"/>
+                    <Button x:Name="ZoomOutButton" 
+                            Content="?" 
+                            Click="ZoomOutButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            Width="30" Height="30"
+                            Padding="2"
+                            Margin="0,0,5,0"
+                            ToolTip="Zoom Out"/>
+                    <Button x:Name="ResetZoomButton" 
+                            Content="?" 
+                            Click="ResetZoomButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            Width="30" Height="30"
+                            Padding="2"
+                            ToolTip="Reset Zoom"/>
+                </StackPanel>
+
+                <!-- Last Update Text -->
+                <TextBlock Grid.Column="3" 
+                           Text="{Binding LastUpdateText}" 
                            Foreground="#AAAAAA" 
                            VerticalAlignment="Center"
-                           Margin="20,0,0,0"
+                           HorizontalAlignment="Left"
+                           Margin="0,0,20,0"
                            FontFamily="Franklin Gothic Medium"/>
-            </StackPanel>
+
+                <!-- Cache Status -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <TextBlock Text="? " 
+                               Foreground="#4CAF50"
+                               VerticalAlignment="Center"
+                               Margin="0,0,5,0"
+                               FontFamily="Franklin Gothic Medium"
+                               Visibility="{Binding IsCacheValid, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               ToolTip="Data cached - no API call needed"/>
+                    <TextBlock Text="{Binding CacheStatusText}" 
+                               Foreground="#AAAAAA" 
+                               VerticalAlignment="Center"
+                               FontFamily="Franklin Gothic Medium"
+                               FontSize="10"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Candlestick Chart -->
@@ -131,12 +209,30 @@ WindowStartupLocation="CenterScreen">
                 <lvc:CartesianChart x:Name="CandlestickChart" 
                                     Series="{Binding CandlestickSeries}"
                                     LegendLocation="Right"
-                                    Visibility="{Binding IsDataLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding IsDataLoaded, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Zoom="X"
+                                    Pan="X"
+                                    Hoverable="True">
+                    <lvc:CartesianChart.ChartLegend>
+                        <lvc:DefaultLegend BulletSize="15" Foreground="White" Background="#2D2D4D"/>
+                    </lvc:CartesianChart.ChartLegend>
+                    <lvc:CartesianChart.DataTooltip>
+                        <lvc:DefaultTooltip Background="#2D2D4D" 
+                                           Foreground="White" 
+                                           BorderBrush="#3E3E56" 
+                                           BorderThickness="1"
+                                           CornerRadius="3"
+                                           FontFamily="Franklin Gothic Medium"
+                                           FontSize="11"/>
+                    </lvc:CartesianChart.DataTooltip>
                     <lvc:CartesianChart.AxisX>
                         <lvc:Axis Title="Time" 
                                   Labels="{Binding TimeLabels}"
                                   Foreground="White"
-                                  FontFamily="Franklin Gothic Medium">
+                                  FontFamily="Franklin Gothic Medium"
+                                  FontSize="10"
+                                  MinValue="{Binding XAxisMin}"
+                                  MaxValue="{Binding XAxisMax}">
                             <lvc:Axis.Separator>
                                 <lvc:Separator StrokeThickness="1" Stroke="#3E3E56"/>
                             </lvc:Axis.Separator>
@@ -146,7 +242,9 @@ WindowStartupLocation="CenterScreen">
                         <lvc:Axis Title="Price (USD)" 
                                   Foreground="White"
                                   LabelFormatter="{Binding PriceFormatter}"
-                                  FontFamily="Franklin Gothic Medium">
+                                  FontFamily="Franklin Gothic Medium"
+                                  MinValue="{Binding YAxisMin}"
+                                  MaxValue="{Binding YAxisMax}">
                             <lvc:Axis.Separator>
                                 <lvc:Separator StrokeThickness="1" Stroke="#3E3E56"/>
                             </lvc:Axis.Separator>
@@ -192,8 +290,21 @@ WindowStartupLocation="CenterScreen">
                 Margin="0,0,0,10">
             <lvc:CartesianChart x:Name="VolumeChart" 
                                 Series="{Binding VolumeSeries}"
-                                LegendLocation="None"
-                                Visibility="{Binding IsDataLoaded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                LegendLocation="Bottom"
+                                Visibility="{Binding IsDataLoaded, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                Hoverable="True">
+                <lvc:CartesianChart.ChartLegend>
+                    <lvc:DefaultLegend BulletSize="12" Foreground="White" Background="#2D2D4D" Orientation="Horizontal"/>
+                </lvc:CartesianChart.ChartLegend>
+                <lvc:CartesianChart.DataTooltip>
+                    <lvc:DefaultTooltip Background="#2D2D4D" 
+                                       Foreground="White" 
+                                       BorderBrush="#3E3E56" 
+                                       BorderThickness="1"
+                                       CornerRadius="3"
+                                       FontFamily="Franklin Gothic Medium"
+                                       FontSize="11"/>
+                </lvc:CartesianChart.DataTooltip>
                 <lvc:CartesianChart.AxisX>
                     <lvc:Axis ShowLabels="False">
                         <lvc:Axis.Separator>

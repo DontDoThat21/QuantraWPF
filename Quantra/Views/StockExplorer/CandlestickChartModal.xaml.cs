@@ -30,6 +30,7 @@ namespace Quantra.Controls
         
         private const int REFRESH_INTERVAL_SECONDS = 15; // 15 seconds to respect API limits
         private const int API_RATE_LIMIT_CALLS = 5; // 5 calls per minute for free tier
+        private const int CACHE_DURATION_SECONDS = 10; // Cache data for 10 seconds
         
         private SeriesCollection _candlestickSeries;
         private SeriesCollection _volumeSeries;
@@ -43,6 +44,19 @@ namespace Quantra.Controls
         private double _lastPrice = 0;
         private double _priceChange = 0;
         private double _priceChangePercent = 0;
+        private int _maxCandles = 100;
+        
+        // Caching
+        private List<HistoricalPrice> _cachedData;
+        private DateTime _cacheTimestamp = DateTime.MinValue;
+        private string _cachedInterval;
+        
+        // Zoom/Pan
+        private double? _xAxisMin;
+        private double? _xAxisMax;
+        private double? _yAxisMin;
+        private double? _yAxisMax;
+        private double _zoomLevel = 1.0;
 
         #endregion
 
@@ -189,6 +203,54 @@ namespace Quantra.Controls
             return value.ToString("F0");
         };
 
+        public bool IsCacheValid => _cachedData != null && 
+                                    _cachedInterval == _currentInterval && 
+                                    (DateTime.Now - _cacheTimestamp).TotalSeconds < CACHE_DURATION_SECONDS;
+
+        public string CacheStatusText => IsCacheValid 
+            ? $"Cached ({(int)(CACHE_DURATION_SECONDS - (DateTime.Now - _cacheTimestamp).TotalSeconds)}s)" 
+            : "Live";
+
+        public double? XAxisMin
+        {
+            get => _xAxisMin;
+            set
+            {
+                _xAxisMin = value;
+                OnPropertyChanged(nameof(XAxisMin));
+            }
+        }
+
+        public double? XAxisMax
+        {
+            get => _xAxisMax;
+            set
+            {
+                _xAxisMax = value;
+                OnPropertyChanged(nameof(XAxisMax));
+            }
+        }
+
+        public double? YAxisMin
+        {
+            get => _yAxisMin;
+            set
+            {
+                _yAxisMin = value;
+                OnPropertyChanged(nameof(YAxisMin));
+            }
+        }
+
+        public double? YAxisMax
+        {
+            get => _yAxisMax;
+            set
+            {
+                _yAxisMax = value;
+                OnPropertyChanged(nameof(YAxisMax));
+            }
+        }
+
         #endregion
 
         #region Constructor
@@ -234,107 +296,294 @@ namespace Quantra.Controls
 
         #region Data Loading
 
-        private async Task LoadCandlestickDataAsync()
+        private async Task LoadCandlestickDataAsync(bool forceRefresh = false)
         {
-            IsLoading = true;
-            IsDataLoaded = false;
-            IsNoData = false;
+            // Check cache first
+            if (!forceRefresh && IsCacheValid)
+            {
+                _loggingService?.Log("Info", $"Using cached data for {_symbol}");
+                await UpdateChartAsync(_cachedData).ConfigureAwait(false);
+                
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    OnPropertyChanged(nameof(IsCacheValid));
+                    OnPropertyChanged(nameof(CacheStatusText));
+                });
+                return;
+            }
+            
+            await Dispatcher.InvokeAsync(() =>
+            {
+                IsLoading = true;
+                IsDataLoaded = false;
+                IsNoData = false;
+            });
             
             try
             {
                 _loggingService?.Log("Info", $"Loading candlestick data for {_symbol} with interval {_currentInterval}");
                 
-                // Get intraday data from Alpha Vantage
-                var historicalData = await _alphaVantageService.GetIntradayData(
-                    _symbol, 
-                    _currentInterval, 
-                    "compact", 
-                    "json");
+                // Get intraday data from Alpha Vantage (run on background thread)
+                var historicalData = await Task.Run(async () => 
+                    await _alphaVantageService.GetIntradayData(
+                        _symbol, 
+                        _currentInterval, 
+                        "compact", 
+                        "json").ConfigureAwait(false)
+                ).ConfigureAwait(false);
                 
                 if (historicalData == null || historicalData.Count == 0)
                 {
                     _loggingService?.Log("Warning", $"No candlestick data available for {_symbol}");
-                    IsNoData = true;
-                    IsLoading = false;
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        IsNoData = true;
+                        IsLoading = false;
+                    });
                     return;
                 }
                 
-                // Sort by date ascending
-                var sortedData = historicalData.OrderBy(h => h.Date).ToList();
+                // Cache the data
+                _cachedData = historicalData;
+                _cacheTimestamp = DateTime.Now;
+                _cachedInterval = _currentInterval;
                 
-                // Limit to last 100 candles for performance
-                if (sortedData.Count > 100)
+                // Update chart on UI thread
+                await UpdateChartAsync(historicalData).ConfigureAwait(false);
+                
+                await Dispatcher.InvokeAsync(() =>
                 {
-                    sortedData = sortedData.Skip(sortedData.Count - 100).ToList();
-                }
+                    _lastUpdateTime = DateTime.Now;
+                    IsDataLoaded = true;
+                    IsNoData = false;
+                    
+                    OnPropertyChanged(nameof(LastUpdateText));
+                    OnPropertyChanged(nameof(StatusText));
+                    OnPropertyChanged(nameof(PriceChangeColor));
+                    OnPropertyChanged(nameof(IsCacheValid));
+                    OnPropertyChanged(nameof(CacheStatusText));
+                });
                 
-                // Update chart
-                UpdateChartWithData(sortedData);
-                
-                // Update price information
-                UpdatePriceInfo(sortedData);
-                
-                _lastUpdateTime = DateTime.Now;
-                IsDataLoaded = true;
-                IsNoData = false;
-                
-                OnPropertyChanged(nameof(LastUpdateText));
-                OnPropertyChanged(nameof(StatusText));
-                OnPropertyChanged(nameof(PriceChangeColor));
-                
-                _loggingService?.Log("Info", $"Successfully loaded {sortedData.Count} candles for {_symbol}");
+                _loggingService?.Log("Info", $"Successfully loaded {historicalData.Count} candles for {_symbol}");
             }
             catch (Exception ex)
             {
                 _loggingService?.LogErrorWithContext(ex, $"Failed to load candlestick data for {_symbol}");
-                IsNoData = true;
+                await Dispatcher.InvokeAsync(() => IsNoData = true);
             }
             finally
             {
-                IsLoading = false;
+                await Dispatcher.InvokeAsync(() => IsLoading = false);
             }
         }
 
-        private void UpdateChartWithData(List<HistoricalPrice> data)
+        private async Task UpdateChartAsync(List<HistoricalPrice> historicalData)
         {
-            // Create candlestick series
-            var candleValues = new ChartValues<OhlcPoint>();
-            var volumeValues = new ChartValues<double>();
-            var labels = new List<string>();
-            
-            foreach (var candle in data)
+            // Process data on background thread
+            var (sortedData, candleValues, volumeValues, labels, volumeColors, gaps) = await Task.Run(() =>
             {
-                candleValues.Add(new OhlcPoint(candle.Open, candle.High, candle.Low, candle.Close));
-                volumeValues.Add(candle.Volume);
-                labels.Add(candle.Date.ToString("HH:mm"));
+                // Sort by date ascending
+                var sorted = historicalData.OrderBy(h => h.Date).ToList();
+                
+                // Limit to configured max candles for performance
+                if (_maxCandles > 0 && sorted.Count > _maxCandles)
+                {
+                    sorted = sorted.Skip(sorted.Count - _maxCandles).ToList();
+                }
+                
+                // Create chart data with enhanced features
+                var candles = new ChartValues<OhlcPoint>();
+                var volumes = new ChartValues<double>();
+                var timeLabels = new List<string>();
+                var volColors = new List<Brush>();
+                var gapIndices = new List<int>();
+                
+                DateTime? previousDate = null;
+                
+                for (int i = 0; i < sorted.Count; i++)
+                {
+                    var candle = sorted[i];
+                    
+                    // Add OHLCV data
+                    candles.Add(new OhlcPoint(candle.Open, candle.High, candle.Low, candle.Close));
+                    volumes.Add(candle.Volume);
+                    
+                    // Enhanced time labels with date when day changes
+                    string timeLabel;
+                    if (previousDate == null || previousDate.Value.Date != candle.Date.Date)
+                    {
+                        // Show date and time when day changes
+                        timeLabel = candle.Date.ToString("MM/dd\nHH:mm");
+                    }
+                    else
+                    {
+                        // Just show time for same day
+                        timeLabel = candle.Date.ToString("HH:mm");
+                    }
+                    timeLabels.Add(timeLabel);
+                    
+                    // Dynamic volume coloring based on price action
+                    bool isPriceUp = candle.Close >= candle.Open;
+                    var volumeColor = isPriceUp 
+                        ? new SolidColorBrush(Color.FromArgb(128, 0x20, 0xC0, 0x40)) // Green (buying pressure)
+                        : new SolidColorBrush(Color.FromArgb(128, 0xC0, 0x20, 0x20)); // Red (selling pressure)
+                    volColors.Add(volumeColor);
+                    
+                    // Detect gaps (significant time jumps between candles)
+                    if (previousDate != null)
+                    {
+                        var expectedInterval = GetExpectedIntervalMinutes(_currentInterval);
+                        var actualInterval = (candle.Date - previousDate.Value).TotalMinutes;
+                        
+                        // If gap is more than 2x the expected interval, mark it
+                        if (actualInterval > expectedInterval * 2)
+                        {
+                            gapIndices.Add(i);
+                        }
+                    }
+                    
+                    previousDate = candle.Date;
+                }
+                
+                return (sorted, candles, volumes, timeLabels, volColors, gapIndices);
+            }).ConfigureAwait(false);
+            
+            // Update UI on UI thread
+            await Dispatcher.InvokeAsync(() =>
+            {
+                UpdateChartWithData(sortedData, candleValues, volumeValues, labels, volumeColors, gaps);
+                UpdatePriceInfo(sortedData);
+            });
+        }
+        
+        private int GetExpectedIntervalMinutes(string interval)
+        {
+            return interval switch
+            {
+                "1min" => 1,
+                "5min" => 5,
+                "15min" => 15,
+                "30min" => 30,
+                "60min" => 60,
+                _ => 5
+            };
+        }
+
+        private void UpdateChartWithData(List<HistoricalPrice> data, ChartValues<OhlcPoint> candleValues, ChartValues<double> volumeValues, List<string> labels, List<Brush> volumeColors, List<int> gapIndices)
+        {
+            // Create candlestick series with tooltips
+            var candleSeries = new CandleSeries
+            {
+                Title = _symbol,
+                Values = candleValues,
+                MaxColumnWidth = 20,
+                IncreaseBrush = new SolidColorBrush(Color.FromRgb(0x20, 0xC0, 0x40)), // Green
+                DecreaseBrush = new SolidColorBrush(Color.FromRgb(0xC0, 0x20, 0x20)),  // Red
+                LabelPoint = point =>
+                {
+                    // Enhanced tooltip with OHLCV details
+                    var ohlc = (OhlcPoint)point.Instance;
+                    var index = (int)point.X;
+                    if (index >= 0 && index < data.Count)
+                    {
+                        var candle = data[index];
+                        var change = candle.Close - candle.Open;
+                        var changePercent = candle.Open != 0 ? (change / candle.Open) * 100 : 0;
+                        var direction = change >= 0 ? "?" : "?";
+                        
+                        // Check if this is a gap candle
+                        var gapIndicator = gapIndices.Contains(index) ? " [GAP]" : "";
+                        
+                        // Check if after-hours (before 9:30 AM or after 4:00 PM ET)
+                        var hour = candle.Date.Hour;
+                        var afterHoursIndicator = (hour < 9 || (hour == 9 && candle.Date.Minute < 30) || hour >= 16) 
+                            ? " [AH]" : "";
+                        
+                        return $"{candle.Date:MM/dd HH:mm}{gapIndicator}{afterHoursIndicator}\n" +
+                               $"Open:  ${ohlc.Open:F2}\n" +
+                               $"High:  ${ohlc.High:F2}\n" +
+                               $"Low:   ${ohlc.Low:F2}\n" +
+                               $"Close: ${ohlc.Close:F2}\n" +
+                               $"Volume: {VolumeFormatter(candle.Volume)}\n" +
+                               $"Change: {direction} ${Math.Abs(change):F2} ({changePercent:+0.00;-0.00;0.00}%)";
+                    }
+                    return string.Empty;
+                }
+            };
+            
+            CandlestickSeries = new SeriesCollection { candleSeries };
+            
+            // Create volume series with dynamic coloring
+            var volumeSeries = new SeriesCollection();
+            
+            // If we have individual colors for each volume bar, create separate series
+            // (LiveCharts limitation: can't color individual bars in one series easily)
+            // For simplicity, we'll use two series: one for up volumes, one for down volumes
+            var upVolumes = new ChartValues<double>();
+            var downVolumes = new ChartValues<double>();
+            
+            for (int i = 0; i < volumeValues.Count; i++)
+            {
+                bool isUp = i < data.Count && data[i].Close >= data[i].Open;
+                
+                if (isUp)
+                {
+                    upVolumes.Add(volumeValues[i]);
+                    downVolumes.Add(0);
+                }
+                else
+                {
+                    upVolumes.Add(0);
+                    downVolumes.Add(volumeValues[i]);
+                }
             }
             
-            // Update candlestick series
-            CandlestickSeries = new SeriesCollection
+            volumeSeries.Add(new ColumnSeries
             {
-                new CandleSeries
+                Title = "Buy Volume",
+                Values = upVolumes,
+                Fill = new SolidColorBrush(Color.FromArgb(128, 0x20, 0xC0, 0x40)), // Green
+                MaxColumnWidth = 20,
+                LabelPoint = point => 
                 {
-                    Title = _symbol,
-                    Values = candleValues,
-                    MaxColumnWidth = 20,
-                    IncreaseBrush = new SolidColorBrush(Color.FromRgb(0x20, 0xC0, 0x40)), // Green
-                    DecreaseBrush = new SolidColorBrush(Color.FromRgb(0xC0, 0x20, 0x20))  // Red
+                    if (point.Y > 0)
+                    {
+                        var index = (int)point.X;
+                        if (index >= 0 && index < data.Count)
+                        {
+                            return $"{data[index].Date:HH:mm}\nVolume: {VolumeFormatter(point.Y)}\n(Buying Pressure)";
+                        }
+                    }
+                    return string.Empty;
                 }
-            };
+            });
             
-            // Update volume series
-            VolumeSeries = new SeriesCollection
+            volumeSeries.Add(new ColumnSeries
             {
-                new ColumnSeries
+                Title = "Sell Volume",
+                Values = downVolumes,
+                Fill = new SolidColorBrush(Color.FromArgb(128, 0xC0, 0x20, 0x20)), // Red
+                MaxColumnWidth = 20,
+                LabelPoint = point => 
                 {
-                    Title = "Volume",
-                    Values = volumeValues,
-                    Fill = new SolidColorBrush(Color.FromArgb(128, 0x60, 0x60, 0x80)), // Semi-transparent gray-blue
-                    MaxColumnWidth = 20
+                    if (point.Y > 0)
+                    {
+                        var index = (int)point.X;
+                        if (index >= 0 && index < data.Count)
+                        {
+                            return $"{data[index].Date:HH:mm}\nVolume: {VolumeFormatter(point.Y)}\n(Selling Pressure)";
+                        }
+                    }
+                    return string.Empty;
                 }
-            };
+            });
+            
+            VolumeSeries = volumeSeries;
             
             TimeLabels = labels;
+            
+            // Reset zoom when new data is loaded
+            ResetZoom();
         }
 
         private void UpdatePriceInfo(List<HistoricalPrice> data)
@@ -389,7 +638,7 @@ namespace Quantra.Controls
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
-            await LoadCandlestickDataAsync();
+            await LoadCandlestickDataAsync(forceRefresh: true);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -414,10 +663,78 @@ namespace Quantra.Controls
                     _currentInterval = newInterval;
                     _loggingService?.Log("Info", $"Changed interval to {_currentInterval} for {_symbol}");
                     
-                    // Reload data with new interval
-                    await LoadCandlestickDataAsync();
+                    // Invalidate cache and reload data with new interval
+                    _cachedInterval = null;
+                    await LoadCandlestickDataAsync(forceRefresh: true);
                 }
             }
+        }
+
+        private async void CandleLimitComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded || _alphaVantageService == null)
+                return;
+                
+            if (CandleLimitComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem selected)
+            {
+                var newLimit = int.Parse(selected.Tag.ToString());
+                
+                if (newLimit != _maxCandles)
+                {
+                    _maxCandles = newLimit;
+                    _loggingService?.Log("Info", $"Changed candle limit to {(_maxCandles == 0 ? "All" : _maxCandles.ToString())} for {_symbol}");
+                    
+                    // Reload chart with cached data if available
+                    if (_cachedData != null)
+                    {
+                        await UpdateChartAsync(_cachedData).ConfigureAwait(false);
+                    }
+                }
+            }
+        }
+
+        private void ZoomInButton_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomLevel *= 0.8; // Zoom in by 20%
+            ApplyZoom();
+        }
+
+        private void ZoomOutButton_Click(object sender, RoutedEventArgs e)
+        {
+            _zoomLevel *= 1.2; // Zoom out by 20%
+            ApplyZoom();
+        }
+
+        private void ResetZoomButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetZoom();
+        }
+
+        private void ApplyZoom()
+        {
+            if (_timeLabels == null || _timeLabels.Count == 0)
+                return;
+
+            int visibleCandles = (int)(_timeLabels.Count * _zoomLevel);
+            if (visibleCandles < 10) visibleCandles = 10;
+            if (visibleCandles > _timeLabels.Count) visibleCandles = _timeLabels.Count;
+
+            int startIndex = Math.Max(0, _timeLabels.Count - visibleCandles);
+            int endIndex = _timeLabels.Count - 1;
+
+            XAxisMin = startIndex;
+            XAxisMax = endIndex;
+
+            _loggingService?.Log("Info", $"Applied zoom level {_zoomLevel:F2} (showing {visibleCandles} candles)");
+        }
+
+        private void ResetZoom()
+        {
+            _zoomLevel = 1.0;
+            XAxisMin = null;
+            XAxisMax = null;
+            YAxisMin = null;
+            YAxisMax = null;
         }
 
         #endregion
