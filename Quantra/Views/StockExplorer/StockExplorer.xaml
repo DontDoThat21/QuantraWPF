@@ -504,8 +504,6 @@ MinWidth="900" MinHeight="700">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Symbol Label and Cache Timestamp with Refresh Button -->
@@ -539,9 +537,21 @@ MinWidth="900" MinHeight="700">
                         IsEnabled="{Binding CanRefreshSymbol, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             </StackPanel>
 
-            <!-- Static Indicators List -->
-            <Border Grid.Row="1" 
-                    Background="#2D2D4D" 
+            <!-- Indicator Selection Panel (horizontal) -->
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,5,0,0">
+                <ItemsControl x:Name="IndicatorWrapPanel">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+        
+        <!-- Static Indicators List (below DataGrid) -->
+        <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="5,10,10,0">
+            <Border Background="#2D2D4D" 
                     BorderBrush="#3E3E56" 
                     BorderThickness="1" 
                     CornerRadius="3" 
@@ -927,25 +937,6 @@ MinWidth="900" MinHeight="700">
                     </StackPanel>
                 </ScrollViewer>
             </Border>
-
-            <!-- Indicator Selection Panel (horizontal, below chart) -->
-            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Margin="0,5,0,0">
-                <ItemsControl x:Name="IndicatorWrapPanel">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </ScrollViewer>
-            <!-- Prediction Summary -->
-            <TextBlock x:Name="PredictionSummaryText"
-                       Grid.Row="3"
-                       Text="{Binding DataContext.PredictionSummary, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                       Style="{StaticResource EnhancedTextBlockStyle}"
-                       FontStyle="Italic"
-                       Margin="0,5,0,0"/>
-
         </Grid>
     </Grid>
 </UserControl>
