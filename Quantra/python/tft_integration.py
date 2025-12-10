@@ -321,50 +321,12 @@ class TFTStockPredictor:
         q25_stacked = np.column_stack(q25_list)
         q75_stacked = np.column_stack(q75_list)
         
-        # CRITICAL FIX: Model outputs are ALREADY percentage changes (no inverse transform needed)
-        # The target_scaler is an identity scaler (scale=1.0, mean=0.0) to maintain code compatibility
-        # Applying inverse_transform would be a no-op, so we skip it for clarity
-        logger.debug(f"Raw model predictions - Median range: [{median_stacked.min():.4f}, {median_stacked.max():.4f}]")
-        
-        # Check if scaler is identity (which it should be for TFT models)
-        is_identity_scaler = (
-            hasattr(self.target_scaler, 'scale_') and 
-            hasattr(self.target_scaler, 'mean_') and
-            np.allclose(self.target_scaler.scale_, 1.0) and 
-            np.allclose(self.target_scaler.mean_, 0.0)
-        )
-        
-        if is_identity_scaler:
-            # Identity scaler - predictions are already in natural scale (percentage changes)
-            logger.debug("Using identity scaler - predictions are already percentage changes")
-            median_unscaled = median_stacked
-            lower_unscaled = lower_stacked
-            upper_unscaled = upper_stacked
-            q25_unscaled = q25_stacked
-            q75_unscaled = q75_stacked
-        else:
-            # Non-identity scaler detected - this is unexpected for TFT models
-            logger.warning(f"Non-identity target scaler detected! Scale: {self.target_scaler.scale_}, Mean: {self.target_scaler.mean_}")
-            logger.warning("This model may have been trained with old code. Predictions may be incorrect.")
-            logger.warning("Recommend retraining the model with the updated training script.")
-            
-            # Apply inverse transform but validate results
-            median_unscaled = self.target_scaler.inverse_transform(median_stacked)
-            lower_unscaled = self.target_scaler.inverse_transform(lower_stacked)
-            upper_unscaled = self.target_scaler.inverse_transform(upper_stacked)
-            q25_unscaled = self.target_scaler.inverse_transform(q25_stacked)
-            q75_unscaled = self.target_scaler.inverse_transform(q75_stacked)
-            
-            # Validate transformed values are reasonable percentage changes
-            if np.any(np.abs(median_unscaled) > 5.0):
-                logger.error(f"INVERSE TRANSFORM FAILED: Produced unrealistic values (>500% change)")
-                logger.error(f"This indicates the model needs retraining. Using fallback zero predictions.")
-                # Emergency fallback: predict zero change (HOLD)
-                median_unscaled = np.zeros_like(median_stacked)
-                lower_unscaled = np.full_like(lower_stacked, -0.05)  # -5%
-                upper_unscaled = np.full_like(upper_stacked, 0.05)   # +5%
-                q25_unscaled = np.full_like(q25_stacked, -0.02)
-                q75_unscaled = np.full_like(q75_stacked, 0.02)
+        # NEW: Inverse transform to get actual percentage changes
+        median_unscaled = self.target_scaler.inverse_transform(median_stacked)
+        lower_unscaled = self.target_scaler.inverse_transform(lower_stacked)
+        upper_unscaled = self.target_scaler.inverse_transform(upper_stacked)
+        q25_unscaled = self.target_scaler.inverse_transform(q25_stacked)
+        q75_unscaled = self.target_scaler.inverse_transform(q75_stacked)
         
         # Concatenate feature importance across all batches
         feature_importance = np.concatenate(all_feature_importance, axis=0)
@@ -474,37 +436,19 @@ class TFTStockPredictor:
                         logger.error(f"Available features: {feature_cols}")
                         
                         # Try to fix by adding missing features or using saved feature names
-                        if hasattr(self, 'feature_names') and self.feature_names and len(self.feature_names) > 0:
-                            # Check if saved feature names are actual names (not generic feature_N)
-                            if not all('feature_' in name for name in self.feature_names):
-                                logger.info(f"Attempting to align features using saved feature_names: {self.feature_names}")
-                                # Create a DataFrame with all expected features, filling missing ones with 0
-                                aligned_df = pd.DataFrame(0.0, index=df.index, columns=self.feature_names)
-                                # Fill in the features we do have
-                                for col in feature_cols:
-                                    if col in aligned_df.columns:
-                                        aligned_df[col] = df[col]
-                                    else:
-                                        logger.warning(f"Feature '{col}' in prediction data but not in model's expected features")
-                                df = aligned_df
-                                feature_cols = list(df.columns)
-                                logger.info(f"Aligned features using saved names (total={len(feature_cols)}): {feature_cols}")
-                            else:
-                                # Saved feature names are generic - add padding feature to match expected count
-                                logger.warning(f"Saved feature names are generic. Adding {expected_features - len(feature_cols)} padding features.")
-                                # Add zero-filled padding features to match expected count
-                                for i in range(len(feature_cols), expected_features):
-                                    df[f'padding_{i}'] = 0.0
-                                feature_cols = list(df.columns)
-                                logger.info(f"Added padding features (total={len(feature_cols)}): {feature_cols}")
-                        else:
-                            # No saved feature names - add padding feature to match expected count
-                            logger.warning(f"No saved feature names available. Adding {expected_features - len(feature_cols)} padding features.")
-                            # Add zero-filled padding features to match expected count
-                            for i in range(len(feature_cols), expected_features):
-                                df[f'padding_{i}'] = 0.0
+                        if hasattr(self, 'feature_names') and self.feature_names:
+                            logger.info(f"Attempting to align features using saved feature_names: {self.feature_names}")
+                            # Create a DataFrame with all expected features, filling missing ones with 0
+                            aligned_df = pd.DataFrame(0.0, index=df.index, columns=self.feature_names)
+                            # Fill in the features we do have
+                            for col in feature_cols:
+                                if col in aligned_df.columns:
+                                    aligned_df[col] = df[col]
+                                else:
+                                    logger.warning(f"Feature '{col}' in prediction data but not in model's expected features")
+                            df = aligned_df
                             feature_cols = list(df.columns)
-                            logger.info(f"Added padding features (total={len(feature_cols)}): {feature_cols}")
+                            logger.info(f"Aligned features (total={len(feature_cols)}): {feature_cols}")
                 
                 if not feature_cols:
                     logger.warning("No feature columns found after dropping OHLCV. Using fallback basic features.")
@@ -537,61 +481,20 @@ class TFTStockPredictor:
             lower_bounds = outputs['lower_bound'][0]
             upper_bounds = outputs['upper_bound'][0]
             
-            # DIAGNOSTIC: Log the raw prediction values for debugging
-            logger.info(f"Raw predictions - Median: {median_predictions}, Lower: {lower_bounds}, Upper: {upper_bounds}")
-            logger.info(f"Current price: {current_price}")
-            
-            # CRITICAL VALIDATION: Check if inverse transform worked correctly
-            if hasattr(self.target_scaler, 'mean_') and hasattr(self.target_scaler, 'scale_'):
-                logger.info(f"Target scaler - Mean: {self.target_scaler.mean_}, Scale: {self.target_scaler.scale_}")
-            else:
-                logger.warning("Target scaler is missing mean_ or scale_ attributes - may not be fitted!")
-            
-            # Additional check: if all predictions are way outside expected range, something is wrong
-            if np.any(np.abs(median_predictions) > 5.0):  # More than 500% change is unrealistic
-                logger.error(f"CRITICAL: Predictions are outside reasonable range! Values: {median_predictions}")
-                logger.error("This indicates the model was NOT trained correctly or scaler is broken.")
-                logger.error("Applying emergency fallback to prevent negative prices...")
-            
             # Build multi-horizon response
             horizons_data = {}
             for i, horizon in enumerate(self.forecast_horizons):
                 # median_change is a percentage change (e.g., 0.05 = 5%)
                 median_change = median_predictions[i]
-                
-                # CRITICAL: Validate percentage change is reasonable
-                # If values are way outside [-1, 1], they're likely not percentage changes
-                if abs(median_change) > 10.0:
-                    logger.error(f"Invalid median_change={median_change:.4f} for horizon {horizon}d. " +
-                                f"Expected percentage change in [-1, 1] range. " +
-                                f"This indicates the inverse transform didn't work properly.")
-                    # Fall back to zero change to avoid returning nonsensical values
-                    median_change = 0.0
-                    logger.warning(f"Using fallback zero change for horizon {horizon}d")
-                
                 target_price = current_price * (1 + median_change) if current_price > 0 else 0.0
-                lower_price = current_price * (1 + lower_bounds[i]) if current_price > 0 else 0.0
-                upper_price = current_price * (1 + upper_bounds[i]) if current_price > 0 else 0.0
                 
-                # Validate prices are positive
-                if target_price < 0 or lower_price < 0 or upper_price < 0:
-                    logger.error(f"Negative prices detected for horizon {horizon}d: " +
-                                f"target={target_price:.2f}, lower={lower_price:.2f}, upper={upper_price:.2f}")
-                    # Set to current price as fallback
-                    target_price = max(0.0, current_price)
-                    lower_price = max(0.0, current_price * 0.95)
-                    upper_price = max(0.0, current_price * 1.05)
-                
+                # C# expects days_ahead, predicted_change, lower_bound, upper_bound as percentage changes
                 horizons_data[f'{horizon}d'] = {
-                    'days_ahead': horizon,
-                    'median_price': float(target_price),
-                    'lower_bound': float(lower_price),
-                    'upper_bound': float(upper_price),
-                    'confidence': float(max(0.0, min(1.0, 1.0 - abs(upper_bounds[i] - lower_bounds[i]))))
+                    'days_ahead': int(horizon),
+                    'predicted_change': float(median_change),
+                    'lower_bound': float(lower_bounds[i]),
+                    'upper_bound': float(upper_bounds[i])
                 }
-                
-                logger.debug(f"Horizon {horizon}d: change={median_change:.4f}, " +
-                            f"price=${target_price:.2f}, range=${lower_price:.2f}-${upper_price:.2f}")
             
             # Determine action from shortest horizon
             first_prediction = median_predictions[0]
@@ -607,6 +510,16 @@ class TFTStockPredictor:
             confidence = max(0.5, 1.0 - min(1.0, interval_width))
             target_price = current_price * (1 + median_predictions[0]) if current_price > 0 else 0.0
             
+            # Flatten feature importance from (1, n_features) to (n_features,)
+            # Check both dimensions to avoid IndexError
+            feature_importance = []
+            if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0 and outputs['feature_importance'].shape[1] > 0:
+                feature_importance = outputs['feature_importance'][0].tolist()
+            elif len(outputs['feature_importance']) == 0 or outputs['feature_importance'].shape[0] == 0:
+                logger.warning("Feature importance array is empty")
+            else:
+                logger.warning("Feature importance array has no features (shape[1] = 0)")
+            
             return {
                 'symbol': historical_sequence[-1].get('symbol', 'UNKNOWN') if historical_sequence else 'UNKNOWN',
                 'action': action,
@@ -619,7 +532,7 @@ class TFTStockPredictor:
                 'horizons': horizons_data,
                 'modelType': 'tft',
                 'uncertainty': float(interval_width),
-                'featureImportance': outputs['feature_importance'].tolist()
+                'featureImportance': feature_importance
             }
             
         except Exception as e:
