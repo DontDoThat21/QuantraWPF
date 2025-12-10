@@ -513,13 +513,12 @@ class TFTStockPredictor:
             # Flatten feature importance from (1, n_features) to (n_features,)
             # Check both dimensions to avoid IndexError
             feature_importance = []
-            if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0:
-                if outputs['feature_importance'].shape[1] > 0:
-                    feature_importance = outputs['feature_importance'][0].tolist()
-                else:
-                    logger.warning("Feature importance array has no features (shape[1] = 0)")
-            else:
+            if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0 and outputs['feature_importance'].shape[1] > 0:
+                feature_importance = outputs['feature_importance'][0].tolist()
+            elif len(outputs['feature_importance']) == 0 or outputs['feature_importance'].shape[0] == 0:
                 logger.warning("Feature importance array is empty")
+            else:
+                logger.warning("Feature importance array has no features (shape[1] = 0)")
             
             return {
                 'symbol': historical_sequence[-1].get('symbol', 'UNKNOWN') if historical_sequence else 'UNKNOWN',
