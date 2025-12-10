@@ -278,9 +278,15 @@ class TemporalFusionTransformer(nn.Module):
         self.static_context_grn = GatedResidualNetwork(hidden_dim, hidden_dim, hidden_dim, dropout)
         
         # 2. Temporal variable selection (past)
-        # Each time step has input_dim features
-        self.temporal_embedding = nn.Linear(input_dim, hidden_dim)
-        self.past_vsn = GatedResidualNetwork(hidden_dim, hidden_dim, hidden_dim, dropout, context_dim=hidden_dim)
+        # Each time step has input_dim features - VSN will select important features and embed them
+        # For stock data, each feature (close, volume, RSI, etc.) is treated as a separate variable
+        self.past_vsn = VariableSelectionNetwork(
+            input_dim=1,  # Each feature is 1-dimensional
+            hidden_dim=hidden_dim,
+            num_features=input_dim,  # Number of features to select from
+            dropout=dropout,
+            context_dim=hidden_dim
+        )
         
         # 3. LSTM encoder for past observations
         self.past_lstm = nn.LSTM(hidden_dim, hidden_dim, num_lstm_layers,
@@ -358,12 +364,12 @@ class TemporalFusionTransformer(nn.Module):
         static_embedded = self.static_embedding(static_features)  # (batch, hidden_dim)
         static_context = self.static_context_grn(static_embedded)  # (batch, hidden_dim)
         
-        # 2. Temporal embedding and variable selection for past
-        past_embedded = self.temporal_embedding(past_features)  # (batch, past_seq_len, hidden_dim)
-        
-        # Apply variable selection with static context
+        # 2. Apply variable selection to past features
+        # VSN will select important features and embed them to hidden_dim
         static_context_expanded = static_context.unsqueeze(1).expand(-1, past_seq_len, -1)
-        selected_past = self.past_vsn(past_embedded, static_context_expanded)  # (batch, past_seq_len, hidden_dim)
+        selected_past, variable_importance = self.past_vsn(past_features, static_context_expanded)
+        # selected_past: (batch, past_seq_len, hidden_dim)
+        # variable_importance: (batch, num_features) - importance weights for each input feature
         
         # 3. LSTM encoding of past observations
         past_lstm_out, (h_past, c_past) = self.past_lstm(selected_past)  # (batch, past_seq_len, hidden_dim)

@@ -838,27 +838,30 @@ class FeatureEngineer:
         self.pipeline_steps = []
         
         for name, params in self.steps:
-            if name == 'generate':
+            # Extract the base step name (handle names with suffixes like 'select_kbest')
+            base_name = name.split('_')[0]
+            
+            if base_name == 'generate':
                 # Feature generation step
-                step = ('generate', FinancialFeatureGenerator(**params))
-            elif name == 'select':
-                # Feature selection step
-                step = ('select', FeatureSelector(**params))
-            elif name == 'reduce':
+                step = (name, FinancialFeatureGenerator(**params))
+            elif base_name == 'select':
+                # Feature selection step (handles 'select', 'select_kbest', 'select_model', etc.)
+                step = (name, FeatureSelector(**params))
+            elif base_name == 'reduce':
                 # Dimensionality reduction step
-                step = ('reduce', DimensionalityReducer(**params))
-            elif name == 'interact':
+                step = (name, DimensionalityReducer(**params))
+            elif base_name == 'interact':
                 # Interaction feature generator
-                step = ('interact', InteractionFeatureGenerator(**params))
-            elif name == 'scale':
+                step = (name, InteractionFeatureGenerator(**params))
+            elif base_name == 'scale':
                 # Feature scaling
                 if params.get('method') == 'standard':
-                    step = ('scale', StandardScaler())
+                    step = (name, StandardScaler())
                 elif params.get('method') == 'minmax':
                     feature_range = params.get('feature_range', (0, 1))
-                    step = ('scale', MinMaxScaler(feature_range=feature_range))
+                    step = (name, MinMaxScaler(feature_range=feature_range))
                 elif params.get('method') == 'robust':
-                    step = ('scale', RobustScaler())
+                    step = (name, RobustScaler())
                 else:
                     raise ValueError(f"Unknown scaling method: {params.get('method')}")
             else:

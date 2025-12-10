@@ -262,9 +262,33 @@ namespace Quantra.DAL.Services
                         daysAhead = parsedDays;
                     }
                     
-                    var predictedPrice = pythonResult.CurrentPrice * (1 + horizon.PredictedChange);
-                    var upperPrice = pythonResult.CurrentPrice * (1 + horizon.UpperBound);
-                    var lowerPrice = pythonResult.CurrentPrice * (1 + horizon.LowerBound);
+                    // Use MedianPrice directly - Python should be converting to absolute prices
+                    var predictedPrice = horizon.MedianPrice;
+                    var upperPrice = horizon.UpperBound;
+                    var lowerPrice = horizon.LowerBound;
+                    
+                    // Validate prices are reasonable (detect if Python returned raw model outputs)
+                    if (predictedPrice < 0 || upperPrice < 0 || lowerPrice < 0)
+                    {
+                        _loggingService?.Log("Warning", 
+                            $"Horizon {daysAhead}d: Invalid negative prices detected! " +
+                            $"MedianPrice={predictedPrice:F2}, Upper={upperPrice:F2}, Lower={lowerPrice:F2}. " +
+                            $"This indicates Python model output needs fixing. Skipping this horizon.");
+                        continue;
+                    }
+                    
+                    // Additional validation: prices should be within reasonable range of current price
+                    if (pythonResult.CurrentPrice > 0)
+                    {
+                        var priceRatio = predictedPrice / pythonResult.CurrentPrice;
+                        if (priceRatio < 0.1 || priceRatio > 10.0)
+                        {
+                            _loggingService?.Log("Warning", 
+                                $"Horizon {daysAhead}d: Predicted price ${predictedPrice:F2} is unrealistic " +
+                                $"compared to current price ${pythonResult.CurrentPrice:F2} (ratio={priceRatio:F2}). " +
+                                $"This may indicate the model returned percentage changes instead of prices.");
+                        }
+                    }
                     
                     result.Predictions.Add(new TFTForecast
                     {
@@ -274,7 +298,9 @@ namespace Quantra.DAL.Services
                         LowerConfidence = lowerPrice
                     });
                     
-                    _loggingService?.Log("Debug", $"Horizon {daysAhead}d: Change={horizon.PredictedChange:P2}, Price=${predictedPrice:F2}");
+                    _loggingService?.Log("Debug", 
+                        $"Horizon {daysAhead}d: Price=${predictedPrice:F2}, " +
+                        $"Range=${lowerPrice:F2}-${upperPrice:F2}");
                 }
             }
             else
@@ -294,18 +320,48 @@ namespace Quantra.DAL.Services
             // Convert feature importance to attention dictionary
             if (pythonResult.FeatureImportance != null && pythonResult.FeatureImportance.Count > 0)
             {
-                // Assume feature importance is an array of values corresponding to features
-                // For now, create generic feature names
-                for (int i = 0; i < pythonResult.FeatureImportance.Count && i < 50; i++)
+                try
                 {
-                    string featureName = $"Feature_{i + 1}";
+                    // FeatureImportance is a 2D array: [[importance_values_for_sample_1], ...]
+                    // Take the first sample's importance values
+                    var importanceValues = pythonResult.FeatureImportance[0];
+                    
+                    if (importanceValues != null && importanceValues.Count > 0)
+                    {
+                        // Check if all values are zero (indicates model issue)
+                        var maxImportance = importanceValues.Max();
+                        if (maxImportance < 0.001)
+                        {
+                            _loggingService?.Log("Warning", 
+                                "Feature importance values are all near-zero. " +
+                                "Model may need retraining with feature importance enabled.");
+                        }
+                        
+                        // Create generic feature names or use known names
+                        for (int i = 0; i < importanceValues.Count && i < 50; i++)
+                        {
+                            string featureName = $"Feature_{i + 1}";
 
-                    // Map to known feature names if possible
-                    if (i < FeatureNames.Count)
-                        featureName = FeatureNames[i];
+                            // Map to known feature names if possible
+                            if (i < FeatureNames.Count)
+                                featureName = FeatureNames[i];
 
-                    result.FeatureAttention[featureName] = pythonResult.FeatureImportance[i];
+                            result.FeatureAttention[featureName] = importanceValues[i];
+                        }
+                    }
+                    else
+                    {
+                        _loggingService?.Log("Warning", "Feature importance array is empty.");
+                    }
                 }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Error", $"Failed to process feature importance: {ex.Message}");
+                }
+            }
+            else
+            {
+                _loggingService?.Log("Debug", "No feature importance data in Python response.");
             }
 
             return result;
@@ -436,7 +492,7 @@ namespace Quantra.DAL.Services
         public double Uncertainty { get; set; }
 
         [JsonPropertyName("featureImportance")]
-        public List<double> FeatureImportance { get; set; }
+        public List<List<double>> FeatureImportance { get; set; }
 
         [JsonPropertyName("error")]
         public string Error { get; set; }
@@ -453,14 +509,17 @@ namespace Quantra.DAL.Services
         [JsonPropertyName("days_ahead")]
         public int DaysAhead { get; set; }
 
-        [JsonPropertyName("predicted_change")]
-        public double PredictedChange { get; set; }
+        [JsonPropertyName("median_price")]
+        public double MedianPrice { get; set; }
 
         [JsonPropertyName("lower_bound")]
         public double LowerBound { get; set; }
 
         [JsonPropertyName("upper_bound")]
         public double UpperBound { get; set; }
+
+        [JsonPropertyName("confidence")]
+        public double Confidence { get; set; }
     }
 
     #endregion

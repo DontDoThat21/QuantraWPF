@@ -353,51 +353,43 @@ def train_model_from_database(
         feature_type=feature_type
     )
     
-    # CRITICAL FIX: Normalize targets (percentage changes) for better training stability
-    # Targets are percentage changes (e.g., 0.05 for 5%), need to be scaled
-    # Use StandardScaler to normalize distribution
+    # CRITICAL FIX: DO NOT scale percentage change targets for TFT
+    # TFT works best with targets in their natural scale (percentage changes)
+    # Scaling percentage changes (which are already normalized) causes issues:
+    # 1. Double normalization makes the model learn z-scores instead of percentages
+    # 2. Inverse transform amplifies small errors into huge prediction errors
+    # 3. Results in extremely negative R² scores due to scale mismatch
     from sklearn.preprocessing import StandardScaler, RobustScaler
     
-    # Use RobustScaler instead of StandardScaler for better handling of outliers
-    target_scaler = RobustScaler()
-    
-    # Fit scaler on training data only (to prevent data leakage)
-    # But we need to split first
+    # Split data FIRST (before any transformation)
     split_idx = int(len(X) * (1 - test_split))
     
-    # Split data
     X_train, X_test = X[:split_idx], X[split_idx:]
     y_train, y_test = y[:split_idx], y[split_idx:]
     X_future_train, X_future_test = X_future[:split_idx], X_future[split_idx:]
     
-    # Check the shape of y_train and reshape if needed
-    logger.info(f"Target shape before scaling: {y_train.shape}")
+    # Log target statistics (percentage changes should be ~[-0.2, 0.2] for ±20%)
+    logger.info(f"Target statistics (raw percentage changes):")
+    logger.info(f"  Train shape: {y_train.shape}")
+    logger.info(f"  Train mean: {np.mean(y_train):.6f} ({np.mean(y_train)*100:.2f}%)")
+    logger.info(f"  Train std: {np.std(y_train):.6f} ({np.std(y_train)*100:.2f}%)")
+    logger.info(f"  Train min: {np.min(y_train):.6f}, max: {np.max(y_train):.6f}")
     
-    # RobustScaler expects 2D array - reshape if 1D
-    if len(y_train.shape) == 1:
-        y_train = y_train.reshape(-1, 1)
-        y_test = y_test.reshape(-1, 1)
-        logger.info(f"Reshaped targets to 2D: {y_train.shape}")
+    # CRITICAL: For TFT, use targets in natural scale (no scaling)
+    # The model will learn percentage changes directly
+    y_train_scaled = y_train.copy()
+    y_test_scaled = y_test.copy()
     
-    # Fit target scaler on training targets only
-    target_scaler.fit(y_train)
+    # Create an IDENTITY scaler for saving/loading consistency
+    # This scaler does nothing but allows code to work without changes
+    target_scaler = StandardScaler()
+    target_scaler.mean_ = np.array([0.0])
+    target_scaler.scale_ = np.array([1.0])
+    target_scaler.n_features_in_ = 1
+    target_scaler.n_samples_seen_ = len(y_train)
     
-    # Transform targets
-    y_train_scaled = target_scaler.transform(y_train)
-    y_test_scaled = target_scaler.transform(y_test)
-    
-    # Flatten back to 1D if needed for model training (depends on model)
-    if y_train_scaled.shape[1] == 1:
-        y_train_scaled = y_train_scaled.ravel()
-        y_test_scaled = y_test_scaled.ravel()
-        logger.info(f"Flattened scaled targets back to 1D: {y_train_scaled.shape}")
-    
-    logger.info(f"Target statistics before scaling:")
-    logger.info(f"  Train mean: {np.mean(y_train, axis=0)}")
-    logger.info(f"  Train std: {np.std(y_train, axis=0)}")
-    logger.info(f"Target statistics after scaling:")
-    logger.info(f"  Train mean: {np.mean(y_train_scaled, axis=0)}")
-    logger.info(f"  Train std: {np.std(y_train_scaled, axis=0)}")
+    logger.info(f"Using IDENTITY target scaler (no transformation) for TFT training")
+    logger.info(f"  This prevents double-normalization of percentage changes")
     
     logger.info(f"Training set: {len(X_train)} samples")
     logger.info(f"Test set: {len(X_test)} samples")
@@ -574,14 +566,9 @@ def train_model_from_database(
                 # For PyTorch/TensorFlow (LSTM, GRU, Transformer), the predict method will handle the 3D data
                 y_pred_scaled = model.predict(X_test)
             
-            # CRITICAL FIX: Inverse transform predictions back to original scale
-            # Reshape to 2D if needed for inverse transform
-            if len(y_pred_scaled.shape) == 1:
-                y_pred_scaled = y_pred_scaled.reshape(-1, 1)
-            y_pred = target_scaler.inverse_transform(y_pred_scaled)
-            # Flatten back to original shape
-            if y_pred.shape[1] == 1:
-                y_pred = y_pred.ravel()
+            # Since we're using identity scaler, predictions are already in natural scale
+            # No inverse transform needed (it would be a no-op anyway)
+            y_pred = y_pred_scaled
             
             # Also reshape y_test if needed for metrics calculation
             if len(y_test.shape) == 2 and y_test.shape[1] == 1:
