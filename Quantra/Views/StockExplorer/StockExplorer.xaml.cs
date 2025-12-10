@@ -117,6 +117,37 @@ namespace Quantra.Controls
             }
         }
 
+        // Price filter properties for DataGrid filtering
+        private string _priceMinFilterText = "";
+        public string PriceMinFilterText
+        {
+            get => _priceMinFilterText;
+            set
+            {
+                if (_priceMinFilterText != value)
+                {
+                    _priceMinFilterText = value;
+                    OnPropertyChanged(nameof(PriceMinFilterText));
+                    _ = ApplyPriceFilterAsync();
+                }
+            }
+        }
+
+        private string _priceMaxFilterText = "";
+        public string PriceMaxFilterText
+        {
+            get => _priceMaxFilterText;
+            set
+            {
+                if (_priceMaxFilterText != value)
+                {
+                    _priceMaxFilterText = value;
+                    OnPropertyChanged(nameof(PriceMaxFilterText));
+                    _ = ApplyPriceFilterAsync();
+                }
+            }
+        }
+
         // Collection view for filtering
         private System.Windows.Data.CollectionView _stocksView;
 
@@ -3814,6 +3845,98 @@ namespace Quantra.Controls
             catch (Exception ex)
             {
                 //DatabaseMonolith.Log("Error", $"Error applying symbol filter for '{SymbolFilterText}'", ex.ToString());
+            }
+            finally
+            {
+                _viewModel.IsLoading = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task ApplyPriceFilterAsync()
+        {
+            // If both filters are empty, restore current page
+            if (string.IsNullOrWhiteSpace(PriceMinFilterText) && string.IsNullOrWhiteSpace(PriceMaxFilterText))
+            {
+                if (_viewModel != null && _viewModel.CurrentPage > 0)
+                {
+                    await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
+                }
+                return;
+            }
+
+            if (_viewModel == null || _cacheService == null)
+                return;
+
+            try
+            {
+                _viewModel.IsLoading = true;
+
+                // Parse the min and max values
+                double? minPrice = null;
+                double? maxPrice = null;
+
+                if (!string.IsNullOrWhiteSpace(PriceMinFilterText) && double.TryParse(PriceMinFilterText, out var min))
+                {
+                    minPrice = min;
+                }
+
+                if (!string.IsNullOrWhiteSpace(PriceMaxFilterText) && double.TryParse(PriceMaxFilterText, out var max))
+                {
+                    maxPrice = max;
+                }
+
+                // Search database for stocks within the price range
+                await System.Threading.Tasks.Task.Run(async () =>
+                {
+                    using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options);
+
+                    // Build query with price filters
+                    IQueryable<string> query = context.StockDataCache.Select(c => c.Symbol).Distinct();
+
+                    // Get all symbols and their latest prices
+                    var allSymbols = await query.ToListAsync();
+                    var matchingStocks = new List<QuoteData>();
+
+                    foreach (var symbol in allSymbols)
+                    {
+                        var stock = await _cacheService.GetCachedStockAsync(symbol);
+                        if (stock != null)
+                        {
+                            bool passesFilter = true;
+
+                            if (minPrice.HasValue && stock.Price < minPrice.Value)
+                                passesFilter = false;
+
+                            if (maxPrice.HasValue && stock.Price > maxPrice.Value)
+                                passesFilter = false;
+
+                            if (passesFilter)
+                            {
+                                matchingStocks.Add(stock);
+                            }
+                        }
+                    }
+
+                    // Update UI on UI thread
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        _viewModel.CachedStocks.Clear();
+                        foreach (var stock in matchingStocks.OrderBy(s => s.Symbol))
+                        {
+                            _viewModel.CachedStocks.Add(stock);
+                        }
+
+                        // Reset pagination since we're showing filtered results
+                        _viewModel.CurrentPage = 1;
+                        _viewModel.TotalCachedStocksCount = matchingStocks.Count;
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                //DatabaseMonolith.Log("Error", $"Error applying price filter (min: '{PriceMinFilterText}', max: '{PriceMaxFilterText}')", ex.ToString());
             }
             finally
             {
