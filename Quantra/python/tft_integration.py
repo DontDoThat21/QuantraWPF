@@ -488,11 +488,12 @@ class TFTStockPredictor:
                 median_change = median_predictions[i]
                 target_price = current_price * (1 + median_change) if current_price > 0 else 0.0
                 
+                # C# expects days_ahead, predicted_change, lower_bound, upper_bound as percentage changes
                 horizons_data[f'{horizon}d'] = {
-                    'median_price': float(target_price),
-                    'lower_bound': float(current_price * (1 + lower_bounds[i]) if current_price > 0 else 0.0),
-                    'upper_bound': float(current_price * (1 + upper_bounds[i]) if current_price > 0 else 0.0),
-                    'confidence': float(1.0 - (upper_bounds[i] - lower_bounds[i]))
+                    'days_ahead': int(horizon),
+                    'predicted_change': float(median_change),
+                    'lower_bound': float(lower_bounds[i]),
+                    'upper_bound': float(upper_bounds[i])
                 }
             
             # Determine action from shortest horizon
@@ -509,6 +510,9 @@ class TFTStockPredictor:
             confidence = max(0.5, 1.0 - min(1.0, interval_width))
             target_price = current_price * (1 + median_predictions[0]) if current_price > 0 else 0.0
             
+            # Flatten feature importance from (1, n_features) to (n_features,)
+            feature_importance = outputs['feature_importance'][0].tolist() if len(outputs['feature_importance']) > 0 else []
+            
             return {
                 'symbol': historical_sequence[-1].get('symbol', 'UNKNOWN') if historical_sequence else 'UNKNOWN',
                 'action': action,
@@ -521,7 +525,7 @@ class TFTStockPredictor:
                 'horizons': horizons_data,
                 'modelType': 'tft',
                 'uncertainty': float(interval_width),
-                'featureImportance': outputs['feature_importance'].tolist()
+                'featureImportance': feature_importance
             }
             
         except Exception as e:
