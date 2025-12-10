@@ -4,8 +4,34 @@
 Integration layer between TFT and existing stock_predictor.py infrastructure.
 Provides TFTStockPredictor wrapper compatible with existing prediction interface.
 
-CRITICAL FIX: This module now properly accepts real historical sequences instead
-of synthetic repeated values for TFT predictions.
+CRITICAL FIXES:
+1. Properly accepts real historical sequences instead of synthetic repeated values
+2. Validates that targets are properly formatted for multi-horizon forecasting
+
+IMPORTANT: Multi-Horizon Target Requirements
+============================================
+For multi-horizon forecasting, targets MUST be a 2D array of shape (n_samples, num_horizons)
+where each column corresponds to the actual future value at that specific forecast horizon.
+
+INCORRECT (DO NOT DO THIS):
+    # Wrong: Repeating the same target for all horizons
+    y_wrong = np.column_stack([y_single] * len(forecast_horizons))
+    # This trains the model to predict the same value for 5 days and 30 days ahead!
+
+CORRECT (DO THIS):
+    # Right: Compute actual targets for each horizon from sequential price data
+    prices = np.array([100, 102, 105, 103, 108, 110, 115, 112, 120, ...])
+    forecast_horizons = [5, 10, 20, 30]
+
+    # Use the helper function to compute proper targets
+    y_correct = compute_multi_horizon_targets(prices, forecast_horizons)
+    # For sample at t=0 (price=100):
+    #   - y_correct[0, 0] = (prices[5] - 100) / 100   # 5-day return
+    #   - y_correct[0, 1] = (prices[10] - 100) / 100  # 10-day return
+    #   - y_correct[0, 2] = (prices[20] - 100) / 100  # 20-day return
+    #   - y_correct[0, 3] = (prices[30] - 100) / 100  # 30-day return
+
+The fit() method will raise a clear error if targets are not properly formatted.
 """
 
 import torch
@@ -111,19 +137,26 @@ class TFTStockPredictor:
             verbose: bool = True) -> Dict[str, List[float]]:
         """
         Train the TFT model.
-        
+
         Args:
             X_past: (n_samples, seq_len, features) - Historical temporal features
             X_static: (n_samples, static_features) - Static features
-            y: (n_samples, num_horizons) or (n_samples,) - Target values
+            y: (n_samples, num_horizons) - Target values for each forecast horizon
+               CRITICAL: y MUST be (n_samples, num_horizons) where each column corresponds
+               to the actual future value at that horizon. Use compute_multi_horizon_targets()
+               to create proper targets from sequential price data.
+               DO NOT pass single-value targets - each horizon needs its own target!
             future_features: (n_samples, forecast_horizon, future_features) - Known future features (optional)
             epochs: Number of training epochs
             batch_size: Training batch size
             lr: Learning rate
             verbose: Whether to print training progress
-            
+
         Returns:
             Training history with train_loss and val_loss
+
+        Raises:
+            ValueError: If y shape doesn't match the number of forecast horizons
         """
         # Initialize scalers
         self.scaler = StandardScaler()
@@ -156,12 +189,31 @@ class TFTStockPredictor:
             self.future_scaler = None  # Ensure consistency
             logger.info("No future features provided for training")
         
-        # Ensure targets have correct shape
+        # CRITICAL: Validate target shape - targets MUST be (n_samples, num_horizons)
+        # Each column must correspond to the actual future value at that horizon
         if y.ndim == 1:
-            y = np.column_stack([y] * len(self.forecast_horizons))
-        
-        # NEW: Fit and transform targets (percentage changes)
-        # Targets are percentage changes (e.g., 0.05 for 5%), need to be scaled
+            raise ValueError(
+                f"Target array y must be 2D with shape (n_samples, {len(self.forecast_horizons)}), "
+                f"but got 1D array of shape {y.shape}. Each forecast horizon needs its own target!\n"
+                f"Use compute_multi_horizon_targets() to create proper multi-horizon targets from "
+                f"sequential price data. DO NOT repeat the same target for all horizons - that's incorrect!"
+            )
+
+        if y.shape[1] != len(self.forecast_horizons):
+            raise ValueError(
+                f"Target array y has {y.shape[1]} columns but model has {len(self.forecast_horizons)} "
+                f"forecast horizons {self.forecast_horizons}. Each horizon needs exactly one target column!\n"
+                f"Expected shape: ({y.shape[0]}, {len(self.forecast_horizons)}), got {y.shape}"
+            )
+
+        logger.info(f"Validated targets: shape {y.shape} matches {len(self.forecast_horizons)} forecast horizons")
+        logger.info(f"Target statistics by horizon:")
+        for i, horizon in enumerate(self.forecast_horizons):
+            logger.info(f"  Horizon {horizon}: mean={y[:, i].mean():.4f}, std={y[:, i].std():.4f}, "
+                       f"min={y[:, i].min():.4f}, max={y[:, i].max():.4f}")
+
+        # Fit and transform targets (percentage changes)
+        # Targets are percentage changes (e.g., 0.05 for 5%), scaled for better training
         y_scaled = self.target_scaler.fit_transform(y)
         
         # Create tensors
@@ -703,6 +755,59 @@ class TFTStockPredictor:
         except Exception as e:
             logger.error(f"Error loading TFT model: {e}")
             return False
+
+
+def compute_multi_horizon_targets(prices: np.ndarray,
+                                  forecast_horizons: List[int],
+                                  return_type: str = 'percentage') -> np.ndarray:
+    """
+    Compute proper multi-horizon targets from sequential price data.
+
+    For each sample at time t, computes the target return/change for each forecast horizon.
+
+    Args:
+        prices: Array of shape (n_samples + max_horizon,) with sequential prices
+        forecast_horizons: List of forecast horizons (e.g., [5, 10, 20, 30])
+        return_type: 'percentage' for percentage returns or 'absolute' for price differences
+
+    Returns:
+        Targets of shape (n_samples, num_horizons) where each column is the
+        actual future return at that horizon
+
+    Example:
+        If prices = [100, 102, 105, 103, 108, 110, 115, ...] and horizons = [2, 5]
+        For sample at t=0 (price=100):
+            - horizon_2 target: (prices[2] - prices[0]) / prices[0] = (105-100)/100 = 0.05
+            - horizon_5 target: (prices[5] - prices[0]) / prices[0] = (110-100)/100 = 0.10
+    """
+    max_horizon = max(forecast_horizons)
+    n_samples = len(prices) - max_horizon
+
+    if n_samples <= 0:
+        raise ValueError(f"Not enough data: need at least {max_horizon} extra samples "
+                        f"beyond training data to compute targets for max horizon {max_horizon}")
+
+    targets = np.zeros((n_samples, len(forecast_horizons)), dtype=np.float32)
+
+    for i in range(n_samples):
+        current_price = prices[i]
+        if current_price == 0:
+            logger.warning(f"Zero price at index {i}, using 0 target")
+            continue
+
+        for j, horizon in enumerate(forecast_horizons):
+            future_price = prices[i + horizon]
+
+            if return_type == 'percentage':
+                # Percentage return: (future - current) / current
+                targets[i, j] = (future_price - current_price) / current_price
+            elif return_type == 'absolute':
+                # Absolute difference
+                targets[i, j] = future_price - current_price
+            else:
+                raise ValueError(f"Unknown return_type: {return_type}")
+
+    return targets
 
 
 def create_static_features(symbol_info: Optional[Dict[str, Any]] = None,

@@ -445,14 +445,13 @@ class TemporalFusionTransformer(nn.Module):
                 quantile_predictions.append(pred)
             predictions[horizon_key] = torch.cat(quantile_predictions, dim=1)  # (batch, num_quantiles)
         
-        # Estimate variable importance from gradients (simplified)
-        # In practice, you would compute this during training with gradient hooks
-        variable_importance = torch.zeros(batch_size, self.input_dim, device=past_features.device)
-        
+        # Variable importance computed by VSN during forward pass
+        # These are the learned importance weights for each input feature
+
         return {
             'predictions': predictions,
             'attention_weights': attention_weights_list,
-            'variable_importance': variable_importance,
+            'variable_importance': variable_importance,  # (batch, num_features) from VSN
             'static_context': static_context
         }
     
@@ -542,17 +541,35 @@ def train_tft_model(model: TemporalFusionTransformer,
                     device: str = 'cuda') -> Dict[str, List[float]]:
     """
     Train TFT model with quantile loss.
-    
+
+    CRITICAL: Target Format Requirements
+    ====================================
+    Targets in the data loaders MUST be 2D tensors of shape (batch_size, num_horizons)
+    where each column corresponds to the actual future value at that specific horizon.
+
+    For example, if model.forecast_horizons = [5, 10, 20, 30]:
+        - targets[:, 0] should contain the 5-day ahead target values
+        - targets[:, 1] should contain the 10-day ahead target values
+        - targets[:, 2] should contain the 20-day ahead target values
+        - targets[:, 3] should contain the 30-day ahead target values
+
+    DO NOT use the same target value for all horizons - that defeats the purpose
+    of multi-horizon forecasting!
+
     Args:
         model: TFT model instance
         train_loader: Training data loader (list of dicts or DataLoader)
-        val_loader: Validation data loader
+                     Each batch dict must have 'targets' key with shape (batch, num_horizons)
+        val_loader: Validation data loader with same format
         epochs: Number of training epochs
         lr: Learning rate
         device: Device to train on
-        
+
     Returns:
         Training history dict with train_loss and val_loss
+
+    Raises:
+        ValueError: If target dimensions don't match model's forecast horizons
     """
     # Move model to device
     device = torch.device(device if torch.cuda.is_available() else 'cpu')
@@ -587,21 +604,33 @@ def train_tft_model(model: TemporalFusionTransformer,
             
             optimizer.zero_grad()
             outputs = model(past_features, static_features, future_features)
-            
-            # Calculate loss for each horizon
+
+            # CRITICAL: Validate target dimensions match forecast horizons
+            if targets.dim() == 1:
+                raise ValueError(
+                    f"Targets must be 2D (batch, num_horizons), got 1D shape {targets.shape}. "
+                    f"Each forecast horizon needs its own target column!"
+                )
+
+            if targets.size(1) != len(model.forecast_horizons):
+                raise ValueError(
+                    f"Target dimension mismatch: targets have {targets.size(1)} columns "
+                    f"but model has {len(model.forecast_horizons)} forecast horizons. "
+                    f"Expected shape: (batch, {len(model.forecast_horizons)}), got {targets.shape}"
+                )
+
+            # Calculate loss for each horizon using the correct target column
             total_loss = 0
             for horizon_idx, horizon in enumerate(model.forecast_horizons):
                 horizon_key = f"horizon_{horizon}"
                 pred_quantiles = outputs['predictions'][horizon_key]
-                
-                if targets.dim() == 2 and targets.size(1) > 1:
-                    target = targets[:, horizon_idx:horizon_idx+1]
-                else:
-                    target = targets
-                    
+
+                # Use the specific target column for this horizon
+                target = targets[:, horizon_idx:horizon_idx+1]
+
                 loss = loss_fn(pred_quantiles, target)
                 total_loss += loss
-            
+
             total_loss = total_loss / len(model.forecast_horizons)
             total_loss.backward()
             
@@ -632,20 +661,33 @@ def train_tft_model(model: TemporalFusionTransformer,
                     future_features = None
                 
                 outputs = model(past_features, static_features, future_features)
-                
+
+                # CRITICAL: Validate target dimensions match forecast horizons
+                if targets.dim() == 1:
+                    raise ValueError(
+                        f"Validation targets must be 2D (batch, num_horizons), got 1D shape {targets.shape}. "
+                        f"Each forecast horizon needs its own target column!"
+                    )
+
+                if targets.size(1) != len(model.forecast_horizons):
+                    raise ValueError(
+                        f"Validation target dimension mismatch: targets have {targets.size(1)} columns "
+                        f"but model has {len(model.forecast_horizons)} forecast horizons. "
+                        f"Expected shape: (batch, {len(model.forecast_horizons)}), got {targets.shape}"
+                    )
+
+                # Calculate loss for each horizon using the correct target column
                 total_loss = 0
                 for horizon_idx, horizon in enumerate(model.forecast_horizons):
                     horizon_key = f"horizon_{horizon}"
                     pred_quantiles = outputs['predictions'][horizon_key]
-                    
-                    if targets.dim() == 2 and targets.size(1) > 1:
-                        target = targets[:, horizon_idx:horizon_idx+1]
-                    else:
-                        target = targets
-                        
+
+                    # Use the specific target column for this horizon
+                    target = targets[:, horizon_idx:horizon_idx+1]
+
                     loss = loss_fn(pred_quantiles, target)
                     total_loss += loss
-                
+
                 total_loss = total_loss / len(model.forecast_horizons)
                 val_losses.append(total_loss.item())
         
