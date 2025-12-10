@@ -112,6 +112,8 @@ namespace Quantra.Controls
                 {
                     _symbolFilterText = value;
                     OnPropertyChanged(nameof(SymbolFilterText));
+                    // Update filtering state based on whether filter text is present
+                    IsFiltering = !string.IsNullOrWhiteSpace(value);
                     _ = ApplySymbolFilterAsync();
                 }
             }
@@ -128,6 +130,8 @@ namespace Quantra.Controls
                 {
                     _priceMinFilterText = value;
                     OnPropertyChanged(nameof(PriceMinFilterText));
+                    // Update filtering state
+                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(PriceMaxFilterText) || !string.IsNullOrWhiteSpace(SymbolFilterText);
                     _ = ApplyPriceFilterAsync();
                 }
             }
@@ -143,6 +147,8 @@ namespace Quantra.Controls
                 {
                     _priceMaxFilterText = value;
                     OnPropertyChanged(nameof(PriceMaxFilterText));
+                    // Update filtering state
+                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(PriceMinFilterText) || !string.IsNullOrWhiteSpace(SymbolFilterText);
                     _ = ApplyPriceFilterAsync();
                 }
             }
@@ -150,6 +156,25 @@ namespace Quantra.Controls
 
         // Collection view for filtering
         private System.Windows.Data.CollectionView _stocksView;
+
+        // Filtering state tracking
+        private bool _isFiltering = false;
+        public bool IsFiltering
+        {
+            get => _isFiltering;
+            set
+            {
+                if (_isFiltering != value)
+                {
+                    _isFiltering = value;
+                    OnPropertyChanged(nameof(IsFiltering));
+                    OnPropertyChanged(nameof(IsPaginationEnabled));
+                }
+            }
+        }
+
+        // Computed property to control pagination UI
+        public bool IsPaginationEnabled => !IsFiltering;
 
         private string _priceText = "";
         public string PriceText
@@ -3736,7 +3761,7 @@ namespace Quantra.Controls
         // Pagination button handlers
         private async void PreviousPageButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_viewModel != null && _viewModel.CurrentPage > 1)
+            if (_viewModel != null && _viewModel.CurrentPage > 1 && !IsFiltering)
             {
                 await _viewModel.LoadPreviousPageAsync();
             }
@@ -3744,7 +3769,7 @@ namespace Quantra.Controls
 
         private async void NextPageButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_viewModel != null && _viewModel.HasMorePages)
+            if (_viewModel != null && _viewModel.HasMorePages && !IsFiltering)
             {
                 await _viewModel.LoadMoreCachedStocksAsync();
             }
@@ -3772,6 +3797,9 @@ namespace Quantra.Controls
         {
             if (string.IsNullOrWhiteSpace(SymbolFilterText))
             {
+                // Clear filtering state
+                IsFiltering = !string.IsNullOrWhiteSpace(PriceMinFilterText) || !string.IsNullOrWhiteSpace(PriceMaxFilterText);
+                
                 // Remove filter if text is empty - restore current page
                 if (_viewModel != null && _viewModel.CurrentPage > 0)
                 {
@@ -3779,6 +3807,9 @@ namespace Quantra.Controls
                 }
                 return;
             }
+
+            // Set filtering state
+            IsFiltering = true;
 
             // Search the entire database for matching symbol
             if (_viewModel == null || _cacheService == null)
@@ -3825,9 +3856,7 @@ namespace Quantra.Controls
                                 _viewModel.CachedStocks.Add(stock);
                             }
                             
-                            // Reset pagination since we're showing filtered results
-                            _viewModel.CurrentPage = 1;
-                            _viewModel.TotalCachedStocksCount = matchingStocks.Count;
+                            // Don't update pagination when filtering - keep the filter results
                         });
                     }
                     else
@@ -3836,8 +3865,6 @@ namespace Quantra.Controls
                         await Dispatcher.InvokeAsync(() =>
                         {
                             _viewModel.CachedStocks.Clear();
-                            _viewModel.CurrentPage = 1;
-                            _viewModel.TotalCachedStocksCount = 0;
                         });
                     }
                 });
@@ -3854,15 +3881,21 @@ namespace Quantra.Controls
 
         private async System.Threading.Tasks.Task ApplyPriceFilterAsync()
         {
-            // If both filters are empty, restore current page
+            // If both price filters are empty, check if symbol filter is active
             if (string.IsNullOrWhiteSpace(PriceMinFilterText) && string.IsNullOrWhiteSpace(PriceMaxFilterText))
             {
-                if (_viewModel != null && _viewModel.CurrentPage > 0)
+                // Clear filtering state only if symbol filter is also empty
+                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText);
+                
+                if (_viewModel != null && _viewModel.CurrentPage > 0 && !IsFiltering)
                 {
                     await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
                 }
                 return;
             }
+
+            // Set filtering state
+            IsFiltering = true;
 
             if (_viewModel == null || _cacheService == null)
                 return;
@@ -3928,9 +3961,7 @@ namespace Quantra.Controls
                             _viewModel.CachedStocks.Add(stock);
                         }
 
-                        // Reset pagination since we're showing filtered results
-                        _viewModel.CurrentPage = 1;
-                        _viewModel.TotalCachedStocksCount = matchingStocks.Count;
+                        // Don't update pagination when filtering - keep the filter results
                     });
                 });
             }

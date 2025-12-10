@@ -10,6 +10,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Quantra.DAL.Services;
+using Microsoft.EntityFrameworkCore;
+using Quantra.DAL.Data;
 
 namespace Quantra.DAL.Services
 {
@@ -2247,6 +2249,7 @@ namespace Quantra.DAL.Services
 
         /// <summary>
         /// Stores fundamental data in cache with current timestamp
+        /// Caches both in-memory (for fast access) and in database (for persistence)
         /// </summary>
         /// <param name="symbol">Stock symbol</param>
         /// <param name="dataType">Type of fundamental data</param>
@@ -2258,10 +2261,51 @@ namespace Quantra.DAL.Services
 
             var cacheKey = $"{symbol}_{dataType}";
 
+            // Cache in memory for fast access
             lock (_cacheLock)
             {
                 _fundamentalDataCache[cacheKey] = (value, DateTime.Now);
-                _loggingService.Log("Info", $"Cached {dataType} for {symbol}: {value}");
+            }
+
+            // Also cache in database for persistence across sessions
+            try
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
+                optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
+
+                using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
+                {
+                    // Normalize the data type for database storage (e.g., "PE_RATIO" -> "PERatio")
+                    string dbDataType = dataType.Replace("_", "");
+
+                    var existing = dbContext.FundamentalDataCache
+                        .FirstOrDefault(f => f.Symbol == symbol && f.DataType == dbDataType);
+
+                    if (existing != null)
+                    {
+                        // Update existing entry
+                        existing.Value = value;
+                        existing.CacheTime = DateTime.Now;
+                    }
+                    else
+                    {
+                        // Create new entry
+                        dbContext.FundamentalDataCache.Add(new Data.Entities.FundamentalDataCache
+                        {
+                            Symbol = symbol,
+                            DataType = dbDataType,
+                            Value = value,
+                            CacheTime = DateTime.Now
+                        });
+                    }
+
+                    dbContext.SaveChanges();
+                    _loggingService.Log("Info", $"Cached {dataType} for {symbol} in memory and database: {value}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService.Log("Warning", $"Failed to cache {dataType} to database for {symbol}, in-memory cache still available", ex.ToString());
             }
         }
 

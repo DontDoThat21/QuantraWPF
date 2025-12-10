@@ -15,6 +15,10 @@ namespace Quantra.DAL.Data.Configurations
             // Indexes for performance
             builder.HasIndex(f => f.Symbol);
             builder.HasIndex(f => f.CacheTime);
+
+            // Configure Value property to use REAL (float) type to match existing database schema
+            // This prevents casting errors when database uses REAL (System.Single) instead of FLOAT (System.Double)
+            builder.Property(f => f.Value).HasColumnType("real");
         }
     }
 

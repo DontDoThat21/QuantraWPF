@@ -19,6 +19,7 @@ MinWidth="900" MinHeight="700">
         <converters:PredictedPriceColorConverter x:Key="PredictedPriceColorConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         <converters:PageNavigationConverter x:Key="PageNavigationConverter"/>
+        <converters:PageNavigationMultiConverter x:Key="PageNavigationMultiConverter"/>
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -497,8 +498,14 @@ MinWidth="900" MinHeight="700">
                         Padding="12,8"
                         Margin="0,0,10,0"
                         Style="{StaticResource EnhancedButtonStyle}"
-                        Click="PreviousPageButton_Click"
-                        IsEnabled="{Binding CurrentPage, Converter={StaticResource PageNavigationConverter}, ConverterParameter=Previous}"/>
+                        Click="PreviousPageButton_Click">
+                    <Button.IsEnabled>
+                        <MultiBinding Converter="{StaticResource PageNavigationMultiConverter}" ConverterParameter="Previous">
+                            <Binding Path="CurrentPage"/>
+                            <Binding Path="IsPaginationEnabled" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                        </MultiBinding>
+                    </Button.IsEnabled>
+                </Button>
                 
                 <!-- Page Info -->
                 <TextBlock VerticalAlignment="Center"
@@ -518,8 +525,14 @@ MinWidth="900" MinHeight="700">
                         Content="Next ▶"
                         Padding="12,8"
                         Style="{StaticResource EnhancedButtonStyle}"
-                        Click="NextPageButton_Click"
-                        IsEnabled="{Binding HasMorePages}"/>
+                        Click="NextPageButton_Click">
+                    <Button.IsEnabled>
+                        <MultiBinding Converter="{StaticResource PageNavigationMultiConverter}" ConverterParameter="Next">
+                            <Binding Path="HasMorePages"/>
+                            <Binding Path="IsPaginationEnabled" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                        </MultiBinding>
+                    </Button.IsEnabled>
+                </Button>
                 
                 <!-- Loading Indicator -->
                 <TextBlock Text="Loading..." 

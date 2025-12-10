@@ -523,6 +523,14 @@ namespace Quantra.DAL.Services
                     .Distinct()
            .ToList();
 
+                    // Batch load P/E ratios from FundamentalDataCache for all symbols
+                    var peRatios = dbContext.FundamentalDataCache
+                        .Where(f => symbols.Contains(f.Symbol) && f.DataType == "PERatio")
+                        .ToList();
+                    
+                    // Create a dictionary for quick P/E ratio lookup
+                    var peRatioDict = peRatios.ToDictionary(f => f.Symbol, f => f.Value ?? 0.0);
+
                     foreach (var symbol in symbols)
                     {
                         // Get the latest cache entry for each symbol
@@ -550,6 +558,10 @@ namespace Quantra.DAL.Services
                             if (prices != null && prices.Count > 0)
                             {
                                 var last = prices.Last();
+                                
+                                // Get P/E ratio from cache if available
+                                var peRatio = peRatioDict.ContainsKey(symbol) ? peRatioDict[symbol] : 0.0;
+                                
                                 stocks.Add(new QuoteData
                                 {
                                     Symbol = symbol,
@@ -563,7 +575,7 @@ namespace Quantra.DAL.Services
                                     MarketCap = 0,
                                     Volume = 0,
                                     RSI = 0,
-                                    PERatio = 0,
+                                    PERatio = peRatio, // Set from FundamentalDataCache
                                     Date = last.Date,
                                     LastUpdated = DateTime.Now,
                                     LastAccessed = DateTime.Now
@@ -632,6 +644,18 @@ namespace Quantra.DAL.Services
                         .Select(g => g.OrderByDescending(c => c.CachedAt).First())
                         .ToList();
 
+                    // Get all symbols from latest entries to batch-load fundamental data
+                    var symbolsList = latestEntries.Select(e => e.Symbol).ToList();
+                    
+                    // Batch load P/E ratios from FundamentalDataCache for all symbols
+                    var peRatios = await dbContext.FundamentalDataCache
+                        .Where(f => symbolsList.Contains(f.Symbol) && f.DataType == "PERatio")
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    
+                    // Create a dictionary for quick P/E ratio lookup
+                    var peRatioDict = peRatios.ToDictionary(f => f.Symbol, f => f.Value ?? 0.0);
+
                     // Process entries to build QuoteData list
                     foreach (var entry in latestEntries)
                     {
@@ -654,6 +678,10 @@ namespace Quantra.DAL.Services
                         if (prices != null && prices.Count > 0)
                         {
                             var last = prices.Last();
+                            
+                            // Get P/E ratio from cache if available
+                            var peRatio = peRatioDict.ContainsKey(entry.Symbol) ? peRatioDict[entry.Symbol] : 0.0;
+                            
                             stocks.Add(new QuoteData
                             {
                                 Symbol = entry.Symbol,
@@ -667,7 +695,7 @@ namespace Quantra.DAL.Services
                                 MarketCap = 0,
                                 Volume = 0,
                                 RSI = 0,
-                                PERatio = 0,
+                                PERatio = peRatio, // Set from FundamentalDataCache
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
                                 LastAccessed = DateTime.Now,
@@ -761,6 +789,13 @@ namespace Quantra.DAL.Services
                         if (prices != null && prices.Count > 0)
                         {
                             var last = prices.Last();
+                            
+                            // Get P/E ratio from FundamentalDataCache if available
+                            var peRatio = dbContext.FundamentalDataCache
+                                .Where(f => f.Symbol == symbol && f.DataType == "PERatio")
+                                .Select(f => f.Value)
+                                .FirstOrDefault() ?? 0.0;
+                            
                             return new QuoteData
                             {
                                 Symbol = symbol,
@@ -774,7 +809,7 @@ namespace Quantra.DAL.Services
                                 MarketCap = 0,
                                 Volume = 0,
                                 RSI = 0,
-                                PERatio = 0,
+                                PERatio = peRatio, // Set from FundamentalDataCache
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
                                 LastAccessed = DateTime.Now,
