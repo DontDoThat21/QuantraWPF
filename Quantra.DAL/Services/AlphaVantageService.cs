@@ -1300,7 +1300,37 @@ namespace Quantra.DAL.Services
             var result = new List<HistoricalPrice>();
             try
             {
-                 var jsonObject = JObject.Parse(jsonResponse);
+                if (string.IsNullOrWhiteSpace(jsonResponse))
+                {
+                    _loggingService?.Log("Warning", $"Empty response received for {function}");
+                    return result;
+                }
+
+                var jsonObject = JObject.Parse(jsonResponse);
+
+                // Check for API error messages
+                if (jsonObject["Error Message"] != null)
+                {
+                    var errorMsg = jsonObject["Error Message"].ToString();
+                    _loggingService?.Log("Error", $"Alpha Vantage API Error for {function}: {errorMsg}");
+                    return result;
+                }
+
+                // Check for rate limit message
+                if (jsonObject["Note"] != null)
+                {
+                    var note = jsonObject["Note"].ToString();
+                    _loggingService?.Log("Warning", $"Alpha Vantage API Note for {function}: {note}");
+                    return result;
+                }
+
+                // Check for information message (often indicates invalid parameters)
+                if (jsonObject["Information"] != null)
+                {
+                    var info = jsonObject["Information"].ToString();
+                    _loggingService?.Log("Warning", $"Alpha Vantage API Information for {function}: {info}");
+                    return result;
+                }
 
                 // Determine the correct time series key
                 string timeSeriesKey = function switch
@@ -1315,17 +1345,41 @@ namespace Quantra.DAL.Services
                     _ => null
                 };
 
-                if (timeSeriesKey == null || !jsonObject.ContainsKey(timeSeriesKey))
+                if (timeSeriesKey == null)
+                {
+                    _loggingService?.Log("Warning", $"Unknown time series key for function {function}");
                     return result;
+                }
+
+                if (!jsonObject.ContainsKey(timeSeriesKey))
+                {
+                    _loggingService?.Log("Warning", $"Response does not contain expected key '{timeSeriesKey}' for {function}");
+                    return result;
+                }
 
                 var timeSeries = jsonObject[timeSeriesKey] as JObject;
                 if (timeSeries == null)
+                {
+                    _loggingService?.Log("Warning", $"Time series data is null or not a valid object for {function}");
                     return result;
+                }
+
+                if (timeSeries.Count == 0)
+                {
+                    _loggingService?.Log("Info", $"No time series data points found for {function}");
+                    return result;
+                }
 
                 foreach (var item in timeSeries)
                 {
                     var dateStr = item.Key;
                     var data = item.Value;
+
+                    if (data == null)
+                    {
+                        _loggingService?.Log("Warning", $"Null data point for date {dateStr} in {function}");
+                        continue;
+                    }
 
                     if (DateTime.TryParse(dateStr, out DateTime date))
                     {
@@ -1354,14 +1408,24 @@ namespace Quantra.DAL.Services
                             AdjClose = data["5. adjusted close"] != null ? ParseDouble("5. adjusted close") : ParseDouble("4. close")
                         });
                     }
+                    else
+                    {
+                        _loggingService?.Log("Warning", $"Failed to parse date '{dateStr}' in {function}");
+                    }
                 }
 
                 // Sort by date ascending
                 result = result.OrderBy(h => h.Date).ToList();
+
+                _loggingService?.Log("Info", $"Successfully parsed {result.Count} data points for {function}");
+            }
+            catch (JsonReaderException jsonEx)
+            {
+                _loggingService?.Log("Error", $"JSON parsing error for {function}: {jsonEx.Message}");
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", "Failed to parse Alpha Vantage response", ex.ToString());
+                _loggingService?.LogErrorWithContext(ex, $"Failed to parse Alpha Vantage response for {function}");
             }
             return result;
         }

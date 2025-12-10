@@ -88,6 +88,21 @@ namespace Quantra.Models
         public DateTime? FetchTimestamp { get; set; }
 
         /// <summary>
+        /// Alpha Vantage contract identifier
+        /// </summary>
+        public string ContractId { get; set; }
+
+        /// <summary>
+        /// Black-Scholes calculated theoretical price
+        /// </summary>
+        public double TheoreticalPrice { get; set; }
+
+        /// <summary>
+        /// IV rank vs. 52-week range (0-100 percentile)
+        /// </summary>
+        public double IVPercentile { get; set; }
+
+        /// <summary>
         /// Gets the mid price (average of bid and ask)
         /// </summary>
         public double MidPrice => (Bid + Ask) / 2.0;
@@ -96,5 +111,93 @@ namespace Quantra.Models
         /// Gets the option symbol representation
         /// </summary>
         public string OptionSymbol => $"{UnderlyingSymbol}{ExpirationDate:yyMMdd}{OptionType[0]}{StrikePrice:00000000}";
+
+        /// <summary>
+        /// Days until expiration
+        /// </summary>
+        public double DaysToExpiration => (ExpirationDate - DateTime.Now).TotalDays;
+
+        /// <summary>
+        /// Years until expiration (for calculations)
+        /// </summary>
+        public double TimeToExpiration => DaysToExpiration / 365.0;
+
+        /// <summary>
+        /// Whether this option is in-the-money
+        /// </summary>
+        public bool IsITM
+        {
+            get
+            {
+                if (OptionType?.ToUpper() == "CALL")
+                    return LastPrice > StrikePrice;
+                else
+                    return LastPrice < StrikePrice;
+            }
+        }
+
+        /// <summary>
+        /// Whether this option is at-the-money (within 2% of strike)
+        /// </summary>
+        public bool IsATM
+        {
+            get
+            {
+                if (LastPrice == 0 || StrikePrice == 0)
+                    return false;
+                    
+                double percentDiff = Math.Abs((LastPrice - StrikePrice) / StrikePrice);
+                return percentDiff <= 0.02;
+            }
+        }
+
+        /// <summary>
+        /// Whether this option is out-of-the-money
+        /// </summary>
+        public bool IsOTM => !IsITM && !IsATM;
+
+        /// <summary>
+        /// Intrinsic value of the option
+        /// </summary>
+        public double IntrinsicValue
+        {
+            get
+            {
+                if (OptionType?.ToUpper() == "CALL")
+                    return Math.Max(0, LastPrice - StrikePrice);
+                else
+                    return Math.Max(0, StrikePrice - LastPrice);
+            }
+        }
+
+        /// <summary>
+        /// Intrinsic value property alias for compatibility
+        /// </summary>
+        public double Intrinsic => IntrinsicValue;
+
+        /// <summary>
+        /// Time value (extrinsic value) of the option
+        /// </summary>
+        public double TimeValue => Math.Max(0, MidPrice - IntrinsicValue);
+
+        /// <summary>
+        /// Extrinsic value property alias for compatibility
+        /// </summary>
+        public double Extrinsic => TimeValue;
+
+        /// <summary>
+        /// In-the-money property alias for compatibility
+        /// </summary>
+        public bool InTheMoney => IsITM;
+
+        /// <summary>
+        /// Bid-ask spread
+        /// </summary>
+        public double Spread => Ask - Bid;
+
+        /// <summary>
+        /// Bid-ask spread as percentage of mid price
+        /// </summary>
+        public double SpreadPercent => MidPrice > 0 ? (Spread / MidPrice) * 100 : 0;
     }
 }

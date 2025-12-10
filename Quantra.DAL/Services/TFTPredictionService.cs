@@ -250,21 +250,31 @@ namespace Quantra.DAL.Services
             {
                 _loggingService?.Log("Debug", $"Processing {pythonResult.Horizons.Count} horizon predictions");
                 
-                foreach (var horizon in pythonResult.Horizons)
+                foreach (var horizonEntry in pythonResult.Horizons)
                 {
+                    var horizonKey = horizonEntry.Key;
+                    var horizon = horizonEntry.Value;
+                    
+                    // Extract days ahead from key (e.g., "5d" -> 5) or use the DaysAhead property
+                    int daysAhead = horizon.DaysAhead;
+                    if (daysAhead == 0 && int.TryParse(horizonKey.TrimEnd('d', 'D'), out int parsedDays))
+                    {
+                        daysAhead = parsedDays;
+                    }
+                    
                     var predictedPrice = pythonResult.CurrentPrice * (1 + horizon.PredictedChange);
                     var upperPrice = pythonResult.CurrentPrice * (1 + horizon.UpperBound);
                     var lowerPrice = pythonResult.CurrentPrice * (1 + horizon.LowerBound);
                     
                     result.Predictions.Add(new TFTForecast
                     {
-                        Timestamp = lastDate.AddDays(horizon.DaysAhead),
+                        Timestamp = lastDate.AddDays(daysAhead),
                         PredictedPrice = predictedPrice,
                         UpperConfidence = upperPrice,
                         LowerConfidence = lowerPrice
                     });
                     
-                    _loggingService?.Log("Debug", $"Horizon {horizon.DaysAhead}d: Change={horizon.PredictedChange:P2}, Price=${predictedPrice:F2}");
+                    _loggingService?.Log("Debug", $"Horizon {daysAhead}d: Change={horizon.PredictedChange:P2}, Price=${predictedPrice:F2}");
                 }
             }
             else
@@ -417,7 +427,7 @@ namespace Quantra.DAL.Services
         public double UpperBound { get; set; }
 
         [JsonPropertyName("horizons")]
-        public List<TFTHorizonData> Horizons { get; set; }
+        public Dictionary<string, TFTHorizonData> Horizons { get; set; }
 
         [JsonPropertyName("modelType")]
         public string ModelType { get; set; }

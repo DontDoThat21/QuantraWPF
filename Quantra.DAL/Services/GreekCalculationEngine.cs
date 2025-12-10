@@ -128,39 +128,206 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Placeholder for Delta calculation (price sensitivity)
+        /// Calculates Delta - the rate of change of option value with respect to underlying price
         /// </summary>
         private double CalculateDelta(Position position, MarketConditions market)
         {
-            // Simplified placeholder - would implement full Delta calculation
-            return 0.5;
+            if (position == null || position.TimeToExpiration <= 0)
+                return 0.0;
+
+            double S = position.UnderlyingPrice;
+            double K = position.StrikePrice;
+            double T = position.TimeToExpiration;
+            double r = market?.InterestRate ?? position.RiskFreeRate;
+            double sigma = position.Volatility;
+
+            if (S <= 0 || K <= 0 || sigma <= 0)
+                return 0.0;
+
+            // Calculate d1 for Black-Scholes
+            double d1 = (Math.Log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.Sqrt(T));
+
+            double delta;
+            if (position.IsCall)
+            {
+                // Call option Delta
+                delta = CumulativeNormalDistribution(d1);
+            }
+            else
+            {
+                // Put option Delta
+                delta = CumulativeNormalDistribution(d1) - 1.0;
+            }
+
+            // Apply position quantity (negative for short positions)
+            return delta * position.Quantity;
         }
 
         /// <summary>
-        /// Placeholder for Gamma calculation (rate of change of Delta)
+        /// Calculates Gamma - the rate of change of Delta with respect to underlying price
         /// </summary>
         private double CalculateGamma(Position position, MarketConditions market)
         {
-            // Simplified placeholder - would implement full Gamma calculation
-            return 0.1;
+            if (position == null || position.TimeToExpiration <= 0)
+                return 0.0;
+
+            double S = position.UnderlyingPrice;
+            double K = position.StrikePrice;
+            double T = position.TimeToExpiration;
+            double r = market?.InterestRate ?? position.RiskFreeRate;
+            double sigma = position.Volatility;
+
+            if (S <= 0 || K <= 0 || sigma <= 0)
+                return 0.0;
+
+            // Calculate d1 for Black-Scholes
+            double d1 = (Math.Log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.Sqrt(T));
+
+            // Standard normal density function
+            double phi_d1 = 1.0 / Math.Sqrt(2 * Math.PI) * Math.Exp(-0.5 * d1 * d1);
+
+            // Gamma is the same for both calls and puts
+            double gamma = phi_d1 / (S * sigma * Math.Sqrt(T));
+
+            // Apply position quantity (absolute value since gamma is always positive)
+            return gamma * Math.Abs(position.Quantity);
         }
 
         /// <summary>
-        /// Placeholder for Vega calculation (volatility sensitivity)
+        /// Calculates Vega - the rate of change of option value with respect to volatility
         /// </summary>
         private double CalculateVega(Position position, MarketConditions market)
         {
-            // Simplified placeholder - would implement full Vega calculation
-            return 0.2;
+            if (position == null || position.TimeToExpiration <= 0)
+                return 0.0;
+
+            double S = position.UnderlyingPrice;
+            double K = position.StrikePrice;
+            double T = position.TimeToExpiration;
+            double r = market?.InterestRate ?? position.RiskFreeRate;
+            double sigma = position.Volatility;
+
+            if (S <= 0 || K <= 0 || sigma <= 0)
+                return 0.0;
+
+            // Calculate d1 for Black-Scholes
+            double d1 = (Math.Log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.Sqrt(T));
+
+            // Standard normal density function
+            double phi_d1 = 1.0 / Math.Sqrt(2 * Math.PI) * Math.Exp(-0.5 * d1 * d1);
+
+            // Vega is the same for both calls and puts
+            // Typically expressed as change per 1% change in volatility
+            double vega = S * phi_d1 * Math.Sqrt(T) / 100.0;
+
+            // Apply position quantity
+            return vega * position.Quantity;
         }
 
         /// <summary>
-        /// Placeholder for Rho calculation (interest rate sensitivity)
+        /// Calculates Rho - the rate of change of option value with respect to interest rate
         /// </summary>
         private double CalculateRho(Position position, MarketConditions market)
         {
-            // Simplified placeholder - would implement full Rho calculation
-            return 0.05;
+            if (position == null || position.TimeToExpiration <= 0)
+                return 0.0;
+
+            double S = position.UnderlyingPrice;
+            double K = position.StrikePrice;
+            double T = position.TimeToExpiration;
+            double r = market?.InterestRate ?? position.RiskFreeRate;
+            double sigma = position.Volatility;
+
+            if (S <= 0 || K <= 0 || sigma <= 0)
+                return 0.0;
+
+            // Calculate d1 and d2 for Black-Scholes
+            double d1 = (Math.Log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.Sqrt(T));
+            double d2 = d1 - sigma * Math.Sqrt(T);
+
+            double rho;
+            if (position.IsCall)
+            {
+                // Call option Rho
+                rho = K * T * Math.Exp(-r * T) * CumulativeNormalDistribution(d2) / 100.0;
+            }
+            else
+            {
+                // Put option Rho
+                rho = -K * T * Math.Exp(-r * T) * CumulativeNormalDistribution(-d2) / 100.0;
+            }
+
+            // Apply position quantity
+            return rho * position.Quantity;
+        }
+
+        /// <summary>
+        /// Calculates portfolio-level Greeks by aggregating individual position Greeks
+        /// </summary>
+        /// <param name="positions">List of positions in the portfolio</param>
+        /// <param name="market">Current market conditions</param>
+        /// <returns>Aggregated portfolio Greeks</returns>
+        public GreekMetrics CalculatePortfolioGreeks(List<Position> positions, MarketConditions market)
+        {
+            if (positions == null || positions.Count == 0)
+                return new GreekMetrics();
+
+            var portfolioGreeks = new GreekMetrics();
+
+            foreach (var position in positions)
+            {
+                try
+                {
+                    var positionGreeks = CalculateGreeks(position, market);
+                    
+                    portfolioGreeks.Delta += positionGreeks.Delta;
+                    portfolioGreeks.Gamma += positionGreeks.Gamma;
+                    portfolioGreeks.Theta += positionGreeks.Theta;
+                    portfolioGreeks.Vega += positionGreeks.Vega;
+                    portfolioGreeks.Rho += positionGreeks.Rho;
+                }
+                catch (Exception)
+                {
+                    // Skip positions with calculation errors
+                    continue;
+                }
+            }
+
+            return portfolioGreeks;
+        }
+
+        /// <summary>
+        /// Performs what-if analysis for Greeks under different scenarios
+        /// </summary>
+        /// <param name="position">The options position</param>
+        /// <param name="market">Current market conditions</param>
+        /// <param name="volatilityChange">Change in volatility (e.g., +0.10 for +10%)</param>
+        /// <param name="priceChange">Change in underlying price (e.g., +5.0 for +$5)</param>
+        /// <param name="timeDecay">Days of time decay to simulate</param>
+        /// <returns>Greeks under the new scenario</returns>
+        public GreekMetrics CalculateGreeksScenario(
+            Position position,
+            MarketConditions market,
+            double volatilityChange = 0,
+            double priceChange = 0,
+            double timeDecay = 0)
+        {
+            if (position == null)
+                throw new ArgumentNullException(nameof(position));
+
+            // Create a copy of the position with adjusted parameters
+            var scenarioPosition = new Position
+            {
+                UnderlyingPrice = position.UnderlyingPrice + priceChange,
+                StrikePrice = position.StrikePrice,
+                TimeToExpiration = Math.Max(0, position.TimeToExpiration - (timeDecay / 365.0)),
+                Volatility = Math.Max(0.01, position.Volatility + volatilityChange),
+                RiskFreeRate = position.RiskFreeRate,
+                IsCall = position.IsCall,
+                Quantity = position.Quantity
+            };
+
+            return CalculateGreeks(scenarioPosition, market);
         }
 
         /// <summary>

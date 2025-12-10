@@ -279,6 +279,12 @@ namespace Quantra.Extensions
                 return new OpenAIPredictionEnhancementService(sentiment, configMgr, null);
             });
 
+            // Register Options Trading Services
+            services.AddSingleton<OptionsDataService>();
+            services.AddSingleton<GreekCalculationEngine>();
+            services.AddSingleton<IVSurfaceService>();
+            services.AddSingleton<OptionsPricingService>();
+
             // Register ViewModels
             services.AddTransient<PredictionAnalysisViewModel>();
             services.AddTransient<LoginWindowViewModel>();
@@ -315,6 +321,10 @@ namespace Quantra.Extensions
             });
             services.AddTransient<StockExplorerViewModel>();
             services.AddTransient<BacktestResultsViewModel>();
+            
+            // Register Options ViewModels
+            services.AddTransient<OptionsViewModel>(); // New comprehensive ViewModel
+            services.AddTransient<OptionsExplorerViewModel>(); // Legacy ViewModel (backward compatibility)
 
             // Register Views
             services.AddTransient<PredictionAnalysis>();
