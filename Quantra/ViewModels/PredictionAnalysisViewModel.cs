@@ -84,6 +84,62 @@ namespace Quantra.ViewModels
             set { _horizon10DayChecked = value; OnPropertyChanged(nameof(Horizon10DayChecked)); }
         }
 
+        // Candlestick chart properties
+        private SeriesCollection _candlestickSeriesCollection;
+        public SeriesCollection CandlestickSeriesCollection
+        {
+            get => _candlestickSeriesCollection;
+            set
+            {
+                _candlestickSeriesCollection = value;
+                OnPropertyChanged(nameof(CandlestickSeriesCollection));
+            }
+        }
+
+        private SeriesCollection _volumeSeriesCollection;
+        public SeriesCollection VolumeSeriesCollection
+        {
+            get => _volumeSeriesCollection;
+            set
+            {
+                _volumeSeriesCollection = value;
+                OnPropertyChanged(nameof(VolumeSeriesCollection));
+            }
+        }
+
+        private List<string> _chartDateLabels = new();
+        public List<string> ChartDateLabels
+        {
+            get => _chartDateLabels;
+            set
+            {
+                _chartDateLabels = value;
+                OnPropertyChanged(nameof(ChartDateLabels));
+            }
+        }
+
+        private bool _isChartVisible = false;
+        public bool IsChartVisible
+        {
+            get => _isChartVisible;
+            set
+            {
+                _isChartVisible = value;
+                OnPropertyChanged(nameof(IsChartVisible));
+            }
+        }
+
+        public Func<double, string> VolumeFormatter => value =>
+        {
+            if (value >= 1_000_000_000)
+                return $"{value / 1_000_000_000:F1}B";
+            if (value >= 1_000_000)
+                return $"{value / 1_000_000:F1}M";
+            if (value >= 1_000)
+                return $"{value / 1_000:F1}K";
+            return value.ToString("F0");
+        };
+
         // Prediction data
         public ObservableCollection<PredictionModel> Predictions { get; set; } = new();
         private ObservableCollection<PredictionModel> _models = new();

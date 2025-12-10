@@ -190,13 +190,17 @@ namespace Quantra.Models
 
         private bool HasBearishDivergence(List<HistoricalPrice> prices, List<double> rsiValues, int currentIndex, int lookback)
         {
-            int startIdx = currentIndex - lookback;
-            if (startIdx < RsiPeriod)
+            int startIdx = Math.Max(RsiPeriod, currentIndex - lookback);
+            if (startIdx >= currentIndex)
+                return false;
+
+            // Ensure all indices are within RSI bounds
+            if (currentIndex >= rsiValues.Count || startIdx >= rsiValues.Count)
                 return false;
 
             // Find price highs in the lookback period
             int maxPriceIdx = startIdx;
-            for (int i = startIdx + 1; i <= currentIndex; i++)
+            for (int i = startIdx + 1; i <= currentIndex - 1; i++)
             {
                 if (prices[i].High > prices[maxPriceIdx].High)
                     maxPriceIdx = i;
@@ -206,10 +210,16 @@ namespace Quantra.Models
             if (maxPriceIdx == currentIndex)
                 return false;
 
+            // Ensure maxPriceIdx is within RSI bounds
+            if (maxPriceIdx >= rsiValues.Count)
+                return false;
+
             // Check if price made higher high but RSI made lower high (bearish divergence)
-            // RSI array is parallel to prices array
-            return prices[currentIndex].High > prices[maxPriceIdx].High &&
-                   rsiValues[currentIndex] < rsiValues[maxPriceIdx];
+            // This indicates potential reversal from overbought condition
+            bool priceHigherHigh = prices[currentIndex].High > prices[maxPriceIdx].High;
+            bool rsiLowerHigh = rsiValues[currentIndex] < rsiValues[maxPriceIdx];
+
+            return priceHigherHigh && rsiLowerHigh;
         }
 
         private List<double> CalculateRSI(List<HistoricalPrice> prices, int period)

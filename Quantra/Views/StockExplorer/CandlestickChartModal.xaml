@@ -42,14 +42,63 @@ KeyDown="Window_KeyDown">
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Symbol and Real-Time Price Ticker -->
+                <!-- Left: Symbol Search and Real-Time Price Ticker -->
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Symbol}" 
-                                   Foreground="Cyan" 
-                                   FontSize="24" 
-                                   FontWeight="Bold"
-                                   FontFamily="Franklin Gothic Medium"/>
+                        <!-- Symbol Search TextBox with Type-Ahead -->
+                        <Grid>
+                            <TextBox x:Name="SymbolSearchTextBox"
+                                     Width="120"
+                                     FontSize="18"
+                                     FontWeight="Bold"
+                                     FontFamily="Franklin Gothic Medium"
+                                     Foreground="Cyan"
+                                     Background="#2D2D4D"
+                                     BorderBrush="#3E3E56"
+                                     BorderThickness="1"
+                                     Padding="5"
+                                     VerticalContentAlignment="Center"/>
+                            
+                            <!-- Search Results Popup -->
+                            <Popup x:Name="SearchResultsPopup"
+                                   PlacementTarget="{Binding ElementName=SymbolSearchTextBox}"
+                                   Placement="Bottom"
+                                   Width="300"
+                                   StaysOpen="False"
+                                   AllowsTransparency="True">
+                                <Border Background="#2D2D4D"
+                                        BorderBrush="#3E3E56"
+                                        BorderThickness="1"
+                                        CornerRadius="3"
+                                        MaxHeight="300">
+                                    <Grid>
+                                        <TextBlock x:Name="SearchLoadingText"
+                                                   Text="Searching..."
+                                                   Foreground="#AAAAAA"
+                                                   FontSize="12"
+                                                   Padding="10"
+                                                   Visibility="Collapsed"/>
+                                        <ListBox x:Name="SearchResultsListBox"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 FontFamily="Franklin Gothic Medium">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Vertical" Margin="5">
+                                                        <TextBlock Text="{Binding Symbol}" 
+                                                                   FontWeight="Bold" 
+                                                                   Foreground="White"/>
+                                                        <TextBlock Text="{Binding Name}" 
+                                                                   FontSize="10" 
+                                                                   Foreground="#AAAAAA"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Border>
+                            </Popup>
+                        </Grid>
                         <!-- Market Status Indicator -->
                         <Border Background="{Binding MarketStatusColor}" 
                                 CornerRadius="10" 

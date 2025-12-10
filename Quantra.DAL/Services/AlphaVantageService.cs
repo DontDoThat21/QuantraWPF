@@ -1300,7 +1300,7 @@ namespace Quantra.DAL.Services
             var result = new List<HistoricalPrice>();
             try
             {
-                var jsonObject = JObject.Parse(jsonResponse);
+                 var jsonObject = JObject.Parse(jsonResponse);
 
                 // Determine the correct time series key
                 string timeSeriesKey = function switch
