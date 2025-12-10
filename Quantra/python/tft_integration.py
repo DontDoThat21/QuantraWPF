@@ -511,7 +511,15 @@ class TFTStockPredictor:
             target_price = current_price * (1 + median_predictions[0]) if current_price > 0 else 0.0
             
             # Flatten feature importance from (1, n_features) to (n_features,)
-            feature_importance = outputs['feature_importance'][0].tolist() if len(outputs['feature_importance']) > 0 else []
+            # Check both dimensions to avoid IndexError
+            feature_importance = []
+            if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0:
+                if outputs['feature_importance'].shape[1] > 0:
+                    feature_importance = outputs['feature_importance'][0].tolist()
+                else:
+                    logger.warning("Feature importance array has no features (shape[1] = 0)")
+            else:
+                logger.warning("Feature importance array is empty")
             
             return {
                 'symbol': historical_sequence[-1].get('symbol', 'UNKNOWN') if historical_sequence else 'UNKNOWN',
