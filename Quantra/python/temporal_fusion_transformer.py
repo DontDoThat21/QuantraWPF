@@ -215,20 +215,21 @@ class InterpretableMultiHeadAttention(nn.Module):
         self.attention_weights = None  # Store for interpretation
         
     def forward(self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
-                need_weights: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
+                need_weights: bool = True, attn_mask: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass with attention weight storage.
-        
+
         Args:
             query: Query tensor (batch, seq_len, d_model)
             key: Key tensor (batch, seq_len, d_model)
             value: Value tensor (batch, seq_len, d_model)
             need_weights: Whether to return attention weights
-            
+            attn_mask: Optional attention mask (seq_len, seq_len) with -inf for blocked positions
+
         Returns:
             Tuple of output and attention weights
         """
-        output, weights = self.attention(query, key, value, need_weights=need_weights)
+        output, weights = self.attention(query, key, value, need_weights=need_weights, attn_mask=attn_mask)
         self.attention_weights = weights  # Store for later access
         return output, weights
 
@@ -266,12 +267,22 @@ class TemporalFusionTransformer(nn.Module):
         self.num_quantiles = num_quantiles
         self.forecast_horizons = forecast_horizons
         self.quantiles = [0.1, 0.25, 0.5, 0.75, 0.9]  # 10th, 25th, median, 75th, 90th
-        
-        # Ensure hidden_dim is divisible by num_heads
+
+        # CRITICAL: Validate hidden_dim is divisible by num_heads
+        # Multi-head attention requires hidden_dim % num_heads == 0
         if hidden_dim % num_heads != 0:
-            hidden_dim = num_heads * (hidden_dim // num_heads + 1)
-            self.hidden_dim = hidden_dim
-            logger.info(f"Adjusted hidden_dim to {hidden_dim} for divisibility by num_heads")
+            suggested_dim = num_heads * (hidden_dim // num_heads + 1)
+            raise ValueError(
+                f"hidden_dim ({hidden_dim}) must be divisible by num_heads ({num_heads}). "
+                f"hidden_dim % num_heads = {hidden_dim % num_heads} (remainder must be 0). "
+                f"\nSuggested values:\n"
+                f"  - hidden_dim={suggested_dim} (next valid value)\n"
+                f"  - hidden_dim={num_heads * (hidden_dim // num_heads)} (previous valid value)\n"
+                f"  - Or choose num_heads that divides {hidden_dim}: "
+                f"{[d for d in range(1, min(hidden_dim + 1, 17)) if hidden_dim % d == 0]}"
+            )
+
+        self.hidden_dim = hidden_dim
         
         # 1. Static covariate encoder
         self.static_embedding = nn.Linear(static_dim, hidden_dim)
@@ -340,22 +351,33 @@ class TemporalFusionTransformer(nn.Module):
                ) -> Dict[str, torch.Tensor]:
         """
         Forward pass of TFT.
-        
+
+        CRITICAL FIX: Uses causal attention masking to prevent information leakage.
+        Position i in the sequence can only attend to positions 0...i, not future positions.
+        This ensures training behavior matches inference and prevents "seeing the future".
+
         STEP 6 ENHANCEMENT: Now properly processes future calendar features as known-future-inputs.
-        
+
         Args:
             past_features: Historical temporal features (batch, past_seq_len, input_dim)
             static_features: Static/time-invariant features (batch, static_dim)
             future_features: Optional known future calendar features (batch, future_seq_len, calendar_dim)
                            Examples: day_of_week, month, quarter, is_holiday, is_month_end, etc.
                            These are deterministic and known in advance for the forecast horizon.
-            
+
         Returns:
             dict with keys:
                 - 'predictions': dict of horizon predictions, each (batch, num_quantiles)
-                - 'attention_weights': List of attention weight tensors
+                - 'attention_weights': List of attention weight tensors (with causal masking applied)
                 - 'variable_importance': (batch, input_dim)
                 - 'static_context': (batch, hidden_dim)
+
+        Note on Causal Masking:
+            The self-attention mechanism uses causal masking where each position can only
+            attend to earlier positions in the sequence. This prevents:
+            - Information leakage from future timesteps during training
+            - Mismatch between training and inference behavior
+            - Overfitting to patterns that won't be available at prediction time
         """
         batch_size = past_features.size(0)
         past_seq_len = past_features.size(1)
@@ -366,8 +388,9 @@ class TemporalFusionTransformer(nn.Module):
         
         # 2. Apply variable selection to past features
         # VSN will select important features and embed them to hidden_dim
-        static_context_expanded = static_context.unsqueeze(1).expand(-1, past_seq_len, -1)
-        selected_past, variable_importance = self.past_vsn(past_features, static_context_expanded)
+        # CRITICAL FIX: Pass static_context directly (batch, hidden_dim) - VSN handles expansion internally
+        # Static context should NOT be pre-expanded as it's the same for all timesteps
+        selected_past, variable_importance = self.past_vsn(past_features, static_context)
         # selected_past: (batch, past_seq_len, hidden_dim)
         # variable_importance: (batch, num_features) - importance weights for each input feature
         
@@ -409,21 +432,31 @@ class TemporalFusionTransformer(nn.Module):
         else:
             # No future features - use only past (backward compatible)
             lstm_out = self.gated_skip(past_lstm_out)
-            static_context_combined = static_context_expanded
             combined_seq_len = past_seq_len
+            # Expand static context for GRN (GRN needs matching dimensions for addition)
+            static_context_combined = static_context.unsqueeze(1).expand(-1, combined_seq_len, -1)
         
         # 5. Static enrichment
         enriched = self.static_enrichment(lstm_out, static_context_combined)  # (batch, combined_seq_len, hidden_dim)
-        
+
         # 6. Multi-head attention with residual connections
-        # Attention now has access to both past and future calendar information
+        # CRITICAL FIX: Create causal attention mask to prevent looking at future timesteps
+        # This prevents information leakage during training and ensures training matches inference
+        device = enriched.device
+        attn_mask = self._generate_causal_mask(combined_seq_len, device)  # (seq_len, seq_len)
+
         attention_out = enriched
         attention_weights_list = []
-        
+
         for i, (attention_layer, grn) in enumerate(zip(self.attention_layers, self.post_attention_grns)):
-            attn_out, weights = attention_layer(attention_out, attention_out, attention_out)
+            # Apply causal masking to prevent future information leakage
+            attn_out, weights = attention_layer(
+                attention_out, attention_out, attention_out,
+                need_weights=True,
+                attn_mask=attn_mask
+            )
             attention_weights_list.append(weights)
-            
+
             # Apply post-attention GRN and residual
             attn_out = grn(attn_out)
             attention_out = self.layer_norm(attention_out + attn_out)
@@ -498,38 +531,114 @@ class TemporalFusionTransformer(nn.Module):
         
         return interpretation
 
+    def _generate_causal_mask(self, seq_len: int, device: torch.device) -> torch.Tensor:
+        """
+        Generate causal attention mask to prevent attending to future positions.
+
+        In causal masking, position i can only attend to positions 0...i (not i+1, i+2, etc.)
+        This prevents information leakage from future timesteps during training.
+
+        Args:
+            seq_len: Sequence length
+            device: Device to create mask on
+
+        Returns:
+            Attention mask of shape (seq_len, seq_len)
+            Values are 0.0 where attention is allowed, -inf where blocked
+        """
+        # Create a lower triangular matrix: 1s on/below diagonal, 0s above
+        # Position i can attend to positions 0...i
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=device))
+
+        # Convert to attention mask format:
+        # 0.0 where attention is allowed (mask == 1)
+        # -inf where attention is blocked (mask == 0)
+        mask = mask.masked_fill(mask == 0, float('-inf'))
+        mask = mask.masked_fill(mask == 1, 0.0)
+
+        return mask
+
 
 class QuantileLoss(nn.Module):
     """
     Quantile loss for training TFT.
     Ensures proper calibration of prediction intervals.
+
+    The quantile loss is asymmetric:
+    - For quantile q, under-predictions are penalized by q
+    - Over-predictions are penalized by (1-q)
+    - This ensures the model learns proper uncertainty bounds
     """
-    
+
     def __init__(self, quantiles: Optional[List[float]] = None):
         super(QuantileLoss, self).__init__()
         if quantiles is None:
             quantiles = [0.1, 0.25, 0.5, 0.75, 0.9]
+
+        # Validate quantiles are valid probabilities
+        for q in quantiles:
+            if not (0 < q < 1):
+                raise ValueError(
+                    f"All quantiles must be in range (0, 1), got quantile {q}. "
+                    f"Provided quantiles: {quantiles}"
+                )
+
         self.quantiles = quantiles
         
     def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         """
         Compute quantile loss.
-        
+
         Args:
-            predictions: (batch, num_quantiles)
-            targets: (batch, 1) or (batch,)
-            
+            predictions: (batch, num_quantiles) - Predicted quantiles
+            targets: (batch, 1) or (batch,) - Ground truth values
+
         Returns:
             Scalar loss value
+
+        Raises:
+            ValueError: If predictions or targets have invalid shapes
         """
+        # CRITICAL: Validate input shapes to catch errors early
+        if predictions.dim() != 2:
+            raise ValueError(
+                f"Predictions must be 2D tensor (batch, num_quantiles), "
+                f"got {predictions.dim()}D tensor with shape {predictions.shape}"
+            )
+
+        if predictions.size(1) != len(self.quantiles):
+            raise ValueError(
+                f"Predictions must have {len(self.quantiles)} quantiles (matching self.quantiles), "
+                f"but got predictions with shape {predictions.shape} "
+                f"({predictions.size(1)} quantiles instead of {len(self.quantiles)}). "
+                f"Expected quantiles: {self.quantiles}"
+            )
+
+        if targets.dim() not in [1, 2]:
+            raise ValueError(
+                f"Targets must be 1D or 2D tensor, "
+                f"got {targets.dim()}D tensor with shape {targets.shape}"
+            )
+
         if targets.dim() == 1:
             targets = targets.unsqueeze(1)
-        
+
+        if targets.size(0) != predictions.size(0):
+            raise ValueError(
+                f"Batch size mismatch: predictions have {predictions.size(0)} samples "
+                f"but targets have {targets.size(0)} samples"
+            )
+
+        # Compute quantile loss for each quantile
         losses = []
         for i, q in enumerate(self.quantiles):
             errors = targets - predictions[:, i:i+1]
+            # Quantile loss: max((q-1)*error, q*error)
+            # For q=0.5 (median): this becomes MAE
+            # For q<0.5: penalizes under-prediction more
+            # For q>0.5: penalizes over-prediction more
             losses.append(torch.max((q - 1) * errors, q * errors))
-        
+
         return torch.mean(torch.cat(losses, dim=1))
 
 

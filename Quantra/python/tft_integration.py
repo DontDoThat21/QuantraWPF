@@ -7,6 +7,33 @@ Provides TFTStockPredictor wrapper compatible with existing prediction interface
 CRITICAL FIXES:
 1. Properly accepts real historical sequences instead of synthetic repeated values
 2. Validates that targets are properly formatted for multi-horizon forecasting
+3. Prevents data leakage by fitting scalers ONLY on training data
+
+IMPORTANT: Data Preprocessing and Look-Ahead Bias Prevention
+=============================================================
+To prevent look-ahead bias (data leakage), the preprocessing pipeline follows these steps:
+
+1. Split data into train/validation sets BEFORE any scaling (80/20 split, sequential for time series)
+2. Fit all scalers (temporal, static, target) ONLY on training data
+3. Transform both train and validation data using the fitted scalers
+4. During inference, use the same fitted scalers (never refit on test data)
+
+INCORRECT (Data Leakage):
+    # Wrong: Fit scaler on all data (train + validation together)
+    X_scaled = scaler.fit_transform(X_all)
+    X_train, X_val = split(X_scaled)  # Validation statistics leaked into training!
+
+CORRECT (No Data Leakage):
+    # Right: Split first, then fit only on training data
+    X_train, X_val = split(X_all)
+    scaler.fit(X_train)  # Fit only on training data
+    X_train_scaled = scaler.transform(X_train)
+    X_val_scaled = scaler.transform(X_val)  # Use same scaler for validation
+
+This ensures that:
+- Training data never sees statistics from validation data
+- Validation/test performance accurately reflects real-world generalization
+- No information from the "future" leaks into the past
 
 IMPORTANT: Multi-Horizon Target Requirements
 ============================================
@@ -158,35 +185,67 @@ class TFTStockPredictor:
         Raises:
             ValueError: If y shape doesn't match the number of forecast horizons
         """
+        # CRITICAL: Split data BEFORE scaling to prevent look-ahead bias
+        # We must fit scalers ONLY on training data, not on validation data
+        n_samples = X_past.shape[0]
+        train_size = int(0.8 * n_samples)
+
+        # Split indices
+        train_indices = np.arange(train_size)
+        val_indices = np.arange(train_size, n_samples)
+
+        logger.info(f"Splitting {n_samples} samples: {train_size} train, {n_samples - train_size} validation")
+
         # Initialize scalers
         self.scaler = StandardScaler()
         self.static_scaler = StandardScaler()
-        self.target_scaler = StandardScaler()  # NEW: Scaler for target values
-        
-        # Scale temporal features
-        n_samples, seq_len, n_features = X_past.shape
+        self.target_scaler = StandardScaler()
+
+        # CRITICAL FIX: Scale temporal features correctly to prevent data leakage
+        # Fit scaler ONLY on training data
+        seq_len, n_features = X_past.shape[1], X_past.shape[2]
+
+        # Get training data and reshape for fitting
+        X_past_train = X_past[train_indices]
+        X_past_train_reshaped = X_past_train.reshape(-1, n_features)
+
+        # Fit scaler on training data ONLY
+        self.scaler.fit(X_past_train_reshaped)
+        logger.info(f"Fitted temporal scaler on {X_past_train_reshaped.shape[0]} training time steps")
+
+        # Transform all data using the fitted scaler
         X_past_reshaped = X_past.reshape(-1, n_features)
-        X_past_scaled = self.scaler.fit_transform(X_past_reshaped)
+        X_past_scaled = self.scaler.transform(X_past_reshaped)
         X_past_scaled = X_past_scaled.reshape(n_samples, seq_len, n_features)
-        
-        # Scale static features
-        X_static_scaled = self.static_scaler.fit_transform(X_static)
-        
+
+        # Scale static features - fit only on training data
+        X_static_train = X_static[train_indices]
+        self.static_scaler.fit(X_static_train)
+        X_static_scaled = self.static_scaler.transform(X_static)
+        logger.info(f"Fitted static scaler on {X_static_train.shape[0]} training samples")
+
         # Handle future features if provided
         has_future = future_features is not None and future_features.size > 0
         if has_future:
             # Initialize future scaler
             self.future_scaler = StandardScaler()
-            
-            # Scale future features
-            n_samples_future, future_seq_len, n_future_features = future_features.shape
+
+            # Fit on training data ONLY
+            future_seq_len, n_future_features = future_features.shape[1], future_features.shape[2]
+            future_train = future_features[train_indices]
+            future_train_reshaped = future_train.reshape(-1, n_future_features)
+
+            self.future_scaler.fit(future_train_reshaped)
+            logger.info(f"Fitted future scaler on {future_train_reshaped.shape[0]} training time steps")
+
+            # Transform all data
             future_reshaped = future_features.reshape(-1, n_future_features)
-            future_scaled = self.future_scaler.fit_transform(future_reshaped)
-            future_scaled = future_scaled.reshape(n_samples_future, future_seq_len, n_future_features)
+            future_scaled = self.future_scaler.transform(future_reshaped)
+            future_scaled = future_scaled.reshape(n_samples, future_seq_len, n_future_features)
             logger.info(f"Scaled future features: {future_scaled.shape}")
         else:
             future_scaled = None
-            self.future_scaler = None  # Ensure consistency
+            self.future_scaler = None
             logger.info("No future features provided for training")
         
         # CRITICAL: Validate target shape - targets MUST be (n_samples, num_horizons)
@@ -207,14 +266,19 @@ class TFTStockPredictor:
             )
 
         logger.info(f"Validated targets: shape {y.shape} matches {len(self.forecast_horizons)} forecast horizons")
-        logger.info(f"Target statistics by horizon:")
+        logger.info(f"Target statistics by horizon (all data):")
         for i, horizon in enumerate(self.forecast_horizons):
             logger.info(f"  Horizon {horizon}: mean={y[:, i].mean():.4f}, std={y[:, i].std():.4f}, "
                        f"min={y[:, i].min():.4f}, max={y[:, i].max():.4f}")
 
-        # Fit and transform targets (percentage changes)
-        # Targets are percentage changes (e.g., 0.05 for 5%), scaled for better training
-        y_scaled = self.target_scaler.fit_transform(y)
+        # CRITICAL FIX: Fit target scaler ONLY on training data to prevent look-ahead bias
+        y_train = y[train_indices]
+        self.target_scaler.fit(y_train)
+        logger.info(f"Fitted target scaler on {y_train.shape[0]} training samples")
+        logger.info(f"Target scaler statistics - mean: {self.target_scaler.mean_}, std: {np.sqrt(self.target_scaler.var_)}")
+
+        # Transform all targets using the fitted scaler
+        y_scaled = self.target_scaler.transform(y)
         
         # Create tensors
         past_tensor = torch.FloatTensor(X_past_scaled)
@@ -222,46 +286,74 @@ class TFTStockPredictor:
         # Use scaled targets: y_scaled contains percentage changes (e.g., 0.05 for 5%)
         # transformed by StandardScaler for improved training stability and convergence
         targets_tensor = torch.FloatTensor(y_scaled)
-        
-        # Create DataLoader with or without future features
+
+        # CRITICAL FIX: Use the same train/val split we used for fitting scalers
+        # For time series, we use sequential split (not random) to maintain temporal order
         if has_future:
             future_tensor = torch.FloatTensor(future_scaled)
-            dataset = TensorDataset(past_tensor, static_tensor, future_tensor, targets_tensor)
+            # Split into train and val using our pre-computed indices
+            train_dataset = TensorDataset(
+                past_tensor[train_indices],
+                static_tensor[train_indices],
+                future_tensor[train_indices],
+                targets_tensor[train_indices]
+            )
+            val_dataset = TensorDataset(
+                past_tensor[val_indices],
+                static_tensor[val_indices],
+                future_tensor[val_indices],
+                targets_tensor[val_indices]
+            )
         else:
-            dataset = TensorDataset(past_tensor, static_tensor, targets_tensor)
-        
-        train_size = int(0.8 * len(dataset))
-        val_size = len(dataset) - train_size
-        train_dataset, val_dataset = torch.utils.data.random_split(
-            dataset, [train_size, val_size],
-            generator=torch.Generator().manual_seed(42)
-        )
+            # Split into train and val using our pre-computed indices
+            train_dataset = TensorDataset(
+                past_tensor[train_indices],
+                static_tensor[train_indices],
+                targets_tensor[train_indices]
+            )
+            val_dataset = TensorDataset(
+                past_tensor[val_indices],
+                static_tensor[val_indices],
+                targets_tensor[val_indices]
+            )
+
+        logger.info(f"Created datasets: {len(train_dataset)} train, {len(val_dataset)} validation samples")
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-        
-        # Generator function to yield dict batches
-        def dict_batch_generator(loader, include_future=False):
-            for batch_data in loader:
-                if include_future:
-                    past, static, future, targets = batch_data
-                    yield {
-                        'past_features': past,
-                        'static_features': static,
-                        'future_features': future,
-                        'targets': targets
-                    }
-                else:
-                    past, static, targets = batch_data
-                    yield {
-                        'past_features': past,
-                        'static_features': static,
-                        'targets': targets
-                    }
-        
-        train_loader_dict = list(dict_batch_generator(train_loader, include_future=has_future))
-        val_loader_dict = list(dict_batch_generator(val_loader, include_future=has_future))
-        
+
+        # CRITICAL FIX: Use generator function wrapper without converting to list
+        # This prevents loading entire dataset into memory and allows streaming
+        class DictBatchWrapper:
+            """Wraps DataLoader to yield dict batches instead of tuples."""
+            def __init__(self, loader, include_future=False):
+                self.loader = loader
+                self.include_future = include_future
+
+            def __iter__(self):
+                for batch_data in self.loader:
+                    if self.include_future:
+                        past, static, future, targets = batch_data
+                        yield {
+                            'past_features': past,
+                            'static_features': static,
+                            'future_features': future,
+                            'targets': targets
+                        }
+                    else:
+                        past, static, targets = batch_data
+                        yield {
+                            'past_features': past,
+                            'static_features': static,
+                            'targets': targets
+                        }
+
+        # Wrap loaders to yield dicts (streaming, no memory overhead)
+        train_loader_dict = DictBatchWrapper(train_loader, include_future=has_future)
+        val_loader_dict = DictBatchWrapper(val_loader, include_future=has_future)
+
+        logger.info(f"Using streaming data loaders (memory efficient)")
+
         # Train model
         history = train_tft_model(
             self.model,
@@ -397,7 +489,7 @@ class TFTStockPredictor:
             'attention_weights': attention_weights
         }
     
-    def predict_single(self, 
+    def predict_single(self,
                       historical_sequence: Optional[List[Dict[str, float]]] = None,
                       calendar_features: Optional[List[Dict[str, int]]] = None,
                       static_dict: Optional[Dict[str, Any]] = None,
@@ -405,33 +497,60 @@ class TFTStockPredictor:
                       lookback: int = 60) -> Dict[str, Any]:
         """
         Predict for a single symbol using REAL historical data.
-        
-        CRITICAL FIX: This method now accepts actual historical sequences
-        instead of creating synthetic repeated values.
-        
+
+        CRITICAL: Proper Usage Requires Real Historical Sequences
+        ==========================================================
+        TFT is a TEMPORAL model that learns from time-series patterns. It requires:
+        - Actual historical sequences with temporal variation
+        - NOT synthetic repeated values
+
+        CORRECT Usage (Recommended):
+            historical_sequence = [
+                {'date': '2024-01-01', 'open': 100, 'close': 102, 'volume': 1000000, ...},
+                {'date': '2024-01-02', 'open': 102, 'close': 98, 'volume': 950000, ...},
+                ...  # 60 days of real data
+            ]
+            predictor.predict_single(historical_sequence=historical_sequence)
+
+        INCORRECT Usage (Deprecated - Will Give Poor Results):
+            features_dict = {'close': 100, 'volume': 1000000}  # Single snapshot
+            predictor.predict_single(features_dict=features_dict)
+            # This repeats the same values 60 times, defeating temporal modeling!
+
         Args:
-            historical_sequence: List of dicts with OHLCV data for last 60 days
-                                [{'date': '2024-01-01', 'close': 98.0, 'volume': 1M, ...}, ...]
-            calendar_features: List of calendar feature dicts for historical + future period
-                              [{'dayofweek': 0, 'month': 1, 'is_friday': 0, ...}, ...]
-            static_dict: Dictionary of static features (sector, market_cap, etc.)
-            features_dict: Legacy parameter for backward compatibility (single feature dict)
+            historical_sequence: REQUIRED - List of dicts with OHLCV data for last 60 days
+                                Format: [{'date': '2024-01-01', 'close': 98.0, 'volume': 1M, ...}, ...]
+                                Must contain at least 'open', 'high', 'low', 'close', 'volume' keys
+            calendar_features: Optional list of calendar feature dicts for historical + future period
+                              Format: [{'dayofweek': 0, 'month': 1, 'is_friday': 0, ...}, ...]
+            static_dict: Optional dictionary of static features (sector, market_cap, etc.)
+            features_dict: DEPRECATED - Single feature dict (creates unrealistic repeated sequence)
+                          Only provided for backward compatibility - DO NOT USE for new code
             lookback: Number of lookback periods (default 60)
-            
+
         Returns:
             Prediction result with multi-horizon forecasts and uncertainty
+
+        Raises:
+            ValueError: If historical_sequence is None/empty when features_dict is not provided
         """
         try:
             # Handle backward compatibility: if features_dict is provided but not historical_sequence
             if historical_sequence is None and features_dict is not None:
-                logger.warning("Using legacy features_dict interface. For best results, use historical_sequence.")
-                # Create synthetic sequence from single feature dict (legacy behavior)
+                logger.warning(
+                    "DEPRECATED: Using legacy features_dict interface with synthetic repeated values. "
+                    "This creates unrealistic temporal sequences (same value repeated 60 times) "
+                    "which defeats the purpose of temporal modeling. "
+                    "Please use 'historical_sequence' parameter with real historical data for proper predictions."
+                )
+                # Create synthetic sequence from single feature dict (LEGACY - NOT RECOMMENDED)
+                # WARNING: This repeats the same values over time, which is unrealistic
                 feature_names = list(features_dict.keys())
                 feature_values = np.array([features_dict[k] for k in feature_names])
                 n_features = len(feature_values)
                 X_past = np.tile(feature_values.reshape(1, 1, n_features), (1, lookback, 1)).astype(np.float32)
-                current_price = features_dict.get('current_price', 
-                               features_dict.get('close', 
+                current_price = features_dict.get('current_price',
+                               features_dict.get('close',
                                features_dict.get('price', 0.0)))
             else:
                 # Use REAL historical sequence (preferred method)
