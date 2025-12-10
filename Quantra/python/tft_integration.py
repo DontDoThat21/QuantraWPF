@@ -681,11 +681,13 @@ class TFTStockPredictor:
             confidence = max(0.5, 1.0 - min(1.0, interval_width))
             target_price = current_price * (1 + median_predictions[0]) if current_price > 0 else 0.0
             
-            # Flatten feature importance from (1, n_features) to (n_features,)
-            # Check both dimensions to avoid IndexError
+            # CRITICAL FIX: Feature importance must be 2D array for C# deserialization
+            # C# expects List<List<double>>, so we need to wrap the 1D array in another list
             feature_importance = []
             if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0 and outputs['feature_importance'].shape[1] > 0:
-                feature_importance = outputs['feature_importance'][0].tolist()
+                # Extract the first sample's importance and wrap in a list to create 2D structure
+                # This converts from shape (1, n_features) to [[val1, val2, ...]]
+                feature_importance = [outputs['feature_importance'][0].tolist()]
             elif len(outputs['feature_importance']) == 0 or outputs['feature_importance'].shape[0] == 0:
                 logger.warning("Feature importance array is empty")
             else:
