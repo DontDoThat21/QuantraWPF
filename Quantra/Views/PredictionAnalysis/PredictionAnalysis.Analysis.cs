@@ -731,10 +731,14 @@ namespace Quantra.Controls
                     }
                 }
 
+                // === PRIMARY ML PREDICTION ===
                 // This should ALWAYS use the trained ML model from Python
                 // The Python script will automatically load the trained model or train a new one if needed
                 try
                 {
+                    _loggingService?.Log("Info", $"=== STARTING ML PREDICTION FOR {symbol} ===");
+                    _loggingService?.Log("Info", $"Current Price: {currentPrice:C2}");
+                    
                     // Use TFT if selected, otherwise use standard prediction
                     if (useTFT)
                     {
@@ -812,12 +816,19 @@ namespace Quantra.Controls
                         targetPrice = result.TargetPrice;
                         weights = result.FeatureWeights;
                         
-                        //DatabaseMonolith.Log("Info", $"ML prediction for {symbol}: {action} with {confidence:P0} confidence (model-based)");
+                        // LOG ML MODEL OUTPUT
+                        double mlReturn = (currentPrice > 0) ? (targetPrice - currentPrice) / currentPrice : 0;
+                        _loggingService?.Log("Info", 
+                            $"ML PREDICTION for {symbol}: " +
+                            $"Action={action}, " +
+                            $"Confidence={confidence:P0}, " +
+                            $"TargetPrice={targetPrice:C2}, " +
+                            $"ML Return={mlReturn:P2}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    //DatabaseMonolith.Log("Error", $"Python ML prediction failed for {symbol}", ex.ToString());
+                    _loggingService?.Log("Error", $"Python ML prediction failed for {symbol}: {ex.Message}");
                     // NOTE: Consider this a critical error - predictions should come from trained models
                     // If the model isn't trained or Python fails, we should notify the user to train the model
                     // rather than silently falling back to rule-based logic
@@ -827,34 +838,62 @@ namespace Quantra.Controls
                         $"For TFT models, ensure you have at least 60 days of historical data cached.", ex);
                 }
 
-                // Incorporate sentiment into confidence/decision
+                // === STORE ML BASELINE (BEFORE ADJUSTMENTS) ===
+                string mlAction = action;
+                double mlConfidence = confidence;
+                double mlTargetPrice = targetPrice;
+                double mlPotentialReturn = (currentPrice > 0) ? (mlTargetPrice - currentPrice) / currentPrice : 0;
+                
+                _loggingService?.Log("Info", 
+                    $"ML BASELINE for {symbol}: " +
+                    $"Action={mlAction}, " +
+                    $"Confidence={mlConfidence:P0}, " +
+                    $"TargetPrice={mlTargetPrice:C2}, " +
+                    $"Return={mlPotentialReturn:P2}");
+                
+                // === SENTIMENT-BASED CONFIDENCE ADJUSTMENTS (NO TARGET PRICE CHANGES) ===
+                // NOTE: We trust the ML model's target price and only adjust confidence
                 if (indicators.ContainsKey("SocialSentiment"))
                 {
                     double socialSentiment = indicators["SocialSentiment"];
-                    // If sentiment is strongly positive/negative, nudge confidence and action
-                    if (socialSentiment > 0.2) { action = "BUY"; confidence += 0.15; }
-                    else if (socialSentiment < -0.2) { action = "SELL"; confidence += 0.15; }
+                    double confidenceBefore = confidence;
                     
-                    // Adjust target price based on sentiment strength
-                    if (action == "BUY" && socialSentiment > 0.4) {
-                        targetPrice *= 1.02; // 2% higher target for strong positive sentiment
+                    // Adjust confidence based on sentiment alignment
+                    if (socialSentiment > 0.2 && action == "BUY") {
+                        confidence += 0.15; // Reinforce buy signal with positive sentiment
                     }
-                    else if (action == "SELL" && socialSentiment < -0.4) {
-                        targetPrice *= 0.98; // 2% lower target for strong negative sentiment
+                    else if (socialSentiment < -0.2 && action == "SELL") {
+                        confidence += 0.15; // Reinforce sell signal with negative sentiment
+                    }
+                    else if (socialSentiment > 0.2 && action == "SELL") {
+                        confidence -= 0.1; // Weaken sell signal with positive sentiment
+                    }
+                    else if (socialSentiment < -0.2 && action == "BUY") {
+                        confidence -= 0.1; // Weaken buy signal with negative sentiment
+                    }
+                    
+                    if (Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"Sentiment adjustment for {symbol}: " +
+                            $"SocialSentiment={socialSentiment:F2}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
                     }
                 }
                 
-                // Incorporate insider trading into prediction
+                // === INSIDER TRADING CONFIDENCE ADJUSTMENTS (NO TARGET PRICE CHANGES) ===
                 if (indicators.ContainsKey("InsiderTradingSentiment"))
                 {
                     double insiderSentiment = indicators["InsiderTradingSentiment"];
+                    double confidenceBefore = confidence;
+                    string actionBefore = action;
                     
                     // Strong insider sentiment can influence action and confidence
                     if (insiderSentiment > 0.4) {
                         // Strong insider buying
                         if (action != "BUY") {
                             action = "BUY";
-                            confidence = Math.Max(confidence, 0.75); // Even higher than analyst consensus
+                            confidence = Math.Max(confidence, 0.75);
                         } else {
                             confidence += 0.25; // Strongly reinforce existing buy decision
                         }
@@ -867,14 +906,6 @@ namespace Quantra.Controls
                         } else {
                             confidence += 0.25; // Strongly reinforce existing sell decision
                         }
-                    }
-                    
-                    // Adjust target price based on insider activity strength
-                    if (action == "BUY" && insiderSentiment > 0.2) {
-                        targetPrice *= 1.03; // 3% higher target for positive insider activity
-                    }
-                    else if (action == "SELL" && insiderSentiment < -0.2) {
-                        targetPrice *= 0.97; // 3% lower target for negative insider activity
                     }
                     
                     // CEO transactions have special significance
@@ -895,19 +926,30 @@ namespace Quantra.Controls
                             }
                         }
                     }
+                    
+                    // Log insider adjustments
+                    if (action != actionBefore || Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"Insider adjustment for {symbol}: " +
+                            $"InsiderSentiment={insiderSentiment:F2}, " +
+                            $"Action: {actionBefore} → {action}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
+                    }
                 }
                 
-                // Incorporate analyst consensus into prediction
+                // === ANALYST CONSENSUS CONFIDENCE ADJUSTMENTS ===
                 if (indicators.ContainsKey("AnalystConsensus"))
                 {
                     double analystConsensus = indicators["AnalystConsensus"];
+                    double confidenceBefore = confidence;
+                    string actionBefore = action;
                     
                     // Strong analyst consensus can override or reinforce the decision
                     if (analystConsensus > 0.5) {
                         // Strong buy consensus
                         if (action != "BUY") {
                             action = "BUY";
-                            // Higher confidence for consensus-driven actions
                             confidence = Math.Max(confidence, 0.7);
                         } else {
                             confidence += 0.2; // Reinforce existing buy decision
@@ -923,43 +965,81 @@ namespace Quantra.Controls
                         }
                     }
                     
-                    // Use analyst price target when available
+                    // TRUST ML MODEL: Do NOT blend analyst price target with ML prediction
+                    // Analyst targets can be informational but shouldn't override trained model
                     if (indicators.ContainsKey("AnalystPriceTarget") && indicators["AnalystPriceTarget"] > 0)
                     {
                         double analystPriceTarget = indicators["AnalystPriceTarget"];
-                        
-                        // Blend ML model prediction with analyst target
-                        if (currentPrice > 0) {
-                            targetPrice = (targetPrice + analystPriceTarget) / 2.0;
-                        } else {
-                            targetPrice = analystPriceTarget; // Use analyst target if no current price available
-                        }
+                        _loggingService?.Log("Info", 
+                            $"Analyst data for {symbol}: " +
+                            $"Consensus={analystConsensus:F2}, " +
+                            $"PriceTarget={analystPriceTarget:C2} (ML target: {targetPrice:C2})");
+                    }
+                    
+                    // Log analyst adjustments
+                    if (action != actionBefore || Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"Analyst adjustment for {symbol}: " +
+                            $"Consensus={analystConsensus:F2}, " +
+                            $"Action: {actionBefore} → {action}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
                     }
                 }
                 else if (indicators.ContainsKey("EarningsTranscriptSentiment"))
                 {
                     // Prioritize earnings transcript sentiment if combined is not available
                     double earningsSentiment = indicators["EarningsTranscriptSentiment"];
+                    double confidenceBefore = confidence;
+                    
                     // Earnings calls have more weight than other sentiment sources
-                    if (earningsSentiment > 0.15) { action = "BUY"; confidence += 0.2; }
-                    else if (earningsSentiment < -0.15) { action = "SELL"; confidence += 0.2; }
+                    if (earningsSentiment > 0.15 && action == "BUY") { confidence += 0.2; }
+                    else if (earningsSentiment < -0.15 && action == "SELL") { confidence += 0.2; }
+                    
+                    if (Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"Earnings sentiment adjustment for {symbol}: " +
+                            $"Sentiment={earningsSentiment:F2}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
+                    }
                 }
                 else if (indicators.ContainsKey("TwitterSentiment"))
                 {
                     // Fallback to Twitter sentiment if others are not available
                     double twitterSentiment = indicators["TwitterSentiment"];
-                    if (twitterSentiment > 0.2) { action = "BUY"; confidence += 0.1; }
-                    else if (twitterSentiment < -0.2) { action = "SELL"; confidence += 0.1; }
+                    double confidenceBefore = confidence;
+                    
+                    if (twitterSentiment > 0.2 && action == "BUY") { confidence += 0.1; }
+                    else if (twitterSentiment < -0.2 && action == "SELL") { confidence += 0.1; }
+                    
+                    if (Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"Twitter sentiment adjustment for {symbol}: " +
+                            $"Sentiment={twitterSentiment:F2}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
+                    }
                 }
                 else if (indicators.ContainsKey("FinancialNewsSentiment"))
                 {
                     // Secondary fallback to financial news sentiment
                     double newsSentiment = indicators["FinancialNewsSentiment"];
-                    if (newsSentiment > 0.15) { action = "BUY"; confidence += 0.15; }
-                    else if (newsSentiment < -0.15) { action = "SELL"; confidence += 0.15; }
+                    double confidenceBefore = confidence;
+                    
+                    if (newsSentiment > 0.15 && action == "BUY") { confidence += 0.15; }
+                    else if (newsSentiment < -0.15 && action == "SELL") { confidence += 0.15; }
+                    
+                    if (Math.Abs(confidence - confidenceBefore) > 0.01)
+                    {
+                        _loggingService?.Log("Info", 
+                            $"News sentiment adjustment for {symbol}: " +
+                            $"Sentiment={newsSentiment:F2}, " +
+                            $"Confidence: {confidenceBefore:P0} → {confidence:P0}");
+                    }
                 }
 
-                // Calculate potential return
+                // === CALCULATE FINAL POTENTIAL RETURN ===
                 // Positive return = price expected to rise (BUY signal)
                 // Negative return = price expected to fall (SELL signal)
                 double potentialReturn = 0;
@@ -968,7 +1048,25 @@ namespace Quantra.Controls
                     potentialReturn = (targetPrice - currentPrice) / currentPrice;
                 }
                 
-                //DatabaseMonolith.Log("Debug", $"AnalyzeStockWithAllAlgorithms (ML+API): symbol={symbol}, action={action}, currentPrice={currentPrice}, targetPrice={targetPrice}, potentialReturn={potentialReturn}, sentiment={sentimentScore}, earnings_quarter={earningsQuarter}, weights={weights}");
+                // === FINAL PREDICTION SUMMARY ===
+                _loggingService?.Log("Info", 
+                    $"=== FINAL PREDICTION FOR {symbol} ===");
+                _loggingService?.Log("Info", 
+                    $"ML Baseline: Action={mlAction}, Confidence={mlConfidence:P0}, " +
+                    $"TargetPrice={mlTargetPrice:C2}, Return={mlPotentialReturn:P2}");
+                _loggingService?.Log("Info", 
+                    $"After Adjustments: Action={action}, Confidence={confidence:P0}, " +
+                    $"TargetPrice={targetPrice:C2}, Return={potentialReturn:P2}");
+                
+                if (Math.Abs(targetPrice - mlTargetPrice) > 0.01)
+                {
+                    _loggingService?.Log("Warning", 
+                        $"TARGET PRICE CHANGED for {symbol}! " +
+                        $"ML: {mlTargetPrice:C2} → Final: {targetPrice:C2}. " +
+                        $"This should NOT happen - investigate!");
+                }
+                
+                _loggingService?.Log("Info", $"Sentiment={sentimentScore:F2}, Quarter={earningsQuarter}");
 
                 // Run sentiment-price correlation analysis if not already done
                 try

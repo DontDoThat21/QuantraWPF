@@ -252,9 +252,28 @@ def prepare_training_data_from_historicals(symbols_data, min_samples=50, use_fea
                 
                 # Store feature names from first symbol
                 if feature_names is None:
-                    # Create feature names based on the number of features
-                    feature_names = [f"feature_{i}" for i in range(X.shape[-1])]
+                    # CRITICAL FIX: Extract ACTUAL feature names from create_features()
+                    # The features are created by create_features() and then OHLCV columns are dropped
+                    # We need to get the actual column names, not generic placeholders like "feature_0"
+                    
+                    # Recreate the feature engineering process to get column names
+                    df_temp = df.copy()
+                    df_temp = create_features(
+                        df_temp,
+                        feature_type=feature_type,
+                        use_feature_engineering=use_feature_engineering
+                    )
+                    
+                    # Drop the same columns that prepare_data_for_ml drops
+                    df_temp = df_temp.drop(['date', 'open', 'high', 'low', 'close', 'volume'], 
+                                           axis=1, errors='ignore')
+                    
+                    # These are the actual feature names (returns, volatility, sma_5, etc.)
+                    feature_names = list(df_temp.columns)
                     future_feature_names = future_cols
+                    
+                    logger.info(f"✓ ACTUAL feature names extracted: {feature_names}")
+                    logger.info(f"✓ Number of features: {len(feature_names)}")
                 
                 logger.debug(f"Prepared {len(X[:min_len])} samples from {symbol} with calendar features")
         
