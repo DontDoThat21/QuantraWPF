@@ -199,7 +199,8 @@ namespace Quantra.DAL.Services
                             Date = TryParseDateTime(quote["07. latest trading day"]),
                             LastUpdated = DateTime.Now,
                             LastAccessed = DateTime.Now,
-                            MarketCap = 0 // Will be populated separately if needed
+                            MarketCap = 0, // Will be populated from OVERVIEW API
+                            Sector = null // Will be populated from OVERVIEW API
                         };
 
                         // Fetch RSI and P/E Ratio for grid display
@@ -220,6 +221,22 @@ namespace Quantra.DAL.Services
                         catch
                         {
                             quoteData.PERatio = 0; // Default value if P/E fetch fails
+                        }
+
+                        // Fetch Sector and Market Cap from OVERVIEW API
+                        try
+                        {
+                            var companyOverview = await GetCompanyOverviewAsync(quoteData.Symbol);
+                            if (companyOverview != null)
+                            {
+                                quoteData.Sector = companyOverview.Sector;
+                                quoteData.MarketCap = (double)(companyOverview.MarketCapitalization ?? 0);
+                            }
+                        }
+                        catch
+                        {
+                            quoteData.Sector = "N/A";
+                            quoteData.MarketCap = 0; // Default value if OVERVIEW fetch fails
                         }
 
                         return quoteData;

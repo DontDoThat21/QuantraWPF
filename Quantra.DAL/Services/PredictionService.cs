@@ -134,6 +134,20 @@ namespace Quantra.DAL.Services
                 throw new InvalidOperationException("Database context is not available. Use the constructor that accepts QuantraDbContext.");
             }
 
+            // Calculate expected fruition date from horizons if available
+            DateTime? expectedFruitionDate = null;
+            if (tftResult.Horizons != null && tftResult.Horizons.Count > 0)
+            {
+                // Use the longest horizon as the expected fruition date
+                var maxHorizon = tftResult.Horizons.Keys.Max(k => ParseHorizonFromKey(k));
+                expectedFruitionDate = DateTime.Now.AddDays(maxHorizon);
+            }
+            else if (prediction.ExpectedFruitionDate.HasValue)
+            {
+                // Use the date from the prediction model if provided
+                expectedFruitionDate = prediction.ExpectedFruitionDate;
+            }
+
             // Create the main prediction entity
             var predictionEntity = new StockPredictionEntity
             {
@@ -145,6 +159,7 @@ namespace Quantra.DAL.Services
                 TargetPrice = tftResult.TargetPrice != 0 ? tftResult.TargetPrice : prediction.TargetPrice,
                 PotentialReturn = tftResult.PotentialReturn,
                 CreatedDate = DateTime.Now,
+                ExpectedFruitionDate = expectedFruitionDate,
                 ModelType = "tft",
                 ArchitectureType = "tft",
                 TrainingHistoryId = prediction.TrainingHistoryId,

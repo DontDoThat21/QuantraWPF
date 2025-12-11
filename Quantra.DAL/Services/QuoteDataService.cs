@@ -82,6 +82,7 @@ namespace Quantra.DAL.Services
                                     Change = 0, // Calculate from previous day if needed
                                     ChangePercent = 0,
                                     MarketCap = 0,
+                                    Sector = null,
                                     RSI = 0,
                                     PERatio = 0,
                                     VWAP = 0
@@ -155,6 +156,7 @@ namespace Quantra.DAL.Services
                                 Change = 0, // Calculate from previous day if needed
                                 ChangePercent = 0,
                                 MarketCap = 0,
+                                Sector = null,
                                 RSI = 0,
                                 PERatio = 0,
                                 VWAP = 0

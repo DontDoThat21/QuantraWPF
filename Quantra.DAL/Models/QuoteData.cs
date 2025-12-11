@@ -30,6 +30,7 @@ namespace Quantra
         public double DayLow { get; set; }
         public double MarketCap { get; set; }
         public double Volume { get; set; }
+        public string Sector { get; set; }
 
         // Technical indicators for grid display
         public double RSI { get; set; }

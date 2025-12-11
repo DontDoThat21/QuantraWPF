@@ -446,7 +446,12 @@ MinWidth="900" MinHeight="700">
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}"/>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="M.Cap" Binding="{Binding MarketCap, StringFormat={}{0:N0}}" Width="80">
+                    <DataGridTextColumn Header="Sector" Binding="{Binding Sector}" Width="120">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="M.Cap" Binding="{Binding MarketCap, StringFormat={}{0:N0}}" Width="100">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}"/>
                         </DataGridTextColumn.ElementStyle>

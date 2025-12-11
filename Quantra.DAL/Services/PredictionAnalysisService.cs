@@ -317,6 +317,26 @@ namespace Quantra.DAL.Services
                     _loggingService.Log("Info", $"Stock symbol {prediction.Symbol} already exists");
                 }
 
+                // Calculate expected fruition date if not provided
+                // Default to a reasonable timeframe based on prediction type
+                if (!expectedFruitionDate.HasValue && prediction.ExpectedFruitionDate.HasValue)
+                {
+                    expectedFruitionDate = prediction.ExpectedFruitionDate;
+                }
+                else if (!expectedFruitionDate.HasValue)
+                {
+                    // Default fruition dates based on architecture type
+                    int daysToFruition = architectureType?.ToLower() switch
+                    {
+                        "tft" => 10,  // TFT typically predicts 10 days out
+                        "lstm" => 5,  // LSTM typically predicts 5 days out
+                        "gru" => 5,   // GRU typically predicts 5 days out
+                        "transformer" => 7,  // Transformer typically predicts 7 days out
+                        _ => 3  // Default to 3 days for other models
+                    };
+                    expectedFruitionDate = DateTime.Now.AddDays(daysToFruition);
+                }
+
                 // Create prediction entity with new fields
                 var predictionEntity = new StockPredictionEntity
                 {

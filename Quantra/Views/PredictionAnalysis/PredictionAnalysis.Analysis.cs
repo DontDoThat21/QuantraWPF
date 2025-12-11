@@ -771,6 +771,22 @@ namespace Quantra.Controls
                                 $"TFT prediction for {symbol}: {action} with {confidence:P0} confidence " +
                                 $"(using proper 60-day temporal sequences)");
                             
+                            // Calculate expected fruition date from TFT result horizons
+                            DateTime? tftExpectedFruitionDate = null;
+                            if (tftResult.TFTResult != null && tftResult.TFTResult.Horizons != null && tftResult.TFTResult.Horizons.Count > 0)
+                            {
+                                // Parse horizon keys and find the maximum horizon
+                                var maxHorizon = tftResult.TFTResult.Horizons.Keys
+                                    .Select(k => int.TryParse(k.Replace("d", "").Replace("D", ""), out int days) ? days : 0)
+                                    .Max();
+                                tftExpectedFruitionDate = DateTime.Now.AddDays(maxHorizon);
+                            }
+                            else
+                            {
+                                // Default TFT fruition date if no horizons available
+                                tftExpectedFruitionDate = DateTime.Now.AddDays(10);
+                            }
+                            
                             // Store TFT-specific data for later visualization
                             var tftPrediction = new Quantra.Models.PredictionModel
                             {
@@ -782,6 +798,7 @@ namespace Quantra.Controls
                                 Indicators = indicators,
                                 PotentialReturn = (targetPrice - currentPrice) / currentPrice,
                                 PredictionDate = DateTime.Now,
+                                ExpectedFruitionDate = tftExpectedFruitionDate,
                                 ModelType = "tft",
                                 ArchitectureType = "tft",
                                 Notes = $"Multi-horizon TFT prediction with proper temporal sequences and uncertainty quantification",
@@ -1087,6 +1104,16 @@ namespace Quantra.Controls
                 }
 
                 // Use cached model type and architecture values (already retrieved at method start)
+                // Calculate expected fruition date based on architecture type
+                DateTime expectedFruitionDate = cachedArchitectureType?.ToLower() switch
+                {
+                    "tft" => DateTime.Now.AddDays(10),  // TFT typically predicts 10 days out
+                    "lstm" => DateTime.Now.AddDays(5),  // LSTM typically predicts 5 days out
+                    "gru" => DateTime.Now.AddDays(5),   // GRU typically predicts 5 days out
+                    "transformer" => DateTime.Now.AddDays(7),  // Transformer typically predicts 7 days out
+                    _ => DateTime.Now.AddDays(3)  // Default to 3 days for other models
+                };
+
                 // Create the prediction model with all available data
                 var predictionModel = new Quantra.Models.PredictionModel
                 {
@@ -1098,6 +1125,7 @@ namespace Quantra.Controls
                     Indicators = indicators,
                     PotentialReturn = potentialReturn,
                     PredictionDate = DateTime.Now,
+                    ExpectedFruitionDate = expectedFruitionDate,
                     ModelType = cachedModelType,
                     ArchitectureType = cachedArchitectureType,
                     Notes = !string.IsNullOrEmpty(earningsKeyTopics) ?
