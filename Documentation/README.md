@@ -32,6 +32,7 @@ The Prediction Analysis Control is a sophisticated module for algorithmic stock 
 5. [Automation and Trading Features](PredictionAnalysisControl/5_Automation_and_Trading_Features.md)
 6. [Configuration and Extension Points](PredictionAnalysisControl/6_Configuration_and_Extension_Points.md)
 7. [Performance Considerations and Best Practices](PredictionAnalysisControl/7_Performance_Considerations_and_Best_Practices.md)
+8. [Machine Learning Features and Training](PredictionAnalysisControl/8_Machine_Learning_Features_and_Training.md) - Comprehensive guide to ML feature generation, model training, and prediction workflows
 
 ### Trading Features
 
