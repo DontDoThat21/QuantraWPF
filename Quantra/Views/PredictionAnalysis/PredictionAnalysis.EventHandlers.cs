@@ -568,6 +568,34 @@ namespace Quantra.Controls
                                 prediction.ExpectedFruitionDate = expectedFruitionDate;
                                 prediction.TrainingHistoryId = trainingHistoryId;
 
+                                // Populate horizon target prices for UI display
+                                if (tftPredictionResult.Horizons != null)
+                                {
+                                    foreach (var kvp in tftPredictionResult.Horizons)
+                                    {
+                                        // Parse horizon key (e.g., "5d" -> 5)
+                                        var horizonKey = kvp.Key.Replace("d", "").Replace("days", "").Trim();
+                                        if (int.TryParse(horizonKey, out int horizonDays))
+                                        {
+                                            switch (horizonDays)
+                                            {
+                                                case 5:
+                                                    prediction.Target5d = kvp.Value.TargetPrice != 0 ? kvp.Value.TargetPrice : kvp.Value.MedianPrice;
+                                                    break;
+                                                case 10:
+                                                    prediction.Target10d = kvp.Value.TargetPrice != 0 ? kvp.Value.TargetPrice : kvp.Value.MedianPrice;
+                                                    break;
+                                                case 20:
+                                                    prediction.Target20d = kvp.Value.TargetPrice != 0 ? kvp.Value.TargetPrice : kvp.Value.MedianPrice;
+                                                    break;
+                                                case 30:
+                                                    prediction.Target30d = kvp.Value.TargetPrice != 0 ? kvp.Value.TargetPrice : kvp.Value.MedianPrice;
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                }
+
                                 // Save with TFT multi-horizon data
                                 var predictionId = await predictionService.SaveTFTPredictionAsync(
                                     prediction,

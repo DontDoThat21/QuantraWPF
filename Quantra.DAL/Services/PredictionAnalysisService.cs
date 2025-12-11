@@ -98,6 +98,53 @@ namespace Quantra.DAL.Services
                             model.Indicators[indicator.IndicatorName] = indicator.IndicatorValue;
                         }
 
+                        // Load horizon target prices for TFT predictions
+                        var horizons = await context.StockPredictionHorizons
+                            .AsNoTracking()
+                            .Where(h => h.PredictionId == prediction.Id)
+                            .ToListAsync()
+                            .ConfigureAwait(false);
+
+                        // DIAGNOSTIC: Log horizon loading
+                        Console.WriteLine($"[GetLatestPredictions] Loading horizons for PredictionId={prediction.Id}, Symbol={prediction.Symbol}");
+                        Console.WriteLine($"[GetLatestPredictions] Found {horizons.Count} horizon records");
+
+                        foreach (var horizon in horizons)
+                        {
+                            Console.WriteLine($"[GetLatestPredictions]   Horizon {horizon.Horizon}d: TargetPrice={horizon.TargetPrice:F2}");
+
+                            switch (horizon.Horizon)
+                            {
+                                case 5:
+                                    model.Target5d = horizon.TargetPrice;
+                                    Console.WriteLine($"[GetLatestPredictions]   Set Target5d = {horizon.TargetPrice:F2}");
+                                    break;
+                                case 10:
+                                    model.Target10d = horizon.TargetPrice;
+                                    Console.WriteLine($"[GetLatestPredictions]   Set Target10d = {horizon.TargetPrice:F2}");
+                                    break;
+                                case 20:
+                                    model.Target20d = horizon.TargetPrice;
+                                    Console.WriteLine($"[GetLatestPredictions]   Set Target20d = {horizon.TargetPrice:F2}");
+                                    break;
+                                case 30:
+                                    model.Target30d = horizon.TargetPrice;
+                                    Console.WriteLine($"[GetLatestPredictions]   Set Target30d = {horizon.TargetPrice:F2}");
+                                    break;
+                            }
+                        }
+
+                        // DIAGNOSTIC: Confirm values set on model
+                        Console.WriteLine($"[GetLatestPredictions] Final model values: Target5d={model.Target5d:F2}, " +
+                                        $"Target10d={model.Target10d:F2}, Target20d={model.Target20d:F2}, Target30d={model.Target30d:F2}");
+
+                        // Populate additional database properties
+                        model.Id = prediction.Id;
+                        model.ExpectedFruitionDate = prediction.ExpectedFruitionDate;
+                        model.ModelType = prediction.ModelType;
+                        model.ArchitectureType = prediction.ArchitectureType;
+                        model.TrainingHistoryId = prediction.TrainingHistoryId;
+
                         result.Add(model);
                     }
                 }

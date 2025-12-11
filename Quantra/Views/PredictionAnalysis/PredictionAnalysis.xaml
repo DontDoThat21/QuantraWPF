@@ -764,6 +764,10 @@ MinWidth="400" MinHeight="300">
                         <DataGridTextColumn Header="Confidence" Binding="{Binding Confidence, StringFormat=P1}" Width="90"/>
                         <DataGridTextColumn Header="Current $" Binding="{Binding CurrentPrice, StringFormat=C2}" Width="90"/>
                         <DataGridTextColumn Header="Target $" Binding="{Binding TargetPrice, StringFormat=C2}" Width="90"/>
+                        <DataGridTextColumn Header="Target 5d" Binding="{Binding Target5d, StringFormat=C2}" Width="85"/>
+                        <DataGridTextColumn Header="Target 10d" Binding="{Binding Target10d, StringFormat=C2}" Width="90"/>
+                        <DataGridTextColumn Header="Target 20d" Binding="{Binding Target20d, StringFormat=C2}" Width="90"/>
+                        <DataGridTextColumn Header="Target 30d" Binding="{Binding Target30d, StringFormat=C2}" Width="90"/>
                         <DataGridTextColumn Header="Return" Binding="{Binding PotentialReturn, StringFormat=P2}" Width="80"/>
                         <DataGridTextColumn Header="Created" Binding="{Binding PredictionDate, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
                         <DataGridTextColumn Header="Target Date" Binding="{Binding ExpectedFruitionDate, StringFormat=yyyy-MM-dd}" Width="100"/>

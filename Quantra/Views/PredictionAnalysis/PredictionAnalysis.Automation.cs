@@ -263,10 +263,17 @@ namespace Quantra.Controls
    {
          // Clear existing predictions before loading new ones
        this.Predictions.Clear();
-         
+
+            // CRITICAL FIX: Also clear ViewModel's TopPredictions collection
+            _viewModel?.TopPredictions?.Clear();
+
      foreach (var prediction in latestPredictions)
         {
       this.Predictions.Add(prediction);
+
+            // CRITICAL FIX: Also add to ViewModel's TopPredictions collection
+            // The TopPredictionsGrid is bound to ViewModel.TopPredictions
+            _viewModel?.AddToTopPredictions(prediction);
       }
 
     if (StatusText != null)

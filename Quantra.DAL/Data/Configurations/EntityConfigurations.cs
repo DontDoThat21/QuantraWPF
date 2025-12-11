@@ -372,14 +372,25 @@ namespace Quantra.DAL.Data.Configurations
                    .HasForeignKey(h => h.PredictionId)
                    .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure double properties to use FLOAT type for SQL Server compatibility
-            builder.Property(h => h.TargetPrice).HasColumnType("float");
-            builder.Property(h => h.LowerBound).HasColumnType("float");
-            builder.Property(h => h.UpperBound).HasColumnType("float");
-            builder.Property(h => h.Confidence).HasColumnType("float");
-            builder.Property(h => h.ActualPrice).HasColumnType("float");
-            builder.Property(h => h.ActualReturn).HasColumnType("float");
-            builder.Property(h => h.ErrorPct).HasColumnType("float");
+            // Create a converter for decimal to double conversion
+            var decimalToDoubleConverter = new ValueConverter<double, decimal>(
+                v => (decimal)v,           // double to decimal for writing to DB
+                v => (double)v             // decimal to double for reading from DB
+            );
+
+            var nullableDecimalToDoubleConverter = new ValueConverter<double?, decimal?>(
+                v => v.HasValue ? (decimal?)v.Value : null,
+                v => v.HasValue ? (double?)v.Value : null
+            );
+
+            // Configure double properties with decimal conversion for database compatibility
+            builder.Property(h => h.TargetPrice).HasConversion(decimalToDoubleConverter);
+            builder.Property(h => h.LowerBound).HasConversion(decimalToDoubleConverter);
+            builder.Property(h => h.UpperBound).HasConversion(decimalToDoubleConverter);
+            builder.Property(h => h.Confidence).HasConversion(decimalToDoubleConverter);
+            builder.Property(h => h.ActualPrice).HasConversion(nullableDecimalToDoubleConverter);
+            builder.Property(h => h.ActualReturn).HasConversion(nullableDecimalToDoubleConverter);
+            builder.Property(h => h.ErrorPct).HasConversion(nullableDecimalToDoubleConverter);
         }
     }
 

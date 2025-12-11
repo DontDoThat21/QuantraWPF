@@ -131,6 +131,12 @@ namespace Quantra.Models
         public int? TrainingHistoryId { get; set; } // Reference to the training history used
         public string UserQuery { get; set; } // Original user query that triggered this prediction
         public int? ChatHistoryId { get; set; } // Links prediction to a chat history record
+
+        // Multi-horizon target prices from TFT predictions
+        public double? Target5d { get; set; } // Target price for 5-day horizon
+        public double? Target10d { get; set; } // Target price for 10-day horizon
+        public double? Target20d { get; set; } // Target price for 20-day horizon
+        public double? Target30d { get; set; } // Target price for 30-day horizon
     }
 
     public class TechnicalPattern
