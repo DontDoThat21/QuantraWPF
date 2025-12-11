@@ -177,6 +177,8 @@ namespace Quantra.DAL.Services
             // Save multi-horizon predictions
             if (tftResult.Horizons != null && tftResult.Horizons.Count > 0)
             {
+                Console.WriteLine($"[SaveTFT] Saving {tftResult.Horizons.Count} horizon predictions for prediction ID {predictionId}");
+
                 foreach (var kvp in tftResult.Horizons)
                 {
                     // Parse horizon from key (e.g., "5d" -> 5)
@@ -185,6 +187,15 @@ namespace Quantra.DAL.Services
 
                     // Use TargetPrice if available, otherwise fall back to MedianPrice
                     double targetPrice = horizonData.TargetPrice != 0 ? horizonData.TargetPrice : horizonData.MedianPrice;
+
+                    // DIAGNOSTIC: Log values before saving
+                    Console.WriteLine($"[SaveTFT] Horizon {kvp.Key} ({horizon} days):");
+                    Console.WriteLine($"[SaveTFT]   TargetPrice from object: {horizonData.TargetPrice}");
+                    Console.WriteLine($"[SaveTFT]   MedianPrice from object: {horizonData.MedianPrice}");
+                    Console.WriteLine($"[SaveTFT]   Using TargetPrice: {targetPrice}");
+                    Console.WriteLine($"[SaveTFT]   LowerBound: {horizonData.LowerBound}");
+                    Console.WriteLine($"[SaveTFT]   UpperBound: {horizonData.UpperBound}");
+                    Console.WriteLine($"[SaveTFT]   Confidence: {horizonData.Confidence}");
 
                     var horizonEntity = new StockPredictionHorizonEntity
                     {
@@ -200,6 +211,11 @@ namespace Quantra.DAL.Services
 
                     await _dbContext.StockPredictionHorizons.AddAsync(horizonEntity, cancellationToken);
                 }
+            }
+            else
+            {
+                Console.WriteLine($"[SaveTFT] WARNING: No horizons to save. tftResult.Horizons is " +
+                                (tftResult.Horizons == null ? "NULL" : $"empty (count=0)"));
             }
 
             // Save feature importance weights

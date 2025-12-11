@@ -351,26 +351,27 @@ namespace Quantra.Controls
 
                 // Check if TFT architecture is selected
                 string selectedArchitecture = GetSelectedArchitectureType();
-                
+
                 Quantra.Models.PredictionModel prediction = null;
-                
+                Quantra.DAL.Models.TFTPredictionResult tftPredictionResult = null;
+
                 if (selectedArchitecture == TFT_ARCHITECTURE_TYPE && _realTimeInferenceService != null)
                 {
                     // Use TFT-specific prediction path
                     if (StatusText != null)
                         StatusText.Text = $"Running TFT prediction for {symbol}...";
-                    
+
                     var tftResult = await _realTimeInferenceService.GetTFTPredictionAsync(
                         symbol,
                         lookbackDays: TFT_DEFAULT_LOOKBACK_DAYS,
                         futureHorizon: TFT_DEFAULT_FUTURE_HORIZON,
-                        progressCallback: (msg) => Dispatcher.InvokeAsync(() => 
+                        progressCallback: (msg) => Dispatcher.InvokeAsync(() =>
                         {
                             if (StatusText != null)
                                 StatusText.Text = msg;
                         })
                     );
-                    
+
                     if (tftResult.Success && tftResult.Prediction != null)
                     {
                         // Convert PredictionResult to PredictionModel
@@ -385,14 +386,44 @@ namespace Quantra.Controls
                             ModelType = TFT_ARCHITECTURE_TYPE,
                             ArchitectureType = TFT_ARCHITECTURE_TYPE
                         };
-                        
+
+                        // Store TFT result for saving to database with horizons
+                        tftPredictionResult = tftResult.TFTResult;
+
+                        // DIAGNOSTIC: Log TFT result details
+                        if (tftPredictionResult != null)
+                        {
+                            _loggingService?.Log("Info",
+                                $"TFT Result captured: Horizons={tftPredictionResult.Horizons?.Count ?? 0}, " +
+                                $"Features={tftPredictionResult.FeatureWeights?.Count ?? 0}, " +
+                                $"Attention={tftPredictionResult.TemporalAttention?.Count ?? 0}");
+
+                            if (tftPredictionResult.Horizons != null && tftPredictionResult.Horizons.Count > 0)
+                            {
+                                foreach (var h in tftPredictionResult.Horizons)
+                                {
+                                    _loggingService?.Log("Info",
+                                        $"  Horizon {h.Key}: TargetPrice={h.Value.TargetPrice}, MedianPrice={h.Value.MedianPrice}, " +
+                                        $"Lower={h.Value.LowerBound}, Upper={h.Value.UpperBound}, Confidence={h.Value.Confidence}");
+                                }
+                            }
+                            else
+                            {
+                                _loggingService?.Log("Warning", "TFT Result has no horizons data!");
+                            }
+                        }
+                        else
+                        {
+                            _loggingService?.Log("Warning", "tftResult.TFTResult is NULL - no multi-horizon data available!");
+                        }
+
                         // Update TFT visualization in ViewModel if available
                         if (tftResult.TFTResult != null && _viewModel != null)
                         {
                             // Get historical prices for context visualization
                             var historicalPrices = await _stockDataCacheService?.GetRecentHistoricalSequenceAsync(symbol, TFT_HISTORICAL_VISUALIZATION_DAYS);
                             var priceList = historicalPrices?.Select(p => p.Close).ToList();
-                            
+
                             await Dispatcher.InvokeAsync(() =>
                             {
                                 _viewModel.UpdateTFTVisualization(tftResult.TFTResult, priceList);
@@ -499,8 +530,70 @@ namespace Quantra.Controls
 
                 if (prediction != null && prediction.PredictedAction != "ERROR")
                 {
-                    // Save prediction to database with expected fruition date and model info
-                    await SavePredictionWithModelInfoAsync(prediction);
+                    // Save prediction to database with TFT multi-horizon data if available
+                    if (tftPredictionResult != null)
+                    {
+                        // Use SaveTFTPredictionAsync for TFT predictions with multi-horizon data
+                        try
+                        {
+                            var optionsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Quantra.DAL.Data.QuantraDbContext>();
+                            optionsBuilder.UseSqlServer(Quantra.DAL.Data.ConnectionHelper.ConnectionString);
+                            using (var dbContext = new Quantra.DAL.Data.QuantraDbContext(optionsBuilder.Options))
+                            {
+                                var predictionService = new Quantra.DAL.Services.PredictionService(dbContext);
+
+                                // Get model metadata for the prediction
+                                string modelType = GetSelectedModelType();
+                                string architectureType = GetSelectedArchitectureType();
+                                DateTime? expectedFruitionDate = GetExpectedFruitionDate();
+
+                                // Get active training history ID
+                                int? trainingHistoryId = null;
+                                try
+                                {
+                                    if (_modelTrainingHistoryService != null)
+                                    {
+                                        var activeModel = await _modelTrainingHistoryService.GetActiveModelAsync(modelType, architectureType);
+                                        trainingHistoryId = activeModel?.Id;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _loggingService?.Log("Warning", $"Could not get active model ID: {ex.Message}");
+                                }
+
+                                // Populate prediction with metadata
+                                prediction.ModelType = modelType;
+                                prediction.ArchitectureType = architectureType;
+                                prediction.ExpectedFruitionDate = expectedFruitionDate;
+                                prediction.TrainingHistoryId = trainingHistoryId;
+
+                                // Save with TFT multi-horizon data
+                                var predictionId = await predictionService.SaveTFTPredictionAsync(
+                                    prediction,
+                                    tftPredictionResult,
+                                    System.Threading.CancellationToken.None
+                                );
+
+                                _loggingService?.Log("Info",
+                                    $"Successfully saved TFT prediction ID {predictionId} for {prediction.Symbol} " +
+                                    $"with {tftPredictionResult.Horizons?.Count ?? 0} horizons, " +
+                                    $"{tftPredictionResult.FeatureWeights?.Count ?? 0} feature weights, " +
+                                    $"and {tftPredictionResult.TemporalAttention?.Count ?? 0} attention weights");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _loggingService?.LogErrorWithContext(ex, $"Error saving TFT prediction for {prediction.Symbol}, falling back to standard save");
+                            // Fall back to standard save on error
+                            await SavePredictionWithModelInfoAsync(prediction);
+                        }
+                    }
+                    else
+                    {
+                        // Use standard save for non-TFT predictions
+                        await SavePredictionWithModelInfoAsync(prediction);
+                    }
 
                     // Add to UI collection on UI thread
                     await Dispatcher.InvokeAsync(() =>

@@ -1041,6 +1041,9 @@ namespace Quantra.DAL.Services
                             return result;
                         }
 
+                        // DIAGNOSTIC: Log raw JSON output (first 500 chars)
+                        Console.WriteLine($"[TFT] Raw JSON output (first 500 chars): {outputJson.Substring(0, Math.Min(500, outputJson.Length))}");
+
                         // Parse TFT result
                         var tftResult = JsonSerializer.Deserialize<TFTPredictionResult>(outputJson, new JsonSerializerOptions
                         {
@@ -1053,6 +1056,23 @@ namespace Quantra.DAL.Services
                             result.ErrorMessage = tftResult?.Error ?? "Failed to parse TFT result.";
                             return result;
                         }
+
+                        // DIAGNOSTIC: Log deserialized TFT result
+                        Console.WriteLine($"[TFT] Deserialized - Action: {tftResult.Action}, Confidence: {tftResult.Confidence:P2}");
+                        Console.WriteLine($"[TFT] Current: ${tftResult.CurrentPrice:F2}, Target: ${tftResult.TargetPrice:F2}");
+                        Console.WriteLine($"[TFT] Horizons count: {tftResult.Horizons?.Count ?? 0}");
+                        if (tftResult.Horizons != null)
+                        {
+                            foreach (var kvp in tftResult.Horizons)
+                            {
+                                Console.WriteLine($"[TFT]   {kvp.Key}: Target=${kvp.Value.TargetPrice:F2}, " +
+                                                $"Lower=${kvp.Value.LowerBound:F2}, " +
+                                                $"Upper=${kvp.Value.UpperBound:F2}, " +
+                                                $"Confidence={kvp.Value.Confidence:F2}");
+                            }
+                        }
+                        Console.WriteLine($"[TFT] FeatureWeights count: {tftResult.FeatureWeights?.Count ?? 0}");
+                        Console.WriteLine($"[TFT] TemporalAttention count: {tftResult.TemporalAttention?.Count ?? 0}");
 
                         // Step 7: Convert to PredictionResult
                         var currentPrice = prices.Last().Close;

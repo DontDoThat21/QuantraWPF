@@ -654,17 +654,37 @@ class TFTStockPredictor:
             
             # Build multi-horizon response
             horizons_data = {}
+
+            # DIAGNOSTIC: Log current price and predictions
+            logger.info(f"Building horizons - Current price: {current_price}")
+            logger.info(f"Median predictions: {median_predictions}")
+            logger.info(f"Lower bounds: {lower_bounds}")
+            logger.info(f"Upper bounds: {upper_bounds}")
+
             for i, horizon in enumerate(self.forecast_horizons):
                 # median_change is a percentage change (e.g., 0.05 = 5%)
                 median_change = median_predictions[i]
                 target_price = current_price * (1 + median_change) if current_price > 0 else 0.0
-                
-                # C# expects days_ahead, predicted_change, lower_bound, upper_bound as percentage changes
+                lower_price = current_price * (1 + lower_bounds[i]) if current_price > 0 else 0.0
+                upper_price = current_price * (1 + upper_bounds[i]) if current_price > 0 else 0.0
+
+                # Calculate confidence from interval width (narrower = more confident)
+                interval_width = upper_bounds[i] - lower_bounds[i]
+                horizon_confidence = max(0.5, 1.0 - min(1.0, interval_width))
+
+                # DIAGNOSTIC: Log calculated values for this horizon
+                logger.info(f"Horizon {horizon}d: median_change={median_change:.4f}, target_price={target_price:.2f}, " +
+                          f"lower={lower_price:.2f}, upper={upper_price:.2f}, confidence={horizon_confidence:.2f}")
+
+                # C# HorizonPredictionData expects: MedianPrice, TargetPrice, LowerBound, UpperBound, Confidence
                 horizons_data[f'{horizon}d'] = {
-                    'days_ahead': int(horizon),
-                    'predicted_change': float(median_change),
-                    'lower_bound': float(lower_bounds[i]),
-                    'upper_bound': float(upper_bounds[i])
+                    'MedianPrice': float(target_price),  # Use target_price as median
+                    'TargetPrice': float(target_price),  # Same as median for consistency
+                    'LowerBound': float(lower_price),    # Convert percentage to price
+                    'UpperBound': float(upper_price),    # Convert percentage to price
+                    'Confidence': float(horizon_confidence),
+                    'Q25': float(current_price * (1 + (median_change + lower_bounds[i]) / 2) if current_price > 0 else 0.0),
+                    'Q75': float(current_price * (1 + (median_change + upper_bounds[i]) / 2) if current_price > 0 else 0.0)
                 }
             
             # Determine action from shortest horizon
@@ -681,19 +701,52 @@ class TFTStockPredictor:
             confidence = max(0.5, 1.0 - min(1.0, interval_width))
             target_price = current_price * (1 + median_predictions[0]) if current_price > 0 else 0.0
             
-            # CRITICAL FIX: Feature importance must be 2D array for C# deserialization
-            # C# expects List<List<double>>, so we need to wrap the 1D array in another list
-            feature_importance = []
+            # Build FeatureWeights dictionary (C# expects Dictionary<string, double>)
+            feature_weights = {}
             if len(outputs['feature_importance']) > 0 and outputs['feature_importance'].shape[0] > 0 and outputs['feature_importance'].shape[1] > 0:
-                # Extract the first sample's importance and wrap in a list to create 2D structure
-                # This converts from shape (1, n_features) to [[val1, val2, ...]]
-                feature_importance = [outputs['feature_importance'][0].tolist()]
-            elif len(outputs['feature_importance']) == 0 or outputs['feature_importance'].shape[0] == 0:
-                logger.warning("Feature importance array is empty")
+                # Get feature importance for first sample
+                importance_values = outputs['feature_importance'][0]
+
+                # Use feature names if available, otherwise use generic names
+                if hasattr(self, 'feature_names') and self.feature_names and len(self.feature_names) == len(importance_values):
+                    feature_names_list = self.feature_names
+                else:
+                    feature_names_list = [f'feature_{i}' for i in range(len(importance_values))]
+
+                # Create dictionary mapping feature name to importance value
+                for fname, importance_val in zip(feature_names_list, importance_values):
+                    feature_weights[fname] = float(importance_val)
+
+                logger.info(f"Generated FeatureWeights with {len(feature_weights)} features")
             else:
-                logger.warning("Feature importance array has no features (shape[1] = 0)")
-            
-            return {
+                logger.warning("Feature importance array is empty or invalid")
+
+            # Build TemporalAttention dictionary (C# expects Dictionary<int, double>)
+            temporal_attention = {}
+            if 'attention_weights' in outputs and len(outputs['attention_weights']) > 0:
+                # attention_weights is a list of arrays, take first layer's weights
+                attention_array = outputs['attention_weights'][0]
+                if attention_array.ndim >= 2:
+                    # Take first sample's attention weights (shape: [batch, seq_len] or [batch, heads, seq_len])
+                    if attention_array.ndim == 3:
+                        # Average across heads
+                        attention_weights_sample = np.mean(attention_array[0], axis=0)
+                    else:
+                        attention_weights_sample = attention_array[0]
+
+                    # Map to time steps (negative indices for lookback: -1, -2, ..., -60)
+                    seq_len = len(attention_weights_sample)
+                    for i, attn_val in enumerate(attention_weights_sample):
+                        time_step = -(seq_len - i)  # -60, -59, ..., -2, -1
+                        temporal_attention[time_step] = float(attn_val)
+
+                    logger.info(f"Generated TemporalAttention with {len(temporal_attention)} time steps")
+                else:
+                    logger.warning(f"Attention array has unexpected shape: {attention_array.shape}")
+            else:
+                logger.warning("No attention weights available in model outputs")
+
+            result = {
                 'symbol': historical_sequence[-1].get('symbol', 'UNKNOWN') if historical_sequence else 'UNKNOWN',
                 'action': action,
                 'confidence': float(confidence),
@@ -703,10 +756,25 @@ class TFTStockPredictor:
                 'lowerBound': float(current_price * (1 + lower_bounds[0]) if current_price > 0 else 0.0),
                 'upperBound': float(current_price * (1 + upper_bounds[0]) if current_price > 0 else 0.0),
                 'horizons': horizons_data,
+                'featureWeights': feature_weights,  # Dictionary<string, double>
+                'temporalAttention': temporal_attention,  # Dictionary<int, double>
                 'modelType': 'tft',
                 'uncertainty': float(interval_width),
-                'featureImportance': feature_importance
+                'potentialReturn': float((target_price - current_price) / current_price if current_price > 0 else 0.0)
             }
+
+            # DIAGNOSTIC: Log the final result structure
+            logger.info(f"Returning prediction result:")
+            logger.info(f"  Action: {result['action']}, Confidence: {result['confidence']:.2%}")
+            logger.info(f"  Current: ${result['currentPrice']:.2f}, Target: ${result['targetPrice']:.2f}")
+            logger.info(f"  Horizons count: {len(result['horizons'])}")
+            for h_key, h_val in result['horizons'].items():
+                logger.info(f"    {h_key}: Target=${h_val.get('TargetPrice', 0):.2f}, " +
+                          f"Lower=${h_val.get('LowerBound', 0):.2f}, " +
+                          f"Upper=${h_val.get('UpperBound', 0):.2f}, " +
+                          f"Confidence={h_val.get('Confidence', 0):.2f}")
+
+            return result
             
         except Exception as e:
             logger.error(f"Error in predict_single: {e}", exc_info=True)
