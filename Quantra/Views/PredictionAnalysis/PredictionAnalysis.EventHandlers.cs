@@ -438,9 +438,9 @@ namespace Quantra.Controls
                                                $"The TFT model was trained with {expectedFeatures} features,\n" +
                                                $"but the prediction data only has {currentFeatures} features.\n" +
                                                $"This usually means:\n" +
-                                               $"  • Different feature engineering during training vs prediction\n" +
-                                               $"  • Model was trained with advanced features\n" +
-                                               $"  • Prediction is using basic OHLCV + simple indicators\n\n" +
+                                               $"  ï¿½ Different feature engineering during training vs prediction\n" +
+                                               $"  ï¿½ Model was trained with advanced features\n" +
+                                               $"  ï¿½ Prediction is using basic OHLCV + simple indicators\n\n" +
                                                $"?? SOLUTION:\n" +
                                                $"You need to RETRAIN the TFT model to match current features.\n" +
                                                $"The training will use the same feature engineering as prediction.\n\n" +
@@ -1247,7 +1247,7 @@ except Exception as e:
             catch (Exception ex)
             {
                 _loggingService?.LogErrorWithContext(ex, "Error deleting prediction");
-                
+
                 if (StatusText != null)
                     StatusText.Text = "Error deleting prediction";
 
@@ -1256,6 +1256,139 @@ except Exception as e:
                     "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Handles the delete all predictions button click
+        /// </summary>
+        private async void DeleteAllPredictionsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Check if there are any predictions to delete
+                if (_viewModel?.TopPredictions == null || _viewModel.TopPredictions.Count == 0)
+                {
+                    MessageBox.Show(
+                        "There are no predictions to delete.",
+                        "No Predictions",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                int predictionCount = _viewModel.TopPredictions.Count;
+
+                // Confirm deletion with user
+                var result = MessageBox.Show(
+                    $"Are you sure you want to delete ALL {predictionCount} predictions?\n\n" +
+                    $"This action cannot be undone.\n\n" +
+                    $"All prediction data will be permanently removed from the database.",
+                    "Delete All Predictions",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    // Update status
+                    if (StatusText != null)
+                        StatusText.Text = $"Deleting all {predictionCount} predictions...";
+
+                    // Disable the button while deleting
+                    if (DeleteAllPredictionsButton != null)
+                        DeleteAllPredictionsButton.IsEnabled = false;
+
+                    try
+                    {
+                        // Delete all predictions from database using the service
+                        if (_predictionService != null)
+                        {
+                            // Get all prediction IDs
+                            var predictionIds = _viewModel.TopPredictions.Select(p => p.Id).ToList();
+                            int deletedCount = 0;
+                            int failedCount = 0;
+
+                            // Delete each prediction
+                            foreach (var predictionId in predictionIds)
+                            {
+                                bool deleted = await _predictionService.DeletePredictionAsync(predictionId);
+                                if (deleted)
+                                    deletedCount++;
+                                else
+                                    failedCount++;
+                            }
+
+                            // Clear the ViewModel collection
+                            if (_viewModel?.TopPredictions != null)
+                            {
+                                _viewModel.TopPredictions.Clear();
+                            }
+
+                            // Update status
+                            if (StatusText != null)
+                            {
+                                if (failedCount == 0)
+                                    StatusText.Text = $"Successfully deleted all {deletedCount} predictions";
+                                else
+                                    StatusText.Text = $"Deleted {deletedCount} predictions, {failedCount} failed";
+                            }
+
+                            _loggingService?.Log("Info", $"User deleted all predictions: {deletedCount} succeeded, {failedCount} failed");
+
+                            // Show success message
+                            if (failedCount == 0)
+                            {
+                                MessageBox.Show(
+                                    $"Successfully deleted all {deletedCount} predictions.",
+                                    "Delete Successful",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                MessageBox.Show(
+                                    $"Deleted {deletedCount} predictions successfully.\n{failedCount} predictions failed to delete.",
+                                    "Partial Success",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Warning);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Prediction service is not available. Cannot delete predictions.",
+                                "Service Unavailable",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+
+                            if (StatusText != null)
+                                StatusText.Text = "Error: Prediction service unavailable";
+                        }
+                    }
+                    finally
+                    {
+                        // Re-enable the button
+                        if (DeleteAllPredictionsButton != null)
+                            DeleteAllPredictionsButton.IsEnabled = true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Error deleting all predictions");
+
+                if (StatusText != null)
+                    StatusText.Text = "Error deleting all predictions";
+
+                MessageBox.Show(
+                    $"An error occurred while deleting all predictions: {ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                // Re-enable the button in case of error
+                if (DeleteAllPredictionsButton != null)
+                    DeleteAllPredictionsButton.IsEnabled = true;
             }
         }
 

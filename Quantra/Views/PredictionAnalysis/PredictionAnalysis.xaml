@@ -672,12 +672,60 @@ MinWidth="400" MinHeight="300">
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                    <TextBlock Text="📊 Top Predictions" FontSize="16" FontWeight="Bold" 
-                               Foreground="Cyan" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TopPredictionsCountText" Text="{Binding TopPredictionsCountText}" 
-                               Foreground="#AAAAAA" FontSize="12" Margin="15,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="📊 Top Predictions" FontSize="16" FontWeight="Bold"
+                                   Foreground="Cyan" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TopPredictionsCountText" Text="{Binding TopPredictionsCountText}"
+                                   Foreground="#AAAAAA" FontSize="12" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Delete All Button -->
+                    <Button Grid.Column="1" x:Name="DeleteAllPredictionsButton"
+                            Content="🗑️ Delete All"
+                            Click="DeleteAllPredictionsButton_Click"
+                            Background="#D64545"
+                            Foreground="White"
+                            BorderBrush="#FF4444"
+                            BorderThickness="1"
+                            Padding="10,5"
+                            FontSize="12"
+                            FontWeight="Bold"
+                            ToolTip="Delete all predictions with confirmation">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="3"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#E65555"/>
+                                                    <Setter Property="BorderBrush" Value="#FF5555"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Background" Value="#C63434"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
 
                 <!-- DataGrid -->
                 <DataGrid Grid.Row="1" x:Name="TopPredictionsGrid"
