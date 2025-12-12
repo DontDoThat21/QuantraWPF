@@ -124,11 +124,12 @@ namespace Quantra.Extensions
             services.AddSingleton<LoggingService>();
 
             // Register SavedFilterService for managing saved filter configurations
-            services.AddSingleton<SavedFilterService>(sp =>
+            services.AddScoped<SavedFilterService>(sp =>
             {
-                var contextFactory = sp.GetRequiredService<IDbContextFactory<QuantraDbContext>>();
+                var dbContext = sp.GetRequiredService<QuantraDbContext>();
                 var loggingService = sp.GetRequiredService<LoggingService>();
-                return new SavedFilterService(contextFactory, loggingService);
+                var authService = sp.GetRequiredService<AuthenticationService>();
+                return new SavedFilterService(dbContext, loggingService, authService);
             });
 
             // Register StockConfigurationService for managing predefined stock symbol configurations
