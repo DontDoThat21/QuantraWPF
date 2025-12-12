@@ -17,12 +17,14 @@ using Quantra.Models;
 using Quantra;
 using LiveCharts.Defaults;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Quantra.ViewModels;
 using Quantra.Enums;
 using Quantra.Views.Shared;
 using Quantra.Utilities;
 using Quantra.DAL.Services;
 using Quantra.DAL.Data;
+using Quantra.DAL.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Quantra.Controls 
@@ -38,7 +40,8 @@ namespace Quantra.Controls
 
         private readonly StockExplorerViewModel _viewModel;
         private readonly StockDataCacheService _cacheService;
-        
+        private readonly SavedFilterService _savedFilterService;
+
         // Sentiment Analysis Services
         private readonly OpenAISentimentService _openAISentimentService;
         private readonly FinancialNewsSentimentService _newsSentimentService;
@@ -70,6 +73,11 @@ namespace Quantra.Controls
         
         // Timer fields for symbol search functionality
         private System.Windows.Threading.DispatcherTimer _symbolSearchTimer;
+        
+        // Auto Refresh Timer
+        private System.Windows.Threading.DispatcherTimer _autoRefreshTimer;
+        private bool _isAutoRefreshEnabled = false;
+        private DateTime _lastAutoRefreshTime = DateTime.MinValue;
 
         // Collection for current indicator values
         private ObservableCollection<TechnicalIndicator> _currentIndicators = new ObservableCollection<TechnicalIndicator>();
@@ -119,37 +127,167 @@ namespace Quantra.Controls
             }
         }
 
-        // Price filter properties for DataGrid filtering
-        private string _priceMinFilterText = "";
-        public string PriceMinFilterText
+        // Price filter property for DataGrid filtering
+        private string _priceFilterText = "";
+        public string PriceFilterText
         {
-            get => _priceMinFilterText;
+            get => _priceFilterText;
             set
             {
-                if (_priceMinFilterText != value)
+                if (_priceFilterText != value)
                 {
-                    _priceMinFilterText = value;
-                    OnPropertyChanged(nameof(PriceMinFilterText));
+                    _priceFilterText = value;
+                    OnPropertyChanged(nameof(PriceFilterText));
                     // Update filtering state
-                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(PriceMaxFilterText) || !string.IsNullOrWhiteSpace(SymbolFilterText);
+                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(SymbolFilterText) ||
+                                 !string.IsNullOrWhiteSpace(VwapFilterText) || !string.IsNullOrWhiteSpace(PeRatioFilterText) ||
+                                 !string.IsNullOrWhiteSpace(RsiFilterText) || !string.IsNullOrWhiteSpace(ChangePercentFilterText) ||
+                                 !string.IsNullOrWhiteSpace(MarketCapFilterText);
                     _ = ApplyPriceFilterAsync();
                 }
             }
         }
 
-        private string _priceMaxFilterText = "";
-        public string PriceMaxFilterText
+        // Filter properties for VWAP
+        private string _vwapFilterText = "";
+        public string VwapFilterText
         {
-            get => _priceMaxFilterText;
+            get => _vwapFilterText;
             set
             {
-                if (_priceMaxFilterText != value)
+                if (_vwapFilterText != value)
                 {
-                    _priceMaxFilterText = value;
-                    OnPropertyChanged(nameof(PriceMaxFilterText));
-                    // Update filtering state
-                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(PriceMinFilterText) || !string.IsNullOrWhiteSpace(SymbolFilterText);
-                    _ = ApplyPriceFilterAsync();
+                    _vwapFilterText = value;
+                    OnPropertyChanged(nameof(VwapFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Filter properties for P/E Ratio
+        private string _peRatioFilterText = "";
+        public string PeRatioFilterText
+        {
+            get => _peRatioFilterText;
+            set
+            {
+                if (_peRatioFilterText != value)
+                {
+                    _peRatioFilterText = value;
+                    OnPropertyChanged(nameof(PeRatioFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Filter properties for RSI
+        private string _rsiFilterText = "";
+        public string RsiFilterText
+        {
+            get => _rsiFilterText;
+            set
+            {
+                if (_rsiFilterText != value)
+                {
+                    _rsiFilterText = value;
+                    OnPropertyChanged(nameof(RsiFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Filter properties for % Change
+        private string _changePercentFilterText = "";
+        public string ChangePercentFilterText
+        {
+            get => _changePercentFilterText;
+            set
+            {
+                if (_changePercentFilterText != value)
+                {
+                    _changePercentFilterText = value;
+                    OnPropertyChanged(nameof(ChangePercentFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Filter properties for Market Cap
+        private string _marketCapFilterText = "";
+        public string MarketCapFilterText
+        {
+            get => _marketCapFilterText;
+            set
+            {
+                if (_marketCapFilterText != value)
+                {
+                    _marketCapFilterText = value;
+                    OnPropertyChanged(nameof(MarketCapFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Saved Filters collection
+        private ObservableCollection<SavedFilter> _savedFilters = new ObservableCollection<SavedFilter>();
+        public ObservableCollection<SavedFilter> SavedFilters
+        {
+            get => _savedFilters;
+            set
+            {
+                if (_savedFilters != value)
+                {
+                    _savedFilters = value;
+                    OnPropertyChanged(nameof(SavedFilters));
+                }
+            }
+        }
+
+        // Currently selected saved filter
+        private SavedFilter? _selectedSavedFilter;
+        public SavedFilter? SelectedSavedFilter
+        {
+            get => _selectedSavedFilter;
+            set
+            {
+                if (_selectedSavedFilter != value)
+                {
+                    _selectedSavedFilter = value;
+                    OnPropertyChanged(nameof(SelectedSavedFilter));
+                    OnPropertyChanged(nameof(CanDeleteFilter));
+                }
+            }
+        }
+
+        // Can delete current filter (only user filters, not system filters)
+        public bool CanDeleteFilter => SelectedSavedFilter != null && !SelectedSavedFilter.IsSystemFilter;
+
+        // Auto Refresh interval in seconds
+        private int _autoRefreshIntervalSeconds = 300; // Default: 5 minutes
+        public int AutoRefreshIntervalSeconds
+        {
+            get => _autoRefreshIntervalSeconds;
+            set
+            {
+                if (_autoRefreshIntervalSeconds != value)
+                {
+                    _autoRefreshIntervalSeconds = value;
+                    OnPropertyChanged(nameof(AutoRefreshIntervalSeconds));
+
+                    // Update the timer interval if auto-refresh is active
+                    if (_autoRefreshTimer != null && _isAutoRefreshEnabled)
+                    {
+                        _autoRefreshTimer.Stop();
+                        _autoRefreshTimer.Interval = TimeSpan.FromSeconds(value);
+                        _autoRefreshTimer.Start();
+
+                        _loggingService?.Log("Info", $"Auto-refresh interval changed to {value} seconds");
+                    }
                 }
             }
         }
@@ -665,6 +803,19 @@ namespace Quantra.Controls
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
             _stockConfigurationService = new StockConfigurationService(loggingService);
 
+            // Initialize the _userSettingsService field (defined in DataGrid.cs partial class)
+            _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
+
+            // Initialize SavedFilterService from service provider
+            try
+            {
+                _savedFilterService = App.ServiceProvider.GetRequiredService<SavedFilterService>();
+            }
+            catch (Exception ex)
+            {
+                loggingService?.Log("Warning", "Failed to initialize SavedFilterService", ex.ToString());
+            }
+
             // Initialize sentiment analysis services with null checks
             try
             {
@@ -730,13 +881,22 @@ namespace Quantra.Controls
 
             // Initialize symbol search timer for automatic loading
             InitializeSymbolSearchTimer();
+            
+            // Initialize auto-refresh timer
+            InitializeAutoRefreshTimer();
+
+            // Load auto-refresh state from settings
+            LoadAutoRefreshState();
 
             // Initialize DataGrid settings and load saved configuration
             InitializeDataGridSettings();
             
             // Initialize the filter collection view
             InitializeStockFilterView();
-            
+
+            // Load saved filters
+            _ = LoadSavedFiltersAsync();
+
             this.Loaded += StockExplorer_Loaded;
         }
 
@@ -929,6 +1089,54 @@ namespace Quantra.Controls
             _symbolSearchTimer = new System.Windows.Threading.DispatcherTimer();
             _symbolSearchTimer.Interval = TimeSpan.FromMilliseconds(500); // 500ms delay for search
             _symbolSearchTimer.Tick += SymbolSearchTimer_Tick;
+        }
+        
+        private void InitializeAutoRefreshTimer()
+        {
+            _autoRefreshTimer = new System.Windows.Threading.DispatcherTimer();
+            _autoRefreshTimer.Interval = TimeSpan.FromSeconds(AutoRefreshIntervalSeconds);
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+        }
+
+        private void LoadAutoRefreshState()
+        {
+            try
+            {
+                var userSettings = _userSettingsService.GetUserSettings();
+                if (userSettings != null && userSettings.EnableStockExplorerAutoRefresh)
+                {
+                    // Set the toggle button state without triggering the event handler
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        if (AutoRefreshToggleButton != null)
+                        {
+                            AutoRefreshToggleButton.IsChecked = true;
+                        }
+                    }, System.Windows.Threading.DispatcherPriority.Loaded);
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Warning", "Failed to load Auto Refresh state from settings", ex.ToString());
+            }
+        }
+
+        private void SaveAutoRefreshState(bool isEnabled)
+        {
+            try
+            {
+                var userSettings = _userSettingsService.GetUserSettings();
+                if (userSettings != null)
+                {
+                    userSettings.EnableStockExplorerAutoRefresh = isEnabled;
+                    _userSettingsService.SaveUserSettings(userSettings);
+                    _loggingService?.Log("Info", $"Auto Refresh state saved: {isEnabled}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Failed to save Auto Refresh state to settings", ex.ToString());
+            }
         }
 
         private async void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -3583,6 +3791,14 @@ namespace Quantra.Controls
                 _symbolSearchTimer.Tick -= SymbolSearchTimer_Tick;
                 _symbolSearchTimer = null;
             }
+            
+            // Clean up auto-refresh timer
+            if (_autoRefreshTimer != null)
+            {
+                _autoRefreshTimer.Stop();
+                _autoRefreshTimer.Tick -= AutoRefreshTimer_Tick;
+                _autoRefreshTimer = null;
+            }
 
             // Clean up cancellation token source
             _symbolOperationCancellation?.Cancel();
@@ -3798,7 +4014,7 @@ namespace Quantra.Controls
             if (string.IsNullOrWhiteSpace(SymbolFilterText))
             {
                 // Clear filtering state
-                IsFiltering = !string.IsNullOrWhiteSpace(PriceMinFilterText) || !string.IsNullOrWhiteSpace(PriceMaxFilterText);
+                IsFiltering = !string.IsNullOrWhiteSpace(PriceFilterText);
                 
                 // Remove filter if text is empty - restore current page
                 if (_viewModel != null && _viewModel.CurrentPage > 0)
@@ -3879,14 +4095,140 @@ namespace Quantra.Controls
             }
         }
 
+        /// <summary>
+        /// Helper method to update filtering state based on all active filters
+        /// </summary>
+        private void UpdateFilteringState()
+        {
+            IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) ||
+                         !string.IsNullOrWhiteSpace(PriceFilterText) ||
+                         !string.IsNullOrWhiteSpace(VwapFilterText) ||
+                         !string.IsNullOrWhiteSpace(PeRatioFilterText) ||
+                         !string.IsNullOrWhiteSpace(RsiFilterText) ||
+                         !string.IsNullOrWhiteSpace(ChangePercentFilterText) ||
+                         !string.IsNullOrWhiteSpace(MarketCapFilterText);
+        }
+
+        /// <summary>
+        /// Parses a filter string that may contain comparison operators (>, <, >=, <=)
+        /// Supports multiple conditions combined with & (AND operator)
+        /// Example: ">100&<200" means greater than 100 AND less than 200
+        /// Returns a list of (operator, value) tuples or null if parsing fails
+        /// </summary>
+        private List<(string op, double value)> ParseNumericFilter(string filterText)
+        {
+            if (string.IsNullOrWhiteSpace(filterText))
+                return null;
+
+            var conditions = new List<(string op, double value)>();
+
+            // Split by & to handle multiple conditions
+            var parts = filterText.Split('&');
+
+            foreach (var part in parts)
+            {
+                var trimmedPart = part.Trim();
+                if (string.IsNullOrEmpty(trimmedPart))
+                    continue;
+
+                // Check for >= or <=
+                if (trimmedPart.StartsWith(">="))
+                {
+                    if (double.TryParse(trimmedPart.Substring(2).Trim(), out var val))
+                        conditions.Add((">=", val));
+                }
+                else if (trimmedPart.StartsWith("<="))
+                {
+                    if (double.TryParse(trimmedPart.Substring(2).Trim(), out var val))
+                        conditions.Add(("<=", val));
+                }
+                // Check for > or <
+                else if (trimmedPart.StartsWith(">"))
+                {
+                    if (double.TryParse(trimmedPart.Substring(1).Trim(), out var val))
+                        conditions.Add((">", val));
+                }
+                else if (trimmedPart.StartsWith("<"))
+                {
+                    if (double.TryParse(trimmedPart.Substring(1).Trim(), out var val))
+                        conditions.Add(("<", val));
+                }
+                // No operator, try exact match or plain number
+                else if (double.TryParse(trimmedPart, out var val))
+                {
+                    conditions.Add(("=", val));
+                }
+            }
+
+            return conditions.Count > 0 ? conditions : null;
+        }
+
+        /// <summary>
+        /// Evaluates if a value passes a numeric filter
+        /// </summary>
+        private bool EvaluateNumericFilter(double value, string op, double filterValue)
+        {
+            return op switch
+            {
+                ">" => value > filterValue,
+                "<" => value < filterValue,
+                ">=" => value >= filterValue,
+                "<=" => value <= filterValue,
+                "=" => Math.Abs(value - filterValue) < 0.01,
+                _ => true
+            };
+        }
+
+        /// <summary>
+        /// Evaluates if a value passes all conditions in a filter list (AND logic)
+        /// </summary>
+        private bool EvaluateNumericFilter(double value, List<(string op, double value)> filters)
+        {
+            if (filters == null || filters.Count == 0)
+                return true;
+
+            // All conditions must pass (AND logic)
+            foreach (var filter in filters)
+            {
+                if (!EvaluateNumericFilter(value, filter.op, filter.value))
+                    return false;
+            }
+
+            return true;
+        }
+
         private async System.Threading.Tasks.Task ApplyPriceFilterAsync()
         {
-            // If both price filters are empty, check if symbol filter is active
-            if (string.IsNullOrWhiteSpace(PriceMinFilterText) && string.IsNullOrWhiteSpace(PriceMaxFilterText))
+            // Delegate to unified numeric filter
+            await ApplyNumericFilterAsync();
+        }
+
+        /// <summary>
+        /// Applies all numeric filters (VWAP, P/E, RSI, % Change, Market Cap, Price)
+        /// Supports comparison operators: >, <, >=, <=, or plain numeric values
+        /// Supports multiple conditions combined with & (AND operator)
+        /// </summary>
+        private async System.Threading.Tasks.Task ApplyNumericFilterAsync()
+        {
+            // Parse all filter values first
+            var priceFilter = ParseNumericFilter(PriceFilterText);
+            var vwapFilter = ParseNumericFilter(VwapFilterText);
+            var peRatioFilter = ParseNumericFilter(PeRatioFilterText);
+            var rsiFilter = ParseNumericFilter(RsiFilterText);
+            var changePercentFilter = ParseNumericFilter(ChangePercentFilterText);
+            var marketCapFilter = ParseNumericFilter(MarketCapFilterText);
+
+            // Check if all filters are empty
+            if (string.IsNullOrWhiteSpace(VwapFilterText) &&
+                string.IsNullOrWhiteSpace(PeRatioFilterText) &&
+                string.IsNullOrWhiteSpace(RsiFilterText) &&
+                string.IsNullOrWhiteSpace(ChangePercentFilterText) &&
+                string.IsNullOrWhiteSpace(MarketCapFilterText) &&
+                string.IsNullOrWhiteSpace(PriceFilterText) &&
+                string.IsNullOrWhiteSpace(SymbolFilterText))
             {
-                // Clear filtering state only if symbol filter is also empty
-                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText);
-                
+                UpdateFilteringState();
+
                 if (_viewModel != null && _viewModel.CurrentPage > 0 && !IsFiltering)
                 {
                     await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
@@ -3904,31 +4246,17 @@ namespace Quantra.Controls
             {
                 _viewModel.IsLoading = true;
 
-                // Parse the min and max values
-                double? minPrice = null;
-                double? maxPrice = null;
-
-                if (!string.IsNullOrWhiteSpace(PriceMinFilterText) && double.TryParse(PriceMinFilterText, out var min))
-                {
-                    minPrice = min;
-                }
-
-                if (!string.IsNullOrWhiteSpace(PriceMaxFilterText) && double.TryParse(PriceMaxFilterText, out var max))
-                {
-                    maxPrice = max;
-                }
-
-                // Search database for stocks within the price range
+                // Search database for stocks matching all filters
                 await System.Threading.Tasks.Task.Run(async () =>
                 {
                     using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
                         .UseSqlServer(ConnectionHelper.ConnectionString)
                         .Options);
 
-                    // Build query with price filters
+                    // Build query with filters
                     IQueryable<string> query = context.StockDataCache.Select(c => c.Symbol).Distinct();
 
-                    // Get all symbols and their latest prices
+                    // Get all symbols and check filters
                     var allSymbols = await query.ToListAsync();
                     var matchingStocks = new List<QuoteData>();
 
@@ -3939,11 +4267,47 @@ namespace Quantra.Controls
                         {
                             bool passesFilter = true;
 
-                            if (minPrice.HasValue && stock.Price < minPrice.Value)
-                                passesFilter = false;
+                            // Apply price filter
+                            if (passesFilter && priceFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.Price, priceFilter);
+                            }
 
-                            if (maxPrice.HasValue && stock.Price > maxPrice.Value)
-                                passesFilter = false;
+                            // Apply VWAP filter
+                            if (passesFilter && vwapFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.VWAP, vwapFilter);
+                            }
+
+                            // Apply P/E Ratio filter
+                            if (passesFilter && peRatioFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.PERatio, peRatioFilter);
+                            }
+
+                            // Apply RSI filter
+                            if (passesFilter && rsiFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.RSI, rsiFilter);
+                            }
+
+                            // Apply % Change filter
+                            if (passesFilter && changePercentFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.ChangePercent, changePercentFilter);
+                            }
+
+                            // Apply Market Cap filter
+                            if (passesFilter != null && marketCapFilter != null)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.MarketCap, marketCapFilter);
+                            }
+
+                            // Apply symbol filter if specified
+                            if (passesFilter && !string.IsNullOrWhiteSpace(SymbolFilterText))
+                            {
+                                passesFilter = stock.Symbol.Contains(SymbolFilterText.ToUpper(), StringComparison.OrdinalIgnoreCase);
+                            }
 
                             if (passesFilter)
                             {
@@ -3967,7 +4331,7 @@ namespace Quantra.Controls
             }
             catch (Exception ex)
             {
-                //DatabaseMonolith.Log("Error", $"Error applying price filter (min: '{PriceMinFilterText}', max: '{PriceMaxFilterText}')", ex.ToString());
+                //DatabaseMonolith.Log("Error", $"Error applying price filter: '{PriceFilterText}'", ex.ToString());
             }
             finally
             {

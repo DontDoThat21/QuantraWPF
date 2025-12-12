@@ -44,33 +44,42 @@ MinWidth="900" MinHeight="700">
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Mode Selection -->
+                <!-- Saved Filters Selection -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Text="Mode:" 
-                               VerticalAlignment="Center" 
-                               Style="{StaticResource EnhancedTextBlockStyle}" 
-                               Margin="0,0,10,0" 
+                    <TextBlock Text="Saved Filters:"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource EnhancedTextBlockStyle}"
+                               Margin="0,0,10,0"
                                FontWeight="Bold"/>
-                    <ComboBox x:Name="SelectionModeComboBox"
-                              Width="200"
+                    <ComboBox x:Name="SavedFiltersComboBox"
+                              Width="220"
                               Height="36"
-                              SelectedIndex="0"
-                              SelectionChanged="SelectionModeComboBox_SelectionChanged"
-                              Style="{StaticResource EnhancedComboBoxStyle}">
-                        <ComboBoxItem Content="Individual Asset"/>
-                        <ComboBoxItem Content="Top Volume RSI Discrepancies"/>
-                        <ComboBoxItem Content="Top P/E"/>
-                        <ComboBoxItem Content="High Volume"/>
-                        <ComboBoxItem Content="Low P/E"/>
-                        <ComboBoxItem Content="RSI Oversold"/>
-                        <ComboBoxItem Content="RSI Overbought"/>
-                        <ComboBoxItem Content="All Database"/>
-                        <ComboBoxItem Content="High Theta"/>
-                        <ComboBoxItem Content="High Beta"/>
-                        <ComboBoxItem Content="High Alpha"/>
-                        <ComboBoxItem Content="Bullish Cup and Handle"/>
-                        <ComboBoxItem Content="Bearish Cup and Handle"/>
-                    </ComboBox>
+                              ItemsSource="{Binding SavedFilters, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              SelectedItem="{Binding SelectedSavedFilter, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+                              SelectionChanged="SavedFiltersComboBox_SelectionChanged"
+                              DisplayMemberPath="Name"
+                              Style="{StaticResource EnhancedComboBoxStyle}"/>
+
+                    <!-- Save Current Filter Button -->
+                    <Button x:Name="SaveFilterButton"
+                            Content="Save Filter"
+                            Margin="10,0,5,0"
+                            Padding="12,5"
+                            Height="36"
+                            Click="SaveFilterButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            ToolTip="Save current filter values"/>
+
+                    <!-- Delete Filter Button -->
+                    <Button x:Name="DeleteFilterButton"
+                            Content="Delete"
+                            Margin="0,0,0,0"
+                            Padding="12,5"
+                            Height="36"
+                            Click="DeleteFilterButton_Click"
+                            IsEnabled="{Binding CanDeleteFilter, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            ToolTip="Delete selected filter (user filters only)"/>
                 </StackPanel>
 
                 <!-- Mode Action Buttons (in a separate column for better wrapping) -->
@@ -267,14 +276,62 @@ MinWidth="900" MinHeight="700">
                 </StackPanel>
 
                 <!-- Symbol and Price Display (in the flexible space) -->
-                <StackPanel Grid.Column="3" Orientation="Vertical" Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left">
-                    <TextBlock x:Name="SymbolLabel" 
-                               Text="{Binding SymbolText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                               Style="{StaticResource EnhancedSmallTextBlockStyle}" 
-                               FontWeight="Bold"/>
-                    <TextBlock x:Name="PriceLabel" 
-                               Text="{Binding PriceText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                               Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="15,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock x:Name="SymbolLabel" 
+                                   Text="{Binding SymbolText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}" 
+                                   FontWeight="Bold"/>
+                        <TextBlock x:Name="PriceLabel" 
+                                   Text="{Binding PriceText, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
+                    </StackPanel>
+                    
+                    <!-- Auto Refresh Button with Dropdown -->
+                    <StackPanel Orientation="Horizontal" Margin="30,0,0,0">
+                        <ToggleButton x:Name="AutoRefreshToggleButton"
+                                      Content="⟳"
+                                      Padding="8,4"
+                                      Height="28"
+                                      Width="28"
+                                      FontSize="14"
+                                      Style="{StaticResource MaterialDesignSwitchToggleButton}"
+                                      Checked="AutoRefreshToggleButton_Checked"
+                                      Unchecked="AutoRefreshToggleButton_Unchecked"
+                                      ToolTip="Enable/Disable automatic refresh"/>
+
+                        <!-- Refresh Interval Dropdown -->
+                        <Button x:Name="RefreshIntervalButton"
+                                Content="▼"
+                                Margin="2,0,0,0"
+                                Padding="4,4"
+                                Height="28"
+                                Width="20"
+                                FontSize="10"
+                                Style="{StaticResource EnhancedButtonStyle}"
+                                ToolTip="Select refresh interval">
+                            <Button.ContextMenu>
+                                <ContextMenu x:Name="RefreshIntervalMenu">
+                                    <MenuItem Header="Every 10 seconds" Click="RefreshInterval_10Seconds_Click" Tag="10"/>
+                                    <MenuItem Header="Every 1 minute" Click="RefreshInterval_1Minute_Click" Tag="60"/>
+                                    <MenuItem Header="Every 5 minutes" Click="RefreshInterval_5Minutes_Click" Tag="300" IsChecked="True"/>
+                                    <MenuItem Header="Every 10 minutes" Click="RefreshInterval_10Minutes_Click" Tag="600"/>
+                                    <MenuItem Header="Every 15 minutes" Click="RefreshInterval_15Minutes_Click" Tag="900"/>
+                                    <MenuItem Header="Every 30 minutes" Click="RefreshInterval_30Minutes_Click" Tag="1800"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+
+                        <!-- Auto Refresh Status Text -->
+                        <TextBlock x:Name="AutoRefreshStatusText"
+                                   Text=""
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource EnhancedSmallTextBlockStyle}"
+                                   FontStyle="Italic"
+                                   FontSize="11"
+                                   Foreground="#888888"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
 
@@ -348,42 +405,47 @@ MinWidth="900" MinHeight="700">
                             </DataTemplate>
                         </DataGridTextColumn.HeaderTemplate>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="150">
+                    <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="100">
                         <DataGridTextColumn.HeaderTemplate>
                             <DataTemplate>
                                 <StackPanel>
-                                    <TextBlock Text="Price" FontWeight="Bold" Margin="0,0,0,5" HorizontalAlignment="Center"/>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="5"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox x:Name="PriceMinFilterTextBox"
-                                                 Grid.Column="0"
-                                                 Width="65"
-                                                 Height="30"
-                                                 Text="{Binding PriceMinFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource EnhancedTextBoxStyle}"
-                                                 ToolTip="Minimum price"
-                                                 VerticalContentAlignment="Center"
-                                                 Margin="0"/>
-                                        <TextBox x:Name="PriceMaxFilterTextBox"
-                                                 Grid.Column="2"
-                                                 Width="65"
-                                                 Height="30"
-                                                 Text="{Binding PriceMaxFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource EnhancedTextBoxStyle}"
-                                                 ToolTip="Maximum price"
-                                                 VerticalContentAlignment="Center"
-                                                 Margin="0"/>
-                                    </Grid>
+                                    <TextBlock Text="Price" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="90" Height="30"
+                                             Text="{Binding PriceFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >100&amp;&lt;200 for greater than 100 AND less than 200"
+                                             VerticalContentAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTextColumn.HeaderTemplate>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="P/E Ratio" Binding="{Binding PERatio, StringFormat={}{0:F1}}" Width="70"/>
+                    <DataGridTextColumn Header="P/E Ratio" Binding="{Binding PERatio, StringFormat={}{0:F1}}" Width="70">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="P/E Ratio" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding PeRatioFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >10&amp;&lt;20 for greater than 10 AND less than 20"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="VWAP" Binding="{Binding VWAP, StringFormat={}{0:F2}}" Width="70">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="VWAP" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding VwapFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >50&amp;&lt;100 for greater than 50 AND less than 100"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}">
                                 <Setter Property="Foreground">
@@ -398,6 +460,18 @@ MinWidth="900" MinHeight="700">
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="RSI" Binding="{Binding RSI, StringFormat={}{0:F1}}" Width="60">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="RSI" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding RsiFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >30&amp;&lt;70 for greater than 30 AND less than 70"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}">
                                 <Setter Property="Foreground" Value="{Binding RSI, Converter={StaticResource RsiColorConverter}}"/>
@@ -435,6 +509,18 @@ MinWidth="900" MinHeight="700">
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="% Change" Binding="{Binding ChangePercent, StringFormat={}{0:P2}}" Width="80">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="% Change" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding ChangePercentFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >0.01&amp;&lt;0.05 for greater than 1% AND less than 5%"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}">
                                 <Setter Property="Foreground" Value="{Binding ChangePercent, Converter={StaticResource PercentChangeColorConverter}}"/>
@@ -452,6 +538,18 @@ MinWidth="900" MinHeight="700">
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="M.Cap" Binding="{Binding MarketCap, StringFormat={}{0:N0}}" Width="100">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="Market Cap" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding MarketCapFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >1000000000&amp;&lt;10000000000 for $1B to $10B"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}"/>
                         </DataGridTextColumn.ElementStyle>

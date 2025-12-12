@@ -147,6 +147,9 @@ namespace Quantra.DAL.Data.Entities
         // VIX monitoring
         public bool EnableVixMonitoring { get; set; }
 
+        // Stock Explorer settings
+        public bool EnableStockExplorerAutoRefresh { get; set; }
+
         // API Keys
         [MaxLength(255)]
         public string? AlphaVantageApiKey { get; set; }

@@ -45,6 +45,20 @@ namespace Quantra.Extensions
 #endif
             });
 
+            // Register DbContext factory for services that need to create their own scoped contexts
+            services.AddDbContextFactory<QuantraDbContext>(options =>
+            {
+                options.UseSqlServer(ConnectionHelper.ConnectionString, sqlServerOptions =>
+                {
+                    sqlServerOptions.CommandTimeout(30);
+                });
+
+#if DEBUG
+                options.EnableSensitiveDataLogging();
+                options.EnableDetailedErrors();
+#endif
+            });
+
             // Register database initialization service
             services.AddSingleton<IDatabaseInitializationService, DatabaseInitializationService>();
 
@@ -108,6 +122,14 @@ namespace Quantra.Extensions
 
             // Logging service
             services.AddSingleton<LoggingService>();
+
+            // Register SavedFilterService for managing saved filter configurations
+            services.AddSingleton<SavedFilterService>(sp =>
+            {
+                var contextFactory = sp.GetRequiredService<IDbContextFactory<QuantraDbContext>>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new SavedFilterService(contextFactory, loggingService);
+            });
 
             // Register StockConfigurationService for managing predefined stock symbol configurations
             services.AddSingleton<StockConfigurationService>(sp =>

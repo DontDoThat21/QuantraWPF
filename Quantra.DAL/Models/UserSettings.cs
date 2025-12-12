@@ -124,6 +124,9 @@ namespace Quantra.Models
         // VIX monitoring settings
         public bool EnableVixMonitoring { get; set; } = true;
 
+        // Stock Explorer settings
+        public bool EnableStockExplorerAutoRefresh { get; set; } = false;
+
         // API Keys settings
         public string AlphaVantageApiKey { get; set; } = "";
 

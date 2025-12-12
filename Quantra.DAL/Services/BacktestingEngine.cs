@@ -462,8 +462,18 @@ namespace Quantra.DAL.Services
                 double equity = cash + position * curr.Close;
                 result.EquityCurve.Add(new EquityPoint { Date = curr.Date, Equity = equity });
 
+                // Update peak equity
                 if (equity > peakEquity) peakEquity = equity;
-                double drawdown = (peakEquity - equity) / peakEquity;
+                
+                // Calculate drawdown with safety checks
+                double drawdown = 0;
+                if (peakEquity > 0)
+                {
+                    drawdown = Math.Max(0, (peakEquity - equity) / peakEquity);
+                    // Cap drawdown at 100% (complete loss)
+                    drawdown = Math.Min(drawdown, 1.0);
+                }
+                
                 if (drawdown > maxDrawdown) maxDrawdown = drawdown;
                 result.DrawdownCurve.Add(new DrawdownPoint { Date = curr.Date, Drawdown = drawdown });
             }
@@ -648,7 +658,16 @@ namespace Quantra.DAL.Services
 
                 // Update peak equity and drawdown
                 if (currentEquity > peakEquity) peakEquity = currentEquity;
-                double drawdown = (peakEquity - currentEquity) / peakEquity;
+                
+                // Calculate drawdown with safety checks
+                double drawdown = 0;
+                if (peakEquity > 0)
+                {
+                    drawdown = Math.Max(0, (peakEquity - currentEquity) / peakEquity);
+                    // Cap drawdown at 100% (complete loss)
+                    drawdown = Math.Min(drawdown, 1.0);
+                }
+                
                 if (drawdown > maxDrawdown) maxDrawdown = drawdown;
                 result.DrawdownCurve.Add(new DrawdownPoint { Date = curr.Date, Drawdown = drawdown });
             }
@@ -993,13 +1012,21 @@ namespace Quantra.DAL.Services
                     // Apply the return to current equity
                     equity *= 1 + dailyReturn;
 
-                    // Update peak equity and drawdown
+                    // Update peak equity and drawdown with safety checks
                     if (equity > peakEquity)
                     {
                         peakEquity = equity;
                     }
 
-                    double drawdown = (peakEquity - equity) / peakEquity;
+                    // Calculate drawdown with safety checks
+                    double drawdown = 0;
+                    if (peakEquity > 0)
+                    {
+                        drawdown = Math.Max(0, (peakEquity - equity) / peakEquity);
+                        // Cap drawdown at 100% (complete loss)
+                        drawdown = Math.Min(drawdown, 1.0);
+                    }
+                    
                     if (drawdown > maxDrawdown)
                     {
                         maxDrawdown = drawdown;

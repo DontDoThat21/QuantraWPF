@@ -6,7 +6,9 @@
       "Bash(find:*)",
       "Bash(dir \"C:\\Users\\tylor\\source\\repos\\DontDoThat21\\QuantraWPF\\Quantra\\Models\" /b)",
       "Bash(dir:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(dotnet build:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

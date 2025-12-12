@@ -69,6 +69,9 @@ namespace Quantra.Models
         // VIX monitoring settings
         public bool EnableVixMonitoring { get; set; } = true;
 
+        // Stock Explorer settings
+        public bool EnableStockExplorerAutoRefresh { get; set; } = false;
+
         // API Keys settings
         public string AlphaVantageApiKey { get; set; } = "";
 
@@ -164,6 +167,8 @@ namespace Quantra.Models
                 LastWindowState = settings.LastWindowState,
                 // VIX monitoring settings
                 EnableVixMonitoring = settings.EnableVixMonitoring,
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = settings.EnableStockExplorerAutoRefresh,
                 // API Keys settings
                 AlphaVantageApiKey = settings.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
@@ -218,6 +223,8 @@ namespace Quantra.Models
                 LastWindowState = this.LastWindowState,
                 // VIX monitoring settings
                 EnableVixMonitoring = this.EnableVixMonitoring,
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = this.EnableStockExplorerAutoRefresh,
                 // API Keys settings
                 AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
@@ -277,6 +284,8 @@ namespace Quantra.Models
                 LastWindowState = this.LastWindowState,
                 // VIX monitoring settings
                 EnableVixMonitoring = this.EnableVixMonitoring,
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = this.EnableStockExplorerAutoRefresh,
                 // API Keys settings
                 AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
@@ -337,6 +346,8 @@ namespace Quantra.Models
                 LastWindowState = 0, // Default to Normal window state
                 // VIX monitoring settings
                 EnableVixMonitoring = true,
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = false,
                 // API Keys settings
                 AlphaVantageApiKey = "",
                 // Alpha Vantage API Plan Settings

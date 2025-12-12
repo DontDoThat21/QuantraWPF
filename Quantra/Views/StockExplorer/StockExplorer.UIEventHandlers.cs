@@ -1557,6 +1557,180 @@ namespace Quantra.Controls
                 CustomModal.ShowError($"Error searching symbols: {ex.Message}", "Search Error", Window.GetWindow(this));
             }
         }
+        
+        private async void AutoRefreshTimer_Tick(object sender, EventArgs e)
+        {
+            if (!_isAutoRefreshEnabled)
+                return;
+                
+            try
+            {
+                await PerformAutoRefresh();
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Error during auto-refresh", ex.ToString());
+            }
+        }
+        
+        private void AutoRefreshToggleButton_Checked(object sender, RoutedEventArgs e)
+        {
+            _isAutoRefreshEnabled = true;
+            _autoRefreshTimer?.Start();
+
+            // Update status text with interval
+            if (AutoRefreshStatusText != null)
+            {
+                AutoRefreshStatusText.Visibility = Visibility.Visible;
+                UpdateAutoRefreshStatusText();
+                AutoRefreshStatusText.Foreground = System.Windows.Media.Brushes.LimeGreen;
+            }
+
+            _loggingService?.Log("Info", "Auto-refresh enabled for StockExplorer");
+
+            // Save setting to user settings
+            SaveAutoRefreshState(true);
+
+            // Perform immediate refresh
+            _ = PerformAutoRefresh();
+        }
+        
+        private void AutoRefreshToggleButton_Unchecked(object sender, RoutedEventArgs e)
+        {
+            _isAutoRefreshEnabled = false;
+            _autoRefreshTimer?.Stop();
+
+            // Update status text
+            if (AutoRefreshStatusText != null)
+            {
+                AutoRefreshStatusText.Visibility = Visibility.Collapsed;
+                AutoRefreshStatusText.Text = "";
+            }
+
+            _loggingService?.Log("Info", "Auto-refresh disabled for StockExplorer");
+
+            // Save setting to user settings
+            SaveAutoRefreshState(false);
+        }
+        
+        private async System.Threading.Tasks.Task PerformAutoRefresh()
+        {
+            if (_viewModel == null || _alphaVantageService == null)
+                return;
+                
+            try
+            {
+                // Update status text
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (AutoRefreshStatusText != null)
+                    {
+                        AutoRefreshStatusText.Text = "Refreshing...";
+                        AutoRefreshStatusText.Foreground = System.Windows.Media.Brushes.Yellow;
+                    }
+                });
+                
+                // Get visible stocks in the grid
+                var visibleStocks = _viewModel.CachedStocks.ToList();
+                
+                if (visibleStocks.Count == 0)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (AutoRefreshStatusText != null)
+                        {
+                            AutoRefreshStatusText.Text = "No stocks to refresh";
+                            AutoRefreshStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                        }
+                    });
+                    return;
+                }
+                
+                _loggingService?.Log("Info", $"Auto-refreshing {visibleStocks.Count} visible stocks");
+                
+                int successCount = 0;
+                int errorCount = 0;
+                
+                // Process stocks in batches to avoid API rate limits
+                const int batchSize = 5;
+                for (int i = 0; i < visibleStocks.Count; i += batchSize)
+                {
+                    var batch = visibleStocks.Skip(i).Take(batchSize).ToList();
+                    var batchTasks = new System.Collections.Generic.List<System.Threading.Tasks.Task>();
+                    
+                    foreach (var stock in batch)
+                    {
+                        batchTasks.Add(System.Threading.Tasks.Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // Reload RSI
+                                var rsi = await _alphaVantageService.GetRSI(stock.Symbol);
+                                stock.RSI = rsi;
+                                
+                                // Reload VWAP
+                                var vwap = await _alphaVantageService.GetVWAP(stock.Symbol);
+                                stock.VWAP = vwap;
+                                
+                                // Reload P/E Ratio
+                                var peRatio = await _alphaVantageService.GetPERatioAsync(stock.Symbol);
+                                stock.PERatio = peRatio ?? stock.PERatio;
+                                
+                                // Update last accessed timestamp
+                                stock.LastAccessed = DateTime.Now;
+                                
+                                System.Threading.Interlocked.Increment(ref successCount);
+                            }
+                            catch (Exception ex)
+                            {
+                                _loggingService?.Log("Warning", $"Failed to refresh {stock.Symbol}", ex.ToString());
+                                System.Threading.Interlocked.Increment(ref errorCount);
+                            }
+                        }));
+                    }
+                    
+                    // Wait for batch to complete
+                    await System.Threading.Tasks.Task.WhenAll(batchTasks);
+                    
+                    // Add delay between batches to respect API rate limits
+                    if (i + batchSize < visibleStocks.Count)
+                    {
+                        await System.Threading.Tasks.Task.Delay(1000); // 1 second delay
+                    }
+                }
+                
+                // Update last refresh time
+                _lastAutoRefreshTime = DateTime.Now;
+                
+                // Refresh the DataGrid to show updated values
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    StockDataGrid?.Items.Refresh();
+                    
+                    // Update status text
+                    if (AutoRefreshStatusText != null)
+                    {
+                        AutoRefreshStatusText.Text = $"Last refresh: {_lastAutoRefreshTime:HH:mm:ss} ({successCount} OK, {errorCount} errors)";
+                        AutoRefreshStatusText.Foreground = errorCount > 0 ? System.Windows.Media.Brushes.Orange : System.Windows.Media.Brushes.LimeGreen;
+                    }
+                });
+                
+                _loggingService?.Log("Info", $"Auto-refresh completed: {successCount} successful, {errorCount} errors");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Error performing auto-refresh", ex.ToString());
+                
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (AutoRefreshStatusText != null)
+                    {
+                        AutoRefreshStatusText.Text = "Refresh failed";
+                        AutoRefreshStatusText.Foreground = System.Windows.Media.Brushes.Red;
+                    }
+                });
+            }
+        }
 
         /// <summary>
         /// Handles scroll events on the StockDataGrid to implement auto-pagination on scroll

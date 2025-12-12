@@ -28,9 +28,13 @@ namespace Quantra.Controls
         // Initialize DataGrid settings
         private void InitializeDataGridSettings()
         {
-            // Get UserSettingsService from App's service provider
-            _userSettingsService = App.ServiceProvider.GetRequiredService<IUserSettingsService>();
-            
+            // _userSettingsService is already initialized in the constructor
+            // If for some reason it wasn't, get it from the service provider
+            if (_userSettingsService == null)
+            {
+                _userSettingsService = App.ServiceProvider.GetRequiredService<IUserSettingsService>();
+            }
+
             // Initialize save timer for delayed saving
             _saveTimer = new DispatcherTimer
             {

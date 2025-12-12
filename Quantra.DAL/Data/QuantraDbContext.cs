@@ -34,6 +34,7 @@ namespace Quantra.DAL.Data
         public DbSet<SettingsEntity> Settings { get; set; }
         public DbSet<SettingsProfile> SettingsProfiles { get; set; }
         public DbSet<IndicatorSettingsEntity> IndicatorSettings { get; set; }
+        public DbSet<SavedFilter> SavedFilters { get; set; }
 
         // Stock and Market Data
         public DbSet<StockSymbolEntity> StockSymbols { get; set; }

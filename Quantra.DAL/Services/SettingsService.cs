@@ -463,6 +463,9 @@ namespace Quantra.DAL.Services
                 // VIX monitoring
                 EnableVixMonitoring = profile.EnableVixMonitoring,
 
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = profile.EnableStockExplorerAutoRefresh,
+
                 // API Keys
                 AlphaVantageApiKey = profile.AlphaVantageApiKey,
 
@@ -564,6 +567,9 @@ namespace Quantra.DAL.Services
             
             // VIX monitoring
             entity.EnableVixMonitoring = profile.EnableVixMonitoring;
+
+            // Stock Explorer settings
+            entity.EnableStockExplorerAutoRefresh = profile.EnableStockExplorerAutoRefresh;
 
             // API Keys
             entity.AlphaVantageApiKey = profile.AlphaVantageApiKey;
@@ -668,6 +674,9 @@ namespace Quantra.DAL.Services
                 
                 // VIX monitoring
                 EnableVixMonitoring = entity.EnableVixMonitoring,
+
+                // Stock Explorer settings
+                EnableStockExplorerAutoRefresh = entity.EnableStockExplorerAutoRefresh,
 
                 // API Keys
                 AlphaVantageApiKey = entity.AlphaVantageApiKey ?? "",
