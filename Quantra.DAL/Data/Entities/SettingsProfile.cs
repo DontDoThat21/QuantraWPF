@@ -157,6 +157,10 @@ namespace Quantra.DAL.Data.Entities
         // Alpha Vantage API Plan Settings
         public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
 
+        // Alpha Vantage Data Entitlement Settings
+        [MaxLength(50)]
+        public string? AlphaVantageDataEntitlement { get; set; } = "none"; // Options: "none", "delayed", "realtime"
+
         [Column("CreatedDate")]
         public DateTime CreatedAt { get; set; }
         

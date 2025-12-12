@@ -186,8 +186,7 @@
                                Foreground="Orange"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               ToolTip="Alpha Vantage Free Tier: 25 requests per minute. Usage is tracked and shown here." />
+                               VerticalAlignment="Center" />
                 </StackPanel>
 
                 <ContentControl Grid.Column="3" x:Name="SettingsPlaceholder" />

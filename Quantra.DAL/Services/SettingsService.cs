@@ -472,6 +472,9 @@ namespace Quantra.DAL.Services
                 // Alpha Vantage API Plan Settings
                 AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute,
 
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = profile.AlphaVantageDataEntitlement,
+
                 // Risk management settings
                 AccountSize = profile.AccountSize,
                 BaseRiskPercentage = profile.BaseRiskPercentage,
@@ -576,6 +579,9 @@ namespace Quantra.DAL.Services
 
             // Alpha Vantage API Plan Settings
             entity.AlphaVantageApiCallsPerMinute = profile.AlphaVantageApiCallsPerMinute;
+
+            // Alpha Vantage Data Entitlement Settings
+            entity.AlphaVantageDataEntitlement = profile.AlphaVantageDataEntitlement;
 
             // Risk management settings
             entity.AccountSize = profile.AccountSize;
@@ -683,6 +689,9 @@ namespace Quantra.DAL.Services
 
                 // Alpha Vantage API Plan Settings
                 AlphaVantageApiCallsPerMinute = entity.AlphaVantageApiCallsPerMinute,
+
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = entity.AlphaVantageDataEntitlement ?? "none",
 
                 // Risk management settings
                 AccountSize = entity.AccountSize,

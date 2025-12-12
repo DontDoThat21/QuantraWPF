@@ -792,20 +792,40 @@ namespace Quantra
         private async Task RefreshApiUsageDisplay()
         {
             UpdateDispatcherMonitoringManual("RefreshApiUsageDisplay");
-            
+
             try
             {
                 // Set loading state when starting API call
                 GlobalLoadingStateService.SetLoadingState(true);
-                
+
                 // Use DB-based count for accuracy
                 int used = await Task.Run(() => _alphaVantageService.GetCurrentDbApiCallCount());
-                int limit = AlphaVantageService.ApiCallLimit;
-                
+
+                // Get the limit from the currently logged-in user's settings profile
+                int limit = 75; // Default fallback
+                try
+                {
+                    var currentUserProfile = await Task.Run(() => _settingsService?.GetDefaultSettingsProfile());
+                    if (currentUserProfile != null)
+                    {
+                        limit = currentUserProfile.AlphaVantageApiCallsPerMinute;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggingService?.Log("Warning", "Failed to get user's API call limit, using default", ex.ToString());
+                }
+
                 // Ensure UI update happens on the UI thread
                 await Dispatcher.InvokeAsync(() =>
                 {
                     ApiUsageDisplay = $"AlphaVantage API: {used}/{limit}/min";
+
+                    // Update the tooltip to reflect the current limit
+                    if (ApiUsageTextBlock != null)
+                    {
+                        ApiUsageTextBlock.ToolTip = $"Alpha Vantage API: {limit} requests per minute (sliding window). Current usage: {used}/{limit}";
+                    }
                 });
             }
             finally
@@ -980,8 +1000,19 @@ namespace Quantra
                         callerName = "Unknown";
                     }
                 }
-                
+
                 _currentInstance.UpdateDispatcherMonitoringManual(methodName, callerName);
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the API usage display from any part of the application (e.g., after settings change)
+        /// </summary>
+        public static void RefreshApiUsageDisplayStatic()
+        {
+            if (_currentInstance != null)
+            {
+                _ = _currentInstance.RefreshApiUsageDisplay();
             }
         }
         

@@ -161,6 +161,13 @@ namespace Quantra
             // Update the SharedTitleBar with the logged-in username
             SharedTitleBar.UpdateLoggedInUsername(e.Username);
 
+            // Update AlphaVantageService rate limit from the newly logged-in user's settings
+            // Use the service from the event args instead of accessing App.ServiceProvider
+            e.AlphaVantageService?.UpdateApiRateLimitFromSettings();
+
+            // Refresh the API usage display to show the new user's limit
+            SharedTitleBar.RefreshApiUsageDisplayStatic();
+
             mainWindow.Show();
             this.Close();
         }

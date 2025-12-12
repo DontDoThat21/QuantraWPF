@@ -379,6 +379,13 @@ namespace Quantra
                 // Update AlphaVantageService rate limit if it's initialized
                 var alphaVantageService = App.ServiceProvider?.GetService<Quantra.DAL.Services.AlphaVantageService>();
                 alphaVantageService?.UpdateApiRateLimitFromSettings();
+
+                // Immediately refresh the SharedTitleBar API usage display to show the new limit
+                Task.Run(async () =>
+                {
+                    await Task.Delay(100); // Small delay to ensure settings are fully committed
+                    SharedTitleBar.RefreshApiUsageDisplayStatic();
+                });
             }
             catch (Exception ex)
             {

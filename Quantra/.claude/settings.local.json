@@ -8,7 +8,10 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(dotnet build:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet tool install:*)",
+      "Bash(sqlcmd:*)"
     ],
     "deny": [],
     "ask": []
