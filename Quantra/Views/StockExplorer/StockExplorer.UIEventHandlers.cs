@@ -1738,7 +1738,7 @@ namespace Quantra.Controls
                     }
                 });
                 
-                // Get visible stocks in the grid
+                // Get visible stocks in the grid - ONLY the currently displayed page in pagination
                 var visibleStocks = _viewModel.CachedStocks.ToList();
                 
                 if (visibleStocks.Count == 0)
@@ -1754,7 +1754,7 @@ namespace Quantra.Controls
                     return;
                 }
                 
-                _loggingService?.Log("Info", $"Auto-refreshing {visibleStocks.Count} visible stocks");
+                _loggingService?.Log("Info", $"Auto-refreshing {visibleStocks.Count} stocks on page {_viewModel.CurrentPage}");
                 
                 int successCount = 0;
                 int errorCount = 0;
@@ -1772,20 +1772,38 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                // Reload RSI
-                                var rsi = await _alphaVantageService.GetRSI(stock.Symbol);
-                                stock.RSI = rsi;
+                                // Get quote data to recalculate indicators from OHLCV
+                                var quoteData = await _alphaVantageService.GetQuoteDataAsync(stock.Symbol);
                                 
-                                // Reload VWAP
-                                var vwap = await _alphaVantageService.GetVWAP(stock.Symbol);
-                                stock.VWAP = vwap;
-                                
-                                // Reload P/E Ratio
-                                var peRatio = await _alphaVantageService.GetPERatioAsync(stock.Symbol);
-                                stock.PERatio = peRatio ?? stock.PERatio;
-                                
-                                // Update last accessed timestamp
-                                stock.LastAccessed = DateTime.Now;
+                                if (quoteData != null)
+                                {
+                                    // Update core quote data
+                                    stock.Price = quoteData.Price;
+                                    stock.Volume = quoteData.Volume;
+                                    stock.DayHigh = quoteData.DayHigh;
+                                    stock.DayLow = quoteData.DayLow;
+                                    stock.ChangePercent = quoteData.ChangePercent;
+                                    stock.Change = quoteData.Change;
+                                    
+                                    // Reload calculated indicators for grid display
+                                    var rsi = await _alphaVantageService.GetRSI(stock.Symbol);
+                                    stock.RSI = rsi;
+                                    
+                                    // Reload VWAP
+                                    var vwap = await _alphaVantageService.GetVWAP(stock.Symbol);
+                                    stock.VWAP = vwap;
+                                    
+                                    // Reload P/E Ratio (if available)
+                                    var peRatio = await _alphaVantageService.GetPERatioAsync(stock.Symbol);
+                                    stock.PERatio = peRatio ?? stock.PERatio;
+                                    
+                                    // Update timestamp to reflect when data was refreshed
+                                    stock.LastAccessed = DateTime.Now;
+                                    stock.CacheTime = DateTime.Now;
+                                    
+                                    // Cache the updated quote data
+                                    await _cacheService.CacheQuoteDataAsync(quoteData);
+                                }
                                 
                                 System.Threading.Interlocked.Increment(ref successCount);
                             }
