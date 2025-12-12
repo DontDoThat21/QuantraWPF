@@ -123,6 +123,7 @@ namespace Quantra
             RiskLevelComboBox.SelectionChanged += OnSettingChanged;
             GridBorderColorComboBox.SelectionChanged += OnSettingChanged;
             AlphaVantageApiPlanComboBox.SelectionChanged += OnSettingChanged;
+            AlphaVantageDataEntitlementComboBox.SelectionChanged += OnSettingChanged;
         }
 
         private async Task LoadProfilesAsync()
@@ -185,6 +186,15 @@ namespace Quantra
                 if (int.TryParse((string)item.Tag, out int callsPerMinute) && callsPerMinute == profile.AlphaVantageApiCallsPerMinute)
                 {
                     AlphaVantageApiPlanComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            // Alpha Vantage Data Entitlement setting
+            foreach (ComboBoxItem item in AlphaVantageDataEntitlementComboBox.Items)
+            {
+                if ((string)item.Tag == (profile.AlphaVantageDataEntitlement ?? "none"))
+                {
+                    AlphaVantageDataEntitlementComboBox.SelectedItem = item;
                     break;
                 }
             }
@@ -354,6 +364,11 @@ namespace Quantra
                         _selectedProfile.AlphaVantageApiCallsPerMinute = callsPerMinute;
                     }
                 }
+                // Alpha Vantage Data Entitlement setting
+                if (AlphaVantageDataEntitlementComboBox.SelectedItem is ComboBoxItem dataEntitlementItem)
+                {
+                    _selectedProfile.AlphaVantageDataEntitlement = (string)dataEntitlementItem.Tag ?? "none";
+                }
 
                 _selectedProfile.ModifiedDate = DateTime.Now;
                 _settingsService.UpdateSettingsProfile(_selectedProfile);
@@ -426,6 +441,13 @@ namespace Quantra
         }
 
         private void AlphaVantageApiPlanComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            // Trigger auto-save
+            OnSettingChanged(sender, e);
+        }
+
+        private void AlphaVantageDataEntitlementComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isLoading) return;
             // Trigger auto-save

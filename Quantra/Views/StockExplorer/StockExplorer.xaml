@@ -287,28 +287,29 @@ MinWidth="900" MinHeight="700">
                                    Style="{StaticResource EnhancedSmallTextBlockStyle}"/>
                     </StackPanel>
                     
-                    <!-- Auto Refresh Button with Dropdown -->
+                    <!-- Auto Refresh Button with Dropdown (Smaller) -->
                     <StackPanel Orientation="Horizontal" Margin="30,0,0,0">
                         <ToggleButton x:Name="AutoRefreshToggleButton"
                                       Content="⟳"
-                                      Padding="8,4"
-                                      Height="28"
-                                      Width="28"
-                                      FontSize="14"
+                                      Padding="4,2"
+                                      Height="22"
+                                      Width="22"
+                                      FontSize="11"
                                       Style="{StaticResource MaterialDesignSwitchToggleButton}"
                                       Checked="AutoRefreshToggleButton_Checked"
                                       Unchecked="AutoRefreshToggleButton_Unchecked"
                                       ToolTip="Enable/Disable automatic refresh"/>
 
-                        <!-- Refresh Interval Dropdown -->
+                        <!-- Refresh Interval Dropdown (Smaller) -->
                         <Button x:Name="RefreshIntervalButton"
                                 Content="▼"
                                 Margin="2,0,0,0"
-                                Padding="4,4"
-                                Height="28"
-                                Width="20"
-                                FontSize="10"
+                                Padding="2,2"
+                                Height="22"
+                                Width="16"
+                                FontSize="8"
                                 Style="{StaticResource EnhancedButtonStyle}"
+                                Click="RefreshIntervalButton_Click"
                                 ToolTip="Select refresh interval">
                             <Button.ContextMenu>
                                 <ContextMenu x:Name="RefreshIntervalMenu">
@@ -322,14 +323,14 @@ MinWidth="900" MinHeight="700">
                             </Button.ContextMenu>
                         </Button>
 
-                        <!-- Auto Refresh Status Text -->
+                        <!-- Auto Refresh Status Text (Smaller) -->
                         <TextBlock x:Name="AutoRefreshStatusText"
                                    Text=""
-                                   Margin="8,0,0,0"
+                                   Margin="6,0,0,0"
                                    VerticalAlignment="Center"
                                    Style="{StaticResource EnhancedSmallTextBlockStyle}"
                                    FontStyle="Italic"
-                                   FontSize="11"
+                                   FontSize="10"
                                    Foreground="#888888"/>
                     </StackPanel>
                 </StackPanel>

@@ -33,6 +33,12 @@ namespace Quantra.Controls
         {
             // Load DataGrid settings after the control is fully loaded
             LoadDataGridSettings();
+            
+            // Subscribe to mouse wheel events for scroll-based pagination
+            if (StockDataGrid != null)
+            {
+                StockDataGrid.PreviewMouseWheel += StockDataGrid_PreviewMouseWheel;
+            }
         }
 
         // Selection mode changed event handler
@@ -1612,6 +1618,108 @@ namespace Quantra.Controls
             // Save setting to user settings
             SaveAutoRefreshState(false);
         }
+
+        private void RefreshIntervalButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void RefreshInterval_10Seconds_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(10, sender as MenuItem);
+        }
+
+        private void RefreshInterval_1Minute_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(60, sender as MenuItem);
+        }
+
+        private void RefreshInterval_5Minutes_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(300, sender as MenuItem);
+        }
+
+        private void RefreshInterval_10Minutes_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(600, sender as MenuItem);
+        }
+
+        private void RefreshInterval_15Minutes_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(900, sender as MenuItem);
+        }
+
+        private void RefreshInterval_30Minutes_Click(object sender, RoutedEventArgs e)
+        {
+            SetRefreshInterval(1800, sender as MenuItem);
+        }
+
+        private void SetRefreshInterval(int seconds, MenuItem clickedItem)
+        {
+            _autoRefreshIntervalSeconds = seconds;
+
+            // Update the timer interval if auto-refresh is enabled
+            if (_autoRefreshTimer != null)
+            {
+                _autoRefreshTimer.Interval = TimeSpan.FromSeconds(seconds);
+
+                // Restart timer if it's currently running
+                if (_isAutoRefreshEnabled)
+                {
+                    _autoRefreshTimer.Stop();
+                    _autoRefreshTimer.Start();
+                    _lastAutoRefreshTime = DateTime.Now;
+                }
+            }
+
+            // Update checked state for menu items
+            if (clickedItem?.Parent is ContextMenu menu)
+            {
+                foreach (var item in menu.Items.OfType<MenuItem>())
+                {
+                    item.IsChecked = (item == clickedItem);
+                }
+            }
+
+            // Update status text
+            UpdateAutoRefreshStatusText();
+
+            _loggingService?.Log("Info", $"Auto-refresh interval set to {GetIntervalText(seconds)}");
+        }
+
+        private void UpdateAutoRefreshStatusText()
+        {
+            if (AutoRefreshStatusText != null)
+            {
+                if (_isAutoRefreshEnabled)
+                {
+                    var intervalText = GetIntervalText(_autoRefreshIntervalSeconds);
+                    AutoRefreshStatusText.Text = $"Auto-refresh: {intervalText}";
+                }
+                else
+                {
+                    AutoRefreshStatusText.Text = "";
+                }
+            }
+        }
+
+        private string GetIntervalText(int seconds)
+        {
+            return seconds switch
+            {
+                10 => "10 seconds",
+                60 => "1 minute",
+                300 => "5 minutes",
+                600 => "10 minutes",
+                900 => "15 minutes",
+                1800 => "30 minutes",
+                _ => $"{seconds} seconds"
+            };
+        }
         
         private async System.Threading.Tasks.Task PerformAutoRefresh()
         {
@@ -1733,10 +1841,112 @@ namespace Quantra.Controls
         }
 
         /// <summary>
+        /// Handles mouse wheel events on the StockDataGrid to implement scroll-based pagination
+        /// Scrolling UP (away from user) loads the PREVIOUS page
+        /// Scrolling DOWN (toward user) loads the NEXT page
+        /// </summary>
+        private void StockDataGrid_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            // Skip if filtering is active (pagination is disabled during filtering)
+            if (IsFiltering)
+                return;
+                
+            // Skip if ViewModel is not initialized
+            if (_viewModel == null)
+                return;
+                
+            // Skip if a load operation is already pending
+            if (_scrollLoadPending || _viewModel.IsLoading)
+                return;
+                
+            // Determine scroll direction
+            // Positive delta (e.Delta > 0) = scrolling UP (wheel rolled away from user) ? PREVIOUS page
+            // Negative delta (e.Delta < 0) = scrolling DOWN (wheel rolled toward user) ? NEXT page
+            bool isScrollingUp = e.Delta > 0;
+            bool isScrollingDown = e.Delta < 0;
+            
+            // Log for debugging
+            _loggingService?.Log("Debug", $"Mouse wheel: Delta={e.Delta}, Up={isScrollingUp}, Down={isScrollingDown}, Page={_viewModel.CurrentPage}, HasMore={_viewModel.HasMorePages}");
+            
+            // Check if we should load PREVIOUS page (scroll UP - wheel away from user)
+            if (isScrollingUp && _viewModel.CurrentPage > 1)
+            {
+                _loggingService?.Log("Debug", $"Triggering PREVIOUS page load from page {_viewModel.CurrentPage}");
+                _scrollLoadPending = true;
+                InitializeScrollDebounceTimer(() => _viewModel.LoadPreviousPageAsync());
+                _scrollDebounceTimer?.Start();
+            }
+            // Check if we should load NEXT page (scroll DOWN - wheel toward user)
+            else if (isScrollingDown && _viewModel.HasMorePages)
+            {
+                _loggingService?.Log("Debug", $"Triggering NEXT page load from page {_viewModel.CurrentPage}");
+                _scrollLoadPending = true;
+                InitializeScrollDebounceTimer(() => _viewModel.LoadMoreCachedStocksAsync());
+                _scrollDebounceTimer?.Start();
+            }
+            else
+            {
+                _loggingService?.Log("Debug", $"Scroll ignored: Up={isScrollingUp} (need page>1={_viewModel.CurrentPage > 1}), Down={isScrollingDown} (need HasMore={_viewModel.HasMorePages})");
+            }
+        }
+        
+        /// <summary>
+        /// Initializes or reinitializes the scroll debounce timer with the specified action
+        /// </summary>
+        private void InitializeScrollDebounceTimer(Func<Task> loadAction)
+        {
+            if (_scrollDebounceTimer == null)
+            {
+                _scrollDebounceTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(300)
+                };
+            }
+            
+            // Remove any existing event handlers to avoid multiple subscriptions
+            _scrollDebounceTimer.Tick -= ScrollDebounceTimer_Tick;
+            
+            // Add new event handler
+            _scrollDebounceTimer.Tick += async (s, args) =>
+            {
+                _scrollDebounceTimer.Stop();
+                _scrollLoadPending = false;
+                
+                if (_viewModel != null && !_viewModel.IsLoading)
+                {
+                    try
+                    {
+                        await loadAction();
+                    }
+                    catch (Exception ex)
+                    {
+                        _loggingService?.Log("Error", "Error during scroll-based pagination", ex.ToString());
+                    }
+                }
+            };
+            
+            // Stop any existing timer before starting new one
+            _scrollDebounceTimer.Stop();
+        }
+        
+        /// <summary>
+        /// Generic scroll debounce timer tick handler
+        /// </summary>
+        private void ScrollDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            // This is intentionally empty as we're using inline handlers in InitializeScrollDebounceTimer
+        }
+        
+        /// <summary>
         /// Handles scroll events on the StockDataGrid to implement auto-pagination on scroll
+        /// This is now a fallback for traditional scroll events when mouse wheel is not used
         /// </summary>
         private void StockDataGrid_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            // Skip if filtering is active
+            if (IsFiltering)
+                return;
+                
             // Only trigger load more when scrolling vertically and near the bottom
             if (e.VerticalChange <= 0)
                 return;
@@ -1760,29 +1970,8 @@ namespace Quantra.Controls
             if (scrollPercentage >= 0.9 && _viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading && !_scrollLoadPending)
             {
                 _scrollLoadPending = true;
-                
-                // Initialize debounce timer if needed
-                if (_scrollDebounceTimer == null)
-                {
-                    _scrollDebounceTimer = new DispatcherTimer
-                    {
-                        Interval = TimeSpan.FromMilliseconds(300)
-                    };
-                    _scrollDebounceTimer.Tick += async (s, args) =>
-                    {
-                        _scrollDebounceTimer.Stop();
-                        _scrollLoadPending = false;
-                        
-                        if (_viewModel != null && _viewModel.HasMorePages && !_viewModel.IsLoading)
-                        {
-                            await _viewModel.LoadMoreCachedStocksAsync();
-                        }
-                    };
-                }
-                
-                // Reset and start the debounce timer
-                _scrollDebounceTimer.Stop();
-                _scrollDebounceTimer.Start();
+                InitializeScrollDebounceTimer(() => _viewModel.LoadMoreCachedStocksAsync());
+                _scrollDebounceTimer?.Start();
             }
         }
 

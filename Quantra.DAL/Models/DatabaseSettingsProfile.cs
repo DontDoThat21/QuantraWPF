@@ -78,6 +78,9 @@ namespace Quantra.Models
         // Alpha Vantage API Plan Settings
         public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
 
+        // Alpha Vantage Data Entitlement Settings
+        public string AlphaVantageDataEntitlement { get; set; } = "none"; // Options: "none", "delayed", "realtime"
+
         // Risk management settings (matching SettingsProfile entity)
         public decimal AccountSize { get; set; } = 100000m;
         public decimal BaseRiskPercentage { get; set; } = 0.01m; // 1%
@@ -172,7 +175,9 @@ namespace Quantra.Models
                 // API Keys settings
                 AlphaVantageApiKey = settings.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
-                AlphaVantageApiCallsPerMinute = settings.AlphaVantageApiCallsPerMinute
+                AlphaVantageApiCallsPerMinute = settings.AlphaVantageApiCallsPerMinute,
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = settings.AlphaVantageDataEntitlement ?? "none"
             };
         }
 
@@ -228,7 +233,9 @@ namespace Quantra.Models
                 // API Keys settings
                 AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
-                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute
+                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute,
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = this.AlphaVantageDataEntitlement ?? "none"
             };
         }
 
@@ -289,7 +296,9 @@ namespace Quantra.Models
                 // API Keys settings
                 AlphaVantageApiKey = this.AlphaVantageApiKey ?? "",
                 // Alpha Vantage API Plan Settings
-                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute
+                AlphaVantageApiCallsPerMinute = this.AlphaVantageApiCallsPerMinute,
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = this.AlphaVantageDataEntitlement ?? "none"
             };
         }
 
@@ -351,7 +360,9 @@ namespace Quantra.Models
                 // API Keys settings
                 AlphaVantageApiKey = "",
                 // Alpha Vantage API Plan Settings
-                AlphaVantageApiCallsPerMinute = 75 // Default to 75 calls/minute (standard plan)
+                AlphaVantageApiCallsPerMinute = 75, // Default to 75 calls/minute (standard plan)
+                // Alpha Vantage Data Entitlement Settings
+                AlphaVantageDataEntitlement = "none" // Default to no entitlement parameter
             };
         }
     }

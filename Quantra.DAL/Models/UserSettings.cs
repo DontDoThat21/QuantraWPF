@@ -133,6 +133,9 @@ namespace Quantra.Models
         // Alpha Vantage API Plan Settings
         public int AlphaVantageApiCallsPerMinute { get; set; } = 75; // Default to 75 calls/minute (standard plan)
 
+        // Alpha Vantage Data Entitlement Settings
+        public string AlphaVantageDataEntitlement { get; set; } = "none"; // Options: "none", "delayed", "realtime"
+
         // Chart refresh settings
         public int ChartRefreshIntervalSeconds { get; set; } = 15; // Default 15 seconds
 

@@ -28,6 +28,10 @@ namespace Quantra.DAL.Services
         private const int PremiumApiCallsPerMinute = 600; // Premium tier rate limit (can be adjusted based on plan)
         private const string StockCacheKey = "stock_symbols_cache";
 
+        // Sliding window API tracking
+        private readonly Queue<DateTime> _apiCallTimestamps;
+        private readonly object _slidingWindowLock = new object();
+
         // Market cap thresholds for categorization (in dollars)
         private const decimal SmallCapMaxThreshold = 2_000_000_000m;        // $2 billion
         private const decimal MidCapMaxThreshold = 10_000_000_000m;         // $10 billion
@@ -63,6 +67,7 @@ namespace Quantra.DAL.Services
             };
             _apiKey = GetApiKey();
             _apiSemaphore = new SemaphoreSlim(1, 1);
+            _apiCallTimestamps = new Queue<DateTime>();
 
             // Load API rate limit from user settings
             var settings = _userSettingsService.GetUserSettings();
@@ -102,8 +107,18 @@ namespace Quantra.DAL.Services
 
         public int GetAlphaVantageApiUsageCount(DateTime utcNow)
         {
-            // TODO: Implement API usage tracking if needed
-            return 0;
+            lock (_slidingWindowLock)
+            {
+                // Remove timestamps older than 1 minute from the sliding window
+                var oneMinuteAgo = utcNow.AddMinutes(-1);
+                while (_apiCallTimestamps.Count > 0 && _apiCallTimestamps.Peek() < oneMinuteAgo)
+                {
+                    _apiCallTimestamps.Dequeue();
+                }
+
+                // Return the count of API calls in the last minute
+                return _apiCallTimestamps.Count;
+            }
         }
 
         public void LogApiUsage()
@@ -121,6 +136,14 @@ namespace Quantra.DAL.Services
             await WaitForApiLimit();
 
             var paramString = string.Join("&", parameters.Select(kv => $"{kv.Key}={kv.Value}"));
+            
+            // Add data entitlement parameter if configured
+            var entitlementParam = GetEntitlementParameter();
+            if (!string.IsNullOrEmpty(entitlementParam))
+            {
+                paramString += $"&{entitlementParam}";
+            }
+            
             var endpoint = $"query?function={functionName}&{paramString}&apikey={_apiKey}";
             await LogApiCall(functionName, paramString);
 
@@ -165,6 +188,36 @@ namespace Quantra.DAL.Services
             return symbol;
         }
 
+        /// <summary>
+        /// Gets the data entitlement parameter from user settings
+        /// </summary>
+        /// <returns>Entitlement query string parameter (e.g., "entitlement=delayed") or empty string if none</returns>
+        private string GetEntitlementParameter()
+        {
+            try
+            {
+                var settings = _userSettingsService?.GetUserSettings();
+                var entitlement = settings?.AlphaVantageDataEntitlement?.ToLowerInvariant() ?? "none";
+                
+                // Only add parameter if it's not "none"
+                if (entitlement == "delayed")
+                {
+                    return "entitlement=delayed";
+                }
+                else if (entitlement == "realtime")
+                {
+                    return "entitlement=realtime";
+                }
+                
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Warning", "Failed to retrieve data entitlement setting", ex.ToString());
+                return string.Empty;
+            }
+        }
+
         public async Task<QuoteData> GetQuoteDataAsync(string symbol)
         {
             try
@@ -176,7 +229,15 @@ namespace Quantra.DAL.Services
                 string normalizedSymbol = NormalizeSymbol(symbol);
 
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=GLOBAL_QUOTE&symbol={normalizedSymbol}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("GLOBAL_QUOTE", normalizedSymbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -264,7 +325,15 @@ namespace Quantra.DAL.Services
             // var cachedSymbols = _userSettingsService.GetUserPreference(StockCacheKey, null);
 
             await WaitForApiLimit();
+            
+            // Build endpoint with entitlement parameter if configured
             var endpoint = $"query?function=LISTING_STATUS&apikey={_apiKey}";
+            var entitlementParam = GetEntitlementParameter();
+            if (!string.IsNullOrEmpty(entitlementParam))
+            {
+                endpoint += $"&{entitlementParam}";
+            }
+            
             await LogApiCall("LISTING_STATUS", null);
 
             var response = await _client.GetAsync(endpoint);
@@ -802,11 +871,51 @@ namespace Quantra.DAL.Services
             await _apiSemaphore.WaitAsync();
             try
             {
+                lock (_slidingWindowLock)
+                {
+                    // Clean up expired timestamps
+                    var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
+                    while (_apiCallTimestamps.Count > 0 && _apiCallTimestamps.Peek() < oneMinuteAgo)
+                    {
+                        _apiCallTimestamps.Dequeue();
+                    }
+
+                    // Check if we've hit the rate limit
+                    if (_apiCallTimestamps.Count >= _maxApiCallsPerMinute)
+                    {
+                        // Calculate how long to wait until the oldest call expires
+                        var oldestCall = _apiCallTimestamps.Peek();
+                        var timeToWait = oldestCall.AddMinutes(1) - DateTime.UtcNow;
+                        
+                        if (timeToWait.TotalMilliseconds > 0)
+                        {
+                            _loggingService?.Log("Info", $"API rate limit reached ({_apiCallTimestamps.Count}/{_maxApiCallsPerMinute}). Waiting {timeToWait.TotalSeconds:F1} seconds...");
+                        }
+                    }
+                }
+
+                // If we need to wait, do so outside the lock
                 var recentCalls = GetCurrentDbApiCallCount();
                 if (recentCalls >= _maxApiCallsPerMinute)
                 {
-                    // Wait until enough time has passed
-                    await Task.Delay(TimeSpan.FromSeconds(61));
+                    var oldestCall = DateTime.MinValue;
+                    lock (_slidingWindowLock)
+                    {
+                        if (_apiCallTimestamps.Count > 0)
+                        {
+                            oldestCall = _apiCallTimestamps.Peek();
+                        }
+                    }
+
+                    if (oldestCall != DateTime.MinValue)
+                    {
+                        var timeToWait = oldestCall.AddMinutes(1) - DateTime.UtcNow;
+                        if (timeToWait.TotalMilliseconds > 0)
+                        {
+                            // Add a small buffer to ensure we're past the minute mark
+                            await Task.Delay(timeToWait.Add(TimeSpan.FromMilliseconds(100)));
+                        }
+                    }
                 }
             }
             finally
@@ -820,6 +929,13 @@ namespace Quantra.DAL.Services
             await _apiSemaphore.WaitAsync();
             try
             {
+                // Add timestamp to sliding window
+                lock (_slidingWindowLock)
+                {
+                    _apiCallTimestamps.Enqueue(DateTime.UtcNow);
+                }
+
+                // Legacy database logging (commented out)
                 //DatabaseMonolith.LogAlphaVantageApiUsage(endpoint, parameters);
             }
             finally
@@ -1540,7 +1656,15 @@ namespace Quantra.DAL.Services
 
             // Fetch from API
             await WaitForApiLimit();
+            
+            // Build endpoint with entitlement parameter if configured
             var endpoint = $"query?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
+            var entitlementParam = GetEntitlementParameter();
+            if (!string.IsNullOrEmpty(entitlementParam))
+            {
+                endpoint += $"&{entitlementParam}";
+            }
+            
             await LogApiCall("OVERVIEW", symbol);
 
             var response = await _client.GetAsync(endpoint);
@@ -2391,7 +2515,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(keywords)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("SYMBOL_SEARCH", keywords);
 
                 var response = await _client.GetAsync(endpoint);
@@ -2470,7 +2602,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=OVERVIEW&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("OVERVIEW", symbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -2698,7 +2838,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=INCOME_STATEMENT&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("INCOME_STATEMENT", symbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -2763,7 +2911,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=BALANCE_SHEET&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("BALANCE_SHEET", symbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -2828,7 +2984,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=CASH_FLOW&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("CASH_FLOW", symbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -2893,7 +3057,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=EARNINGS&symbol={Uri.EscapeDataString(symbol)}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("EARNINGS", symbol);
 
                 var response = await _client.GetAsync(endpoint);
@@ -3156,6 +3328,13 @@ namespace Quantra.DAL.Services
 
                 queryParams.Add($"limit={Math.Min(1000, Math.Max(1, limit))}");
 
+                // Add entitlement parameter if configured
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    queryParams.Add(entitlementParam);
+                }
+
                 var endpoint = $"query?{string.Join("&", queryParams)}";
                 await LogApiCall("NEWS_SENTIMENT", tickers ?? "all");
 
@@ -3263,7 +3442,15 @@ namespace Quantra.DAL.Services
             try
             {
                 await WaitForApiLimit();
+                
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=TOP_GAINERS_LOSERS&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("TOP_GAINERS_LOSERS", null);
 
                 var response = await _client.GetAsync(endpoint);
@@ -3358,6 +3545,13 @@ namespace Quantra.DAL.Services
                 if (!string.IsNullOrWhiteSpace(symbol))
                 {
                     queryParams.Add($"symbol={Uri.EscapeDataString(symbol)}");
+                }
+
+                // Add entitlement parameter if configured
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    queryParams.Add(entitlementParam);
                 }
 
                 var endpoint = $"query?{string.Join("&", queryParams)}";
@@ -3746,6 +3940,13 @@ namespace Quantra.DAL.Services
                 // Use EARNINGS function which returns both historical and future earnings
                 // API: https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={key}
                 string url = $"query?function=EARNINGS&symbol={symbol}&apikey={_apiKey}";
+                
+                // Add entitlement parameter if configured
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    url += $"&{entitlementParam}";
+                }
 
                 await _apiSemaphore.WaitAsync();
                 try
@@ -3875,7 +4076,14 @@ namespace Quantra.DAL.Services
             {
                 await WaitForApiLimit();
                 
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=TREASURY_YIELD&interval={interval}&maturity={maturity}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("TREASURY_YIELD", $"{maturity},{interval}");
 
                 var response = await _client.GetAsync(endpoint);
@@ -3941,7 +4149,14 @@ namespace Quantra.DAL.Services
             {
                 await WaitForApiLimit();
                 
+                // Build endpoint with entitlement parameter if configured
                 var endpoint = $"query?function=FEDERAL_FUNDS_RATE&interval={interval}&apikey={_apiKey}";
+                var entitlementParam = GetEntitlementParameter();
+                if (!string.IsNullOrEmpty(entitlementParam))
+                {
+                    endpoint += $"&{entitlementParam}";
+                }
+                
                 await LogApiCall("FEDERAL_FUNDS_RATE", interval);
 
                 var response = await _client.GetAsync(endpoint);

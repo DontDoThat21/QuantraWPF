@@ -263,28 +263,46 @@
                                                      PasswordChanged="AlphaVantageApiKeyBox_PasswordChanged"/>
 									</Grid>
 
-									<Grid Margin="0,10,0,0">
-										<Grid.ColumnDefinitions>
-											<ColumnDefinition Width="Auto" MinWidth="200"/>
-											<ColumnDefinition Width="Auto"/>
-										</Grid.ColumnDefinitions>
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-										<TextBlock Text="Alpha Vantage API Plan:" VerticalAlignment="Center"
+                                        <TextBlock Text="Alpha Vantage API Plan:" VerticalAlignment="Center"
                                                    Foreground="White"/>
-										<ComboBox x:Name="AlphaVantageApiPlanComboBox" Grid.Column="1" Width="180"
+                                        <ComboBox x:Name="AlphaVantageApiPlanComboBox" Grid.Column="1" Width="180"
                                                   Style="{StaticResource EnhancedComboBoxStyle}"
                                                   Margin="10,0,0,0"
                                                   SelectionChanged="AlphaVantageApiPlanComboBox_SelectionChanged">
-											<ComboBoxItem Content="Free (5 calls/min)" Tag="5"/>
-											<ComboBoxItem Content="Standard (75 calls/min)" Tag="75" IsSelected="True"/>
-											<ComboBoxItem Content="Premium 150 (150 calls/min)" Tag="150"/>
-											<ComboBoxItem Content="Premium 300 (300 calls/min)" Tag="300"/>
-											<ComboBoxItem Content="Premium 600 (600 calls/min)" Tag="600"/>
-											<ComboBoxItem Content="Premium 1200 (1200 calls/min)" Tag="1200"/>
-										</ComboBox>
-									</Grid>
-								</StackPanel>
-							</materialDesign:Card>
+                                            <ComboBoxItem Content="Free (5 calls/min)" Tag="5"/>
+                                            <ComboBoxItem Content="Standard (75 calls/min)" Tag="75" IsSelected="True"/>
+                                            <ComboBoxItem Content="Premium 150 (150 calls/min)" Tag="150"/>
+                                            <ComboBoxItem Content="Premium 300 (300 calls/min)" Tag="300"/>
+                                            <ComboBoxItem Content="Premium 600 (600 calls/min)" Tag="600"/>
+                                            <ComboBoxItem Content="Premium 1200 (1200 calls/min)" Tag="1200"/>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="200"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Data Entitlement:" VerticalAlignment="Center"
+                                                   Foreground="White"/>
+                                        <ComboBox x:Name="AlphaVantageDataEntitlementComboBox" Grid.Column="1" Width="180"
+                                                  Style="{StaticResource EnhancedComboBoxStyle}"
+                                                  Margin="10,0,0,0"
+                                                  SelectionChanged="AlphaVantageDataEntitlementComboBox_SelectionChanged">
+                                            <ComboBoxItem Content="None" Tag="none" IsSelected="True"/>
+                                            <ComboBoxItem Content="Delayed (15-min)" Tag="delayed"/>
+                                            <ComboBoxItem Content="Realtime" Tag="realtime"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </materialDesign:Card>
 
 							<!-- Data Settings -->
 							<materialDesign:Card Grid.Row="2" Margin="0,0,0,15" Style="{StaticResource EnhancedContentCardStyle}">
