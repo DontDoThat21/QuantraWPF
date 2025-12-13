@@ -14,6 +14,7 @@ using Quantra.Enums;
 using Quantra.Views.StockExplorer;
 using Quantra.DAL.Enums;
 using Quantra.DAL.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Quantra.Controls
 {
@@ -1092,6 +1093,106 @@ namespace Quantra.Controls
                     
                 Mouse.OverrideCursor = null;
             }
+        }
+
+        // Calculate Metrics button click event handler
+        private async void CalculateMetricsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var confirmResult = CustomModal.ShowConfirmation(
+                    "This will calculate RSI, VWAP, and Market Cap for all cached symbols.\n\n" +
+                    "This may take some time depending on the number of symbols.\n\n" +
+                    "Do you want to continue?",
+                    "Calculate Metrics",
+                    Window.GetWindow(this));
+
+                if (!confirmResult)
+                {
+                    return;
+                }
+
+                if (CalculateMetricsButton != null)
+                    CalculateMetricsButton.IsEnabled = false;
+
+                if (ModeStatusPanel != null && ModeStatusText != null)
+                {
+                    ModeStatusPanel.Visibility = Visibility.Visible;
+                    ModeStatusText.Text = "Initializing metrics calculation...";
+                }
+
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var metricsService = App.ServiceProvider.GetService(typeof(StockMetricsCalculationService)) as StockMetricsCalculationService;
+                if (metricsService == null)
+                {
+                    CustomModal.ShowError("Metrics calculation service not available.", "Error", Window.GetWindow(this));
+                    return;
+                }
+
+                metricsService.ProgressChanged += OnMetricsProgressChanged;
+
+                SharedTitleBar.SetLoadAllHistoricalsActive(true, "Calculating: 0/0");
+
+                await Task.Run(async () => await metricsService.CalculateAllMetricsAsync());
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (ModeStatusText != null)
+                        ModeStatusText.Text = "Metrics calculation completed! Reloading grid...";
+                });
+
+                await Task.Delay(1000);
+
+                if (_viewModel != null)
+                {
+                    await _viewModel.LoadCachedStocksPageAsync(1);
+                }
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (ModeStatusText != null)
+                        ModeStatusText.Text = "Metrics calculation completed successfully!";
+                });
+
+                SharedTitleBar.SetLoadAllHistoricalsActive(false);
+                
+                (Application.Current.MainWindow as MainWindow)?.AppendAlert(
+                    "Metrics calculation completed successfully!", "positive");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Error calculating metrics", ex.ToString());
+                CustomModal.ShowError($"Error calculating metrics: {ex.Message}", "Error", Window.GetWindow(this));
+                
+                if (ModeStatusText != null)
+                    ModeStatusText.Text = "Error calculating metrics";
+                    
+                SharedTitleBar.SetLoadAllHistoricalsActive(false);
+            }
+            finally
+            {
+                if (CalculateMetricsButton != null)
+                    CalculateMetricsButton.IsEnabled = true;
+                    
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void OnMetricsProgressChanged(object sender, MetricsCalculationProgressEventArgs e)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (ModeStatusText != null)
+                {
+                    ModeStatusText.Text = $"Calculating metrics: {e.ProcessedSymbols}/{e.TotalSymbols} " +
+                                         $"({e.SuccessCount} success, {e.ErrorCount} errors) - {e.ProgressPercentage:F1}%";
+                }
+
+                SharedTitleBar.UpdateLoadAllHistoricalsCounter(
+                    e.TotalSymbols - e.ProcessedSymbols, 
+                    e.TotalSymbols);
+            });
         }
 
         /// <summary>

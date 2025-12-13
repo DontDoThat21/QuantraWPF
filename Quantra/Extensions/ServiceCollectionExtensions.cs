@@ -147,6 +147,32 @@ namespace Quantra.Extensions
                 return new StockExplorerDataService(dbContextFactory, loggingService);
             });
 
+            // Register StockMetricsCalculationService for pre-calculating indicators (RSI, VWAP, etc.)
+            services.AddSingleton<StockMetricsCalculationService>(sp =>
+            {
+                var dbContextFactory = sp.GetRequiredService<IDbContextFactory<QuantraDbContext>>();
+                var stockDataCacheService = sp.GetRequiredService<StockDataCacheService>();
+                var technicalIndicatorService = sp.GetRequiredService<TechnicalIndicatorService>();
+                var alphaVantageService = sp.GetRequiredService<AlphaVantageService>();
+                var stockExplorerDataService = sp.GetRequiredService<StockExplorerDataService>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new StockMetricsCalculationService(
+                    dbContextFactory,
+                    stockDataCacheService,
+                    technicalIndicatorService,
+                    alphaVantageService,
+                    stockExplorerDataService,
+                    loggingService);
+            });
+
+            // Register StockMetricsSchedulerService for scheduling metrics calculation
+            services.AddSingleton<StockMetricsSchedulerService>(sp =>
+            {
+                var metricsCalculationService = sp.GetRequiredService<StockMetricsCalculationService>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new StockMetricsSchedulerService(metricsCalculationService, loggingService);
+            });
+
             // Register custom ILogger from CrossCutting for services that need it
             services.AddSingleton<Quantra.CrossCutting.Logging.ILogger>(sp => 
                 Quantra.CrossCutting.Logging.Log.ForContext("DependencyInjection"));

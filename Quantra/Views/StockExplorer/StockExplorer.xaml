@@ -200,6 +200,15 @@ MinWidth="900" MinHeight="700">
                             Click="LoadAllHistoricalsButton_Click"
                             Style="{StaticResource EnhancedButtonStyle}"
                             ToolTip="Load historical data for all stocks in the grid using TIME_SERIES_DAILY_ADJUSTED API"/>
+
+                    <!-- Calculate Metrics Button (pre-calculate RSI, VWAP, MarketCap for all symbols) -->
+                    <Button x:Name="CalculateMetricsButton"
+                            Content="Calculate Metrics"
+                            Margin="0,0,5,0"
+                            Padding="10,5"
+                            Click="CalculateMetricsButton_Click"
+                            Style="{StaticResource EnhancedButtonStyle}"
+                            ToolTip="Pre-calculate RSI, VWAP, and Market Cap for all cached symbols"/>
                 </StackPanel>
 
                 <!-- Individual Asset Symbol Search Controls -->

@@ -605,20 +605,60 @@ namespace Quantra.DAL.Services
 
             try
             {
-                // Use Entity Framework Core with SQL Server
                 var optionsBuilder = new DbContextOptionsBuilder<QuantraDbContext>();
                 optionsBuilder.UseSqlServer(ConnectionHelper.ConnectionString);
 
                 using (var dbContext = new QuantraDbContext(optionsBuilder.Options))
                 {
-                    // Get count and paginated symbols in efficient queries
+                    totalCount = await dbContext.StockExplorerData.CountAsync().ConfigureAwait(false);
+
+                    var paginatedStocks = await dbContext.StockExplorerData
+                        .AsNoTracking()
+                        .OrderBy(s => s.Symbol)
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+
+                    if (paginatedStocks.Count > 0)
+                    {
+                        foreach (var stock in paginatedStocks)
+                        {
+                            stocks.Add(new QuoteData
+                            {
+                                Symbol = stock.Symbol,
+                                Name = stock.Name,
+                                Sector = stock.Sector,
+                                Price = stock.Price,
+                                Change = stock.Change,
+                                ChangePercent = stock.ChangePercent,
+                                DayHigh = stock.DayHigh,
+                                DayLow = stock.DayLow,
+                                MarketCap = stock.MarketCap,
+                                Volume = stock.Volume,
+                                RSI = stock.RSI,
+                                PERatio = stock.PERatio,
+                                VWAP = stock.VWAP,
+                                Date = stock.Date,
+                                Timestamp = stock.LastUpdated,
+                                LastUpdated = stock.LastUpdated,
+                                LastAccessed = DateTime.Now,
+                                CacheTime = stock.CacheTime
+                            });
+                        }
+
+                        _loggingService.Log("Info", $"Retrieved {stocks.Count} pre-calculated stocks from StockExplorerData table (page {page})");
+                        return (stocks, totalCount);
+                    }
+
+                    _loggingService.Log("Warning", "StockExplorerData table is empty, falling back to StockDataCache");
+
                     var distinctSymbols = dbContext.StockDataCache
                         .Select(c => c.Symbol)
                         .Distinct();
 
                     totalCount = await distinctSymbols.CountAsync().ConfigureAwait(false);
 
-                    // Apply pagination at database level
                     var paginatedSymbols = await distinctSymbols
                         .OrderBy(s => s)
                         .Skip((page - 1) * pageSize)
@@ -631,48 +671,39 @@ namespace Quantra.DAL.Services
                         return (stocks, totalCount);
                     }
 
-                    // Fetch latest cache entries for all paginated symbols
-                    // Get all entries for paginated symbols, then filter in memory to get latest per symbol
                     var allEntriesForSymbols = await dbContext.StockDataCache
                         .Where(c => paginatedSymbols.Contains(c.Symbol))
                         .ToListAsync()
                         .ConfigureAwait(false);
 
-                    // Group in memory and get the latest entry for each symbol
                     var latestEntries = allEntriesForSymbols
                         .GroupBy(c => c.Symbol)
                         .Select(g => g.OrderByDescending(c => c.CachedAt).First())
                         .ToList();
 
-                    // Get all symbols from latest entries to batch-load fundamental data
                     var symbolsList = latestEntries.Select(e => e.Symbol).ToList();
                     
-                    // Batch load P/E ratios from FundamentalDataCache for all symbols
                     var peRatios = await dbContext.FundamentalDataCache
                         .Where(f => symbolsList.Contains(f.Symbol) && f.DataType == "PERatio")
                         .ToListAsync()
                         .ConfigureAwait(false);
                     
-                    // Batch load EPS from FundamentalDataCache for all symbols
                     var epsValues = await dbContext.FundamentalDataCache
                         .Where(f => symbolsList.Contains(f.Symbol) && f.DataType == "EPS")
                         .ToListAsync()
                         .ConfigureAwait(false);
                     
-                    // Batch load Name and Sector from StockSymbols for all symbols
                     var stockSymbols = await dbContext.StockSymbols
                         .AsNoTracking()
                         .Where(s => symbolsList.Contains(s.Symbol))
                         .ToListAsync()
                         .ConfigureAwait(false);
                     
-                    // Create dictionaries for quick lookup
                     var peRatioDict = peRatios.ToDictionary(f => f.Symbol, f => f.Value ?? 0.0);
                     var epsDict = epsValues.ToDictionary(f => f.Symbol, f => f.Value);
                     var nameDict = stockSymbols.ToDictionary(s => s.Symbol, s => s.Name);
                     var sectorDict = stockSymbols.ToDictionary(s => s.Symbol, s => s.Sector);
 
-                    // Process entries to build QuoteData list
                     foreach (var entry in latestEntries)
                     {
                         if (entry == null) continue;
@@ -680,7 +711,6 @@ namespace Quantra.DAL.Services
                         var storedData = entry.Data;
                         string jsonData;
 
-                        // Check if data is compressed and decompress if needed
                         if (Quantra.Utilities.CompressionHelper.IsCompressed(storedData))
                         {
                             jsonData = Quantra.Utilities.CompressionHelper.DecompressString(storedData);
@@ -695,16 +725,9 @@ namespace Quantra.DAL.Services
                         {
                             var last = prices.Last();
                             
-                            // Get P/E ratio from cache if available
                             var peRatio = peRatioDict.ContainsKey(entry.Symbol) ? peRatioDict[entry.Symbol] : 0.0;
-                            
-                            // Get EPS from cache if available
                             var eps = epsDict.ContainsKey(entry.Symbol) ? epsDict[entry.Symbol] : null;
-                            
-                            // Get Name from cache if available
                             var name = nameDict.ContainsKey(entry.Symbol) ? nameDict[entry.Symbol] : null;
-                            
-                            // Get Sector from cache if available
                             var sector = sectorDict.ContainsKey(entry.Symbol) ? sectorDict[entry.Symbol] : null;
                             
                             stocks.Add(new QuoteData
@@ -714,7 +737,6 @@ namespace Quantra.DAL.Services
                                 Sector = sector,
                                 Price = last.Close,
                                 Timestamp = last.Date,
-                                // Other fields will be default values
                                 Change = 0,
                                 ChangePercent = 0,
                                 DayHigh = 0,
@@ -722,12 +744,12 @@ namespace Quantra.DAL.Services
                                 MarketCap = 0,
                                 Volume = 0,
                                 RSI = 0,
-                                PERatio = peRatio, // Set from FundamentalDataCache
-                                EPS = eps, // Set from FundamentalDataCache
+                                PERatio = peRatio,
+                                EPS = eps,
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
                                 LastAccessed = DateTime.Now,
-                                CacheTime = entry.CachedAt // Set from database cache timestamp
+                                CacheTime = entry.CachedAt
                             });
                         }
                     }
