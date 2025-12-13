@@ -406,6 +406,23 @@ MinWidth="900" MinHeight="700">
                             </DataTemplate>
                         </DataGridTextColumn.HeaderTemplate>
                     </DataGridTextColumn>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="Name" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="NameFilterTextBox"
+                                             Width="140"
+                                             Height="30"
+                                             Text="{Binding NameFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter stocks by company name"
+                                             VerticalContentAlignment="Center"
+                                             Margin="0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
+                    </DataGridTextColumn>
                     <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="100">
                         <DataGridTextColumn.HeaderTemplate>
                             <DataTemplate>
@@ -429,6 +446,20 @@ MinWidth="900" MinHeight="700">
                                              Text="{Binding PeRatioFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
                                              Style="{StaticResource EnhancedTextBoxStyle}"
                                              ToolTip="Filter: >10&amp;&lt;20 for greater than 10 AND less than 20"
+                                             VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="EPS" Binding="{Binding EPS, StringFormat={}{0:F2}}" Width="70">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="EPS" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <TextBox Width="70" Height="30"
+                                             Text="{Binding EpsFilterText, RelativeSource={RelativeSource AncestorType=UserControl}, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource EnhancedTextBoxStyle}"
+                                             ToolTip="Filter: >1&amp;&lt;10 for greater than 1 AND less than 10"
                                              VerticalContentAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>

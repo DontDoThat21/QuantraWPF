@@ -653,8 +653,15 @@ namespace Quantra.DAL.Services
                         .ToListAsync()
                         .ConfigureAwait(false);
                     
-                    // Create a dictionary for quick P/E ratio lookup
+                    // Batch load EPS from FundamentalDataCache for all symbols
+                    var epsValues = await dbContext.FundamentalDataCache
+                        .Where(f => symbolsList.Contains(f.Symbol) && f.DataType == "EPS")
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    
+                    // Create dictionaries for quick lookup
                     var peRatioDict = peRatios.ToDictionary(f => f.Symbol, f => f.Value ?? 0.0);
+                    var epsDict = epsValues.ToDictionary(f => f.Symbol, f => f.Value);
 
                     // Process entries to build QuoteData list
                     foreach (var entry in latestEntries)
@@ -682,6 +689,9 @@ namespace Quantra.DAL.Services
                             // Get P/E ratio from cache if available
                             var peRatio = peRatioDict.ContainsKey(entry.Symbol) ? peRatioDict[entry.Symbol] : 0.0;
                             
+                            // Get EPS from cache if available
+                            var eps = epsDict.ContainsKey(entry.Symbol) ? epsDict[entry.Symbol] : null;
+                            
                             stocks.Add(new QuoteData
                             {
                                 Symbol = entry.Symbol,
@@ -696,6 +706,7 @@ namespace Quantra.DAL.Services
                                 Volume = 0,
                                 RSI = 0,
                                 PERatio = peRatio, // Set from FundamentalDataCache
+                                EPS = eps, // Set from FundamentalDataCache
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
                                 LastAccessed = DateTime.Now,
@@ -796,6 +807,12 @@ namespace Quantra.DAL.Services
                                 .Select(f => f.Value)
                                 .FirstOrDefault() ?? 0.0;
                             
+                            // Get EPS from FundamentalDataCache if available
+                            var eps = dbContext.FundamentalDataCache
+                                .Where(f => f.Symbol == symbol && f.DataType == "EPS")
+                                .Select(f => f.Value)
+                                .FirstOrDefault();
+                            
                             return new QuoteData
                             {
                                 Symbol = symbol,
@@ -810,6 +827,7 @@ namespace Quantra.DAL.Services
                                 Volume = 0,
                                 RSI = 0,
                                 PERatio = peRatio, // Set from FundamentalDataCache
+                                EPS = eps, // Set from FundamentalDataCache
                                 Date = last.Date,
                                 LastUpdated = DateTime.Now,
                                 LastAccessed = DateTime.Now,

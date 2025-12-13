@@ -41,7 +41,8 @@ namespace Quantra
         private EmailService _emailService;
         private RealTimeInferenceService _inferenceService;
         private PredictionCacheService _predictionCacheService;
-        
+        private StockExplorerDataService _stockExplorerDataService;
+
         // Sentiment analysis services (for DI into PredictionAnalysisControl)
         private TwitterSentimentService _twitterSentimentService;
         private FinancialNewsSentimentService _financialNewsSentimentService;
@@ -613,6 +614,7 @@ namespace Quantra
                             "Backtest Chart" => CreateBacktestingCard(), // Accept alias
                             "Market Chat" => CreateMarketChatCard(),
                             "Spreads Explorer" => CreateSpreadsExplorerCard(),
+                            "Options Explorer" => CreateOptionsExplorerCard(),
                             "Company Overview" => CreateCompanyOverviewCard(),
                             "Cash Flow" => CreateCashFlowCard(),
                             "Earnings" => CreateEarningsCard(),
@@ -653,7 +655,6 @@ namespace Quantra
 
             return controls;
         }
-
         private UIElement CreateSymbolChartsCard()
         {
             try
@@ -667,7 +668,8 @@ namespace Quantra
                     _alphaVantageService,
                     _inferenceService,
                     _predictionCacheService,
-                    _stockSymbolCacheService);
+                    _stockSymbolCacheService,
+                    _stockExplorerDataService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 symbolChartControl.Width = double.NaN; // Auto width
@@ -1129,6 +1131,61 @@ namespace Quantra
                 errorPanel.Children.Add(new TextBlock
                 {
                     Text = "Error: Could not load Spreads Explorer",
+                    Foreground = Brushes.Red,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = ex.Message,
+                    Foreground = Brushes.White,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(10),
+                    HorizontalAlignment = HorizontalAlignment.Center
+                });
+                return errorPanel;
+            }
+        }
+
+        private UIElement CreateOptionsExplorerCard()
+        {
+            try
+            {
+                // Create a new instance of OptionsExplorer control using DI
+                var optionsExplorerControl = new Views.OptionsExplorer.OptionsExplorer();
+
+                // Ensure the control has proper sizing and stretching behavior
+                optionsExplorerControl.Width = double.NaN; // Auto width
+                optionsExplorerControl.Height = double.NaN; // Auto height
+                optionsExplorerControl.HorizontalAlignment = HorizontalAlignment.Stretch;
+                optionsExplorerControl.VerticalAlignment = VerticalAlignment.Stretch;
+                optionsExplorerControl.MinWidth = 800;
+                optionsExplorerControl.MinHeight = 600;
+
+                // Force layout calculation to ensure control is properly sized
+                optionsExplorerControl.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                optionsExplorerControl.Arrange(new Rect(0, 0, optionsExplorerControl.DesiredSize.Width, optionsExplorerControl.DesiredSize.Height));
+                optionsExplorerControl.UpdateLayout();
+
+                // Log success
+                //DatabaseMonolith.Log("Info", "Successfully created OptionsExplorerControl");
+
+                // Return the control
+                return optionsExplorerControl;
+            }
+            catch (Exception ex)
+            {
+                // Log error and create fallback content
+                //DatabaseMonolith.Log("Error", "Failed to create OptionsExplorerControl", ex.ToString());
+
+                // Create a simple error display as fallback
+                var errorPanel = new StackPanel();
+                errorPanel.Children.Add(new TextBlock
+                {
+                    Text = "Error: Could not load Options Explorer",
                     Foreground = Brushes.Red,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
@@ -2120,6 +2177,7 @@ namespace Quantra
                     "Backtest Chart" => CreateBacktestingCard(), // Accept alias
                     "Market Chat" => CreateMarketChatCard(),
                     "Spreads Explorer" => CreateSpreadsExplorerCard(),
+                    "Options Explorer" => CreateOptionsExplorerCard(),
                     "Company Overview" => CreateCompanyOverviewCard(),
                     "Cash Flow" => CreateCashFlowCard(),
                     "Earnings" => CreateEarningsCard(),

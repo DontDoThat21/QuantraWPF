@@ -21,20 +21,23 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Gets all tabs ordered by TabOrder
+        /// Gets all tabs for the current user ordered by TabOrder
         /// </summary>
         public List<(string TabName, int TabOrder)> GetTabs()
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabs = _dbContext.UserAppSettings
                     .AsNoTracking()
+                    .Where(t => t.UserId == currentUserId)
                     .OrderBy(t => t.TabOrder)
                     .Select(t => new { t.TabName, t.TabOrder })
                     .ToList()
                     .Select(t => (t.TabName, t.TabOrder))
                     .ToList();
-                    
+
                 return tabs;
             }
             catch (Exception ex)
@@ -45,18 +48,21 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Gets all tabs ordered by TabOrder (async version)
+        /// Gets all tabs for the current user ordered by TabOrder (async version)
         /// </summary>
         public async Task<List<(string TabName, int TabOrder)>> GetTabsAsync()
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabs = await _dbContext.UserAppSettings
                     .AsNoTracking()
+                    .Where(t => t.UserId == currentUserId)
                     .OrderBy(t => t.TabOrder)
                     .Select(t => new { t.TabName, t.TabOrder })
                     .ToListAsync();
-                    
+
                 return tabs.Select(t => (t.TabName, t.TabOrder)).ToList();
             }
             catch (Exception ex)
@@ -67,14 +73,17 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Inserts a new tab with specified grid dimensions
+        /// Inserts a new tab with specified grid dimensions for the current user
         /// </summary>
         public void InsertTab(string tabName, int tabOrder, int rows, int columns)
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabSetting = new UserAppSetting
                 {
+                    UserId = currentUserId,
                     TabName = tabName,
                     TabOrder = tabOrder,
                     GridRows = rows,
@@ -92,14 +101,17 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Inserts a new tab with specified grid dimensions (async version)
+        /// Inserts a new tab with specified grid dimensions for the current user (async version)
         /// </summary>
         public async Task InsertTabAsync(string tabName, int tabOrder, int rows, int columns)
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabSetting = new UserAppSetting
                 {
+                    UserId = currentUserId,
                     TabName = tabName,
                     TabOrder = tabOrder,
                     GridRows = rows,
@@ -117,14 +129,16 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Updates the name of a tab
+        /// Updates the name of a tab for the current user
         /// </summary>
         public void UpdateTabName(string oldTabName, string newTabName)
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabSetting = _dbContext.UserAppSettings
-                    .FirstOrDefault(t => t.TabName == oldTabName);
+                    .FirstOrDefault(t => t.TabName == oldTabName && t.UserId == currentUserId);
 
                 if (tabSetting != null)
                 {
@@ -171,14 +185,16 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Deletes a tab by name
+        /// Deletes a tab by name for the current user
         /// </summary>
         public void DeleteTab(string tabName)
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabSetting = _dbContext.UserAppSettings
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (tabSetting != null)
                 {
@@ -225,14 +241,16 @@ namespace Quantra.Repositories
         }
 
         /// <summary>
-        /// Updates the order of a tab
+        /// Updates the order of a tab for the current user
         /// </summary>
         public void UpdateTabOrder(string tabName, int tabOrder)
         {
             try
             {
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                 var tabSetting = _dbContext.UserAppSettings
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (tabSetting != null)
                 {

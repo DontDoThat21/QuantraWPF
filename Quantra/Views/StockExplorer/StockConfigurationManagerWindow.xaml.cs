@@ -140,6 +140,16 @@ namespace Quantra.Views.StockExplorer
             }
         }
 
+        private void ConfigurationsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // Only process if a configuration is actually selected
+            if (_selectedConfiguration != null)
+            {
+                // Call the same logic as the Select & Load button
+                SelectButton_Click(sender, new RoutedEventArgs());
+            }
+        }
+
         private void NewButton_Click(object sender, RoutedEventArgs e)
         {
             ConfigurationsListBox.SelectedItem = null;

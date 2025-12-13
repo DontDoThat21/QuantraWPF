@@ -95,7 +95,8 @@
                                  Foreground="White"
                                  BorderThickness="0"
                                  Margin="5"
-                                 SelectionChanged="ConfigurationsListBox_SelectionChanged">
+                                 SelectionChanged="ConfigurationsListBox_SelectionChanged"
+                                 MouseDoubleClick="ConfigurationsListBox_MouseDoubleClick">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Vertical" Margin="5">

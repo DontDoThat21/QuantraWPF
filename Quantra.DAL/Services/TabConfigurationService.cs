@@ -20,7 +20,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Loads controls configuration for a specific tab
+        /// Loads controls configuration for a specific tab for the current user
         /// </summary>
         /// <param name="tabName">The name of the tab</param>
         /// <returns>The controls configuration string, or empty string if not found</returns>
@@ -28,10 +28,12 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Query the UserAppSettings table for the tab
+                var currentUserId = AuthenticationService.CurrentUserId;
+
+                // Query the UserAppSettings table for the tab belonging to the current user
                 var tabConfig = _dbContext.UserAppSettings
                     .AsNoTracking()
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (tabConfig != null && !string.IsNullOrWhiteSpace(tabConfig.ControlsConfig))
                 {
@@ -49,7 +51,7 @@ namespace Quantra.DAL.Services
         }
 
         /// <summary>
-        /// Saves controls configuration for a specific tab
+        /// Saves controls configuration for a specific tab for the current user
         /// </summary>
         /// <param name="tabName">The name of the tab</param>
         /// <param name="controlsConfig">The controls configuration string</param>
@@ -57,20 +59,23 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                // Find or create tab configuration
+                var currentUserId = AuthenticationService.CurrentUserId;
+
+                // Find or create tab configuration for current user
                 var tabConfig = _dbContext.UserAppSettings
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (tabConfig == null)
                 {
                     // Create new tab configuration
                     tabConfig = new Data.Entities.UserAppSetting
                     {
+                        UserId = currentUserId,
                         TabName = tabName,
                         ControlsConfig = controlsConfig,
                         GridRows = 4, // Default
                         GridColumns = 4, // Default
-                        TabOrder = _dbContext.UserAppSettings.Count()
+                        TabOrder = _dbContext.UserAppSettings.Count(t => t.UserId == currentUserId)
                     };
                     _dbContext.UserAppSettings.Add(tabConfig);
                 }

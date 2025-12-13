@@ -41,6 +41,7 @@ namespace Quantra.Controls
         private readonly StockExplorerViewModel _viewModel;
         private readonly StockDataCacheService _cacheService;
         private readonly SavedFilterService _savedFilterService;
+        private readonly StockExplorerDataService _stockExplorerDataService;
 
         // Sentiment Analysis Services
         private readonly OpenAISentimentService _openAISentimentService;
@@ -127,6 +128,27 @@ namespace Quantra.Controls
             }
         }
 
+        // Name filter text for DataGrid filtering
+        private string _nameFilterText = "";
+        public string NameFilterText
+        {
+            get => _nameFilterText;
+            set
+            {
+                if (_nameFilterText != value)
+                {
+                    _nameFilterText = value;
+                    OnPropertyChanged(nameof(NameFilterText));
+                    // Update filtering state based on whether filter text is present
+                    IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(SymbolFilterText) ||
+                                 !string.IsNullOrWhiteSpace(PriceFilterText) || !string.IsNullOrWhiteSpace(VwapFilterText) ||
+                                 !string.IsNullOrWhiteSpace(PeRatioFilterText) || !string.IsNullOrWhiteSpace(RsiFilterText) ||
+                                 !string.IsNullOrWhiteSpace(ChangePercentFilterText) || !string.IsNullOrWhiteSpace(MarketCapFilterText);
+                    _ = ApplyNameFilterAsync();
+                }
+            }
+        }
+
         // Price filter property for DataGrid filtering
         private string _priceFilterText = "";
         public string PriceFilterText
@@ -140,9 +162,9 @@ namespace Quantra.Controls
                     OnPropertyChanged(nameof(PriceFilterText));
                     // Update filtering state
                     IsFiltering = !string.IsNullOrWhiteSpace(value) || !string.IsNullOrWhiteSpace(SymbolFilterText) ||
-                                 !string.IsNullOrWhiteSpace(VwapFilterText) || !string.IsNullOrWhiteSpace(PeRatioFilterText) ||
-                                 !string.IsNullOrWhiteSpace(RsiFilterText) || !string.IsNullOrWhiteSpace(ChangePercentFilterText) ||
-                                 !string.IsNullOrWhiteSpace(MarketCapFilterText);
+                                 !string.IsNullOrWhiteSpace(NameFilterText) || !string.IsNullOrWhiteSpace(VwapFilterText) ||
+                                 !string.IsNullOrWhiteSpace(PeRatioFilterText) || !string.IsNullOrWhiteSpace(RsiFilterText) ||
+                                 !string.IsNullOrWhiteSpace(ChangePercentFilterText) || !string.IsNullOrWhiteSpace(MarketCapFilterText);
                     _ = ApplyPriceFilterAsync();
                 }
             }
@@ -176,6 +198,23 @@ namespace Quantra.Controls
                 {
                     _peRatioFilterText = value;
                     OnPropertyChanged(nameof(PeRatioFilterText));
+                    UpdateFilteringState();
+                    _ = ApplyNumericFilterAsync();
+                }
+            }
+        }
+
+        // Filter properties for EPS
+        private string _epsFilterText = "";
+        public string EpsFilterText
+        {
+            get => _epsFilterText;
+            set
+            {
+                if (_epsFilterText != value)
+                {
+                    _epsFilterText = value;
+                    OnPropertyChanged(nameof(EpsFilterText));
                     UpdateFilteringState();
                     _ = ApplyNumericFilterAsync();
                 }
@@ -790,11 +829,12 @@ namespace Quantra.Controls
         public StockExplorer(StockDataCacheService stockDataCacheService,
                             UserSettingsService userSettingsService, LoggingService loggingService,
                             AlphaVantageService alphaVantageService, RealTimeInferenceService inferenceService,
-                            PredictionCacheService predictionCacheService, StockSymbolCacheService stockSymbolCacheService)
+                            PredictionCacheService predictionCacheService, StockSymbolCacheService stockSymbolCacheService,
+                            StockExplorerDataService stockExplorerDataService)
         {
             // Generate stable instance identifier for DataGrid settings persistence
             _instanceId = Guid.NewGuid().ToString();
-            
+
             InitializeComponent();
             _viewModel = new StockExplorerViewModel(stockDataCacheService, alphaVantageService, inferenceService, predictionCacheService);
             _cacheService = stockDataCacheService;
@@ -802,6 +842,7 @@ namespace Quantra.Controls
             _stockSymbolCacheService = stockSymbolCacheService ?? throw new ArgumentNullException(nameof(stockSymbolCacheService));
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
             _stockConfigurationService = new StockConfigurationService(loggingService);
+            _stockExplorerDataService = stockExplorerDataService ?? throw new ArgumentNullException(nameof(stockExplorerDataService));
 
             // Initialize the _userSettingsService field (defined in DataGrid.cs partial class)
             _userSettingsService = userSettingsService ?? throw new ArgumentNullException(nameof(userSettingsService));
@@ -1035,6 +1076,20 @@ namespace Quantra.Controls
                     {
                         _viewModel.CachedStocks.Add(stock);
                     }
+                }
+
+                // Save loaded stock data to StockExplorerData table in batch
+                try
+                {
+                    if (stockList != null && stockList.Any())
+                    {
+                        await _stockExplorerDataService.SaveStockDataBatchAsync(stockList);
+                        _loggingService?.Log("Info", $"Saved {stockList.Count} stocks to StockExplorerData table for mode {mode}");
+                    }
+                }
+                catch (Exception saveEx)
+                {
+                    _loggingService?.Log("Warning", $"Failed to save stocks to StockExplorerData table", saveEx.ToString());
                 }
             }
             catch (Exception ex)
@@ -1427,6 +1482,9 @@ namespace Quantra.Controls
                             try
                             {
                                 await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                                
+                                // Save loaded stock data to StockExplorerData table
+                                await _stockExplorerDataService.SaveStockDataFromQuoteAsync(quoteData).ConfigureAwait(false);
                             }
                             catch (Exception cacheEx)
                             {
@@ -1515,6 +1573,9 @@ namespace Quantra.Controls
                             try
                             {
                                 await _cacheService.CacheQuoteDataAsync(quoteData).ConfigureAwait(false);
+                                
+                                // Save refreshed stock data to StockExplorerData table
+                                await _stockExplorerDataService.SaveStockDataFromQuoteAsync(quoteData).ConfigureAwait(false);
                             }
                             catch (Exception cacheEx)
                             {
@@ -4095,15 +4156,118 @@ namespace Quantra.Controls
             }
         }
 
+        private async System.Threading.Tasks.Task ApplyNameFilterAsync()
+        {
+            if (string.IsNullOrWhiteSpace(NameFilterText))
+            {
+                // Clear filtering state
+                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) || !string.IsNullOrWhiteSpace(PriceFilterText);
+                
+                // Remove filter if text is empty - restore current page
+                if (_viewModel != null && _viewModel.CurrentPage > 0)
+                {
+                    await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
+                }
+                return;
+            }
+
+            // Set filtering state
+            IsFiltering = true;
+
+            // Search the entire StockExplorerData table for matching name
+            if (_viewModel == null || _stockExplorerDataService == null)
+                return;
+
+            try
+            {
+                _viewModel.IsLoading = true;
+                
+                // Search database for stocks matching the filter text
+                await System.Threading.Tasks.Task.Run(async () =>
+                {
+                    using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options);
+
+                    // Query StockExplorerData table for matching names
+                    var matchingStocks = await context.StockExplorerData
+                        .Where(c => c.Name.Contains(NameFilterText))
+                        .OrderBy(s => s.Symbol)
+                        .ToListAsync();
+
+                    if (matchingStocks.Any())
+                    {
+                        // Convert entities to QuoteData objects
+                        var quoteDataList = new List<QuoteData>();
+                        foreach (var stockEntity in matchingStocks)
+                        {
+                            var quoteData = new QuoteData
+                            {
+                                Symbol = stockEntity.Symbol,
+                                Name = stockEntity.Name,
+                                Price = stockEntity.Price,
+                                Change = stockEntity.Change,
+                                ChangePercent = stockEntity.ChangePercent,
+                                DayHigh = stockEntity.DayHigh,
+                                DayLow = stockEntity.DayLow,
+                                MarketCap = stockEntity.MarketCap,
+                                Volume = stockEntity.Volume,
+                                Sector = stockEntity.Sector,
+                                RSI = stockEntity.RSI,
+                                PERatio = stockEntity.PERatio,
+                                VWAP = stockEntity.VWAP,
+                                Date = stockEntity.Date,
+                                LastUpdated = stockEntity.LastUpdated,
+                                LastAccessed = stockEntity.LastAccessed,
+                                Timestamp = stockEntity.Timestamp,
+                                CacheTime = stockEntity.CacheTime
+                            };
+                            quoteDataList.Add(quoteData);
+                        }
+
+                        // Update UI on UI thread
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                            foreach (var stock in quoteDataList)
+                            {
+                                _viewModel.CachedStocks.Add(stock);
+                            }
+                            
+                            // Don't update pagination when filtering - keep the filter results
+                        });
+                    }
+                    else
+                    {
+                        // No matches found - clear the grid
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                        });
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", $"Error applying name filter for '{NameFilterText}'", ex.ToString());
+            }
+            finally
+            {
+                _viewModel.IsLoading = false;
+            }
+        }
+
         /// <summary>
         /// Helper method to update filtering state based on all active filters
         /// </summary>
         private void UpdateFilteringState()
         {
             IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) ||
+                         !string.IsNullOrWhiteSpace(NameFilterText) ||
                          !string.IsNullOrWhiteSpace(PriceFilterText) ||
                          !string.IsNullOrWhiteSpace(VwapFilterText) ||
                          !string.IsNullOrWhiteSpace(PeRatioFilterText) ||
+                         !string.IsNullOrWhiteSpace(EpsFilterText) ||
                          !string.IsNullOrWhiteSpace(RsiFilterText) ||
                          !string.IsNullOrWhiteSpace(ChangePercentFilterText) ||
                          !string.IsNullOrWhiteSpace(MarketCapFilterText);
@@ -4204,7 +4368,7 @@ namespace Quantra.Controls
         }
 
         /// <summary>
-        /// Applies all numeric filters (VWAP, P/E, RSI, % Change, Market Cap, Price)
+        /// Applies all numeric filters (VWAP, P/E, EPS, RSI, % Change, Market Cap, Price)
         /// Supports comparison operators: >, <, >=, <=, or plain numeric values
         /// Supports multiple conditions combined with & (AND operator)
         /// </summary>
@@ -4214,6 +4378,7 @@ namespace Quantra.Controls
             var priceFilter = ParseNumericFilter(PriceFilterText);
             var vwapFilter = ParseNumericFilter(VwapFilterText);
             var peRatioFilter = ParseNumericFilter(PeRatioFilterText);
+            var epsFilter = ParseNumericFilter(EpsFilterText);
             var rsiFilter = ParseNumericFilter(RsiFilterText);
             var changePercentFilter = ParseNumericFilter(ChangePercentFilterText);
             var marketCapFilter = ParseNumericFilter(MarketCapFilterText);
@@ -4221,11 +4386,13 @@ namespace Quantra.Controls
             // Check if all filters are empty
             if (string.IsNullOrWhiteSpace(VwapFilterText) &&
                 string.IsNullOrWhiteSpace(PeRatioFilterText) &&
+                string.IsNullOrWhiteSpace(EpsFilterText) &&
                 string.IsNullOrWhiteSpace(RsiFilterText) &&
                 string.IsNullOrWhiteSpace(ChangePercentFilterText) &&
                 string.IsNullOrWhiteSpace(MarketCapFilterText) &&
                 string.IsNullOrWhiteSpace(PriceFilterText) &&
-                string.IsNullOrWhiteSpace(SymbolFilterText))
+                string.IsNullOrWhiteSpace(SymbolFilterText) &&
+                string.IsNullOrWhiteSpace(NameFilterText))
             {
                 UpdateFilteringState();
 
@@ -4285,6 +4452,12 @@ namespace Quantra.Controls
                                 passesFilter = EvaluateNumericFilter(stock.PERatio, peRatioFilter);
                             }
 
+                            // Apply EPS filter
+                            if (passesFilter && epsFilter != null && stock.EPS.HasValue)
+                            {
+                                passesFilter = EvaluateNumericFilter(stock.EPS.Value, epsFilter);
+                            }
+
                             // Apply RSI filter
                             if (passesFilter && rsiFilter != null)
                             {
@@ -4307,6 +4480,13 @@ namespace Quantra.Controls
                             if (passesFilter && !string.IsNullOrWhiteSpace(SymbolFilterText))
                             {
                                 passesFilter = stock.Symbol.Contains(SymbolFilterText.ToUpper(), StringComparison.OrdinalIgnoreCase);
+                            }
+
+                            // Apply name filter if specified
+                            if (passesFilter && !string.IsNullOrWhiteSpace(NameFilterText))
+                            {
+                                passesFilter = !string.IsNullOrEmpty(stock.Name) && 
+                                             stock.Name.Contains(NameFilterText, StringComparison.OrdinalIgnoreCase);
                             }
 
                             if (passesFilter)

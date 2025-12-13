@@ -284,12 +284,13 @@ namespace Quantra.DAL.Services
                             quoteData.PERatio = 0; // Default value if P/E fetch fails
                         }
 
-                        // Fetch Sector and Market Cap from OVERVIEW API
+                        // Fetch Name, Sector and Market Cap from OVERVIEW API
                         try
                         {
                             var companyOverview = await GetCompanyOverviewAsync(quoteData.Symbol);
                             if (companyOverview != null)
                             {
+                                quoteData.Name = companyOverview.Name ?? quoteData.Name;
                                 quoteData.Sector = companyOverview.Sector;
                                 quoteData.MarketCap = (double)(companyOverview.MarketCapitalization ?? 0);
                             }
@@ -298,6 +299,16 @@ namespace Quantra.DAL.Services
                         {
                             quoteData.Sector = "N/A";
                             quoteData.MarketCap = 0; // Default value if OVERVIEW fetch fails
+                        }
+
+                        // Calculate VWAP from historical data
+                        try
+                        {
+                            quoteData.VWAP = await GetVWAP(quoteData.Symbol);
+                        }
+                        catch
+                        {
+                            quoteData.VWAP = 0; // Default value if VWAP calculation fails
                         }
 
                         return quoteData;
@@ -2677,6 +2688,12 @@ namespace Quantra.DAL.Services
                     lock (_companyOverviewCacheLock)
                     {
                         _companyOverviewCache[symbol.ToUpperInvariant()] = (overview, DateTime.Now);
+                    }
+
+                    // Cache EPS in FundamentalDataCache if available
+                    if (overview.EPS.HasValue)
+                    {
+                        CacheFundamentalData(symbol, "EPS", (double)overview.EPS.Value);
                     }
 
                     _loggingService.Log("Info", $"Retrieved and cached company overview for {symbol}");

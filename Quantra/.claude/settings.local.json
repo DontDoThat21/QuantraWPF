@@ -11,7 +11,10 @@
       "Bash(grep:*)",
       "Bash(dotnet ef migrations add:*)",
       "Bash(dotnet tool install:*)",
-      "Bash(sqlcmd:*)"
+      "Bash(sqlcmd:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:www.alphavantage.co)",
+      "Bash(dotnet ef migrations:*)"
     ],
     "deny": [],
     "ask": []

@@ -139,6 +139,14 @@ namespace Quantra.Extensions
                 return new StockConfigurationService(loggingService);
             });
 
+            // Register StockExplorerDataService for managing stock data displayed in StockExplorer view
+            services.AddSingleton<StockExplorerDataService>(sp =>
+            {
+                var dbContextFactory = sp.GetRequiredService<IDbContextFactory<QuantraDbContext>>();
+                var loggingService = sp.GetRequiredService<LoggingService>();
+                return new StockExplorerDataService(dbContextFactory, loggingService);
+            });
+
             // Register custom ILogger from CrossCutting for services that need it
             services.AddSingleton<Quantra.CrossCutting.Logging.ILogger>(sp => 
                 Quantra.CrossCutting.Logging.Log.ForContext("DependencyInjection"));
@@ -351,6 +359,7 @@ namespace Quantra.Extensions
 
             // Register Views
             services.AddTransient<PredictionAnalysis>();
+            services.AddTransient<Quantra.Views.OptionsExplorer.OptionsExplorer>();
 
             return services;
         }

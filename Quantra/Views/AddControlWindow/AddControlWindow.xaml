@@ -205,6 +205,13 @@
                                                 <TextBlock Text="Stock Explorer V2"/>
                                             </StackPanel>
                                         </ComboBoxItem>
+                                        <!-- Add Options Explorer control option -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="SwapVertical" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <TextBlock Text="Options Explorer"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </materialDesign:Card>

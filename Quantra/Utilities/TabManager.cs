@@ -275,10 +275,12 @@ namespace Quantra.Utilities
         {
             try
             {
-                // Check if tab already exists
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
+                // Check if tab already exists for current user
                 var existingTab = _dbContext.UserAppSettings
                     .AsNoTracking()
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (existingTab == null)
                 {
@@ -310,10 +312,12 @@ namespace Quantra.Utilities
         {
             try
             {
-                // Check if tab already exists
+                var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
+                // Check if tab already exists for current user
                 var existingTab = _dbContext.UserAppSettings
                     .AsNoTracking()
-                    .FirstOrDefault(t => t.TabName == tabName);
+                    .FirstOrDefault(t => t.TabName == tabName && t.UserId == currentUserId);
 
                 if (existingTab == null)
                 {
@@ -359,12 +363,14 @@ namespace Quantra.Utilities
             {
                 try
                 {
+                    var currentUserId = Quantra.DAL.Services.AuthenticationService.CurrentUserId;
+
                     // Update the tab name in the UI
                     tabItem.Header = newTabName;
 
-                    // Find the existing tab configuration
+                    // Find the existing tab configuration for current user
                     var tabConfig = _dbContext.UserAppSettings
-                        .FirstOrDefault(t => t.TabName == oldTabName);
+                        .FirstOrDefault(t => t.TabName == oldTabName && t.UserId == currentUserId);
 
                     if (tabConfig != null)
                     {

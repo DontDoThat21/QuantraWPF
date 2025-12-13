@@ -36,6 +36,11 @@ namespace Quantra.DAL.Data.Entities
         [Key]
         public int Id { get; set; }
 
+        /// <summary>
+        /// Foreign key to UserCredentials table - identifies which user owns this tab
+        /// </summary>
+        public int? UserId { get; set; }
+
         [Required]
         [MaxLength(200)]
         public string TabName { get; set; }
@@ -200,37 +205,37 @@ namespace Quantra.DAL.Data.Entities
         public DateTime LastUpdated { get; set; }
     }
 
-    /// <summary>
-    /// Entity representing a predefined stock configuration for batch loading historical data
-    /// </summary>
-    [Table("StockConfigurations")]
-    public class StockConfigurationEntity
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        [MaxLength(100)]
-        public string Name { get; set; }
-
-        [MaxLength(500)]
-        public string Description { get; set; }
-
         /// <summary>
-        /// JSON array of stock symbols in this configuration
+        /// Entity representing a predefined stock configuration for batch loading historical data
         /// </summary>
-        [Required]
-        [MaxLength]
-        public string Symbols { get; set; }
+        [Table("StockConfigurations")]
+        public class StockConfigurationEntity
+        {
+            [Key]
+            public int Id { get; set; }
 
-        [Required]
-        public DateTime CreatedAt { get; set; }
+            [Required]
+            [MaxLength(100)]
+            public string Name { get; set; }
 
-        public DateTime? LastUsed { get; set; }
+            [MaxLength(500)]
+            public string Description { get; set; }
 
-        /// <summary>
-        /// Whether this is the default configuration
-        /// </summary>
-        public bool IsDefault { get; set; }
+            /// <summary>
+            /// JSON array of stock symbols in this configuration
+            /// </summary>
+            [Required]
+            [MaxLength]
+            public string Symbols { get; set; }
+
+            [Required]
+            public DateTime CreatedAt { get; set; }
+
+            public DateTime? LastUsed { get; set; }
+
+            /// <summary>
+            /// Whether this is the default configuration
+            /// </summary>
+            public bool IsDefault { get; set; }
+        }
     }
-}

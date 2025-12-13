@@ -36,6 +36,7 @@ namespace Quantra
         public double RSI { get; set; }
         public double PERatio { get; set; }
         public double VWAP { get; set; }
+        public double? EPS { get; set; }
 
         // Date/time info
         public DateTime Date { get; set; }

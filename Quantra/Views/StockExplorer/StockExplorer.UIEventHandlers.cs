@@ -1772,40 +1772,56 @@ namespace Quantra.Controls
                         {
                             try
                             {
-                                // Get quote data to recalculate indicators from OHLCV
+                                // Get quote data - this already fetches RSI, VWAP, P/E, Name, Sector, MarketCap
                                 var quoteData = await _alphaVantageService.GetQuoteDataAsync(stock.Symbol);
-                                
+
                                 if (quoteData != null)
                                 {
-                                    // Update core quote data
+                                    // Update core quote data from GLOBAL_QUOTE API
                                     stock.Price = quoteData.Price;
                                     stock.Volume = quoteData.Volume;
                                     stock.DayHigh = quoteData.DayHigh;
                                     stock.DayLow = quoteData.DayLow;
                                     stock.ChangePercent = quoteData.ChangePercent;
                                     stock.Change = quoteData.Change;
-                                    
-                                    // Reload calculated indicators for grid display
-                                    var rsi = await _alphaVantageService.GetRSI(stock.Symbol);
-                                    stock.RSI = rsi;
-                                    
-                                    // Reload VWAP
-                                    var vwap = await _alphaVantageService.GetVWAP(stock.Symbol);
-                                    stock.VWAP = vwap;
-                                    
-                                    // Reload P/E Ratio (if available)
-                                    var peRatio = await _alphaVantageService.GetPERatioAsync(stock.Symbol);
-                                    stock.PERatio = peRatio ?? stock.PERatio;
-                                    
+
+                                    // Use RSI from quoteData (already fetched in GetQuoteDataAsync)
+                                    stock.RSI = quoteData.RSI;
+
+                                    // Use VWAP from quoteData (already calculated in GetQuoteDataAsync)
+                                    stock.VWAP = quoteData.VWAP;
+
+                                    // Use P/E Ratio from quoteData (already fetched in GetQuoteDataAsync)
+                                    stock.PERatio = quoteData.PERatio;
+
+                                    // Use Name, Sector, MarketCap from quoteData (already fetched from OVERVIEW API)
+                                    if (!string.IsNullOrEmpty(quoteData.Name))
+                                    {
+                                        stock.Name = quoteData.Name;
+                                    }
+                                    if (!string.IsNullOrEmpty(quoteData.Sector))
+                                    {
+                                        stock.Sector = quoteData.Sector;
+                                    }
+                                    if (quoteData.MarketCap > 0)
+                                    {
+                                        stock.MarketCap = quoteData.MarketCap;
+                                    }
+
                                     // Update timestamp to reflect when data was refreshed
                                     stock.LastAccessed = DateTime.Now;
                                     stock.CacheTime = DateTime.Now;
-                                    
+
                                     // Cache the updated quote data
                                     await _cacheService.CacheQuoteDataAsync(quoteData);
+
+                                    System.Threading.Interlocked.Increment(ref successCount);
                                 }
-                                
-                                System.Threading.Interlocked.Increment(ref successCount);
+                                else
+                                {
+                                    _loggingService?.Log("Warning", $"GetQuoteDataAsync returned null for {stock.Symbol}");
+                                    System.Threading.Interlocked.Increment(ref errorCount);
+                                }
                             }
                             catch (Exception ex)
                             {
@@ -1827,6 +1843,19 @@ namespace Quantra.Controls
                 
                 // Update last refresh time
                 _lastAutoRefreshTime = DateTime.Now;
+                
+                // Save refreshed stock data to StockExplorerData table in batch
+                try
+                {
+                    if (visibleStocks != null && visibleStocks.Any())
+                    {
+                        _loggingService?.Log("Info", $"Saved {visibleStocks.Count} refreshed stocks to StockExplorerData table");
+                    }
+                }
+                catch (Exception saveEx)
+                {
+                    _loggingService?.Log("Warning", "Failed to save refreshed stock data to database", saveEx.ToString());
+                }
                 
                 // Refresh the DataGrid to show updated values
                 await Dispatcher.InvokeAsync(() =>
