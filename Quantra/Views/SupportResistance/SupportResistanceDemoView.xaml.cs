@@ -36,13 +36,13 @@ namespace Quantra.Views.SupportResistance
             _dateLabels = new List<string>();
         }
         
-        public SupportResistanceDemoView(UserSettingsService userSettingsService, LoggingService loggingService)
+        public SupportResistanceDemoView(UserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
             InitializeComponent();
             DataContext = this;
-            
+
             // Initialize services and strategy
-            _dataService = new HistoricalDataService(userSettingsService, loggingService);
+            _dataService = new HistoricalDataService(userSettingsService, loggingService, stockSymbolCacheService);
             _strategy = new SupportResistanceStrategy();
             
             // Initialize config control

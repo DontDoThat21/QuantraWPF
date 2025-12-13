@@ -37,7 +37,8 @@ namespace Quantra.Controls
             // For services not injected, use defaults
             var sectorSentimentService = new SectorSentimentAnalysisService(_userSettings);
             var predictionAnalysisRepository = new Quantra.Repositories.PredictionAnalysisRepository();
-            var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService);
+            var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+            var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService, stockSymbolCacheService);
             
             _sentimentCorrelationAnalysis = new Modules.SentimentPriceCorrelationAnalysis(
                 _userSettings, 

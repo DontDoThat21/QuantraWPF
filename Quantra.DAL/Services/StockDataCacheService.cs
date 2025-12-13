@@ -32,9 +32,9 @@ namespace Quantra.DAL.Services
         private readonly UserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
 
-        public StockDataCacheService(UserSettingsService userSettingsService, LoggingService loggingService)
+        public StockDataCacheService(UserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
-            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService, stockSymbolCacheService);
             _userSettingsService = userSettingsService;
             _loggingService = loggingService;
             EnsureCacheTableExists();
@@ -659,9 +659,18 @@ namespace Quantra.DAL.Services
                         .ToListAsync()
                         .ConfigureAwait(false);
                     
+                    // Batch load Name and Sector from StockSymbols for all symbols
+                    var stockSymbols = await dbContext.StockSymbols
+                        .AsNoTracking()
+                        .Where(s => symbolsList.Contains(s.Symbol))
+                        .ToListAsync()
+                        .ConfigureAwait(false);
+                    
                     // Create dictionaries for quick lookup
                     var peRatioDict = peRatios.ToDictionary(f => f.Symbol, f => f.Value ?? 0.0);
                     var epsDict = epsValues.ToDictionary(f => f.Symbol, f => f.Value);
+                    var nameDict = stockSymbols.ToDictionary(s => s.Symbol, s => s.Name);
+                    var sectorDict = stockSymbols.ToDictionary(s => s.Symbol, s => s.Sector);
 
                     // Process entries to build QuoteData list
                     foreach (var entry in latestEntries)
@@ -692,9 +701,17 @@ namespace Quantra.DAL.Services
                             // Get EPS from cache if available
                             var eps = epsDict.ContainsKey(entry.Symbol) ? epsDict[entry.Symbol] : null;
                             
+                            // Get Name from cache if available
+                            var name = nameDict.ContainsKey(entry.Symbol) ? nameDict[entry.Symbol] : null;
+                            
+                            // Get Sector from cache if available
+                            var sector = sectorDict.ContainsKey(entry.Symbol) ? sectorDict[entry.Symbol] : null;
+                            
                             stocks.Add(new QuoteData
                             {
                                 Symbol = entry.Symbol,
+                                Name = name,
+                                Sector = sector,
                                 Price = last.Close,
                                 Timestamp = last.Date,
                                 // Other fields will be default values
@@ -813,9 +830,31 @@ namespace Quantra.DAL.Services
                                 .Select(f => f.Value)
                                 .FirstOrDefault();
                             
+                            // Try to get Name and Sector from StockSymbols cache
+                            string name = null;
+                            string sector = null;
+                            try
+                            {
+                                var stockSymbolEntity = dbContext.StockSymbols
+                                    .AsNoTracking()
+                                    .FirstOrDefault(s => s.Symbol == symbol);
+                                
+                                if (stockSymbolEntity != null)
+                                {
+                                    name = stockSymbolEntity.Name;
+                                    sector = stockSymbolEntity.Sector;
+                                }
+                            }
+                            catch
+                            {
+                                // Name and Sector will remain null if lookup fails
+                            }
+                            
                             return new QuoteData
                             {
                                 Symbol = symbol,
+                                Name = name,
+                                Sector = sector,
                                 Price = last.Close,
                                 Timestamp = last.Date,
                                 // Other fields will be default values

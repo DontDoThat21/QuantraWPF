@@ -565,6 +565,22 @@ MinWidth="900" MinHeight="700">
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="Sector" Binding="{Binding Sector}" Width="120">
+                        <DataGridTextColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="Sector" FontWeight="Bold" Margin="0,0,0,5"/>
+                                    <ComboBox x:Name="SectorFilterComboBox"
+                                              Width="110"
+                                              Height="30"
+                                              ItemsSource="{Binding AvailableSectors, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              SelectedItem="{Binding SelectedSectorFilter, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Style="{StaticResource EnhancedComboBoxStyle}"
+                                              ToolTip="Filter by sector"
+                                              VerticalContentAlignment="Center"
+                                              Margin="0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTextColumn.HeaderTemplate>
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock" BasedOn="{StaticResource EnhancedDataGridColumnStyle}"/>
                         </DataGridTextColumn.ElementStyle>

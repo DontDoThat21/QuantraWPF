@@ -741,9 +741,10 @@ namespace Quantra
                 
                 // Cache UserSettings to avoid redundant calls
                 var userSettings = _userSettingsService.GetUserSettings();
-                
+
                 // Initialize services that need DbContext
-                var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
+                var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+                var historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService, stockSymbolCacheService);
                 var indicatorSettingsService = new IndicatorSettingsService(_quantraDbContext);
                 var tradingRuleService = new TradingRuleService(_quantraDbContext);
                 var orderHistoryService = new OrderHistoryService(_quantraDbContext);
@@ -1100,7 +1101,8 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 // Create a new instance of our custom SpreadsExplorer control
-                var spreadsExplorerControl = new SpreadsExplorer(_userSettingsService, _loggingService);
+                var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+                var spreadsExplorerControl = new SpreadsExplorer(_userSettingsService, _loggingService, stockSymbolCacheService);
 
                 // Ensure the control has proper sizing and stretching behavior
                 spreadsExplorerControl.Width = double.NaN; // Auto width
@@ -1355,7 +1357,8 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 // Create SectorMomentumService
-                var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService);
+                var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+                var sectorMomentumService = new SectorMomentumService(_userSettingsService, _loggingService, stockSymbolCacheService);
 
                 // Create a new instance of our custom SectorAnalysisHeatmapControl
                 var sectorHeatmapControl = new SectorAnalysisHeatmapControl(sectorMomentumService);
@@ -1413,10 +1416,12 @@ namespace Quantra
             {
                 // Use services from MainWindow's initialized fields
                 // Create BacktestConfiguration control with proper dependency injection
+                var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
                 var backtestConfig = new Views.Backtesting.BacktestConfiguration(
                     _userSettingsService,
                     _loggingService,
-                    _alphaVantageService);
+                    _alphaVantageService,
+                    stockSymbolCacheService);
 
                 backtestConfig.Width = double.NaN;
                 backtestConfig.Height = double.NaN;

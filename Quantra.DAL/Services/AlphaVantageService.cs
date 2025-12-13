@@ -22,6 +22,7 @@ namespace Quantra.DAL.Services
         private readonly SemaphoreSlim _apiSemaphore;
         private readonly IUserSettingsService _userSettingsService;
         private readonly LoggingService _loggingService;
+        private readonly StockSymbolCacheService _stockSymbolCacheService;
 
         // Standard API rate limits
         private const int StandardApiCallsPerMinute = 75;
@@ -57,10 +58,11 @@ namespace Quantra.DAL.Services
         private readonly object _companyOverviewCacheLock = new object();
         private const int CompanyOverviewCacheDays = 7;
 
-        public AlphaVantageService(IUserSettingsService userSettingsService, LoggingService loggingService)
+        public AlphaVantageService(IUserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
             _userSettingsService = userSettingsService;
             _loggingService = loggingService;
+            _stockSymbolCacheService = stockSymbolCacheService;
             _client = new HttpClient
             {
                 BaseAddress = new Uri("https://www.alphavantage.co/")
@@ -251,6 +253,7 @@ namespace Quantra.DAL.Services
                         QuoteData quoteData = new QuoteData
                         {
                             Symbol = quote["01. symbol"]?.ToString() ?? "",
+                            Name = null, // Will be populated from OVERVIEW API or StockSymbols table
                             Price = TryParseDouble(quote["05. price"]),
                             Change = TryParseDouble(quote["09. change"]),
                             ChangePercent = TryParsePercentage(quote["10. change percent"]),
@@ -290,7 +293,7 @@ namespace Quantra.DAL.Services
                             var companyOverview = await GetCompanyOverviewAsync(quoteData.Symbol);
                             if (companyOverview != null)
                             {
-                                quoteData.Name = companyOverview.Name ?? quoteData.Name;
+                                quoteData.Name = companyOverview.Name;
                                 quoteData.Sector = companyOverview.Sector;
                                 quoteData.MarketCap = (double)(companyOverview.MarketCapitalization ?? 0);
                             }
@@ -299,6 +302,36 @@ namespace Quantra.DAL.Services
                         {
                             quoteData.Sector = "N/A";
                             quoteData.MarketCap = 0; // Default value if OVERVIEW fetch fails
+                        }
+
+                        // If Name or Sector is still null/empty after OVERVIEW fetch, try to get from StockSymbols cache
+                        var needsNameFallback = string.IsNullOrEmpty(quoteData.Name);
+                        var needsSectorFallback = string.IsNullOrEmpty(quoteData.Sector) || quoteData.Sector == "N/A";
+                        
+                        if (needsNameFallback || needsSectorFallback)
+                        {
+                            try
+                            {
+                                // Attempt to get data from cached StockSymbols table
+                                var cachedSymbol = _stockSymbolCacheService.GetStockSymbol(quoteData.Symbol);
+                                if (cachedSymbol != null)
+                                {
+                                    if (needsNameFallback && !string.IsNullOrEmpty(cachedSymbol.Name))
+                                    {
+                                        quoteData.Name = cachedSymbol.Name;
+                                        _loggingService?.Log("Info", $"Retrieved name '{quoteData.Name}' for {quoteData.Symbol} from StockSymbols cache");
+                                    }
+                                    if (needsSectorFallback && !string.IsNullOrEmpty(cachedSymbol.Sector))
+                                    {
+                                        quoteData.Sector = cachedSymbol.Sector;
+                                        _loggingService?.Log("Info", $"Retrieved sector '{quoteData.Sector}' for {quoteData.Symbol} from StockSymbols cache");
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // Fallback silently - Name/Sector will remain null/empty or "N/A"
+                            }
                         }
 
                         // Calculate VWAP from historical data
@@ -372,6 +405,59 @@ namespace Quantra.DAL.Services
             return new List<string> { "VIX" };
         }
 
+        /// <summary>
+        /// Gets all stock symbols with their names from the LISTING_STATUS API.
+        /// Returns a dictionary mapping symbol to company name.
+        /// </summary>
+        public async Task<Dictionary<string, string>> GetAllStockSymbolsWithNames()
+        {
+            await WaitForApiLimit();
+            
+            // Build endpoint with entitlement parameter if configured
+            var endpoint = $"query?function=LISTING_STATUS&apikey={_apiKey}";
+            var entitlementParam = GetEntitlementParameter();
+            if (!string.IsNullOrEmpty(entitlementParam))
+            {
+                endpoint += $"&{entitlementParam}";
+            }
+            
+            await LogApiCall("LISTING_STATUS", null);
+
+            var response = await _client.GetAsync(endpoint);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var symbolsWithNames = new Dictionary<string, string>();
+                
+                var lines = content.Split('\n')
+                    .Skip(1) // Skip header row
+                    .Where(line => !string.IsNullOrWhiteSpace(line));
+
+                foreach (var line in lines)
+                {
+                    var parts = line.Split(',');
+                    if (parts.Length >= 2)
+                    {
+                        var symbol = parts[0].Trim();
+                        var name = parts[1].Trim();
+                        symbolsWithNames[symbol] = name;
+                    }
+                }
+
+                // Add VIX with its name
+                if (!symbolsWithNames.ContainsKey("VIX"))
+                {
+                    symbolsWithNames["VIX"] = "CBOE Volatility Index";
+                }
+
+                _loggingService?.Log("Info", $"Retrieved {symbolsWithNames.Count} symbols with names from LISTING_STATUS API");
+                return symbolsWithNames;
+            }
+
+            // Return VIX as a fallback if API fails
+            return new Dictionary<string, string> { { "VIX", "CBOE Volatility Index" } };
+        }
+
         public void CacheSymbols(List<string> symbols)
         {
             if (symbols == null || !symbols.Any())
@@ -387,6 +473,41 @@ namespace Quantra.DAL.Services
             catch (Exception ex)
             {
                 _loggingService.LogErrorWithContext(ex, "Failed to cache symbols");
+            }
+        }
+
+        /// <summary>
+        /// Caches stock symbols with their names to the StockSymbols table from LISTING_STATUS API.
+        /// This ensures that the Name field from LISTING_STATUS is properly stored in the database.
+        /// </summary>
+        public async Task CacheSymbolsWithNamesAsync()
+        {
+            try
+            {
+                var symbolsWithNames = await GetAllStockSymbolsWithNames();
+                
+                if (symbolsWithNames == null || !symbolsWithNames.Any())
+                {
+                    _loggingService?.Log("Warning", "No symbols with names retrieved from LISTING_STATUS API");
+                    return;
+                }
+
+                // Use StockSymbolCacheService to cache the symbols with names
+                var stockSymbols = symbolsWithNames.Select(kvp => new StockSymbol
+                {
+                    Symbol = kvp.Key,
+                    Name = kvp.Value,
+                    Sector = string.Empty,
+                    Industry = string.Empty,
+                    LastUpdated = DateTime.Now
+                }).ToList();
+
+                _stockSymbolCacheService.CacheStockSymbols(stockSymbols);
+                _loggingService?.Log("Info", $"Successfully cached {stockSymbols.Count} symbols with names to StockSymbols table");
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.LogErrorWithContext(ex, "Failed to cache symbols with names");
             }
         }
 

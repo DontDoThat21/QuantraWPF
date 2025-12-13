@@ -11,13 +11,15 @@ namespace Quantra.DAL.Services
 {
     public class QuoteDataService
     {
-        private AlphaVantageService _alphaVantageService;
-        private LoggingService _loggingService;
+        private readonly AlphaVantageService _alphaVantageService;
+        private readonly LoggingService _loggingService;
+        private readonly StockSymbolCacheService _stockSymbolCacheService;
 
-        public QuoteDataService(AlphaVantageService alphaVantageService, LoggingService loggingService)
+        public QuoteDataService(AlphaVantageService alphaVantageService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
             _alphaVantageService = alphaVantageService;
             _loggingService = loggingService;
+            _stockSymbolCacheService = stockSymbolCacheService;
         }
 
 
@@ -68,9 +70,31 @@ namespace Quantra.DAL.Services
                             if (prices != null && prices.Any())
                             {
                                 var lastPrice = prices.Last();
+                                
+                                // Try to get the name and sector from StockSymbols cache
+                                string name = null;
+                                string sector = null;
+                                try
+                                {
+                                    var cachedSymbol = _stockSymbolCacheService.GetStockSymbol(symbol);
+                                    if (cachedSymbol != null)
+                                    {
+                                        if (!string.IsNullOrEmpty(cachedSymbol.Name))
+                                            name = cachedSymbol.Name;
+                                        if (!string.IsNullOrEmpty(cachedSymbol.Sector))
+                                            sector = cachedSymbol.Sector;
+                                    }
+                                }
+                                catch
+                                {
+                                    // Name and Sector will remain null if lookup fails
+                                }
+                                
                                 quoteDataList.Add(new QuoteData
                                 {
                                     Symbol = symbol,
+                                    Name = name,
+                                    Sector = sector,
                                     Price = lastPrice.Close,
                                     Date = lastPrice.Date,
                                     LastUpdated = latest.CachedAt,
@@ -82,7 +106,6 @@ namespace Quantra.DAL.Services
                                     Change = 0, // Calculate from previous day if needed
                                     ChangePercent = 0,
                                     MarketCap = 0,
-                                    Sector = null,
                                     RSI = 0,
                                     PERatio = 0,
                                     VWAP = 0

@@ -37,7 +37,7 @@ namespace Quantra.DAL.Services
             ["Real Estate"] = new[] { "AMT", "PLD", "CCI", "EQIX", "PSA", "DLR", "SPG" }
         };
 
-        public SectorMomentumService(UserSettingsService userSettingsService, LoggingService loggingService)
+        public SectorMomentumService(UserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
             _userSettingsService = userSettingsService;
             _loggingService = loggingService;
@@ -45,7 +45,7 @@ namespace Quantra.DAL.Services
             // Initialize the HTTP client if needed
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "Quantra/1.0");
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
+            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService, stockSymbolCacheService);
         }
 
         public Dictionary<string, List<SectorMomentumModel>> GetSectorMomentumData(string timeframe, bool forceRefresh = false)

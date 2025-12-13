@@ -47,7 +47,8 @@ namespace Quantra.Views.Backtesting
         /// </summary>
         public BacktestConfiguration(UserSettingsService userSettingsService,
             LoggingService loggingService,
-            IAlphaVantageService alphaVantageService)
+            IAlphaVantageService alphaVantageService,
+            StockSymbolCacheService stockSymbolCacheService)
         {
             InitializeComponent();
 
@@ -55,8 +56,8 @@ namespace Quantra.Views.Backtesting
             _loggingService = loggingService ?? throw new ArgumentNullException(nameof(loggingService));
             _alphaVantageService = alphaVantageService ?? throw new ArgumentNullException(nameof(alphaVantageService));
 
-            _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
-            _stockDataCacheService = new StockDataCacheService(_userSettingsService, _loggingService);
+            _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService, stockSymbolCacheService);
+            _stockDataCacheService = new StockDataCacheService(_userSettingsService, _loggingService, stockSymbolCacheService);
             _backtestResultService = new BacktestResultService(_loggingService);
             _cachedSymbols = new ObservableCollection<CachedSymbolInfo>();
 

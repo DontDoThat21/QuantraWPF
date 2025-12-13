@@ -19,9 +19,9 @@ namespace Quantra.DAL.Services
         private readonly AlphaVantageService _alphaVantageService;
 
         // Update constructor to initialize AlphaVantageService
-        public HistoricalDataService(UserSettingsService userSettingsService, LoggingService loggingService)
+        public HistoricalDataService(UserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
-            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService);
+            _alphaVantageService = new AlphaVantageService(userSettingsService, loggingService, stockSymbolCacheService);
         }
 
         /// <summary>

@@ -33,7 +33,7 @@ namespace Quantra.DAL.Services
         private readonly IMonitoringManager _monitoringManager;
         private bool _disposed = false;
 
-        public TechnicalIndicatorService(AlphaVantageService alphaVantageService, UserSettingsService userSettingsService, LoggingService loggingService)
+        public TechnicalIndicatorService(AlphaVantageService alphaVantageService, UserSettingsService userSettingsService, LoggingService loggingService, StockSymbolCacheService stockSymbolCacheService)
         {
             _alphaVantageService = alphaVantageService;
 
@@ -44,7 +44,7 @@ namespace Quantra.DAL.Services
                 //throw new InvalidOperationException("AlphaVantageApiKey not found in database settings profile.");
             }
 
-            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService);
+            _historicalDataService = new HistoricalDataService(userSettingsService, loggingService, stockSymbolCacheService);
 
             _indicators = new Dictionary<string, Func<string, string, Task<double>>>
             {

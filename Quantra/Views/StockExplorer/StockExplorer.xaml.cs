@@ -272,6 +272,37 @@ namespace Quantra.Controls
             }
         }
 
+        // Sector filter properties
+        private ObservableCollection<string> _availableSectors = new ObservableCollection<string>();
+        public ObservableCollection<string> AvailableSectors
+        {
+            get => _availableSectors;
+            set
+            {
+                if (_availableSectors != value)
+                {
+                    _availableSectors = value;
+                    OnPropertyChanged(nameof(AvailableSectors));
+                }
+            }
+        }
+
+        private string _selectedSectorFilter = "All Sectors";
+        public string SelectedSectorFilter
+        {
+            get => _selectedSectorFilter;
+            set
+            {
+                if (_selectedSectorFilter != value)
+                {
+                    _selectedSectorFilter = value;
+                    OnPropertyChanged(nameof(SelectedSectorFilter));
+                    UpdateFilteringState();
+                    _ = ApplySectorFilterAsync();
+                }
+            }
+        }
+
         // Saved Filters collection
         private ObservableCollection<SavedFilter> _savedFilters = new ObservableCollection<SavedFilter>();
         public ObservableCollection<SavedFilter> SavedFilters
@@ -4161,7 +4192,8 @@ namespace Quantra.Controls
             if (string.IsNullOrWhiteSpace(NameFilterText))
             {
                 // Clear filtering state
-                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) || !string.IsNullOrWhiteSpace(PriceFilterText);
+                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) || !string.IsNullOrWhiteSpace(PriceFilterText) || 
+                             !string.IsNullOrWhiteSpace(SelectedSectorFilter) && SelectedSectorFilter != "All Sectors";
                 
                 // Remove filter if text is empty - restore current page
                 if (_viewModel != null && _viewModel.CurrentPage > 0)
@@ -4270,7 +4302,160 @@ namespace Quantra.Controls
                          !string.IsNullOrWhiteSpace(EpsFilterText) ||
                          !string.IsNullOrWhiteSpace(RsiFilterText) ||
                          !string.IsNullOrWhiteSpace(ChangePercentFilterText) ||
-                         !string.IsNullOrWhiteSpace(MarketCapFilterText);
+                         !string.IsNullOrWhiteSpace(MarketCapFilterText) ||
+                         (!string.IsNullOrWhiteSpace(SelectedSectorFilter) && SelectedSectorFilter != "All Sectors");
+        }
+
+        /// <summary>
+        /// Loads available sectors from StockExplorerData table
+        /// </summary>
+        private async System.Threading.Tasks.Task LoadAvailableSectorsAsync()
+        {
+            try
+            {
+                await System.Threading.Tasks.Task.Run(async () =>
+                {
+                    using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options);
+
+                    // Query StockExplorerData table for distinct sectors
+                    var sectors = await context.StockExplorerData
+                        .Where(s => !string.IsNullOrEmpty(s.Sector))
+                        .Select(s => s.Sector)
+                        .Distinct()
+                        .OrderBy(s => s)
+                        .ToListAsync();
+
+                    // Update UI on UI thread
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        AvailableSectors.Clear();
+                        AvailableSectors.Add("All Sectors"); // Add default option
+                        
+                        foreach (var sector in sectors)
+                        {
+                            if (!string.IsNullOrWhiteSpace(sector) && sector != "N/A")
+                            {
+                                AvailableSectors.Add(sector);
+                            }
+                        }
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", "Error loading available sectors", ex.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Applies sector filter to stock data
+        /// </summary>
+        private async System.Threading.Tasks.Task ApplySectorFilterAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SelectedSectorFilter) || SelectedSectorFilter == "All Sectors")
+            {
+                // Clear filtering state - check if any other filters are active
+                IsFiltering = !string.IsNullOrWhiteSpace(SymbolFilterText) || !string.IsNullOrWhiteSpace(NameFilterText) ||
+                             !string.IsNullOrWhiteSpace(PriceFilterText) || !string.IsNullOrWhiteSpace(VwapFilterText) ||
+                             !string.IsNullOrWhiteSpace(PeRatioFilterText) || !string.IsNullOrWhiteSpace(RsiFilterText) ||
+                             !string.IsNullOrWhiteSpace(ChangePercentFilterText) || !string.IsNullOrWhiteSpace(MarketCapFilterText);
+                
+                // Remove filter if "All Sectors" selected - restore current page
+                if (_viewModel != null && _viewModel.CurrentPage > 0)
+                {
+                    await _viewModel.LoadCachedStocksPageAsync(_viewModel.CurrentPage);
+                }
+                return;
+            }
+
+            // Set filtering state
+            IsFiltering = true;
+
+            // Search the entire StockExplorerData table for matching sector
+            if (_viewModel == null || _stockExplorerDataService == null)
+                return;
+
+            try
+            {
+                _viewModel.IsLoading = true;
+                
+                // Search database for stocks in the selected sector
+                await System.Threading.Tasks.Task.Run(async () =>
+                {
+                    using var context = new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+                        .UseSqlServer(ConnectionHelper.ConnectionString)
+                        .Options);
+
+                    // Query StockExplorerData table for matching sector
+                    var matchingStocks = await context.StockExplorerData
+                        .Where(c => c.Sector == SelectedSectorFilter)
+                        .OrderBy(s => s.Symbol)
+                        .ToListAsync();
+
+                    if (matchingStocks.Any())
+                    {
+                        // Convert entities to QuoteData objects
+                        var quoteDataList = new List<QuoteData>();
+                        foreach (var stockEntity in matchingStocks)
+                        {
+                            var quoteData = new QuoteData
+                            {
+                                Symbol = stockEntity.Symbol,
+                                Name = stockEntity.Name,
+                                Price = stockEntity.Price,
+                                Change = stockEntity.Change,
+                                ChangePercent = stockEntity.ChangePercent,
+                                DayHigh = stockEntity.DayHigh,
+                                DayLow = stockEntity.DayLow,
+                                MarketCap = stockEntity.MarketCap,
+                                Volume = stockEntity.Volume,
+                                Sector = stockEntity.Sector,
+                                RSI = stockEntity.RSI,
+                                PERatio = stockEntity.PERatio,
+                                VWAP = stockEntity.VWAP,
+                                Date = stockEntity.Date,
+                                LastUpdated = stockEntity.LastUpdated,
+                                LastAccessed = DateTime.Now,
+                                Timestamp = stockEntity.Timestamp,
+                                CacheTime = stockEntity.CacheTime
+                            };
+                            quoteDataList.Add(quoteData);
+                        }
+
+                        // Update UI on UI thread
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                            foreach (var stock in quoteDataList)
+                            {
+                                _viewModel.CachedStocks.Add(stock);
+                            }
+                        });
+                        
+                        _loggingService?.Log("Info", $"Filtered by sector '{SelectedSectorFilter}': {quoteDataList.Count} stocks found");
+                    }
+                    else
+                    {
+                        // No matches found - clear the grid
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.CachedStocks.Clear();
+                        });
+                        
+                        _loggingService?.Log("Info", $"No stocks found for sector '{SelectedSectorFilter}'");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _loggingService?.Log("Error", $"Error applying sector filter for '{SelectedSectorFilter}'", ex.ToString());
+            }
+            finally
+            {
+                _viewModel.IsLoading = false;
+            }
         }
 
         /// <summary>

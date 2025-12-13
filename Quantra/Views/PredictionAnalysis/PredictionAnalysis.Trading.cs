@@ -22,26 +22,27 @@ namespace Quantra.Controls
 
   /// <summary>
 /// Initializes trading components for the PredictionAnalysisControl
-  /// </summary>
-        private void InitializeTradingComponents()
-  {
-      // Initialize services with their required dependencies
-    var userSettingsService = new UserSettingsService(
-new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
-   .UseSqlServer(ConnectionHelper.ConnectionString)
-    .Options), _loggingService);
-      
-    var alphaVantageService = new AlphaVantageService(userSettingsService, _loggingService);
-        var historicalDataService = new HistoricalDataService(userSettingsService, _loggingService);
-        var technicalIndicatorService = new TechnicalIndicatorService(alphaVantageService, userSettingsService, _loggingService);
-    
- _tradingBot = new WebullTradingBot(
-  userSettingsService,
-      historicalDataService,
-            alphaVantageService,
-   technicalIndicatorService);
-      
-         _stockDataCache = new StockDataCacheService(userSettingsService, _loggingService);
+      /// </summary>
+            private void InitializeTradingComponents()
+      {
+          // Initialize services with their required dependencies
+        var userSettingsService = new UserSettingsService(
+    new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
+       .UseSqlServer(ConnectionHelper.ConnectionString)
+        .Options), _loggingService);
+
+        var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+        var alphaVantageService = new AlphaVantageService(userSettingsService, _loggingService, stockSymbolCacheService);
+            var historicalDataService = new HistoricalDataService(userSettingsService, _loggingService, stockSymbolCacheService);
+            var technicalIndicatorService = new TechnicalIndicatorService(alphaVantageService, userSettingsService, _loggingService, stockSymbolCacheService);
+
+     _tradingBot = new WebullTradingBot(
+      userSettingsService,
+          historicalDataService,
+                alphaVantageService,
+       technicalIndicatorService);
+
+             _stockDataCache = new StockDataCacheService(userSettingsService, _loggingService, stockSymbolCacheService);
   // _orderHistoryService is already initialized in constructor, no need to reassign
      
           // Default to paper trading mode

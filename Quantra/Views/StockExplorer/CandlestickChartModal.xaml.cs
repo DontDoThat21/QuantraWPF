@@ -490,12 +490,15 @@ namespace Quantra.Controls
                 new QuantraDbContext(new DbContextOptionsBuilder<QuantraDbContext>()
                     .UseSqlServer(ConnectionHelper.ConnectionString).Options),
                 loggingService);
-            
+
+            // Get StockSymbolCacheService from DI
+            var stockSymbolCacheService = App.ServiceProvider?.GetService(typeof(StockSymbolCacheService)) as StockSymbolCacheService;
+
             // Initialize StockDataCacheService - create if not provided
-            _stockDataCacheService = stockDataCacheService ?? new StockDataCacheService(_userSettingsService, loggingService);
-            
+            _stockDataCacheService = stockDataCacheService ?? new StockDataCacheService(_userSettingsService, loggingService, stockSymbolCacheService);
+
             // Initialize TechnicalIndicatorService - create if not provided
-            _technicalIndicatorService = technicalIndicatorService ?? new TechnicalIndicatorService(alphaVantageService, _userSettingsService, loggingService);
+            _technicalIndicatorService = technicalIndicatorService ?? new TechnicalIndicatorService(alphaVantageService, _userSettingsService, loggingService, stockSymbolCacheService);
             
             _cancellationTokenSource = new CancellationTokenSource();
             _requestCancellationTokenSource = new CancellationTokenSource();

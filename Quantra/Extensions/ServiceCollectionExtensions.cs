@@ -259,7 +259,8 @@ namespace Quantra.Extensions
             {
                 var userSettingsService = sp.GetRequiredService<UserSettingsService>();
                 var loggingService = sp.GetRequiredService<LoggingService>();
-                return new SectorMomentumService(userSettingsService, loggingService);
+                var stockSymbolCacheService = sp.GetRequiredService<StockSymbolCacheService>();
+                return new SectorMomentumService(userSettingsService, loggingService, stockSymbolCacheService);
             });
 
             // Register SectorSentimentAnalysisService

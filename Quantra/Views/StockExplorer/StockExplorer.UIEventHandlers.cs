@@ -29,10 +29,13 @@ namespace Quantra.Controls
         private DispatcherTimer _scrollDebounceTimer;
         private bool _scrollLoadPending = false;
 
-        private void StockExplorer_Loaded(object sender, RoutedEventArgs e)
+        private async void StockExplorer_Loaded(object sender, RoutedEventArgs e)
         {
             // Load DataGrid settings after the control is fully loaded
             LoadDataGridSettings();
+            
+            // Load available sectors for the sector filter dropdown
+            await LoadAvailableSectorsAsync();
             
             // Subscribe to mouse wheel events for scroll-based pagination
             if (StockDataGrid != null)

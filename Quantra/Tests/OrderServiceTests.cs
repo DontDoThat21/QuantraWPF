@@ -36,9 +36,10 @@ namespace Quantra.Tests
             // Create instances of the required services
             _loggingService = new LoggingService();
             _userSettingsService = new UserSettingsService(dbContext, _loggingService);
-            _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService);
-            _alphaVantageService = new AlphaVantageService(_userSettingsService, _loggingService);
-            _technicalIndicatorService = new TechnicalIndicatorService(_alphaVantageService, _userSettingsService, _loggingService);
+            var stockSymbolCacheService = new StockSymbolCacheService(_loggingService);
+            _historicalDataService = new HistoricalDataService(_userSettingsService, _loggingService, stockSymbolCacheService);
+            _alphaVantageService = new AlphaVantageService(_userSettingsService, _loggingService, stockSymbolCacheService);
+            _technicalIndicatorService = new TechnicalIndicatorService(_alphaVantageService, _userSettingsService, _loggingService, stockSymbolCacheService);
 
             // Create the OrderService with all required dependencies
             _orderService = new OrderService(
