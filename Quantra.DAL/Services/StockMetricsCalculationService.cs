@@ -218,7 +218,7 @@ namespace Quantra.DAL.Services
                 var highPrices = prices.Select(p => p.High).ToList();
                 var lowPrices = prices.Select(p => p.Low).ToList();
                 var closePrices = prices.Select(p => p.Close).ToList();
-                var volumes = prices.Select(p => p.Volume).ToList();
+                var volumes = prices.Select(p => (double)p.Volume).ToList();
 
                 var vwapValues = _technicalIndicatorService.CalculateVWAP(highPrices, lowPrices, closePrices, volumes);
                 
@@ -235,10 +235,10 @@ namespace Quantra.DAL.Services
         {
             try
             {
-                var overview = await _alphaVantageService.GetCompanyOverview(symbol);
-                if (overview != null && double.TryParse(overview.MarketCapitalization, out double marketCap))
+                var overview = await _alphaVantageService.GetCompanyOverviewAsync(symbol);
+                if (overview != null && overview.MarketCapitalization.HasValue)
                 {
-                    return marketCap;
+                    return (double)overview.MarketCapitalization.Value;
                 }
                 return 0;
             }

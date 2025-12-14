@@ -22,6 +22,11 @@ namespace Quantra.Views.Shared
     public partial class CustomModal : Window
     {
         /// <summary>
+        /// Gets the dialog result for confirmation dialogs
+        /// </summary>
+        public bool? ConfirmationResult { get; private set; }
+
+        /// <summary>
         /// Parameterless constructor for XAML designer support
         /// </summary>
         public CustomModal()
@@ -94,6 +99,39 @@ namespace Quantra.Views.Shared
             Show(message, title, CustomModalType.Information, owner);
         }
 
+        /// <summary>
+        /// Shows a confirmation dialog with Yes/No buttons
+        /// </summary>
+        /// <param name="message">The message to display</param>
+        /// <param name="title">The title of the dialog</param>
+        /// <param name="owner">The owner window</param>
+        /// <returns>True if user clicked Yes, False if user clicked No</returns>
+        public static bool ShowConfirmation(string message, string title = "Confirm", Window owner = null)
+        {
+            var dialog = new CustomModal(message, title, CustomModalType.Information);
+
+            if (owner != null)
+            {
+                dialog.Owner = owner;
+            }
+            else if (Application.Current.MainWindow != null)
+            {
+                dialog.Owner = Application.Current.MainWindow;
+            }
+
+            // Hide OK button, show Yes/No buttons
+            dialog.OkButton.Visibility = Visibility.Collapsed;
+            dialog.YesButton.Visibility = Visibility.Visible;
+            dialog.NoButton.Visibility = Visibility.Visible;
+
+            // Set focus to Yes button
+            dialog.Loaded += (s, e) => dialog.YesButton.Focus();
+
+            dialog.ShowDialog();
+
+            return dialog.ConfirmationResult ?? false;
+        }
+
         private void SetMessageTypeProperties(CustomModalType messageType, string customTitle)
         {
             switch (messageType)
@@ -135,13 +173,40 @@ namespace Quantra.Views.Shared
             Close();
         }
         
-        private void Window_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Escape || e.Key == Key.Enter)
-            {
-                Close();
-                e.Handled = true;
+                private void Window_KeyDown(object sender, KeyEventArgs e)
+                {
+                    if (e.Key == Key.Escape)
+                    {
+                        // If Yes/No buttons are visible, treat Escape as No
+                        if (YesButton.Visibility == Visibility.Visible)
+                        {
+                            ConfirmationResult = false;
+                        }
+                        Close();
+                        e.Handled = true;
+                    }
+                    else if (e.Key == Key.Enter)
+                    {
+                        // If Yes/No buttons are visible, treat Enter as Yes
+                        if (YesButton.Visibility == Visibility.Visible)
+                        {
+                            ConfirmationResult = true;
+                        }
+                        Close();
+                        e.Handled = true;
+                    }
+                }
+
+                private void YesButton_Click(object sender, RoutedEventArgs e)
+                {
+                    ConfirmationResult = true;
+                    Close();
+                }
+
+                private void NoButton_Click(object sender, RoutedEventArgs e)
+                {
+                    ConfirmationResult = false;
+                    Close();
+                }
             }
         }
-    }
-}

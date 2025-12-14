@@ -105,16 +105,16 @@ namespace Quantra.DAL.Services
             return indicators["TradingSignal"];
         }
 
-        private async Task<double> CalculateTradingSignal(string symbol, string timeframe)
+        private Task<double> CalculateTradingSignal(string symbol, string timeframe)
         {
             // Implementation here
-            return 0;
+            return Task.FromResult(0.0);
         }
 
-        private async Task<double> CalculateBuySellSignal(string symbol, string timeframe)
+        private Task<double> CalculateBuySellSignal(string symbol, string timeframe)
         {
             // Implementation here
-            return 0;
+            return Task.FromResult(0.0);
         }
 
         public async Task<(double macd, double signal)> GetMACD(string symbol, string timeframe)

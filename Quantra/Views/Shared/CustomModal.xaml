@@ -94,11 +94,24 @@
                             HorizontalAlignment="Right" 
                             Margin="0,0,15,0" 
                             VerticalAlignment="Center">
-                    
+
                     <Button x:Name="OkButton" 
                             Content="OK" 
                             Style="{StaticResource CustomModalButtonStyle}"
                             Click="OkButton_Click" />
+
+                    <Button x:Name="YesButton" 
+                            Content="Yes" 
+                            Style="{StaticResource CustomModalButtonStyle}"
+                            Visibility="Collapsed"
+                            Click="YesButton_Click" />
+
+                    <Button x:Name="NoButton" 
+                            Content="No" 
+                            Style="{StaticResource CustomModalButtonStyle}"
+                            Background="#6E3A3A"
+                            Visibility="Collapsed"
+                            Click="NoButton_Click" />
                 </StackPanel>
             </Border>
         </Grid>
