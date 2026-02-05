@@ -88,7 +88,6 @@ Application is running on a Ryzen 9 7950X3D, 64GB Ram, RX 9070 XT.
 
 Early PoC:
 <img width="2532" height="1371" alt="image" src="https://github.com/user-attachments/assets/550f83ae-5c80-428b-8685-89739cb7fd52" />
-<img width="1205" height="807" alt="image" src="https://github.com/user-attachments/assets/63bdc911-8aa1-4de4-8487-0f5e1fb43357" />
 <img width="1694" height="945" alt="image" src="https://github.com/user-attachments/assets/85a2ec59-0f15-4a12-926a-8d349729a02b" />
 <img width="720" height="405" alt="image" src="https://github.com/user-attachments/assets/5fcd8807-5de7-4358-ad32-5f19795abaa7" />
 <img width="502" height="992" alt="img" src="https://github.com/user-attachments/assets/13c7f86d-535a-405a-be0f-1bf6a009ee3d" />
